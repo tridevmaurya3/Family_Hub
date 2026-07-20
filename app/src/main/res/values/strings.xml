@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="content_description_add">Add new item</string>
+
+    <string name="app_name">Family Hub</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_greeting">Good evening</string>
+    <string name="dashboard_intro">Your family, all in one place.</string>
+    <string name="family_status">Private by default</string>
+    <string name="family_status_detail">Start building a calm space for the people who matter.</string>
+    <string name="quick_actions">Quick actions</string>
+    <string name="today_overview">Today’s overview</string>
+    <string name="dashboard_overview">Overview</string>
+    <string name="dashboard_recent_activity">Recent activity</string>
+    <string name="dashboard_today_schedule">Today’s schedule</string>
+    <string name="view_all">View all</string>
+
+    <!-- Dashboard search -->
+    <string name="search_family_hub">Search Family Hub</string>
+    <string name="search_hint_dashboard">Search family, reminders, finance or Family Live</string>
+    <string name="search_voice">Voice search</string>
+    <string name="search_filter">Search filter</string>
+    <string name="search_clear">Clear search</string>
+    <string name="dashboard_search_empty">Type something to search.</string>
+    <string name="dashboard_search_no_result">No matching Family Hub module was found for “%1$s”.</string>
+    <string name="dashboard_voice_search_coming_soon">Voice search will be added in a future update.</string>
+    <string name="dashboard_filter_coming_soon">Search filters will be added in a future update.</string>
+
+    <!-- Quick actions -->
+    <string name="family_members">Family members</string>
+    <string name="add_reminder">Add reminder</string>
+    <string name="add_expense">Add expense</string>
+    <string name="add_new">Add new</string>
+
+    <!-- Dashboard reminder -->
+    <string name="upcoming_reminder">Upcoming reminder</string>
+    <string name="upcoming_reminder_detail">Medicine reminder · 8:00 PM</string>
+    <string name="dashboard_no_upcoming_reminder_title">No upcoming reminder</string>
+    <string name="dashboard_no_upcoming_reminder_detail">Create a reminder to keep life organised.</string>
+    <string name="dashboard_next_reminder_detail">%1$s · %2$s</string>
+
+    <!-- Dashboard finance -->
+    <string name="monthly_spend">Monthly spend</string>
+    <string name="monthly_spend_value">₹0.00</string>
+    <string name="monthly_spend_detail">Income ₹0.00 · Balance ₹0.00</string>
+    <string name="dashboard_finance_detail">Income %1$s · Balance %2$s</string>
+
+    <!-- Status cards -->
+    <string name="status_finance">Finance</string>
+    <string name="status_family">Family</string>
+    <string name="status_documents">Documents</string>
+    <string name="status_health">Health</string>
+    <string name="status_balance_available">Balance available</string>
+    <string name="status_documents_ready">Documents module coming soon</string>
+    <string name="status_family_ready">Open family details</string>
+    <string name="status_health_update">Health module coming soon</string>
+    <string name="status_zero_members">0 members</string>
+    <string name="status_zero_files">0 files</string>
+    <string name="status_no_health_data">No data</string>
+
+    <!-- General module placeholders -->
+    <string name="family_title">Family</string>
+    <string name="family_description">Member profiles, roles, and family details will be built here as a complete offline module.</string>
+    <string name="reminders_title">Reminders</string>
+    <string name="reminders_description">Your dependable local reminders and schedules will appear here.</string>
+    <string name="finance_title">Finance</string>
+    <string name="finance_description">Expenses, income, and reports will stay private on this device by default.</string>
+    <string name="more_title">More</string>
+    <string name="more_description">Documents, health, assets, settings, and future Family Hub tools will be organized here.</string>
+    <string name="in_development">This module is next in the Family Hub build.</string>
+    <string name="coming_soon">Coming soon</string>
+
+    <!-- Notifications -->
+    <string name="notifications_clear">You are all caught up.</string>
+    <string name="add_action_coming_soon">Choose what to add from this dashboard soon.</string>
+    <string name="content_description_notifications">Open notifications</string>
+    <string name="content_description_family_hub_mark">Family Hub</string>
+
+    <!-- Family members -->
+    <string name="family_subtitle">Keep the details of your loved ones together, safely on this device.</string>
+    <string name="add_member">Add member</string>
+    <string name="search_members">Search by name or relation</string>
+    <string name="no_members_title">Your family starts here</string>
+    <string name="no_members_detail">Add your first family member. Everything stays on this device unless you later choose backup or sync.</string>
+    <string name="member_contact_missing">No phone or email added</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="add_family_member">Add family member</string>
+    <string name="edit_family_member">Edit family member</string>
+    <string name="member_name">Full name</string>
+    <string name="member_relation">Relationship</string>
+    <string name="member_phone">Phone number</string>
+    <string name="member_email">Email address</string>
+    <string name="member_birth_date">Date of birth (optional)</string>
+    <string name="member_note">Notes (optional)</string>
+    <string name="cancel">Cancel</string>
+    <string name="save_member">Save member</string>
+    <string name="member_name_required">Enter the member’s name.</string>
+    <string name="member_relation_required">Enter a relationship, such as Mother or Son.</string>
+    <string name="member_phone_invalid">Enter a valid phone number or leave it empty.</string>
+    <string name="member_email_invalid">Enter a valid email address or leave it empty.</string>
+    <string name="member_birth_date_invalid">Use a valid date of birth.</string>
+    <string name="member_added">Family member added</string>
+    <string name="member_updated">Family member updated</string>
+    <string name="delete_member_title">Delete family member?</string>
+    <string name="delete_member_message">This removes %1$s from this device. You can add them again later.</string>
+    <string name="member_deleted">Family member deleted</string>
+    <string name="confirm_delete">Delete member</string>
+    <string name="content_description_add_member">Add family member</string>
+
+    <!-- Finance -->
+    <string name="finance_subtitle">A simple, private view of money coming in and going out.</string>
+    <string name="add_entry">Add entry</string>
+    <string name="content_description_add_finance_entry">Add income or expense</string>
+    <string name="this_month">This month</string>
+    <string name="finance_expense">Expense</string>
+    <string name="finance_income">Income</string>
+    <string name="finance_balance">Balance</string>
+    <string name="search_finance_entries">Search category, note, or type</string>
+    <string name="no_finance_entries_title">Every rupee has a story</string>
+    <string name="no_finance_entries_detail">Add your first income or expense entry. Your records stay private on this device.</string>
+    <string name="add_finance_entry">Add income or expense</string>
+    <string name="edit_finance_entry">Edit finance entry</string>
+    <string name="finance_type">Type</string>
+    <string name="finance_amount">Amount</string>
+    <string name="finance_category">Category</string>
+    <string name="finance_note">Description (optional)</string>
+    <string name="finance_entry_date">Date</string>
+    <string name="save_finance_entry">Save entry</string>
+    <string name="finance_amount_invalid">Enter an amount greater than zero.</string>
+    <string name="finance_category_required">Enter a category, such as Groceries or Salary.</string>
+    <string name="finance_date_invalid">Choose a valid date.</string>
+    <string name="finance_entry_added">Finance entry added</string>
+    <string name="finance_entry_updated">Finance entry updated</string>
+    <string name="delete_finance_entry_title">Delete finance entry?</string>
+    <string name="delete_finance_entry_message">This removes the %1$s entry from this device.</string>
+    <string name="finance_entry_deleted">Finance entry deleted</string>
+
+    <!-- Reminders -->
+    <string name="reminders_subtitle">Local reminders for the everyday things you never want to miss.</string>
+    <string name="add_reminder_short">Add reminder</string>
+    <string name="content_description_add_reminder">Add reminder</string>
+    <string name="search_reminders">Search title, note, or repeat type</string>
+    <string name="no_reminders_title">Make time work for you</string>
+    <string name="no_reminders_detail">Create a private reminder for medicine, bills, birthdays, or anything important.</string>
+    <string name="add_reminder_title">Add reminder</string>
+    <string name="edit_reminder_title">Edit reminder</string>
+    <string name="reminder_title">Reminder title</string>
+    <string name="reminder_note">Note (optional)</string>
+    <string name="reminder_date">Date</string>
+    <string name="reminder_time">Time</string>
+    <string name="reminder_repeat">Repeat</string>
+    <string name="reminder_once">Once</string>
+    <string name="reminder_daily">Every day</string>
+    <string name="reminder_enabled">Reminder enabled</string>
+    <string name="reminder_disabled">Reminder disabled</string>
+    <string name="save_reminder">Save reminder</string>
+    <string name="reminder_title_required">Enter a reminder title.</string>
+    <string name="reminder_future_time_required">Choose a future date and time for a one-time reminder.</string>
+    <string name="reminder_added">Reminder saved</string>
+    <string name="reminder_updated">Reminder updated</string>
+    <string name="delete_reminder_title">Delete reminder?</string>
+    <string name="delete_reminder_message">This removes “%1$s” and its scheduled notification from this device.</string>
+    <string name="reminder_deleted">Reminder deleted</string>
+    <string name="reminder_daily_at">Every day at %1$s</string>
+    <string name="notification_permission_explanation">Allow notifications to receive this reminder on time.</string>
+    <string name="reminder_notification_channel_name">Family Hub reminders</string>
+    <string name="reminder_notification_channel_description">Private reminders scheduled by Family Hub</string>
+    <string name="reminder_notification_fallback_title">Family Hub reminder</string>
+    <string name="reminder_notification_fallback_note">You have a reminder.</string>
+
+    <!-- Family Live -->
+    <string name="family_live_member_count">%1$d family members</string>
+    <string name="family_live">Family Live</string>
+    <string name="family_live_dashboard_description">View family locations and current status</string>
+
+</resources>

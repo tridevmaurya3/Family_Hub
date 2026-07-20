@@ -1,0 +1,27 @@
+<resources>
+    <style name="TextAppearance.FamilyHub.Overline" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.Heading" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.SectionTitle" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.CardTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+</resources>

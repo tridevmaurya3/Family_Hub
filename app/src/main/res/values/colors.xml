@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Primary brand colors -->
+    <color name="fh_primary">#3159D6</color>
+    <color name="fh_primary_dark">#203DA1</color>
+    <color name="fh_primary_container">#E2E8FF</color>
+    <color name="fh_on_primary">#FFFFFF</color>
+    <color name="fh_on_primary_container">#132A73</color>
+
+    <!-- Secondary colors -->
+    <color name="fh_secondary">#386A56</color>
+    <color name="fh_secondary_container">#B9F3D6</color>
+    <color name="fh_on_secondary">#FFFFFF</color>
+    <color name="fh_on_secondary_container">#002116</color>
+
+    <!-- Tertiary colors -->
+    <color name="fh_tertiary">#A65E00</color>
+    <color name="fh_tertiary_container">#FFE0BA</color>
+    <color name="fh_on_tertiary">#FFFFFF</color>
+    <color name="fh_on_tertiary_container">#351A00</color>
+
+    <!-- Background and surfaces -->
+    <color name="fh_background">#F8F9FD</color>
+    <color name="fh_surface">#FFFFFF</color>
+    <color name="fh_surface_variant">#EEF1F8</color>
+    <color name="fh_surface_container">#F2F4FA</color>
+    <color name="fh_surface_container_high">#E9ECF4</color>
+
+    <!-- Text colors -->
+    <color name="fh_text_primary">#1A1C22</color>
+    <color name="fh_text_secondary">#5F6370</color>
+    <color name="fh_text_disabled">#9B9FAA</color>
+
+    <!-- Material-compatible aliases -->
+    <color name="fh_on_surface">#1A1C22</color>
+    <color name="fh_on_surface_variant">#5F6370</color>
+
+    <!-- Borders and dividers -->
+    <color name="fh_outline">#D8DDEA</color>
+    <color name="fh_outline_variant">#E5E8F0</color>
+    <color name="fh_divider">#E5E8F0</color>
+
+    <!-- Status colors -->
+    <color name="fh_success">#137A4A</color>
+    <color name="fh_success_container">#C0F0D4</color>
+
+    <color name="fh_warning">#9A6700</color>
+    <color name="fh_warning_container">#FFE5A3</color>
+
+    <color name="fh_error">#BA1A1A</color>
+    <color name="fh_error_container">#FFDAD6</color>
+
+    <color name="fh_info">#246BCE</color>
+    <color name="fh_info_container">#D9E7FF</color>
+
+    <!-- Common colors -->
+    <color name="fh_white">#FFFFFF</color>
+    <color name="fh_black">#000000</color>
+    <color name="fh_transparent">#00000000</color>
+
+</resources>

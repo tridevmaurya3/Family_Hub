@@ -1,0 +1,37 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.FamilyHub" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/fh_primary</item>
+        <item name="colorOnPrimary">@color/fh_on_primary</item>
+        <item name="colorPrimaryContainer">@color/fh_primary_container</item>
+        <item name="colorSecondary">@color/fh_secondary</item>
+        <item name="colorSecondaryContainer">@color/fh_secondary_container</item>
+        <item name="colorTertiary">@color/fh_tertiary</item>
+        <item name="colorTertiaryContainer">@color/fh_tertiary_container</item>
+        <item name="colorSurface">@color/fh_surface</item>
+        <item name="colorSurfaceVariant">@color/fh_surface_variant</item>
+        <item name="colorOnSurface">@color/fh_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/fh_on_surface_variant</item>
+        <item name="android:colorAccent">@color/fh_primary</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:navigationBarColor">@color/fh_surface</item>
+        <item name="android:statusBarColor">@color/fh_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.FamilyHub.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/fh_primary</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_family_hub_mark</item>
+        <item name="postSplashScreenTheme">@style/Theme.FamilyHub</item>
+    </style>
+
+    <style name="Widget.FamilyHub.BottomNavigation.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/fh_primary_container</item>
+    </style>
+
+    <style name="Widget.FamilyHub.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/fh_primary</item>
+        <item name="hintTextColor">@color/fh_on_surface_variant</item>
+    </style>
+</resources>

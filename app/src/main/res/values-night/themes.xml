@@ -1,0 +1,22 @@
+<resources>
+    <style name="Theme.FamilyHub" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#BAC3FF</item>
+        <item name="colorOnPrimary">#00217A</item>
+        <item name="colorPrimaryContainer">#17349D</item>
+        <item name="colorSecondary">#9CD8BB</item>
+        <item name="colorSecondaryContainer">#20513F</item>
+        <item name="colorTertiary">#FFB86E</item>
+        <item name="colorTertiaryContainer">#713900</item>
+        <item name="colorSurface">#121318</item>
+        <item name="colorSurfaceVariant">#22242D</item>
+        <item name="colorOnSurface">#E3E2E9</item>
+        <item name="colorOnSurfaceVariant">#C4C6D0</item>
+        <item name="android:colorAccent">#BAC3FF</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:navigationBarColor">#121318</item>
+        <item name="android:statusBarColor">#121318</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>
