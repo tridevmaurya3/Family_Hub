@@ -16,6 +16,7 @@ import com.tridev.familyhub.data.local.dao.DocumentDao;
 import com.tridev.familyhub.data.local.dao.PasswordEntryDao;
 import com.tridev.familyhub.data.local.dao.HealthRecordDao;
 import com.tridev.familyhub.data.local.dao.VehicleDao;
+import com.tridev.familyhub.data.local.dao.PropertyDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -24,6 +25,7 @@ import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.PasswordEntry;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.Vehicle;
+import com.tridev.familyhub.data.local.entity.PropertyEntry;
 
 /**
  * The private on-device database.
@@ -40,9 +42,10 @@ import com.tridev.familyhub.data.local.entity.Vehicle;
                 DocumentEntry.class,
                 PasswordEntry.class,
                 HealthRecord.class,
-                Vehicle.class
+                Vehicle.class,
+                PropertyEntry.class
         },
-        version = 7,
+        version = 8,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -60,6 +63,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract PasswordEntryDao passwordEntryDao();
     public abstract HealthRecordDao healthRecordDao();
     public abstract VehicleDao vehicleDao();
+    public abstract PropertyDao propertyDao();
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -261,6 +265,49 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Adds family-owned property profiles without changing existing data. */
+    private static final Migration MIGRATION_7_8 = new Migration(7, 8) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `properties` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`ownerMemberId` INTEGER NOT NULL, "
+                            + "`propertyType` TEXT NOT NULL, "
+                            + "`title` TEXT NOT NULL, "
+                            + "`address` TEXT NOT NULL, "
+                            + "`city` TEXT NOT NULL, "
+                            + "`state` TEXT NOT NULL, "
+                            + "`postalCode` TEXT NOT NULL, "
+                            + "`area` TEXT NOT NULL, "
+                            + "`purchaseValue` REAL NOT NULL, "
+                            + "`estimatedValue` REAL NOT NULL, "
+                            + "`purchaseDate` INTEGER NOT NULL, "
+                            + "`registrationReference` TEXT NOT NULL, "
+                            + "`notes` TEXT NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "FOREIGN KEY(`ownerMemberId`) "
+                            + "REFERENCES `family_members`(`id`) "
+                            + "ON UPDATE CASCADE ON DELETE CASCADE)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_properties_ownerMemberId` "
+                            + "ON `properties` (`ownerMemberId`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_properties_propertyType` "
+                            + "ON `properties` (`propertyType`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_properties_title` "
+                            + "ON `properties` (`title`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -276,7 +323,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_3_4,
                                     MIGRATION_4_5,
                                     MIGRATION_5_6,
-                                    MIGRATION_6_7
+                                    MIGRATION_6_7,
+                                    MIGRATION_7_8
                             )
                             .build();
                 }
