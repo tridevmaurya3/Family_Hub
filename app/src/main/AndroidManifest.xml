@@ -33,6 +33,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".core.planner.PlannerReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".core.reminders.ReminderBootReceiver"
             android:directBootAware="false"
             android:exported="false">

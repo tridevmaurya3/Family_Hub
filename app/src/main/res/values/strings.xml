@@ -583,4 +583,10 @@
     <string name="action_sharing_value">%1$d sharing</string>
     <string name="action_members_value">%1$d family members</string>
 
+    <!-- Planner notifications -->
+    <string name="planner_notification_title">Family Planner</string>
+    <string name="planner_notification_detail">A scheduled family event or task is due.</string>
+    <string name="planner_notification_channel">Planner alerts</string>
+    <string name="planner_notification_channel_detail">Events and tasks scheduled in Family Planner</string>
+
 </resources>

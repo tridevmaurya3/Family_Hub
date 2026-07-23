@@ -1,7 +1,10 @@
 package com.tridev.familyhub.feature.planner;
 
+import android.Manifest;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,12 +14,14 @@ import android.widget.ArrayAdapter;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.planner.PlannerScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
@@ -33,6 +38,7 @@ import java.util.List;
 /** Offline-first Office-style family calendar and task planner. */
 public class PlannerFragment extends Fragment implements AddActionHost {
 
+    private static final int NOTIFICATION_PERMISSION_REQUEST = 4102;
     private static final String[] TYPES = {
             PlannerItem.TYPE_EVENT, PlannerItem.TYPE_TASK
     };
@@ -79,7 +85,14 @@ public class PlannerFragment extends Fragment implements AddActionHost {
                     @NonNull PlannerItem item,
                     boolean completed
             ) {
-                repository.setCompleted(item, completed, PlannerFragment.this::reload);
+                repository.setCompleted(item, completed, () -> {
+                    if (completed) {
+                        PlannerScheduler.cancel(requireContext(), item.id);
+                    } else {
+                        PlannerScheduler.schedule(requireContext(), item);
+                    }
+                    reload();
+                });
             }
 
             @Override
@@ -114,6 +127,7 @@ public class PlannerFragment extends Fragment implements AddActionHost {
                     ) { }
                 }
         );
+        ensureNotificationPermission();
         reload();
     }
 
@@ -264,6 +278,11 @@ public class PlannerFragment extends Fragment implements AddActionHost {
                     ? null : members.get(memberIndex - 1).id;
             repository.save(item, () -> {
                 if (binding != null) {
+                    if (item.isReminderEnabled) {
+                        PlannerScheduler.schedule(requireContext(), item);
+                    } else {
+                        PlannerScheduler.cancel(requireContext(), item.id);
+                    }
                     dialog.dismiss();
                     reload();
                     Snackbar.make(
@@ -338,9 +357,23 @@ public class PlannerFragment extends Fragment implements AddActionHost {
                         R.string.planner_delete_message, item.title
                 ))
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.remove, (dialog, which) ->
-                        repository.delete(item, this::reload)
-                ).show();
+                .setPositiveButton(R.string.remove, (dialog, which) -> {
+                    PlannerScheduler.cancel(requireContext(), item.id);
+                    repository.delete(item, this::reload);
+                }).show();
+    }
+
+    private void ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATION_PERMISSION_REQUEST
+            );
+        }
     }
 
     private void reload() {

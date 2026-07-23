@@ -14,6 +14,13 @@ import java.util.List;
 @Dao
 public interface PlannerItemDao {
 
+    @Query("SELECT * FROM planner_items WHERE id = :itemId LIMIT 1")
+    PlannerItem getById(long itemId);
+
+    @Query("SELECT * FROM planner_items WHERE isReminderEnabled = 1 "
+            + "AND isCompleted = 0")
+    List<PlannerItem> getReminderEnabled();
+
     @Query("SELECT * FROM planner_items "
             + "ORDER BY isCompleted ASC, startAt ASC")
     List<PlannerItem> getAll();
