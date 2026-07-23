@@ -1,78 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.FamilyHub.Card.Flat"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="@dimen/space_12"
+    android:layout_marginBottom="@dimen/card_spacing"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="@color/fh_surface"
-    app:cardCornerRadius="@dimen/radius_20"
-    app:cardElevation="0dp"
-    app:strokeColor="@color/fh_outline"
-    app:strokeWidth="1dp">
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="@dimen/space_16">
-
-        <TextView
-            android:id="@+id/member_initials"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@drawable/bg_member_avatar"
-            android:gravity="center"
-            android:textColor="@color/fh_on_primary"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+        android:orientation="vertical"
+        android:padding="@dimen/card_padding">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/space_12"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/member_name"
-                style="@style/TextAppearance.FamilyHub.CardTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/fh_on_surface" />
+                android:id="@+id/member_initials"
+                android:layout_width="@dimen/icon_tile_size"
+                android:layout_height="@dimen/icon_tile_size"
+                android:background="@drawable/bg_member_avatar"
+                android:gravity="center"
+                android:textColor="@color/fh_on_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/member_relation"
-                style="@style/TextAppearance.FamilyHub.Body"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:textColor="@color/fh_primary" />
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/member_contact"
-                style="@style/TextAppearance.FamilyHub.Body"
+                <TextView
+                    android:id="@+id/member_name"
+                    style="@style/TextAppearance.FamilyHub.CardTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="2" />
+
+                <TextView
+                    android:id="@+id/member_contact"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:ellipsize="end"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:textColor="@color/fh_on_surface_variant" />
+                android:layout_marginStart="@dimen/space_8"
+                app:cardBackgroundColor="@color/fh_module_family_container"
+                app:cardCornerRadius="@dimen/radius_14"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/fh_module_family"
+                app:strokeWidth="@dimen/border_width">
+
+                <TextView
+                    android:id="@+id/member_relation"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:paddingStart="@dimen/space_10"
+                    android:paddingTop="@dimen/space_6"
+                    android:paddingEnd="@dimen/space_10"
+                    android:paddingBottom="@dimen/space_6"
+                    android:textColor="@color/fh_module_family"
+                    android:textStyle="bold" />
+
+            </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/border_width"
+            android:layout_marginTop="@dimen/space_12"
+            android:background="@color/fh_divider" />
+
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_marginTop="@dimen/space_8"
+            android:gravity="end"
+            android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_member_button"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="@dimen/touch_target_min"
                 android:minWidth="0dp"
                 android:text="@string/edit"
                 android:textColor="@color/fh_primary" />
@@ -81,10 +111,14 @@
                 android:id="@+id/delete_member_button"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginStart="@dimen/space_4"
                 android:minWidth="0dp"
                 android:text="@string/delete"
-                android:textColor="@color/fh_tertiary" />
+                android:textColor="@color/fh_error" />
+
         </LinearLayout>
+
     </LinearLayout>
+
 </com.google.android.material.card.MaterialCardView>

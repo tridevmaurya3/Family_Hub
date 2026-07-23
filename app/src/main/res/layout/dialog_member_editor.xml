@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -9,14 +10,51 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/space_24">
+        android:padding="@dimen/space_20">
 
-        <TextView
-            android:id="@+id/editor_title"
-            style="@style/TextAppearance.FamilyHub.SectionTitle"
-            android:layout_width="wrap_content"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/fh_on_surface" />
+            app:cardBackgroundColor="@color/fh_module_family_container"
+            app:strokeColor="@color/fh_module_family">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/card_padding">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="@dimen/icon_tile_size"
+                    android:layout_height="@dimen/icon_tile_size"
+                    app:cardBackgroundColor="@color/fh_surface"
+                    app:cardCornerRadius="@dimen/radius_14"
+                    app:cardElevation="0dp">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size_medium"
+                        android:layout_height="@dimen/icon_size_medium"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_family"
+                        app:tint="@color/fh_module_family" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:id="@+id/editor_title"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:textColor="@color/fh_on_primary_container" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_name_layout"
@@ -32,6 +70,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="textPersonName"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -39,7 +78,7 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/member_relation">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -48,6 +87,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="textCapSentences"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -55,7 +95,7 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/member_phone">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -64,6 +104,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="phone"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -71,7 +112,7 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/member_email">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -80,6 +121,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -87,10 +129,11 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/member_birth_date"
             app:endIconDrawable="@drawable/ic_reminder"
-            app:endIconMode="custom">
+            app:endIconMode="custom"
+            app:endIconTint="@color/fh_primary">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/member_birth_date_input"
@@ -100,6 +143,7 @@
                 android:focusable="false"
                 android:inputType="none"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -107,7 +151,7 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/member_note">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -118,31 +162,35 @@
                 android:inputType="textMultiLine|textCapSentences"
                 android:maxLines="4"
                 android:minLines="3" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
-            android:gravity="end"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_member_button"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/cancel"
-                android:textColor="@color/fh_on_surface_variant" />
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                android:text="@string/cancel" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_member_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_8"
-                android:text="@string/save_member"
-                android:textColor="@color/fh_on_primary"
-                app:backgroundTint="@color/fh_primary" />
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                android:text="@string/save_member" />
+
         </LinearLayout>
+
     </LinearLayout>
-</ScrollView>
+
+</androidx.core.widget.NestedScrollView>

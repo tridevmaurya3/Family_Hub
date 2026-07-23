@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/fh_background"
-    android:paddingStart="@dimen/space_20"
+    android:paddingStart="@dimen/screen_padding_horizontal"
     android:paddingTop="@dimen/space_24"
-    android:paddingEnd="@dimen/space_20">
+    android:paddingEnd="@dimen/screen_padding_horizontal">
 
     <TextView
         android:id="@+id/family_title"
@@ -14,7 +15,6 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="@string/family_title"
-        android:textColor="@color/fh_on_surface"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -26,7 +26,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_4"
         android:text="@string/family_subtitle"
-        android:textColor="@color/fh_on_surface_variant"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/family_title" />
@@ -39,17 +38,22 @@
         android:layout_marginTop="@dimen/space_20"
         android:hint="@string/search_members"
         app:endIconMode="clear_text"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/fh_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/family_subtitle">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/member_search_input"
+            style="@style/TextAppearance.FamilyHub.Body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:imeOptions="actionSearch"
             android:inputType="text"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:textColor="@color/fh_on_surface" />
+
     </com.google.android.material.textfield.TextInputLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -64,57 +68,73 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/member_search_layout" />
 
-    <LinearLayout
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/family_empty_state"
+        style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="@dimen/space_32"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_24"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:cardBackgroundColor="@color/fh_module_family_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/member_search_layout">
+        app:layout_constraintTop_toBottomOf="@id/member_search_layout"
+        app:strokeColor="@color/fh_module_family">
 
-        <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:background="@drawable/bg_placeholder_icon"
-            android:contentDescription="@null"
-            android:padding="23dp"
-            android:src="@drawable/ic_family"
-            app:tint="@color/fh_primary" />
-
-        <TextView
-            style="@style/TextAppearance.FamilyHub.SectionTitle"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
             android:gravity="center"
-            android:text="@string/no_members_title"
-            android:textColor="@color/fh_on_surface" />
+            android:orientation="vertical"
+            android:padding="@dimen/space_32">
 
-        <TextView
-            style="@style/TextAppearance.FamilyHub.Body"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:gravity="center"
-            android:text="@string/no_members_detail"
-            android:textAlignment="center"
-            android:textColor="@color/fh_on_surface_variant" />
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                app:cardBackgroundColor="@color/fh_surface"
+                app:cardCornerRadius="@dimen/radius_20"
+                app:cardElevation="0dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/empty_add_member_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
-            android:text="@string/add_member"
-            android:textColor="@color/fh_on_primary"
-            app:backgroundTint="@color/fh_primary"
-            app:icon="@drawable/ic_add"
-            app:iconTint="@color/fh_on_primary" />
-    </LinearLayout>
+                <ImageView
+                    android:layout_width="@dimen/icon_size_large"
+                    android:layout_height="@dimen/icon_size_large"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_family"
+                    app:tint="@color/fh_module_family" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/TextAppearance.FamilyHub.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:gravity="center"
+                android:text="@string/no_members_title" />
+
+            <TextView
+                style="@style/TextAppearance.FamilyHub.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:gravity="center"
+                android:text="@string/no_members_detail"
+                android:textAlignment="center" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/empty_add_member_button"
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/add_member"
+                app:icon="@drawable/ic_add"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/space_6" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
