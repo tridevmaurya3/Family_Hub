@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fh_background"
+    android:paddingStart="@dimen/screen_padding_horizontal"
+    android:paddingTop="@dimen/space_24"
+    android:paddingEnd="@dimen/screen_padding_horizontal">
+
+    <TextView
+        android:id="@+id/planner_title"
+        style="@style/TextAppearance.FamilyHub.Heading"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/planner_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/planner_subtitle"
+        style="@style/TextAppearance.FamilyHub.Body"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/planner_subtitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/planner_title" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/planner_summary"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        app:cardBackgroundColor="@color/fh_tertiary_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/planner_subtitle"
+        app:strokeColor="@color/fh_tertiary">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/card_padding">
+            <ImageView
+                android:layout_width="@dimen/icon_tile_size"
+                android:layout_height="@dimen/icon_tile_size"
+                android:background="@drawable/bg_placeholder_icon"
+                android:contentDescription="@null"
+                android:padding="@dimen/space_10"
+                android:src="@drawable/ic_planner"
+                app:tint="@color/fh_tertiary" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/planner_open_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/fh_tertiary" />
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/planner_open_items" />
+            </LinearLayout>
+            <TextView
+                style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/planner_offline_status"
+                android:textColor="@color/fh_tertiary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/planner_search_layout"
+        style="@style/Widget.FamilyHub.TextInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:hint="@string/planner_search_hint"
+        app:endIconMode="clear_text"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/fh_tertiary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/planner_summary">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/planner_search_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/planner_recycler_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/space_12"
+        android:paddingBottom="104dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/planner_search_layout" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/planner_empty_state"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/fh_tertiary_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/planner_search_layout"
+        app:strokeColor="@color/fh_tertiary">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/space_32">
+            <ImageView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_placeholder_icon"
+                android:contentDescription="@null"
+                android:padding="@dimen/space_20"
+                android:src="@drawable/ic_planner"
+                app:tint="@color/fh_tertiary" />
+            <TextView
+                style="@style/TextAppearance.FamilyHub.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/planner_empty_title" />
+            <TextView
+                style="@style/TextAppearance.FamilyHub.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:gravity="center"
+                android:text="@string/planner_empty_detail"
+                android:textAlignment="center" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/empty_add_planner_button"
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/planner_add"
+                app:icon="@drawable/ic_add" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.constraintlayout.widget.ConstraintLayout>

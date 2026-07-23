@@ -29,6 +29,7 @@ import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.notes.NotesFragment;
+import com.tridev.familyhub.feature.planner.PlannerFragment;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -280,6 +281,15 @@ public class DashboardFragment extends Fragment {
                 || normalizedQuery.contains("memo")) {
             binding.dashboardSearchBar.clearSearchFocus();
             openFeature(new NotesFragment());
+            return;
+        }
+
+        if (normalizedQuery.contains("planner")
+                || normalizedQuery.contains("calendar")
+                || normalizedQuery.contains("event")
+                || normalizedQuery.contains("task")) {
+            binding.dashboardSearchBar.clearSearchFocus();
+            openFeature(new PlannerFragment());
             return;
         }
 

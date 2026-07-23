@@ -502,4 +502,64 @@
         <item>@string/notes_color_neutral</item>
     </string-array>
 
+    <!-- Planner and Calendar -->
+    <string name="planner_title">Family Planner</string>
+    <string name="planner_subtitle">Events, tasks, schedules, and family responsibilities in one place</string>
+    <string name="planner_open_items">Open events and tasks</string>
+    <string name="planner_offline_status">Private • On device</string>
+    <string name="planner_search_hint">Search event, task, notes, or location</string>
+    <string name="planner_empty_title">Your planner is empty</string>
+    <string name="planner_empty_detail">Add a family event, appointment, school activity, or personal task.</string>
+    <string name="planner_add">Add planner item</string>
+    <string name="planner_edit">Edit planner item</string>
+    <string name="planner_save">Save item</string>
+    <string name="planner_title_label">Title</string>
+    <string name="planner_type_label">Item type</string>
+    <string name="planner_priority_label">Priority</string>
+    <string name="planner_member_label">Assigned to</string>
+    <string name="planner_start_label">Start or due date and time</string>
+    <string name="planner_end_label">End date and time (optional)</string>
+    <string name="planner_all_day">All-day event</string>
+    <string name="planner_location_label">Location (optional)</string>
+    <string name="planner_repeat_label">Repeat</string>
+    <string name="planner_reminder_enabled">Enable reminder</string>
+    <string name="planner_reminder_minutes">Remind minutes before</string>
+    <string name="planner_notes_label">Notes (optional)</string>
+    <string name="planner_title_required">Enter a title</string>
+    <string name="planner_end_invalid">End time must be after the start time</string>
+    <string name="planner_added">Planner item added</string>
+    <string name="planner_updated">Planner item updated</string>
+    <string name="planner_delete_title">Remove planner item?</string>
+    <string name="planner_delete_message">This permanently removes “%1$s” from the planner.</string>
+    <string name="planner_whole_family">Whole family</string>
+    <string name="planner_no_location">No location added</string>
+    <string name="planner_type_event">Event</string>
+    <string name="planner_type_task">Task</string>
+    <string name="planner_priority_normal">Normal</string>
+    <string name="planner_priority_high">High</string>
+    <string name="planner_priority_urgent">Urgent</string>
+    <string name="planner_repeat_none">Does not repeat</string>
+    <string name="planner_repeat_daily">Daily</string>
+    <string name="planner_repeat_weekly">Weekly</string>
+    <string name="planner_repeat_monthly">Monthly</string>
+    <string name="planner_repeat_yearly">Yearly</string>
+    <string name="more_planner_title">Family Planner</string>
+    <string name="more_planner_detail">Events, tasks, member assignments, and schedules</string>
+    <string-array name="planner_type_labels">
+        <item>@string/planner_type_event</item>
+        <item>@string/planner_type_task</item>
+    </string-array>
+    <string-array name="planner_priority_labels">
+        <item>@string/planner_priority_normal</item>
+        <item>@string/planner_priority_high</item>
+        <item>@string/planner_priority_urgent</item>
+    </string-array>
+    <string-array name="planner_repeat_labels">
+        <item>@string/planner_repeat_none</item>
+        <item>@string/planner_repeat_daily</item>
+        <item>@string/planner_repeat_weekly</item>
+        <item>@string/planner_repeat_monthly</item>
+        <item>@string/planner_repeat_yearly</item>
+    </string-array>
+
 </resources>

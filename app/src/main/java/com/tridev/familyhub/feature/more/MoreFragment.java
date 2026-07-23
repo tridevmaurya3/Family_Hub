@@ -22,6 +22,7 @@ import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.notes.NotesFragment;
+import com.tridev.familyhub.feature.planner.PlannerFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
 
@@ -71,6 +72,9 @@ public class MoreFragment extends Fragment {
         );
         binding.cardNotes.setOnClickListener(
                 clickedView -> openFeature(new NotesFragment())
+        );
+        binding.cardPlanner.setOnClickListener(
+                clickedView -> openFeature(new PlannerFragment())
         );
 
         boolean darkThemeEnabled =
