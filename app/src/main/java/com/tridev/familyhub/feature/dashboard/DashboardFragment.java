@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.cards.HeroCardModel;
+import com.tridev.familyhub.core.ui.cards.ActionCardModel;
 import com.tridev.familyhub.core.ui.cards.StatusCardModel;
 import com.tridev.familyhub.core.ui.cards.StatusCardView;
 import com.tridev.familyhub.core.ui.search.SearchBarModel;
@@ -106,7 +107,7 @@ public class DashboardFragment extends Fragment {
         setupSearchBar();
         setupHeroCard();
         setupStatusCards();
-        setupQuickActions();
+        setupActionCards();
         setupNotificationAction();
 
         loadDashboardData();
@@ -399,29 +400,24 @@ public class DashboardFragment extends Fragment {
         );
     }
 
-    /**
-     * Configures dashboard quick-action cards.
-     */
-    private void setupQuickActions() {
-        binding.quickFamily.setOnClickListener(
-                view -> openTab(
-                        R.id.nav_family
-                )
+    /** Connects live dashboard cards to their full modules. */
+    private void setupActionCards() {
+        binding.actionPlanner.setOnClickListener(
+                view -> openFeature(new PlannerFragment())
         );
-
-        binding.quickReminder.setOnClickListener(
-                view -> openTab(
-                        R.id.nav_reminders
-                )
+        binding.actionGrocery.setOnClickListener(
+                view -> openFeature(new GroceryFragment())
         );
-
-        binding.quickExpense.setOnClickListener(
-                view -> openTab(
-                        R.id.nav_finance
-                )
+        binding.actionDocuments.setOnClickListener(
+                view -> openFeature(new DocumentsFragment())
         );
-
-        binding.quickFamilyLive.setOnClickListener(
+        binding.actionVehicles.setOnClickListener(
+                view -> openFeature(new VehicleFragment())
+        );
+        binding.actionNotes.setOnClickListener(
+                view -> openFeature(new NotesFragment())
+        );
+        binding.actionFamilyLive.setOnClickListener(
                 view -> openFamilyLive()
         );
     }
@@ -487,8 +483,98 @@ public class DashboardFragment extends Fragment {
 
             renderFinance(data.getStats());
             renderCounts(data.getStats());
+            renderActionCards(data.getStats());
             renderReminder(data);
         });
+    }
+
+    private void renderActionCards(@NonNull DashboardStats stats) {
+        binding.actionPlanner.setModel(new ActionCardModel(
+                getString(R.string.action_planner_title),
+                getString(
+                        R.string.action_open_value,
+                        stats.getPlannerOpen()
+                ),
+                getString(
+                        R.string.action_completed_value,
+                        stats.getPlannerCompleted()
+                ),
+                R.drawable.ic_planner,
+                R.color.fh_module_reminders,
+                R.color.fh_module_reminders_container
+        ));
+
+        binding.actionGrocery.setModel(new ActionCardModel(
+                getString(R.string.action_grocery_title),
+                getString(
+                        R.string.action_pending_value,
+                        stats.getGroceryPending()
+                ),
+                getString(
+                        R.string.action_purchased_value,
+                        stats.getGroceryPurchased()
+                ),
+                R.drawable.ic_grocery,
+                R.color.fh_module_finance,
+                R.color.fh_module_finance_container
+        ));
+
+        binding.actionDocuments.setModel(new ActionCardModel(
+                getString(R.string.action_documents_title),
+                getString(
+                        R.string.action_files_value,
+                        stats.getDocuments()
+                ),
+                getString(
+                        R.string.action_due_value,
+                        stats.getDocumentsExpiringSoon()
+                ),
+                R.drawable.ic_document,
+                R.color.fh_module_documents,
+                R.color.fh_module_documents_container
+        ));
+
+        binding.actionVehicles.setModel(new ActionCardModel(
+                getString(R.string.action_vehicles_title),
+                getString(
+                        R.string.action_due_value,
+                        stats.getVehiclesDueSoon()
+                ),
+                getString(R.string.action_vehicle_due_detail),
+                R.drawable.ic_vehicle,
+                R.color.fh_module_vehicle,
+                R.color.fh_module_vehicle_container
+        ));
+
+        binding.actionNotes.setModel(new ActionCardModel(
+                getString(R.string.action_notes_title),
+                getString(
+                        R.string.action_active_value,
+                        stats.getActiveNotes()
+                ),
+                getString(
+                        R.string.action_pinned_value,
+                        stats.getPinnedNotes()
+                ),
+                R.drawable.ic_note,
+                R.color.fh_primary,
+                R.color.fh_primary_container
+        ));
+
+        binding.actionFamilyLive.setModel(new ActionCardModel(
+                getString(R.string.action_family_live_title),
+                getString(
+                        R.string.action_sharing_value,
+                        stats.getFamilyLiveSharing()
+                ),
+                getString(
+                        R.string.action_members_value,
+                        stats.getTotalMembers()
+                ),
+                R.drawable.ic_family,
+                R.color.fh_module_family,
+                R.color.fh_module_family_container
+        ));
     }
 
     private void renderFinance(@NonNull DashboardStats stats) {

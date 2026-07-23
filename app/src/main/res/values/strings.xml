@@ -562,4 +562,25 @@
         <item>@string/planner_repeat_yearly</item>
     </string-array>
 
+    <!-- Dashboard live action center -->
+    <string name="dashboard_action_center">Action center</string>
+    <string name="dashboard_action_center_detail">Live status from your family modules • Tap a card to take action</string>
+    <string name="action_planner_title">Planner</string>
+    <string name="action_grocery_title">Grocery</string>
+    <string name="action_documents_title">Documents</string>
+    <string name="action_vehicles_title">Vehicles</string>
+    <string name="action_notes_title">Notes</string>
+    <string name="action_family_live_title">Family Live</string>
+    <string name="action_open_value">%1$d open</string>
+    <string name="action_completed_value">%1$d completed</string>
+    <string name="action_pending_value">%1$d pending</string>
+    <string name="action_purchased_value">%1$d purchased</string>
+    <string name="action_files_value">%1$d files</string>
+    <string name="action_due_value">%1$d due</string>
+    <string name="action_vehicle_due_detail">Insurance, PUC, or service within 30 days</string>
+    <string name="action_active_value">%1$d active</string>
+    <string name="action_pinned_value">%1$d pinned</string>
+    <string name="action_sharing_value">%1$d sharing</string>
+    <string name="action_members_value">%1$d family members</string>
+
 </resources>

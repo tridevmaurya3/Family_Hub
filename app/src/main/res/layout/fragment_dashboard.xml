@@ -73,21 +73,92 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16" />
 
-        <!-- Quick actions heading -->
+        <!-- Live action center -->
         <TextView
             style="@style/TextAppearance.FamilyHub.SectionTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_24"
-            android:text="@string/quick_actions"
+            android:text="@string/dashboard_action_center"
             android:textColor="@color/fh_on_surface" />
 
-        <!-- Quick actions first row -->
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_4"
+            android:text="@string/dashboard_action_center_detail" />
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="132dp"
             android:layout_marginTop="@dimen/space_12"
             android:orientation="horizontal">
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_planner"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_grocery"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="132dp"
+            android:layout_marginTop="@dimen/space_12"
+            android:orientation="horizontal">
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_documents"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_vehicles"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="132dp"
+            android:layout_marginTop="@dimen/space_12"
+            android:orientation="horizontal">
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_notes"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_family_live"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- Retained IDs are hidden for ViewBinding compatibility. -->
+        <LinearLayout
+            android:id="@+id/legacy_quick_row_one"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/quick_family"
@@ -175,10 +246,11 @@
 
         <!-- Quick actions second row -->
         <LinearLayout
+            android:id="@+id/legacy_quick_row_two"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/quick_expense"
