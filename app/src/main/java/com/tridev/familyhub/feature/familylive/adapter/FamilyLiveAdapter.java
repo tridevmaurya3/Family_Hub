@@ -1,13 +1,14 @@
 package com.tridev.familyhub.feature.familylive.adapter;
 
+import android.content.Context;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -20,7 +21,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Displays Family Live member status com.tridev.familyhub.core.ui.cards.
+ * Displays Family Live member status cards.
  */
 public class FamilyLiveAdapter
         extends RecyclerView.Adapter<FamilyLiveAdapter.ViewHolder> {
@@ -61,23 +62,38 @@ public class FamilyLiveAdapter
             int position
     ) {
         FamilyLiveMemberUiModel member = members.get(position);
+        Context context = holder.itemView.getContext();
 
         holder.memberName.setText(member.getMemberName());
         holder.avatar.setText(createInitials(member.getMemberName()));
         holder.location.setText(
-                emptyFallback(member.getCurrentLocation(), "Location unavailable")
+                emptyFallback(
+                        member.getCurrentLocation(),
+                        context.getString(
+                                R.string.family_live_location_unavailable
+                        )
+                )
         );
 
         holder.status.setText(
-                emptyFallback(member.getOnlineStatus(), "Unknown")
+                displayLabel(emptyFallback(
+                        member.getOnlineStatus(),
+                        context.getString(R.string.family_live_unknown)
+                ))
         );
 
         holder.movement.setText(
-                emptyFallback(member.getMovementType(), "Status unavailable")
+                displayLabel(emptyFallback(
+                        member.getMovementType(),
+                        context.getString(
+                                R.string.family_live_status_unavailable
+                        )
+                ))
         );
 
         holder.battery.setText(
                 createBatteryText(
+                        context,
                         member.getBatteryPercentage(),
                         member.isCharging()
                 )
@@ -85,12 +101,15 @@ public class FamilyLiveAdapter
 
         holder.connection.setText(
                 member.isInternetAvailable()
-                        ? "Internet available"
-                        : "No internet connection"
+                        ? R.string.family_live_internet_available
+                        : R.string.family_live_internet_unavailable
         );
 
         holder.lastUpdated.setText(
-                createUpdatedText(member.getLastUpdatedTime())
+                createUpdatedText(
+                        context,
+                        member.getLastUpdatedTime()
+                )
         );
 
         applyStatusAppearance(
@@ -111,12 +130,18 @@ public class FamilyLiveAdapter
         boolean online = status != null
                 && STATUS_ONLINE.equalsIgnoreCase(status.trim());
 
-        int statusColor = Color.parseColor(
-                online ? "#16875B" : "#C94A4A"
+        Context context = holder.itemView.getContext();
+
+        int statusColor = ContextCompat.getColor(
+                context,
+                online ? R.color.fh_success : R.color.fh_error
         );
 
-        int statusBackground = Color.parseColor(
-                online ? "#E8F5EE" : "#FDECEC"
+        int statusBackground = ContextCompat.getColor(
+                context,
+                online
+                        ? R.color.fh_success_container
+                        : R.color.fh_error_container
         );
 
         holder.status.setTextColor(statusColor);
@@ -134,34 +159,40 @@ public class FamilyLiveAdapter
 
     @NonNull
     private String createBatteryText(
+            @NonNull Context context,
             int batteryPercentage,
             boolean charging
     ) {
         if (batteryPercentage < 0) {
-            return "Battery unavailable";
+            return context.getString(
+                    R.string.family_live_battery_unavailable
+            );
         }
 
         int safeBattery = Math.min(batteryPercentage, 100);
 
         if (charging) {
-            return String.format(
-                    Locale.getDefault(),
-                    "Charging %d%%",
+            return context.getString(
+                    R.string.family_live_charging_format,
                     safeBattery
             );
         }
 
-        return String.format(
-                Locale.getDefault(),
-                "Battery %d%%",
+        return context.getString(
+                R.string.family_live_battery_format,
                 safeBattery
         );
     }
 
     @NonNull
-    private String createUpdatedText(long updatedTime) {
+    private String createUpdatedText(
+            @NonNull Context context,
+            long updatedTime
+    ) {
         if (updatedTime <= 0L) {
-            return "Update time unavailable";
+            return context.getString(
+                    R.string.family_live_update_unavailable
+            );
         }
 
         long difference = Math.max(
@@ -172,21 +203,51 @@ public class FamilyLiveAdapter
         long minutes = TimeUnit.MILLISECONDS.toMinutes(difference);
 
         if (minutes < 1L) {
-            return "Updated just now";
+            return context.getString(
+                    R.string.family_live_updated_now
+            );
         }
 
         if (minutes < 60L) {
-            return "Updated " + minutes + " min ago";
+            return context.getString(
+                    R.string.family_live_updated_minutes,
+                    minutes
+            );
         }
 
         long hours = TimeUnit.MILLISECONDS.toHours(difference);
 
         if (hours < 24L) {
-            return "Updated " + hours + " hr ago";
+            return context.getString(
+                    R.string.family_live_updated_hours,
+                    hours
+            );
         }
 
         long days = TimeUnit.MILLISECONDS.toDays(difference);
-        return "Updated " + days + " day ago";
+        return context.getString(
+                R.string.family_live_updated_days,
+                days
+        );
+    }
+
+    @NonNull
+    private String displayLabel(@NonNull String value) {
+        if (value.contains(" ")) {
+            return value;
+        }
+
+        String normalized = value
+                .replace('_', ' ')
+                .toLowerCase(Locale.getDefault());
+
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+
+        return normalized.substring(0, 1)
+                .toUpperCase(Locale.getDefault())
+                + normalized.substring(1);
     }
 
     @NonNull

@@ -2,26 +2,19 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.FamilyHub.Card.Flat"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="10dp"
-    android:layout_marginTop="6dp"
-    android:layout_marginEnd="10dp"
-    android:layout_marginBottom="6dp"
+    android:layout_marginBottom="@dimen/card_spacing"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="@color/fh_surface"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="0dp"
-    app:strokeColor="@color/fh_outline"
-    app:strokeWidth="1dp">
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="@dimen/card_padding">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -37,11 +30,10 @@
                     android:id="@+id/tvAvatar"
                     android:layout_width="52dp"
                     android:layout_height="52dp"
-                    android:background="@drawable/bg_placeholder_icon"
+                    android:background="@drawable/bg_member_avatar"
                     android:gravity="center"
-                    android:text="TM"
-                    android:textColor="@color/fh_primary"
-                    android:textSize="17sp"
+                    android:textColor="@color/fh_on_primary"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <View
@@ -56,99 +48,84 @@
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
+                android:layout_marginStart="@dimen/space_12"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvMemberName"
                     style="@style/TextAppearance.FamilyHub.CardTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:maxLines="1"
-                    android:text="Tridev Maurya"
-                    android:textColor="@color/fh_on_surface"
-                    android:ellipsize="end" />
+                    android:ellipsize="end"
+                    android:maxLines="1" />
 
                 <TextView
                     android:id="@+id/tvLocation"
-                    style="@style/TextAppearance.FamilyHub.Body"
-                    android:layout_width="wrap_content"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:maxLines="1"
-                    android:text="Home"
-                    android:textColor="@color/fh_on_surface_variant"
-                    android:ellipsize="end" />
+                    android:layout_marginTop="@dimen/space_4"
+                    android:ellipsize="end"
+                    android:maxLines="1" />
 
             </LinearLayout>
 
             <TextView
                 android:id="@+id/tvStatus"
+                style="@style/TextAppearance.FamilyHub.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_status_pill"
-                android:paddingStart="10dp"
-                android:paddingTop="5dp"
-                android:paddingEnd="10dp"
-                android:paddingBottom="5dp"
-                android:text="Online"
-                android:textColor="@color/fh_primary"
-                android:textSize="12sp"
+                android:paddingStart="@dimen/space_10"
+                android:paddingTop="@dimen/space_6"
+                android:paddingEnd="@dimen/space_10"
+                android:paddingBottom="@dimen/space_6"
                 android:textStyle="bold" />
 
         </LinearLayout>
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="12dp"
-            android:background="@color/fh_outline" />
+            android:layout_height="@dimen/border_width"
+            android:layout_marginTop="@dimen/space_12"
+            android:background="@color/fh_divider" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/tvMovement"
-                style="@style/TextAppearance.FamilyHub.Body"
+                style="@style/TextAppearance.FamilyHub.BodyStrong"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="At home"
-                android:textColor="@color/fh_on_surface" />
+                android:layout_weight="1" />
 
             <TextView
                 android:id="@+id/tvBattery"
-                style="@style/TextAppearance.FamilyHub.Body"
+                style="@style/TextAppearance.FamilyHub.BodyStrong"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Battery 87%"
-                android:textColor="@color/fh_on_surface" />
+                android:layout_height="wrap_content" />
 
         </LinearLayout>
 
         <TextView
             android:id="@+id/tvConnection"
-            style="@style/TextAppearance.FamilyHub.Body"
+            style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
-            android:text="Internet available"
-            android:textColor="@color/fh_on_surface_variant" />
+            android:layout_marginTop="@dimen/space_8" />
 
         <TextView
             android:id="@+id/tvLastUpdated"
-            style="@style/TextAppearance.FamilyHub.Body"
+            style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="5dp"
-            android:text="Updated just now"
-            android:textColor="@color/fh_on_surface_variant"
-            android:textSize="12sp" />
+            android:layout_marginTop="@dimen/space_4" />
 
     </LinearLayout>
 

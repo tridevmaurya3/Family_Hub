@@ -6,11 +6,32 @@ import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
+import com.tridev.familyhub.data.model.FamilyLiveMemberData;
 
 import java.util.List;
 
 @Dao
 public interface FamilyLiveStatusDao {
+
+    @Query("SELECT "
+            + "member.id AS familyMemberId, "
+            + "member.name AS memberName, "
+            + "member.relation AS relation, "
+            + "COALESCE(status.onlineStatus, 'UNKNOWN') AS onlineStatus, "
+            + "COALESCE(status.currentPlaceName, '') AS currentPlaceName, "
+            + "COALESCE(status.batteryPercentage, -1) AS batteryPercentage, "
+            + "COALESCE(status.isCharging, 0) AS isCharging, "
+            + "COALESCE(status.hasInternet, 0) AS hasInternet, "
+            + "COALESCE(status.movementType, 'UNKNOWN') AS movementType, "
+            + "COALESCE(status.lastUpdatedAt, 0) AS lastUpdatedAt, "
+            + "COALESCE(status.isLocationSharingEnabled, 0) "
+            + "AS isLocationSharingEnabled, "
+            + "COALESCE(status.hasLocation, 0) AS hasLocation "
+            + "FROM family_members AS member "
+            + "LEFT JOIN family_live_status AS status "
+            + "ON status.familyMemberId = member.id "
+            + "ORDER BY member.name COLLATE NOCASE ASC")
+    List<FamilyLiveMemberData> getMemberStatuses();
 
     @Query("SELECT * FROM family_live_status "
             + "ORDER BY isLocationSharingEnabled DESC, lastUpdatedAt DESC")

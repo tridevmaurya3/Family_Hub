@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyLiveStatusDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
+import com.tridev.familyhub.data.model.FamilyLiveMemberData;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -21,6 +22,12 @@ import java.util.concurrent.Executors;
  * All Room operations are performed away from the main UI thread.
  */
 public class FamilyLiveRepository {
+
+    public interface MemberStatusListCallback {
+        void onMemberStatusesLoaded(
+                @NonNull List<FamilyLiveMemberData> memberStatuses
+        );
+    }
 
     public interface StatusListCallback {
         void onStatusListLoaded(@NonNull List<FamilyLiveStatus> statusList);
@@ -44,6 +51,19 @@ public class FamilyLiveRepository {
         familyLiveStatusDao = FamilyHubDatabase
                 .getInstance(context)
                 .familyLiveStatusDao();
+    }
+
+    public void loadMemberStatuses(
+            @NonNull MemberStatusListCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<FamilyLiveMemberData> memberStatuses =
+                    familyLiveStatusDao.getMemberStatuses();
+
+            mainHandler.post(
+                    () -> callback.onMemberStatusesLoaded(memberStatuses)
+            );
+        });
     }
 
     public void loadAll(@NonNull StatusListCallback callback) {
