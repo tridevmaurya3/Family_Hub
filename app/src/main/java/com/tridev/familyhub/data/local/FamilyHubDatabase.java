@@ -17,6 +17,7 @@ import com.tridev.familyhub.data.local.dao.PasswordEntryDao;
 import com.tridev.familyhub.data.local.dao.HealthRecordDao;
 import com.tridev.familyhub.data.local.dao.VehicleDao;
 import com.tridev.familyhub.data.local.dao.PropertyDao;
+import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -26,6 +27,7 @@ import com.tridev.familyhub.data.local.entity.PasswordEntry;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.PropertyEntry;
+import com.tridev.familyhub.data.local.entity.GroceryItem;
 
 /**
  * The private on-device database.
@@ -43,9 +45,10 @@ import com.tridev.familyhub.data.local.entity.PropertyEntry;
                 PasswordEntry.class,
                 HealthRecord.class,
                 Vehicle.class,
-                PropertyEntry.class
+                PropertyEntry.class,
+                GroceryItem.class
         },
-        version = 8,
+        version = 9,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -64,6 +67,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract HealthRecordDao healthRecordDao();
     public abstract VehicleDao vehicleDao();
     public abstract PropertyDao propertyDao();
+    public abstract GroceryItemDao groceryItemDao();
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -308,6 +312,41 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Adds the offline family grocery and shopping list. */
+    private static final Migration MIGRATION_8_9 = new Migration(8, 9) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `grocery_items` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`name` TEXT NOT NULL, "
+                            + "`category` TEXT NOT NULL, "
+                            + "`quantity` TEXT NOT NULL, "
+                            + "`estimatedCost` REAL NOT NULL, "
+                            + "`priority` TEXT NOT NULL, "
+                            + "`isPurchased` INTEGER NOT NULL, "
+                            + "`notes` TEXT NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "`purchasedAt` INTEGER NOT NULL)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_grocery_items_category` "
+                            + "ON `grocery_items` (`category`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_grocery_items_isPurchased` "
+                            + "ON `grocery_items` (`isPurchased`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_grocery_items_priority` "
+                            + "ON `grocery_items` (`priority`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -324,7 +363,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_4_5,
                                     MIGRATION_5_6,
                                     MIGRATION_6_7,
-                                    MIGRATION_7_8
+                                    MIGRATION_7_8,
+                                    MIGRATION_8_9
                             )
                             .build();
                 }
