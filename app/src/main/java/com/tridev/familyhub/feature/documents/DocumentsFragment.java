@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -122,6 +123,15 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     private void showDocumentEditor() {
         DialogDocumentEditorBinding dialogBinding =
                 DialogDocumentEditorBinding.inflate(getLayoutInflater());
+        String[] categoryLabels = getResources().getStringArray(
+                R.array.document_category_labels
+        );
+        dialogBinding.documentCategoryInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                categoryLabels
+        ));
+        dialogBinding.documentCategoryInput.setText(categoryLabels[0], false);
 
         androidx.appcompat.app.AlertDialog dialog =
                 new MaterialAlertDialogBuilder(requireContext())

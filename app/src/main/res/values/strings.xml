@@ -632,4 +632,110 @@
     <string name="planner_notification_channel">Planner alerts</string>
     <string name="planner_notification_channel_detail">Events and tasks scheduled in Family Planner</string>
 
+    <!-- Standardized form dropdown choices -->
+    <string-array name="family_relation_labels">
+        <item>Father</item>
+        <item>Mother</item>
+        <item>Spouse</item>
+        <item>Son</item>
+        <item>Daughter</item>
+        <item>Brother</item>
+        <item>Sister</item>
+        <item>Grandfather</item>
+        <item>Grandmother</item>
+        <item>Guardian</item>
+        <item>Relative</item>
+    </string-array>
+    <string-array name="finance_expense_category_labels">
+        <item>Food &amp; Grocery</item>
+        <item>Home &amp; Utilities</item>
+        <item>Health</item>
+        <item>Education</item>
+        <item>Transport</item>
+        <item>Shopping</item>
+        <item>Entertainment</item>
+        <item>EMI &amp; Loan</item>
+        <item>Insurance</item>
+        <item>Other expense</item>
+    </string-array>
+    <string-array name="finance_income_category_labels">
+        <item>Salary</item>
+        <item>Business</item>
+        <item>Investment</item>
+        <item>Rent</item>
+        <item>Gift</item>
+        <item>Refund</item>
+        <item>Other income</item>
+    </string-array>
+    <string-array name="document_category_labels">
+        <item>Identity</item>
+        <item>Education</item>
+        <item>Health</item>
+        <item>Finance &amp; Bank</item>
+        <item>Insurance</item>
+        <item>Vehicle</item>
+        <item>Property</item>
+        <item>Employment</item>
+        <item>Family</item>
+        <item>Other</item>
+    </string-array>
+    <string-array name="grocery_category_labels">
+        <item>Vegetables</item>
+        <item>Fruits</item>
+        <item>Dairy</item>
+        <item>Grains &amp; Pulses</item>
+        <item>Snacks</item>
+        <item>Beverages</item>
+        <item>Household</item>
+        <item>Personal care</item>
+        <item>Medicine</item>
+        <item>Other</item>
+    </string-array>
+    <string-array name="vehicle_fuel_labels">
+        <item>Petrol</item>
+        <item>Diesel</item>
+        <item>CNG</item>
+        <item>Electric</item>
+        <item>Hybrid</item>
+        <item>LPG</item>
+        <item>Other</item>
+    </string-array>
+    <string-array name="property_state_labels">
+        <item>Andhra Pradesh</item>
+        <item>Arunachal Pradesh</item>
+        <item>Assam</item>
+        <item>Bihar</item>
+        <item>Chhattisgarh</item>
+        <item>Delhi</item>
+        <item>Goa</item>
+        <item>Gujarat</item>
+        <item>Haryana</item>
+        <item>Himachal Pradesh</item>
+        <item>Jharkhand</item>
+        <item>Karnataka</item>
+        <item>Kerala</item>
+        <item>Madhya Pradesh</item>
+        <item>Maharashtra</item>
+        <item>Odisha</item>
+        <item>Punjab</item>
+        <item>Rajasthan</item>
+        <item>Tamil Nadu</item>
+        <item>Telangana</item>
+        <item>Uttar Pradesh</item>
+        <item>Uttarakhand</item>
+        <item>West Bengal</item>
+        <item>Other state or territory</item>
+    </string-array>
+    <string-array name="notes_category_labels">
+        <item>Family</item>
+        <item>Personal</item>
+        <item>Important</item>
+        <item>Work</item>
+        <item>Health</item>
+        <item>Finance</item>
+        <item>Shopping</item>
+        <item>Ideas</item>
+        <item>Other</item>
+    </string-array>
+
 </resources>

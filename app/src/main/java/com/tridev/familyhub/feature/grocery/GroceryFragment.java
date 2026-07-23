@@ -134,6 +134,14 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] priorityLabels = getResources().getStringArray(
                 R.array.grocery_priority_labels
         );
+        String[] categoryLabels = getResources().getStringArray(
+                R.array.grocery_category_labels
+        );
+        form.groceryCategoryInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                categoryLabels
+        ));
         form.groceryPriorityInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
@@ -141,11 +149,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         ));
 
         if (existing == null) {
+            form.groceryCategoryInput.setText(categoryLabels[0], false);
             form.groceryPriorityInput.setText(priorityLabels[0], false);
         } else {
             form.groceryDialogTitle.setText(R.string.grocery_edit_item);
             form.groceryNameInput.setText(item.name);
-            form.groceryCategoryInput.setText(item.category);
+            form.groceryCategoryInput.setText(item.category, false);
             form.groceryQuantityInput.setText(item.quantity);
             if (item.estimatedCost > 0) {
                 form.groceryCostInput.setText(String.valueOf(

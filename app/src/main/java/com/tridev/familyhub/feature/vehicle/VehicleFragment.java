@@ -165,6 +165,14 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 typeLabels
         ));
+        String[] fuelLabels = getResources().getStringArray(
+                R.array.vehicle_fuel_labels
+        );
+        form.vehicleFuelInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                fuelLabels
+        ));
 
         long[] selectedDates = {
                 vehicle.insuranceExpiryAt,
@@ -175,6 +183,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         if (existing == null) {
             form.vehicleOwnerInput.setText(members.get(0).name, false);
             form.vehicleTypeInput.setText(typeLabels[0], false);
+            form.vehicleFuelInput.setText(fuelLabels[0], false);
         } else {
             form.vehicleDialogTitle.setText(R.string.vehicle_edit);
             form.vehicleOwnerInput.setText(existing.ownerName, false);
@@ -186,7 +195,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             form.vehicleRegistrationInput.setText(vehicle.registrationNumber);
             form.vehicleManufacturerInput.setText(vehicle.manufacturer);
             form.vehicleModelInput.setText(vehicle.model);
-            form.vehicleFuelInput.setText(vehicle.fuelType);
+            form.vehicleFuelInput.setText(vehicle.fuelType, false);
             if (vehicle.manufactureYear > 0) {
                 form.vehicleYearInput.setText(String.valueOf(
                         vehicle.manufactureYear

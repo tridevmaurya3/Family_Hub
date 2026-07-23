@@ -2,7 +2,7 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.FamilyHub.Card.Flat"
+    style="@style/Widget.FamilyHub.Card.Data"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/card_spacing"
@@ -119,7 +119,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_health_record_button"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.FamilyHub.Button.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:minWidth="0dp"
@@ -128,7 +128,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/delete_health_record_button"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.FamilyHub.Button.Danger"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:layout_marginStart="@dimen/space_4"

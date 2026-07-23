@@ -179,19 +179,18 @@
             android:orientation="horizontal">
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
+                style="@style/Widget.FamilyHub.Form.Dropdown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/space_4"
                 android:layout_weight="1"
                 android:hint="@string/vehicle_fuel">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/vehicle_fuel_input"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textCapWords"
-                    android:maxLines="1" />
+                android:inputType="none" />
 
             </com.google.android.material.textfield.TextInputLayout>
 

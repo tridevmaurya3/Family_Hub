@@ -67,18 +67,17 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/document_category_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/document_category">
 
-            <com.google.android.material.textfield.TextInputEditText
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/document_category_input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapWords"
-                android:maxLines="1" />
+                android:inputType="none" />
 
         </com.google.android.material.textfield.TextInputLayout>
 

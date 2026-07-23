@@ -156,13 +156,16 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
                 getResources().getStringArray(R.array.member_blood_labels);
         String[] roleLabels =
                 getResources().getStringArray(R.array.member_role_labels);
+        String[] relationLabels =
+                getResources().getStringArray(R.array.family_relation_labels);
         dialogBinding.memberGenderInput.setAdapter(dropdown(genderLabels));
         dialogBinding.memberBloodGroupInput.setAdapter(dropdown(bloodLabels));
         dialogBinding.memberRoleInput.setAdapter(dropdown(roleLabels));
+        dialogBinding.memberRelationInput.setAdapter(dropdown(relationLabels));
 
         if (!isNewMember) {
             dialogBinding.memberNameInput.setText(existingMember.name);
-            dialogBinding.memberRelationInput.setText(existingMember.relation);
+            dialogBinding.memberRelationInput.setText(existingMember.relation, false);
             dialogBinding.memberPhoneInput.setText(existingMember.phone);
             dialogBinding.memberEmailInput.setText(existingMember.email);
             dialogBinding.memberBirthDateInput.setText(existingMember.dateOfBirth);

@@ -163,11 +163,20 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 typeLabels
         ));
+        String[] stateLabels = getResources().getStringArray(
+                R.array.property_state_labels
+        );
+        form.propertyStateInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                stateLabels
+        ));
 
         long[] purchaseDate = {property.purchaseDate};
         if (existing == null) {
             form.propertyOwnerInput.setText(members.get(0).name, false);
             form.propertyTypeInput.setText(typeLabels[0], false);
+            form.propertyStateInput.setText(stateLabels[0], false);
         } else {
             form.propertyDialogTitle.setText(R.string.property_edit);
             form.propertyOwnerInput.setText(existing.ownerName, false);
@@ -178,7 +187,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
             form.propertyTitleInput.setText(property.title);
             form.propertyAddressInput.setText(property.address);
             form.propertyCityInput.setText(property.city);
-            form.propertyStateInput.setText(property.state);
+            form.propertyStateInput.setText(property.state, false);
             form.propertyPostalInput.setText(property.postalCode);
             form.propertyAreaInput.setText(property.area);
             setNumber(form.propertyPurchaseValueInput, property.purchaseValue);

@@ -8,6 +8,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
@@ -142,6 +143,21 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         dialogBinding.financeEntryDateInput.setText(isNewEntry
                 ? todayAsIsoDate()
                 : existingEntry.transactionDate);
+        String[] expenseCategories = getResources().getStringArray(
+                R.array.finance_expense_category_labels
+        );
+        String[] incomeCategories = getResources().getStringArray(
+                R.array.finance_income_category_labels
+        );
+        updateCategoryChoices(dialogBinding, expenseCategories);
+        dialogBinding.financeTypeGroup.setOnCheckedChangeListener(
+                (group, checkedId) -> updateCategoryChoices(
+                        dialogBinding,
+                        checkedId == R.id.type_income_button
+                                ? incomeCategories
+                                : expenseCategories
+                )
+        );
 
         if (!isNewEntry) {
             dialogBinding.financeAmountInput.setText(String.valueOf(existingEntry.amount));
@@ -150,6 +166,12 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             dialogBinding.financeTypeGroup.check(FinanceEntry.TYPE_INCOME.equals(existingEntry.entryType)
                     ? R.id.type_income_button
                     : R.id.type_expense_button);
+            updateCategoryChoices(
+                    dialogBinding,
+                    FinanceEntry.TYPE_INCOME.equals(existingEntry.entryType)
+                            ? incomeCategories
+                            : expenseCategories
+            );
         }
 
         final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
@@ -192,6 +214,17 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             });
         });
         dialog.show();
+    }
+
+    private void updateCategoryChoices(
+            @NonNull DialogFinanceEntryBinding editor,
+            @NonNull String[] categories
+    ) {
+        editor.financeCategoryInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                categories
+        ));
     }
 
     @Nullable

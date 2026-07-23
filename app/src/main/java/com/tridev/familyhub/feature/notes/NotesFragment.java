@@ -146,6 +146,13 @@ public class NotesFragment extends Fragment implements AddActionHost {
                 getResources().getStringArray(R.array.notes_type_labels);
         String[] colorLabels =
                 getResources().getStringArray(R.array.notes_color_labels);
+        String[] categoryLabels =
+                getResources().getStringArray(R.array.notes_category_labels);
+        form.noteCategoryInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                categoryLabels
+        ));
         form.noteTypeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
@@ -158,13 +165,14 @@ public class NotesFragment extends Fragment implements AddActionHost {
         ));
 
         if (existing == null) {
+            form.noteCategoryInput.setText(categoryLabels[0], false);
             form.noteTypeInput.setText(typeLabels[0], false);
             form.noteColorInput.setText(colorLabels[0], false);
         } else {
             form.noteDialogTitle.setText(R.string.notes_edit);
             form.noteTitleInput.setText(note.title);
             form.noteContentInput.setText(note.content);
-            form.noteCategoryInput.setText(note.category);
+            form.noteCategoryInput.setText(note.category, false);
             form.noteTypeInput.setText(
                     typeLabels[indexOf(NOTE_TYPES, note.noteType)],
                     false
