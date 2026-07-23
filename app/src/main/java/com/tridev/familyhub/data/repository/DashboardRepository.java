@@ -1,9 +1,12 @@
 package com.tridev.familyhub.data.repository;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 
+import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
@@ -11,7 +14,10 @@ import com.tridev.familyhub.data.model.DashboardStats;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+/** Central read-only data source for the dashboard. */
 public class DashboardRepository {
 
     public interface DashboardDataCallback {
@@ -20,10 +26,17 @@ public class DashboardRepository {
 
     private final FinanceRepository financeRepository;
     private final ReminderRepository reminderRepository;
+    private final FamilyHubDatabase database;
+    private final ExecutorService databaseExecutor;
+    private final Handler mainHandler;
 
     public DashboardRepository(@NonNull Context context) {
-        financeRepository = new FinanceRepository(context);
-        reminderRepository = new ReminderRepository(context);
+        Context applicationContext = context.getApplicationContext();
+        financeRepository = new FinanceRepository(applicationContext);
+        reminderRepository = new ReminderRepository(applicationContext);
+        database = FamilyHubDatabase.getInstance(applicationContext);
+        databaseExecutor = Executors.newSingleThreadExecutor();
+        mainHandler = new Handler(Looper.getMainLooper());
     }
 
     public void loadDashboardData(
@@ -62,18 +75,28 @@ public class DashboardRepository {
                     );
                 }
 
-                // Placeholder values until other modules are ready
-                stats.setTotalMembers(0);
-                stats.setMaleMembers(0);
-                stats.setFemaleMembers(0);
-                stats.setChildren(0);
-
-                stats.setDocuments(0);
-                stats.setHealthAlerts(0);
-
-                callback.onLoaded(dashboardData);
+                loadLocalCounts(dashboardData, callback);
             });
 
+        });
+    }
+
+    private void loadLocalCounts(
+            @NonNull DashboardData dashboardData,
+            @NonNull DashboardDataCallback callback
+    ) {
+        databaseExecutor.execute(() -> {
+            DashboardStats stats = dashboardData.getStats();
+            stats.setTotalMembers(database.familyMemberDao().count());
+            stats.setDocuments(database.documentDao().count());
+
+            // These fields become live when the corresponding modules exist.
+            stats.setMaleMembers(0);
+            stats.setFemaleMembers(0);
+            stats.setChildren(0);
+            stats.setHealthAlerts(0);
+
+            mainHandler.post(() -> callback.onLoaded(dashboardData));
         });
     }
 
@@ -126,5 +149,9 @@ public class DashboardRepository {
         }
 
         return calendar.getTimeInMillis();
+    }
+
+    public void close() {
+        databaseExecutor.shutdown();
     }
 }

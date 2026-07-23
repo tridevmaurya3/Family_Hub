@@ -15,25 +15,20 @@ import com.tridev.familyhub.core.ui.cards.HeroCardModel;
 import com.tridev.familyhub.core.ui.cards.StatusCardModel;
 import com.tridev.familyhub.core.ui.cards.StatusCardView;
 import com.tridev.familyhub.core.ui.search.SearchBarModel;
-import com.tridev.familyhub.data.local.entity.FinanceSummary;
+import com.tridev.familyhub.data.model.DashboardData;
+import com.tridev.familyhub.data.model.DashboardStats;
 import com.tridev.familyhub.data.local.entity.Reminder;
-import com.tridev.familyhub.data.repository.FinanceRepository;
-import com.tridev.familyhub.data.repository.ReminderRepository;
+import com.tridev.familyhub.data.repository.DashboardRepository;
 import com.tridev.familyhub.databinding.FragmentDashboardBinding;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
-import com.tridev.familyhub.data.local.FamilyHubDatabase;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Main Family Hub dashboard.
@@ -50,9 +45,7 @@ public class DashboardFragment extends Fragment {
 
     private FragmentDashboardBinding binding;
 
-    private FinanceRepository financeRepository;
-    private ReminderRepository reminderRepository;
-    private final ExecutorService dashboardExecutor = Executors.newSingleThreadExecutor();
+    private DashboardRepository dashboardRepository;
 
     private StatusCardView financeStatusCard;
     private StatusCardView healthStatusCard;
@@ -99,11 +92,8 @@ public class DashboardFragment extends Fragment {
     ) {
         super.onViewCreated(view, savedInstanceState);
 
-        financeRepository =
-                new FinanceRepository(requireContext());
-
-        reminderRepository =
-                new ReminderRepository(requireContext());
+        dashboardRepository =
+                new DashboardRepository(requireContext());
 
         bindStatusCards();
 
@@ -113,9 +103,7 @@ public class DashboardFragment extends Fragment {
         setupQuickActions();
         setupNotificationAction();
 
-        updateFinanceSnapshot();
-        updateUpcomingReminder();
-        updateCounts();
+        loadDashboardData();
     }
 
     /**
@@ -431,230 +419,99 @@ public class DashboardFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
-        if (financeRepository != null) {
-            updateFinanceSnapshot();
+        if (dashboardRepository != null) {
+            loadDashboardData();
         }
-
-        if (reminderRepository != null) {
-            updateUpcomingReminder();
-        }
-        updateCounts();
     }
 
-    private void updateCounts() {
-        if (!isAdded()) return;
-        dashboardExecutor.execute(() -> {
-            FamilyHubDatabase database = FamilyHubDatabase.getInstance(requireContext());
-            int members = database.familyMemberDao().count();
-            int documents = database.documentDao().count();
-            if (getActivity() == null) return;
-            requireActivity().runOnUiThread(() -> {
-                if (binding == null) return;
-                familyStatusCard.setModel(new StatusCardModel(
-                        getString(R.string.status_family), members + (members == 1 ? " member" : " members"),
-                        getString(R.string.status_family_ready), R.drawable.ic_family));
-                documentStatusCard.setModel(new StatusCardModel(
-                        getString(R.string.status_documents), documents + (documents == 1 ? " file" : " files"),
-                        "Stored securely on this device", R.drawable.ic_wallet));
-            });
+    private void loadDashboardData() {
+        dashboardRepository.loadDashboardData(data -> {
+            if (binding == null) {
+                return;
+            }
+
+            renderFinance(data.getStats());
+            renderCounts(data.getStats());
+            renderReminder(data);
         });
     }
 
-    /**
-     * Loads the current month's income and expense summary.
-     */
-    private void updateFinanceSnapshot() {
-        financeRepository.loadCurrentMonthSummary(
-                summary -> {
-                    if (binding == null) {
-                        return;
-                    }
+    private void renderFinance(@NonNull DashboardStats stats) {
+        binding.dashboardMonthlyExpenseValue.setText(
+                currencyFormatter.format(stats.getExpense())
+        );
 
-                    FinanceSummary safeSummary =
-                            summary == null
-                                    ? new FinanceSummary()
-                                    : summary;
+        String detail = getString(
+                R.string.dashboard_finance_detail,
+                currencyFormatter.format(stats.getIncome()),
+                currencyFormatter.format(stats.getBalance())
+        );
+        binding.dashboardMonthlyExpenseDetail.setText(detail);
 
-                    double balance =
-                            safeSummary.income
-                                    - safeSummary.expense;
-
-                    binding.dashboardMonthlyExpenseValue.setText(
-                            currencyFormatter.format(
-                                    safeSummary.expense
-                            )
-                    );
-
-                    binding.dashboardMonthlyExpenseDetail.setText(
-                            getString(
-                                    R.string.dashboard_finance_detail,
-                                    currencyFormatter.format(
-                                            safeSummary.income
-                                    ),
-                                    currencyFormatter.format(
-                                            balance
-                                    )
-                            )
-                    );
-
-                    if (financeStatusCard != null) {
-                        financeStatusCard.setModel(
-                                new StatusCardModel(
-                                        getString(
-                                                R.string.status_finance
-                                        ),
-                                        currencyFormatter.format(
-                                                balance
-                                        ),
-                                        getString(
-                                                R.string.dashboard_finance_detail,
-                                                currencyFormatter.format(
-                                                        safeSummary.income
-                                                ),
-                                                currencyFormatter.format(
-                                                        balance
-                                                )
-                                        ),
-                                        R.drawable.ic_wallet
-                                )
-                        );
-                    }
-                }
+        financeStatusCard.setModel(
+                new StatusCardModel(
+                        getString(R.string.status_finance),
+                        currencyFormatter.format(stats.getBalance()),
+                        detail,
+                        R.drawable.ic_wallet
+                )
         );
     }
 
-    /**
-     * Loads and displays the next active reminder.
-     */
-    private void updateUpcomingReminder() {
-        reminderRepository.loadEnabledReminders(
-                reminders -> {
-                    if (binding == null) {
-                        return;
-                    }
+    private void renderCounts(@NonNull DashboardStats stats) {
+        int members = stats.getTotalMembers();
+        int documents = stats.getDocuments();
 
-                    Reminder nextReminder =
-                            findNextReminder(reminders);
+        familyStatusCard.setModel(
+                new StatusCardModel(
+                        getString(R.string.status_family),
+                        members + (members == 1 ? " member" : " members"),
+                        getString(R.string.status_family_ready),
+                        R.drawable.ic_family
+                )
+        );
 
-                    if (nextReminder == null) {
-                        binding.dashboardUpcomingReminderTitle.setText(
-                                R.string.dashboard_no_upcoming_reminder_title
-                        );
-
-                        binding.dashboardUpcomingReminderDetail.setText(
-                                R.string.dashboard_no_upcoming_reminder_detail
-                        );
-
-                        return;
-                    }
-
-                    long triggerAt =
-                            nextTriggerTime(
-                                    nextReminder
-                            );
-
-                    Date reminderDate =
-                            new Date(
-                                    triggerAt
-                            );
-
-                    binding.dashboardUpcomingReminderTitle.setText(
-                            nextReminder.title
-                    );
-
-                    if (Reminder.REPEAT_DAILY.equals(
-                            nextReminder.repeatType
-                    )) {
-                        binding.dashboardUpcomingReminderDetail.setText(
-                                getString(
-                                        R.string.reminder_daily_at,
-                                        reminderTimeFormat.format(
-                                                reminderDate
-                                        )
-                                )
-                        );
-                    } else {
-                        binding.dashboardUpcomingReminderDetail.setText(
-                                getString(
-                                        R.string.dashboard_next_reminder_detail,
-                                        reminderDateFormat.format(
-                                                reminderDate
-                                        ),
-                                        reminderTimeFormat.format(
-                                                reminderDate
-                                        )
-                                )
-                        );
-                    }
-                }
+        documentStatusCard.setModel(
+                new StatusCardModel(
+                        getString(R.string.status_documents),
+                        documents + (documents == 1 ? " file" : " files"),
+                        "Stored securely on this device",
+                        R.drawable.ic_wallet
+                )
         );
     }
 
-    /**
-     * Finds the reminder whose next trigger is closest.
-     */
-    @Nullable
-    private Reminder findNextReminder(
-            @NonNull List<Reminder> reminders
-    ) {
-        Reminder closestReminder =
-                null;
-
-        long closestTrigger =
-                Long.MAX_VALUE;
-
-        for (Reminder reminder : reminders) {
-            long triggerAt =
-                    nextTriggerTime(
-                            reminder
-                    );
-
-            if (triggerAt > 0L
-                    && triggerAt < closestTrigger) {
-
-                closestTrigger =
-                        triggerAt;
-
-                closestReminder =
-                        reminder;
-            }
+    private void renderReminder(@NonNull DashboardData data) {
+        Reminder nextReminder = data.getNextReminder();
+        if (!data.hasUpcomingReminder() || nextReminder == null) {
+            binding.dashboardUpcomingReminderTitle.setText(
+                    R.string.dashboard_no_upcoming_reminder_title
+            );
+            binding.dashboardUpcomingReminderDetail.setText(
+                    R.string.dashboard_no_upcoming_reminder_detail
+            );
+            return;
         }
 
-        return closestReminder;
-    }
+        Date reminderDate = new Date(data.getNextReminderTriggerAt());
+        binding.dashboardUpcomingReminderTitle.setText(nextReminder.title);
 
-    /**
-     * Calculates the next valid trigger time.
-     */
-    private long nextTriggerTime(
-            @NonNull Reminder reminder
-    ) {
-        long now =
-                System.currentTimeMillis();
-
-        if (Reminder.REPEAT_ONCE.equals(
-                reminder.repeatType
-        )) {
-            return reminder.reminderAt > now
-                    ? reminder.reminderAt
-                    : -1L;
-        }
-
-        Calendar calendar =
-                Calendar.getInstance();
-
-        calendar.setTimeInMillis(
-                reminder.reminderAt
-        );
-
-        while (calendar.getTimeInMillis() <= now) {
-            calendar.add(
-                    Calendar.DATE,
-                    1
+        if (Reminder.REPEAT_DAILY.equals(nextReminder.repeatType)) {
+            binding.dashboardUpcomingReminderDetail.setText(
+                    getString(
+                            R.string.reminder_daily_at,
+                            reminderTimeFormat.format(reminderDate)
+                    )
+            );
+        } else {
+            binding.dashboardUpcomingReminderDetail.setText(
+                    getString(
+                            R.string.dashboard_next_reminder_detail,
+                            reminderDateFormat.format(reminderDate),
+                            reminderTimeFormat.format(reminderDate)
+                    )
             );
         }
-
-        return calendar.getTimeInMillis();
     }
 
     /**
@@ -670,6 +527,11 @@ public class DashboardFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        if (dashboardRepository != null) {
+            dashboardRepository.close();
+            dashboardRepository = null;
+        }
+
         financeStatusCard =
                 null;
 
