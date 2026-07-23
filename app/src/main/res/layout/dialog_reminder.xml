@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -9,14 +10,43 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/space_24">
+        android:padding="@dimen/space_20">
 
-        <TextView
-            android:id="@+id/reminder_editor_title"
-            style="@style/TextAppearance.FamilyHub.SectionTitle"
-            android:layout_width="wrap_content"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/fh_on_surface" />
+            app:cardBackgroundColor="@color/fh_module_reminders_container"
+            app:strokeColor="@color/fh_module_reminders">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/card_padding">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_tile_size"
+                    android:layout_height="@dimen/icon_tile_size"
+                    android:background="@drawable/bg_placeholder_icon"
+                    android:contentDescription="@null"
+                    android:padding="@dimen/space_10"
+                    android:src="@drawable/ic_reminder"
+                    app:tint="@color/fh_module_reminders" />
+
+                <TextView
+                    android:id="@+id/reminder_editor_title"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:textColor="@color/fh_on_warning_container" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/reminder_title_layout"
@@ -32,6 +62,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="textCapSentences"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -39,10 +70,11 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/reminder_date"
             app:endIconDrawable="@drawable/ic_reminder"
-            app:endIconMode="custom">
+            app:endIconMode="custom"
+            app:endIconTint="@color/fh_module_reminders">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/reminder_date_input"
@@ -52,6 +84,7 @@
                 android:focusable="false"
                 android:inputType="none"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -59,10 +92,11 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/reminder_time"
             app:endIconDrawable="@drawable/ic_reminder"
-            app:endIconMode="custom">
+            app:endIconMode="custom"
+            app:endIconTint="@color/fh_module_reminders">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/reminder_time_input"
@@ -72,6 +106,7 @@
                 android:focusable="false"
                 android:inputType="none"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
@@ -80,47 +115,67 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
             android:text="@string/reminder_repeat"
-            android:textColor="@color/fh_on_surface_variant" />
+            android:textColor="@color/fh_module_reminders" />
 
-        <RadioGroup
-            android:id="@+id/reminder_repeat_group"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_4"
-            android:orientation="horizontal">
+            android:layout_marginTop="@dimen/space_6">
 
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/repeat_once_button"
-                android:layout_width="wrap_content"
+            <RadioGroup
+                android:id="@+id/reminder_repeat_group"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/reminder_once"
-                android:textColor="@color/fh_on_surface" />
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_10"
+                android:paddingEnd="@dimen/space_10">
 
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/repeat_daily_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_24"
-                android:text="@string/reminder_daily"
-                android:textColor="@color/fh_on_surface" />
-        </RadioGroup>
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/repeat_once_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:checked="true"
+                    android:text="@string/reminder_once"
+                    android:textColor="@color/fh_on_surface" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/reminder_enabled_switch"
-            android:layout_width="wrap_content"
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/repeat_daily_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:text="@string/reminder_daily"
+                    android:textColor="@color/fh_on_surface" />
+
+            </RadioGroup>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:checked="true"
-            android:text="@string/reminder_enabled"
-            android:textColor="@color/fh_on_surface" />
+            android:layout_marginTop="@dimen/form_field_spacing">
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/reminder_enabled_switch"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/input_min_height"
+                android:checked="true"
+                android:paddingStart="@dimen/space_12"
+                android:paddingEnd="@dimen/space_12"
+                android:text="@string/reminder_enabled"
+                android:textColor="@color/fh_on_surface" />
+
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/reminder_note_layout"
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/reminder_note">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -131,31 +186,35 @@
                 android:inputType="textMultiLine|textCapSentences"
                 android:maxLines="4"
                 android:minLines="3" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
-            android:gravity="end"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_reminder_button"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/cancel"
-                android:textColor="@color/fh_on_surface_variant" />
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                android:text="@string/cancel" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_reminder_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_8"
-                android:text="@string/save_reminder"
-                android:textColor="@color/fh_on_primary"
-                app:backgroundTint="@color/fh_primary" />
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                android:text="@string/save_reminder" />
+
         </LinearLayout>
+
     </LinearLayout>
-</ScrollView>
+
+</androidx.core.widget.NestedScrollView>
