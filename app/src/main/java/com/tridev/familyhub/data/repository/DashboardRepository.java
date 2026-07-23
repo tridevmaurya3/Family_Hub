@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
@@ -114,10 +115,17 @@ public class DashboardRepository {
                     database.familyLiveStatusDao().countSharingEnabled()
             );
 
-            // These fields become live when the corresponding modules exist.
-            stats.setMaleMembers(0);
-            stats.setFemaleMembers(0);
-            stats.setChildren(0);
+            stats.setMaleMembers(
+                    database.familyMemberDao().countByGender("Male")
+            );
+            stats.setFemaleMembers(
+                    database.familyMemberDao().countByGender("Female")
+            );
+            stats.setChildren(
+                    database.familyMemberDao().countByRole(
+                            FamilyMember.ROLE_CHILD
+                    )
+            );
 
             mainHandler.post(() -> callback.onLoaded(dashboardData));
         });

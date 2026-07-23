@@ -54,7 +54,7 @@ import com.tridev.familyhub.data.local.entity.PlannerItem;
                 NoteEntry.class,
                 PlannerItem.class
         },
-        version = 11,
+        version = 12,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -440,6 +440,45 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Expands family profiles while preserving every existing member. */
+    private static final Migration MIGRATION_11_12 = new Migration(11, 12) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`profilePhotoUri` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`gender` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`bloodGroup` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`address` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`emergencyContactName` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`emergencyContactPhone` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`familyRole` TEXT NOT NULL DEFAULT 'ADULT'"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`isGuardian` INTEGER NOT NULL DEFAULT 0"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -459,7 +498,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_7_8,
                                     MIGRATION_8_9,
                                     MIGRATION_9_10,
-                                    MIGRATION_10_11
+                                    MIGRATION_10_11,
+                                    MIGRATION_11_12
                             )
                             .build();
                 }
