@@ -15,6 +15,7 @@ import com.tridev.familyhub.data.local.dao.ReminderDao;
 import com.tridev.familyhub.data.local.dao.DocumentDao;
 import com.tridev.familyhub.data.local.dao.PasswordEntryDao;
 import com.tridev.familyhub.data.local.dao.HealthRecordDao;
+import com.tridev.familyhub.data.local.dao.VehicleDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -22,6 +23,7 @@ import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.PasswordEntry;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
+import com.tridev.familyhub.data.local.entity.Vehicle;
 
 /**
  * The private on-device database.
@@ -37,9 +39,10 @@ import com.tridev.familyhub.data.local.entity.HealthRecord;
                 FamilyLiveStatus.class,
                 DocumentEntry.class,
                 PasswordEntry.class,
-                HealthRecord.class
+                HealthRecord.class,
+                Vehicle.class
         },
-        version = 6,
+        version = 7,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -56,6 +59,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract DocumentDao documentDao();
     public abstract PasswordEntryDao passwordEntryDao();
     public abstract HealthRecordDao healthRecordDao();
+    public abstract VehicleDao vehicleDao();
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -210,6 +214,53 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Adds family-owned vehicle profiles and their important due dates. */
+    private static final Migration MIGRATION_6_7 = new Migration(6, 7) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `vehicles` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`ownerMemberId` INTEGER NOT NULL, "
+                            + "`vehicleType` TEXT NOT NULL, "
+                            + "`displayName` TEXT NOT NULL, "
+                            + "`registrationNumber` TEXT NOT NULL, "
+                            + "`manufacturer` TEXT NOT NULL, "
+                            + "`model` TEXT NOT NULL, "
+                            + "`fuelType` TEXT NOT NULL, "
+                            + "`manufactureYear` INTEGER NOT NULL, "
+                            + "`insuranceExpiryAt` INTEGER NOT NULL, "
+                            + "`pollutionExpiryAt` INTEGER NOT NULL, "
+                            + "`serviceDueAt` INTEGER NOT NULL, "
+                            + "`notes` TEXT NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "FOREIGN KEY(`ownerMemberId`) "
+                            + "REFERENCES `family_members`(`id`) "
+                            + "ON UPDATE CASCADE ON DELETE CASCADE)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_vehicles_ownerMemberId` "
+                            + "ON `vehicles` (`ownerMemberId`)"
+            );
+            database.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS "
+                            + "`index_vehicles_registrationNumber` "
+                            + "ON `vehicles` (`registrationNumber`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_vehicles_insuranceExpiryAt` "
+                            + "ON `vehicles` (`insuranceExpiryAt`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_vehicles_serviceDueAt` "
+                            + "ON `vehicles` (`serviceDueAt`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -224,7 +275,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_2_3,
                                     MIGRATION_3_4,
                                     MIGRATION_4_5,
-                                    MIGRATION_5_6
+                                    MIGRATION_5_6,
+                                    MIGRATION_6_7
                             )
                             .build();
                 }
