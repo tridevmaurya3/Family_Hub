@@ -209,5 +209,24 @@
     <string name="more_privacy_detail">Family Hub version and privacy information</string>
     <string name="more_privacy_message">Family Hub • Version %1$s\n\nPrivate, offline-first family organizer. Adult location and documents must only be shared with explicit consent.</string>
     <string name="ok">OK</string>
+    <string name="documents_title">Document Vault</string>
+    <string name="documents_subtitle">Secure links to your PDFs, images and certificates</string>
+    <string name="documents_search_hint">Search documents or categories</string>
+    <string name="documents_empty_title">No documents yet</string>
+    <string name="documents_empty_detail">Add a PDF or image using Android’s secure document picker.</string>
+    <string name="document_add">Add document</string>
+    <string name="document_title">Document title</string>
+    <string name="document_category">Category (Aadhaar, PAN, Insurance…)</string>
+    <string name="document_default_category">Other</string>
+    <string name="document_title_required">Enter a document title</string>
+    <string name="document_picker_note">Family Hub stores a secure link to the selected file. The original file remains in its current location.</string>
+    <string name="document_choose_file">Choose file</string>
+    <string name="document_added">Document added</string>
+    <string name="document_unavailable">This file is no longer available</string>
+    <string name="document_remove_title">Remove document?</string>
+    <string name="document_remove_message">The original file will not be deleted.</string>
+    <string name="document_removed">Document removed</string>
+    <string name="open">Open</string>
+    <string name="remove">Remove</string>
 
 </resources>
