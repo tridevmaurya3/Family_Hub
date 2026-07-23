@@ -1,6 +1,8 @@
 package com.tridev.familyhub.feature.family;
 
 import android.app.DatePickerDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -10,7 +12,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ArrayAdapter;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -36,10 +41,42 @@ import java.util.Locale;
 public class FamilyFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
 
     private static final String ISO_DATE_PATTERN = "yyyy-MM-dd";
+    private static final String[] FAMILY_ROLES = {
+            FamilyMember.ROLE_GUARDIAN,
+            FamilyMember.ROLE_ADULT,
+            FamilyMember.ROLE_CHILD
+    };
 
     private FragmentFamilyBinding binding;
     private FamilyMemberAdapter memberAdapter;
     private FamilyMemberRepository repository;
+    private ActivityResultLauncher<String[]> photoPicker;
+    private DialogMemberEditorBinding activeEditor;
+    private String selectedPhotoUri = "";
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        photoPicker = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri == null || activeEditor == null) {
+                        return;
+                    }
+                    try {
+                        requireContext().getContentResolver()
+                                .takePersistableUriPermission(
+                                        uri,
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                );
+                    } catch (SecurityException ignored) {
+                        // The selected image remains available for this session.
+                    }
+                    selectedPhotoUri = uri.toString();
+                    showPhoto(activeEditor, selectedPhotoUri);
+                }
+        );
+    }
 
     @Nullable
     @Override
@@ -106,10 +143,22 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
 
     private void showMemberEditor(@Nullable FamilyMember existingMember) {
         DialogMemberEditorBinding dialogBinding = DialogMemberEditorBinding.inflate(getLayoutInflater());
+        activeEditor = dialogBinding;
         boolean isNewMember = existingMember == null;
+        selectedPhotoUri = isNewMember ? "" : existingMember.profilePhotoUri;
         dialogBinding.editorTitle.setText(isNewMember
                 ? R.string.add_family_member
                 : R.string.edit_family_member);
+
+        String[] genderLabels =
+                getResources().getStringArray(R.array.member_gender_labels);
+        String[] bloodLabels =
+                getResources().getStringArray(R.array.member_blood_labels);
+        String[] roleLabels =
+                getResources().getStringArray(R.array.member_role_labels);
+        dialogBinding.memberGenderInput.setAdapter(dropdown(genderLabels));
+        dialogBinding.memberBloodGroupInput.setAdapter(dropdown(bloodLabels));
+        dialogBinding.memberRoleInput.setAdapter(dropdown(roleLabels));
 
         if (!isNewMember) {
             dialogBinding.memberNameInput.setText(existingMember.name);
@@ -118,12 +167,57 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
             dialogBinding.memberEmailInput.setText(existingMember.email);
             dialogBinding.memberBirthDateInput.setText(existingMember.dateOfBirth);
             dialogBinding.memberNoteInput.setText(existingMember.note);
+            dialogBinding.memberGenderInput.setText(
+                    existingMember.gender, false
+            );
+            dialogBinding.memberBloodGroupInput.setText(
+                    existingMember.bloodGroup, false
+            );
+            dialogBinding.memberAddressInput.setText(existingMember.address);
+            dialogBinding.memberEmergencyNameInput.setText(
+                    existingMember.emergencyContactName
+            );
+            dialogBinding.memberEmergencyPhoneInput.setText(
+                    existingMember.emergencyContactPhone
+            );
+            dialogBinding.memberRoleInput.setText(
+                    roleLabels[indexOf(FAMILY_ROLES, existingMember.familyRole)],
+                    false
+            );
+            dialogBinding.memberGuardianSwitch.setChecked(
+                    existingMember.isGuardian
+            );
+        } else {
+            dialogBinding.memberGenderInput.setText(genderLabels[0], false);
+            dialogBinding.memberBloodGroupInput.setText(bloodLabels[0], false);
+            dialogBinding.memberRoleInput.setText(roleLabels[1], false);
         }
+        showPhoto(dialogBinding, selectedPhotoUri);
 
         final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setView(dialogBinding.getRoot())
                 .create();
+        dialog.setOnDismissListener(ignored -> {
+            if (activeEditor == dialogBinding) {
+                activeEditor = null;
+                selectedPhotoUri = "";
+            }
+        });
 
+        dialogBinding.selectMemberPhotoButton.setOnClickListener(
+                v -> photoPicker.launch(new String[]{"image/*"})
+        );
+        dialogBinding.removeMemberPhotoButton.setOnClickListener(v -> {
+            selectedPhotoUri = "";
+            showPhoto(dialogBinding, "");
+        });
+        dialogBinding.memberRoleInput.setOnItemClickListener(
+                (parent, view, position, id) -> {
+                    if (position == 0) {
+                        dialogBinding.memberGuardianSwitch.setChecked(true);
+                    }
+                }
+        );
         dialogBinding.memberBirthDateInput.setOnClickListener(v -> showDatePicker(
                 dialogBinding.memberBirthDateInput
         ));
@@ -137,27 +231,133 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
             }
 
             FamilyMember member = isNewMember ? new FamilyMember() : existingMember;
-            member.name = dialogBinding.memberNameInput.getText().toString().trim();
-            member.relation = dialogBinding.memberRelationInput.getText().toString().trim();
-            member.phone = dialogBinding.memberPhoneInput.getText().toString().trim();
-            member.email = dialogBinding.memberEmailInput.getText().toString().trim();
-            member.dateOfBirth = dialogBinding.memberBirthDateInput.getText().toString().trim();
-            member.note = dialogBinding.memberNoteInput.getText().toString().trim();
+            String phone = textOf(dialogBinding.memberPhoneInput);
+            String email = textOf(dialogBinding.memberEmailInput);
+            repository.checkUniqueContact(member.id, phone, email,
+                    (phoneAvailable, emailAvailable) -> {
+                        if (!phoneAvailable) {
+                            dialogBinding.memberPhoneLayout.setError(
+                                    getString(R.string.member_phone_duplicate)
+                            );
+                        }
+                        if (!emailAvailable) {
+                            dialogBinding.memberEmailLayout.setError(
+                                    getString(R.string.member_email_duplicate)
+                            );
+                        }
+                        if (!phoneAvailable || !emailAvailable) {
+                            return;
+                        }
 
-            repository.save(member, () -> {
-                if (binding == null) {
-                    return;
-                }
-                dialog.dismiss();
-                loadMembers(binding.memberSearchInput.getText().toString());
-                Snackbar.make(
-                        binding.getRoot(),
-                        isNewMember ? R.string.member_added : R.string.member_updated,
-                        Snackbar.LENGTH_SHORT
-                ).show();
-            });
+                        member.name = textOf(dialogBinding.memberNameInput);
+                        member.relation = textOf(
+                                dialogBinding.memberRelationInput
+                        );
+                        member.phone = phone;
+                        member.email = email;
+                        member.dateOfBirth = textOf(
+                                dialogBinding.memberBirthDateInput
+                        );
+                        member.note = textOf(dialogBinding.memberNoteInput);
+                        member.profilePhotoUri = selectedPhotoUri;
+                        member.gender = textOf(
+                                dialogBinding.memberGenderInput
+                        );
+                        member.bloodGroup = textOf(
+                                dialogBinding.memberBloodGroupInput
+                        );
+                        member.address = textOf(
+                                dialogBinding.memberAddressInput
+                        );
+                        member.emergencyContactName = textOf(
+                                dialogBinding.memberEmergencyNameInput
+                        );
+                        member.emergencyContactPhone = textOf(
+                                dialogBinding.memberEmergencyPhoneInput
+                        );
+                        int roleIndex = indexOf(
+                                roleLabels,
+                                textOf(dialogBinding.memberRoleInput)
+                        );
+                        member.familyRole = FAMILY_ROLES[roleIndex];
+                        member.isGuardian =
+                                dialogBinding.memberGuardianSwitch.isChecked()
+                                        || FamilyMember.ROLE_GUARDIAN.equals(
+                                        member.familyRole
+                                );
+
+                        repository.save(member, () -> {
+                            if (binding == null) {
+                                return;
+                            }
+                            dialog.dismiss();
+                            loadMembers(binding.memberSearchInput
+                                    .getText().toString());
+                            Snackbar.make(
+                                    binding.getRoot(),
+                                    isNewMember
+                                            ? R.string.member_added
+                                            : R.string.member_updated,
+                                    Snackbar.LENGTH_SHORT
+                            ).show();
+                        });
+                    });
         });
         dialog.show();
+    }
+
+    private ArrayAdapter<String> dropdown(@NonNull String[] values) {
+        return new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                values
+        );
+    }
+
+    private int indexOf(@NonNull String[] values, @NonNull String selected) {
+        for (int index = 0; index < values.length; index++) {
+            if (values[index].equalsIgnoreCase(selected)) {
+                return index;
+            }
+        }
+        return 0;
+    }
+
+    private void showPhoto(
+            @NonNull DialogMemberEditorBinding editor,
+            @NonNull String uriValue
+    ) {
+        if (uriValue.isEmpty()) {
+            int padding = getResources().getDimensionPixelSize(
+                    R.dimen.space_16
+            );
+            editor.memberPhotoPreview.setPadding(
+                    padding, padding, padding, padding
+            );
+            editor.memberPhotoPreview.setImageResource(R.drawable.ic_family);
+            editor.removeMemberPhotoButton.setVisibility(View.GONE);
+            return;
+        }
+        try {
+            editor.memberPhotoPreview.setPadding(0, 0, 0, 0);
+            editor.memberPhotoPreview.setImageURI(Uri.parse(uriValue));
+            editor.removeMemberPhotoButton.setVisibility(View.VISIBLE);
+        } catch (RuntimeException ignored) {
+            int padding = getResources().getDimensionPixelSize(
+                    R.dimen.space_16
+            );
+            editor.memberPhotoPreview.setPadding(
+                    padding, padding, padding, padding
+            );
+            editor.memberPhotoPreview.setImageResource(R.drawable.ic_family);
+            editor.removeMemberPhotoButton.setVisibility(View.GONE);
+        }
+    }
+
+    @NonNull
+    private String textOf(@NonNull EditText input) {
+        return input.getText() == null
+                ? "" : input.getText().toString().trim();
     }
 
     private boolean validateEditor(DialogMemberEditorBinding editor) {
@@ -259,6 +459,9 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
 
     @Override
     public void onDestroyView() {
+        activeEditor = null;
+        selectedPhotoUri = "";
+        binding.memberRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();
     }

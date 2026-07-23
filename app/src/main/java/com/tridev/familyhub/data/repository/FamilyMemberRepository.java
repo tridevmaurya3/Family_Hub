@@ -25,6 +25,10 @@ public class FamilyMemberRepository {
         void onComplete();
     }
 
+    public interface UniquenessCallback {
+        void onChecked(boolean phoneAvailable, boolean emailAvailable);
+    }
+
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private final FamilyMemberDao memberDao;
@@ -59,6 +63,28 @@ public class FamilyMemberRepository {
         DATABASE_EXECUTOR.execute(() -> {
             memberDao.delete(member);
             mainHandler.post(callback::onComplete);
+        });
+    }
+
+    public void checkUniqueContact(
+            long memberId,
+            @NonNull String phone,
+            @NonNull String email,
+            @NonNull UniquenessCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            boolean phoneAvailable = phone.trim().isEmpty()
+                    || memberDao.countOtherMembersWithPhone(
+                    phone.trim(), memberId
+            ) == 0;
+            boolean emailAvailable = email.trim().isEmpty()
+                    || memberDao.countOtherMembersWithEmail(
+                    email.trim(), memberId
+            ) == 0;
+            mainHandler.post(() -> callback.onChecked(
+                    phoneAvailable,
+                    emailAvailable
+            ));
         });
     }
 }

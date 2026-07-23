@@ -1,7 +1,9 @@
 package com.tridev.familyhub.feature.family.adapter;
 
+import android.net.Uri;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
@@ -68,9 +70,60 @@ public class FamilyMemberAdapter extends RecyclerView.Adapter<FamilyMemberAdapte
             binding.memberName.setText(member.name);
             binding.memberRelation.setText(member.relation);
             binding.memberContact.setText(contactSummary(member));
+            binding.memberProfileSummary.setText(profileSummary(member));
+            showPhoto(member);
             binding.getRoot().setOnClickListener(v -> listener.onEdit(member));
             binding.editMemberButton.setOnClickListener(v -> listener.onEdit(member));
             binding.deleteMemberButton.setOnClickListener(v -> listener.onDelete(member));
+        }
+
+        private void showPhoto(@NonNull FamilyMember member) {
+            if (member.profilePhotoUri.isEmpty()) {
+                binding.memberPhoto.setVisibility(View.GONE);
+                binding.memberInitials.setVisibility(View.VISIBLE);
+                return;
+            }
+            try {
+                binding.memberPhoto.setImageURI(
+                        Uri.parse(member.profilePhotoUri)
+                );
+                if (binding.memberPhoto.getDrawable() == null) {
+                    binding.memberPhoto.setVisibility(View.GONE);
+                    binding.memberInitials.setVisibility(View.VISIBLE);
+                    return;
+                }
+                binding.memberPhoto.setVisibility(View.VISIBLE);
+                binding.memberInitials.setVisibility(View.GONE);
+            } catch (RuntimeException ignored) {
+                binding.memberPhoto.setVisibility(View.GONE);
+                binding.memberInitials.setVisibility(View.VISIBLE);
+            }
+        }
+
+        private String profileSummary(@NonNull FamilyMember member) {
+            List<String> details = new ArrayList<>();
+            if (member.isGuardian) {
+                details.add(binding.getRoot().getContext().getString(
+                        R.string.member_role_guardian
+                ));
+            } else if (FamilyMember.ROLE_CHILD.equals(member.familyRole)) {
+                details.add(binding.getRoot().getContext().getString(
+                        R.string.member_role_child
+                ));
+            } else {
+                details.add(binding.getRoot().getContext().getString(
+                        R.string.member_role_adult
+                ));
+            }
+            if (!member.bloodGroup.isEmpty()
+                    && !member.bloodGroup.equalsIgnoreCase("Not known")) {
+                details.add(member.bloodGroup);
+            }
+            if (!member.gender.isEmpty()
+                    && !member.gender.equalsIgnoreCase("Not specified")) {
+                details.add(member.gender);
+            }
+            return TextUtils.join(" • ", details);
         }
 
         private String initials(String name) {

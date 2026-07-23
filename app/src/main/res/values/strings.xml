@@ -106,6 +106,49 @@
     <string name="delete_member_title">Delete family member?</string>
     <string name="delete_member_message">This removes %1$s from this device. You can add them again later.</string>
     <string name="member_deleted">Family member deleted</string>
+    <string name="member_profile_photo">Family member profile photo</string>
+    <string name="member_choose_photo">Choose profile photo</string>
+    <string name="member_remove_photo">Remove photo</string>
+    <string name="member_gender">Gender</string>
+    <string name="member_gender_not_specified">Not specified</string>
+    <string name="member_gender_male">Male</string>
+    <string name="member_gender_female">Female</string>
+    <string name="member_gender_other">Other</string>
+    <string name="member_blood_group">Blood group</string>
+    <string name="member_blood_unknown">Not known</string>
+    <string name="member_family_role">Family role</string>
+    <string name="member_role_guardian">Guardian</string>
+    <string name="member_role_adult">Adult</string>
+    <string name="member_role_child">Child</string>
+    <string name="member_guardian_permission">Guardian privileges for this member</string>
+    <string name="member_address">Full address (optional)</string>
+    <string name="member_emergency_section">Emergency contact</string>
+    <string name="member_emergency_name">Contact name (optional)</string>
+    <string name="member_emergency_phone">Contact phone (optional)</string>
+    <string name="member_phone_duplicate">This phone number is already used by another member.</string>
+    <string name="member_email_duplicate">This email address is already used by another member.</string>
+    <string-array name="member_gender_labels">
+        <item>@string/member_gender_not_specified</item>
+        <item>@string/member_gender_male</item>
+        <item>@string/member_gender_female</item>
+        <item>@string/member_gender_other</item>
+    </string-array>
+    <string-array name="member_blood_labels">
+        <item>@string/member_blood_unknown</item>
+        <item>A+</item>
+        <item>A-</item>
+        <item>B+</item>
+        <item>B-</item>
+        <item>AB+</item>
+        <item>AB-</item>
+        <item>O+</item>
+        <item>O-</item>
+    </string-array>
+    <string-array name="member_role_labels">
+        <item>@string/member_role_guardian</item>
+        <item>@string/member_role_adult</item>
+        <item>@string/member_role_child</item>
+    </string-array>
     <string name="confirm_delete">Delete member</string>
     <string name="content_description_add_member">Add family member</string>
 
