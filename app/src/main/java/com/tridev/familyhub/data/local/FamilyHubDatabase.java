@@ -19,6 +19,7 @@ import com.tridev.familyhub.data.local.dao.VehicleDao;
 import com.tridev.familyhub.data.local.dao.PropertyDao;
 import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.dao.NoteDao;
+import com.tridev.familyhub.data.local.dao.PlannerItemDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -30,6 +31,7 @@ import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.PropertyEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
+import com.tridev.familyhub.data.local.entity.PlannerItem;
 
 /**
  * The private on-device database.
@@ -49,9 +51,10 @@ import com.tridev.familyhub.data.local.entity.NoteEntry;
                 Vehicle.class,
                 PropertyEntry.class,
                 GroceryItem.class,
-                NoteEntry.class
+                NoteEntry.class,
+                PlannerItem.class
         },
-        version = 10,
+        version = 11,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -72,6 +75,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract PropertyDao propertyDao();
     public abstract GroceryItemDao groceryItemDao();
     public abstract NoteDao noteDao();
+    public abstract PlannerItemDao plannerItemDao();
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -387,6 +391,55 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Adds offline family calendar events and tasks. */
+    private static final Migration MIGRATION_10_11 = new Migration(10, 11) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `planner_items` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`itemType` TEXT NOT NULL, "
+                            + "`title` TEXT NOT NULL, "
+                            + "`notes` TEXT NOT NULL, "
+                            + "`startAt` INTEGER NOT NULL, "
+                            + "`endAt` INTEGER NOT NULL, "
+                            + "`isAllDay` INTEGER NOT NULL, "
+                            + "`location` TEXT NOT NULL, "
+                            + "`assignedMemberId` INTEGER, "
+                            + "`priority` TEXT NOT NULL, "
+                            + "`repeatType` TEXT NOT NULL, "
+                            + "`isCompleted` INTEGER NOT NULL, "
+                            + "`isReminderEnabled` INTEGER NOT NULL, "
+                            + "`reminderMinutesBefore` INTEGER NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "`updatedAt` INTEGER NOT NULL, "
+                            + "FOREIGN KEY(`assignedMemberId`) "
+                            + "REFERENCES `family_members`(`id`) "
+                            + "ON UPDATE CASCADE ON DELETE SET NULL)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_planner_items_assignedMemberId` "
+                            + "ON `planner_items` (`assignedMemberId`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_planner_items_itemType` "
+                            + "ON `planner_items` (`itemType`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_planner_items_startAt` "
+                            + "ON `planner_items` (`startAt`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_planner_items_isCompleted` "
+                            + "ON `planner_items` (`isCompleted`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -405,7 +458,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_6_7,
                                     MIGRATION_7_8,
                                     MIGRATION_8_9,
-                                    MIGRATION_9_10
+                                    MIGRATION_9_10,
+                                    MIGRATION_10_11
                             )
                             .build();
                 }
