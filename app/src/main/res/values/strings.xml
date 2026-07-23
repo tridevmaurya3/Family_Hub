@@ -409,4 +409,44 @@
         <item>@string/property_type_other</item>
     </string-array>
 
+    <!-- Grocery -->
+    <string name="grocery_title">Grocery &amp; Shopping</string>
+    <string name="grocery_subtitle">A simple private shopping list for the whole family</string>
+    <string name="grocery_pending">Pending items</string>
+    <string name="grocery_estimated_total">Estimated total</string>
+    <string name="grocery_search_hint">Search item, category, or notes</string>
+    <string name="grocery_clear_purchased">Clear purchased</string>
+    <string name="grocery_empty_title">Your shopping list is empty</string>
+    <string name="grocery_empty_detail">Add groceries, household supplies, medicines, or anything else you need.</string>
+    <string name="grocery_add_item">Add item</string>
+    <string name="grocery_edit_item">Edit item</string>
+    <string name="grocery_save_item">Save item</string>
+    <string name="grocery_item_name">Item name</string>
+    <string name="grocery_category">Category (optional)</string>
+    <string name="grocery_quantity">Quantity (optional)</string>
+    <string name="grocery_estimated_cost">Estimated cost</string>
+    <string name="grocery_priority">Priority</string>
+    <string name="grocery_notes">Notes (optional)</string>
+    <string name="grocery_name_required">Enter an item name</string>
+    <string name="grocery_priority_required">Select a priority</string>
+    <string name="grocery_item_added">Item added</string>
+    <string name="grocery_item_updated">Item updated</string>
+    <string name="grocery_delete_title">Remove item?</string>
+    <string name="grocery_delete_message">This permanently removes “%1$s” from the list.</string>
+    <string name="grocery_clear_title">Clear purchased items?</string>
+    <string name="grocery_clear_message">All checked items will be permanently removed.</string>
+    <string name="grocery_uncategorized">Uncategorized</string>
+    <string name="grocery_quantity_not_added">Quantity not added</string>
+    <string name="grocery_cost_not_added">Cost not added</string>
+    <string name="grocery_priority_normal">Normal</string>
+    <string name="grocery_priority_high">High</string>
+    <string name="grocery_priority_urgent">Urgent</string>
+    <string name="more_grocery_title">Grocery &amp; Shopping</string>
+    <string name="more_grocery_detail">Shared-ready shopping list, priorities, and estimated cost</string>
+    <string-array name="grocery_priority_labels">
+        <item>@string/grocery_priority_normal</item>
+        <item>@string/grocery_priority_high</item>
+        <item>@string/grocery_priority_urgent</item>
+    </string-array>
+
 </resources>
