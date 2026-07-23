@@ -25,6 +25,7 @@ import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
+import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -239,6 +240,16 @@ public class DashboardFragment extends Fragment {
                 || normalizedQuery.contains("appointment")) {
             binding.dashboardSearchBar.clearSearchFocus();
             openFeature(new HealthFragment());
+            return;
+        }
+
+        if (normalizedQuery.contains("vehicle")
+                || normalizedQuery.contains("car")
+                || normalizedQuery.contains("bike")
+                || normalizedQuery.contains("insurance")
+                || normalizedQuery.contains("puc")) {
+            binding.dashboardSearchBar.clearSearchFocus();
+            openFeature(new VehicleFragment());
             return;
         }
 
