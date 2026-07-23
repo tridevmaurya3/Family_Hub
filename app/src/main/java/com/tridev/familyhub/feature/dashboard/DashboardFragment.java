@@ -24,6 +24,7 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
+import com.tridev.familyhub.feature.health.HealthFragment;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -202,8 +203,7 @@ public class DashboardFragment extends Fragment {
         }
 
         if (normalizedQuery.contains("reminder")
-                || normalizedQuery.contains("schedule")
-                || normalizedQuery.contains("medicine")) {
+                || normalizedQuery.contains("schedule")) {
 
             binding.dashboardSearchBar.clearSearchFocus();
             openTab(R.id.nav_reminders);
@@ -230,6 +230,15 @@ public class DashboardFragment extends Fragment {
         if (normalizedQuery.contains("password") || normalizedQuery.contains("credential") || normalizedQuery.contains("login")) {
             binding.dashboardSearchBar.clearSearchFocus();
             openFeature(new PasswordVaultFragment());
+            return;
+        }
+
+        if (normalizedQuery.contains("health")
+                || normalizedQuery.contains("medicine")
+                || normalizedQuery.contains("allergy")
+                || normalizedQuery.contains("appointment")) {
+            binding.dashboardSearchBar.clearSearchFocus();
+            openFeature(new HealthFragment());
             return;
         }
 
@@ -331,12 +340,7 @@ public class DashboardFragment extends Fragment {
         );
 
         healthStatusCard.setOnClickListener(
-                view -> showComingSoonMessage(
-                        view,
-                        getString(
-                                R.string.status_health_update
-                        )
-                )
+                view -> openFeature(new HealthFragment())
         );
 
         documentStatusCard.setOnClickListener(
@@ -461,6 +465,7 @@ public class DashboardFragment extends Fragment {
     private void renderCounts(@NonNull DashboardStats stats) {
         int members = stats.getTotalMembers();
         int documents = stats.getDocuments();
+        int healthRecords = stats.getHealthAlerts();
 
         familyStatusCard.setModel(
                 new StatusCardModel(
@@ -477,6 +482,19 @@ public class DashboardFragment extends Fragment {
                         documents + (documents == 1 ? " file" : " files"),
                         "Stored securely on this device",
                         R.drawable.ic_wallet
+                )
+        );
+
+        healthStatusCard.setModel(
+                new StatusCardModel(
+                        getString(R.string.status_health),
+                        getResources().getQuantityString(
+                                R.plurals.health_record_count,
+                                healthRecords,
+                                healthRecords
+                        ),
+                        getString(R.string.health_dashboard_detail),
+                        R.drawable.ic_health
                 )
         );
     }

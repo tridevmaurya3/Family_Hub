@@ -17,6 +17,7 @@ import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
+import com.tridev.familyhub.feature.health.HealthFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
 
@@ -51,6 +52,9 @@ public class MoreFragment extends Fragment {
         );
         binding.cardFamilyLive.setOnClickListener(
                 clickedView -> openFeature(new FamilyLiveFragment())
+        );
+        binding.cardHealth.setOnClickListener(
+                clickedView -> openFeature(new HealthFragment())
         );
 
         boolean darkThemeEnabled =

@@ -89,12 +89,12 @@ public class DashboardRepository {
             DashboardStats stats = dashboardData.getStats();
             stats.setTotalMembers(database.familyMemberDao().count());
             stats.setDocuments(database.documentDao().count());
+            stats.setHealthAlerts(database.healthRecordDao().count());
 
             // These fields become live when the corresponding modules exist.
             stats.setMaleMembers(0);
             stats.setFemaleMembers(0);
             stats.setChildren(0);
-            stats.setHealthAlerts(0);
 
             mainHandler.post(() -> callback.onLoaded(dashboardData));
         });

@@ -255,4 +255,53 @@
     <string name="vault_not_provided">Not provided</string>
     <string name="close">Close</string>
 
+    <!-- Health -->
+    <string name="health_title">Health Records</string>
+    <string name="health_subtitle">Private health information organized for each family member</string>
+    <string name="health_search_hint">Search member, type, title, or value</string>
+    <string name="health_empty_title">No health records yet</string>
+    <string name="health_empty_detail">Add medicines, allergies, measurements, appointments, and vaccinations.</string>
+    <string name="health_add_record">Add health record</string>
+    <string name="health_edit_record">Edit health record</string>
+    <string name="health_family_member">Family member</string>
+    <string name="health_record_type">Record type</string>
+    <string name="health_record_title">Title</string>
+    <string name="health_value">Value or instructions (optional)</string>
+    <string name="health_record_date">Date</string>
+    <string name="health_notes">Notes (optional)</string>
+    <string name="health_save_record">Save record</string>
+    <string name="health_member_required">Select a family member</string>
+    <string name="health_type_required">Select a record type</string>
+    <string name="health_title_required">Enter a title</string>
+    <string name="health_add_member_first">Add a family member before creating a health record.</string>
+    <string name="health_record_added">Health record added</string>
+    <string name="health_record_updated">Health record updated</string>
+    <string name="health_delete_title">Remove health record?</string>
+    <string name="health_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="health_record_removed">Health record removed</string>
+    <string name="health_no_value">No value provided</string>
+    <string name="health_type_medicine">Medicine</string>
+    <string name="health_type_condition">Condition</string>
+    <string name="health_type_allergy">Allergy</string>
+    <string name="health_type_measurement">Measurement</string>
+    <string name="health_type_appointment">Appointment</string>
+    <string name="health_type_vaccination">Vaccination</string>
+    <string name="health_type_other">Other</string>
+    <string name="more_health_title">Health Records</string>
+    <string name="more_health_detail">Medicines, allergies, measurements, and appointments</string>
+    <string name="health_dashboard_detail">Stored privately on this device</string>
+    <plurals name="health_record_count">
+        <item quantity="one">%d record</item>
+        <item quantity="other">%d records</item>
+    </plurals>
+    <string-array name="health_record_type_labels">
+        <item>@string/health_type_medicine</item>
+        <item>@string/health_type_condition</item>
+        <item>@string/health_type_allergy</item>
+        <item>@string/health_type_measurement</item>
+        <item>@string/health_type_appointment</item>
+        <item>@string/health_type_vaccination</item>
+        <item>@string/health_type_other</item>
+    </string-array>
+
 </resources>
