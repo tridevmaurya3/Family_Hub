@@ -2,56 +2,75 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.FamilyHub.Card.Flat"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="16dp"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="2dp">
+    app:cardBackgroundColor="@color/fh_primary_container"
+    app:strokeColor="@color/fh_primary">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="20dp"
-        android:gravity="center_vertical">
+        android:padding="@dimen/space_16">
 
-        <ImageView
-            android:id="@+id/imgHeroIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:contentDescription="@string/app_name"
-            android:src="@android:drawable/ic_dialog_info"/>
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="@dimen/icon_tile_size"
+            android:layout_height="@dimen/icon_tile_size"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:cardCornerRadius="@dimen/radius_14"
+            app:cardElevation="0dp">
+
+            <ImageView
+                android:id="@+id/imgHeroIcon"
+                android:layout_width="@dimen/icon_size_large"
+                android:layout_height="@dimen/icon_size_large"
+                android:layout_gravity="center"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_family_hub_mark"
+                app:tint="@color/fh_primary" />
+
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_12"
             android:layout_weight="1"
-            android:layout_marginStart="16dp"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/txtHeroTitle"
+                style="@style/TextAppearance.FamilyHub.CardTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hero Title"
-                android:textStyle="bold"
-                android:textSize="20sp"/>
+                android:text="@string/family_status"
+                android:textColor="@color/fh_on_primary_container" />
 
             <TextView
                 android:id="@+id/txtHeroSubtitle"
+                style="@style/TextAppearance.FamilyHub.Body"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Hero Subtitle"
-                android:textSize="14sp"/>
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/family_status_detail"
+                android:textColor="@color/fh_on_primary_container" />
 
         </LinearLayout>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnHeroAction"
+            style="@style/Widget.FamilyHub.Button.Primary"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Open"/>
+            android:layout_height="@dimen/button_height"
+            android:layout_marginStart="@dimen/space_8"
+            android:minWidth="0dp"
+            android:text="@string/family_live"
+            app:icon="@drawable/ic_arrow_right"
+            app:iconGravity="textEnd"
+            app:iconPadding="@dimen/space_4"
+            app:iconSize="@dimen/icon_size_small" />
 
     </LinearLayout>
 

@@ -2,36 +2,39 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.FamilyHub.Card.Flat"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="20dp"
-    app:cardElevation="0dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="@color/fh_outline"
-    app:cardBackgroundColor="@color/fh_surface">
+    android:layout_height="wrap_content">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="16dp">
+        android:orientation="horizontal"
+        android:padding="@dimen/card_padding">
 
-        <ImageView
-            android:id="@+id/imgStatusIcon"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_placeholder_icon"
-            android:padding="10dp"
-            android:src="@drawable/ic_wallet"
-            app:tint="@color/fh_primary"
-            android:contentDescription="@string/app_name"/>
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="@dimen/icon_tile_size"
+            android:layout_height="@dimen/icon_tile_size"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:cardCornerRadius="@dimen/radius_14"
+            app:cardElevation="0dp">
+
+            <ImageView
+                android:id="@+id/imgStatusIcon"
+                android:layout_width="@dimen/icon_size_medium"
+                android:layout_height="@dimen/icon_size_medium"
+                android:layout_gravity="center"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_wallet"
+                app:tint="@color/fh_primary" />
+
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="@dimen/space_12"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -40,27 +43,33 @@
                 style="@style/TextAppearance.FamilyHub.CardTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Monthly Expense"/>
+                android:text="@string/monthly_spend" />
 
             <TextView
                 android:id="@+id/txtStatusValue"
+                style="@style/TextAppearance.FamilyHub.SectionTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="₹18,250"
-                android:textColor="@color/fh_primary"
-                android:textSize="22sp"
-                android:textStyle="bold"/>
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/monthly_spend_value"
+                android:textColor="@color/fh_primary" />
 
             <TextView
                 android:id="@+id/txtStatusSubtitle"
-                style="@style/TextAppearance.FamilyHub.Body"
+                style="@style/TextAppearance.FamilyHub.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Updated today"/>
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/monthly_spend_detail" />
 
         </LinearLayout>
+
+        <ImageView
+            android:layout_width="@dimen/icon_size_small"
+            android:layout_height="@dimen/icon_size_small"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_arrow_right"
+            app:tint="@color/fh_text_secondary" />
 
     </LinearLayout>
 
