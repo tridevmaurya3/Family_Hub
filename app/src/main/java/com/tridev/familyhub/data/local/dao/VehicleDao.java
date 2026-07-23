@@ -35,6 +35,12 @@ public interface VehicleDao {
     @Query("SELECT COUNT(*) FROM vehicles")
     int count();
 
+    @Query("SELECT COUNT(*) FROM vehicles WHERE "
+            + "(insuranceExpiryAt > 0 AND insuranceExpiryAt <= :deadline) OR "
+            + "(pollutionExpiryAt > 0 AND pollutionExpiryAt <= :deadline) OR "
+            + "(serviceDueAt > 0 AND serviceDueAt <= :deadline)")
+    int countDueBy(long deadline);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(Vehicle vehicle);
 

@@ -32,6 +32,9 @@ public interface NoteDao {
     @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 0")
     int countActive();
 
+    @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 0 AND isPinned = 1")
+    int countPinned();
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(NoteEntry note);
 

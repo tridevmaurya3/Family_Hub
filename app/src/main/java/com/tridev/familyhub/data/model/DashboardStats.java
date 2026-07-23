@@ -28,6 +28,17 @@ public class DashboardStats {
     // Reminders
     public int upcomingReminders;
 
+    // Action center
+    public int plannerOpen;
+    public int plannerCompleted;
+    public int groceryPending;
+    public int groceryPurchased;
+    public int documentsExpiringSoon;
+    public int vehiclesDueSoon;
+    public int activeNotes;
+    public int pinnedNotes;
+    public int familyLiveSharing;
+
     public DashboardStats() {
     }
 
@@ -109,5 +120,77 @@ public class DashboardStats {
 
     public void setUpcomingReminders(int upcomingReminders) {
         this.upcomingReminders = upcomingReminders;
+    }
+
+    public int getPlannerOpen() {
+        return plannerOpen;
+    }
+
+    public void setPlannerOpen(int plannerOpen) {
+        this.plannerOpen = plannerOpen;
+    }
+
+    public int getPlannerCompleted() {
+        return plannerCompleted;
+    }
+
+    public void setPlannerCompleted(int plannerCompleted) {
+        this.plannerCompleted = plannerCompleted;
+    }
+
+    public int getGroceryPending() {
+        return groceryPending;
+    }
+
+    public void setGroceryPending(int groceryPending) {
+        this.groceryPending = groceryPending;
+    }
+
+    public int getGroceryPurchased() {
+        return groceryPurchased;
+    }
+
+    public void setGroceryPurchased(int groceryPurchased) {
+        this.groceryPurchased = groceryPurchased;
+    }
+
+    public int getDocumentsExpiringSoon() {
+        return documentsExpiringSoon;
+    }
+
+    public void setDocumentsExpiringSoon(int documentsExpiringSoon) {
+        this.documentsExpiringSoon = documentsExpiringSoon;
+    }
+
+    public int getVehiclesDueSoon() {
+        return vehiclesDueSoon;
+    }
+
+    public void setVehiclesDueSoon(int vehiclesDueSoon) {
+        this.vehiclesDueSoon = vehiclesDueSoon;
+    }
+
+    public int getActiveNotes() {
+        return activeNotes;
+    }
+
+    public void setActiveNotes(int activeNotes) {
+        this.activeNotes = activeNotes;
+    }
+
+    public int getPinnedNotes() {
+        return pinnedNotes;
+    }
+
+    public void setPinnedNotes(int pinnedNotes) {
+        this.pinnedNotes = pinnedNotes;
+    }
+
+    public int getFamilyLiveSharing() {
+        return familyLiveSharing;
+    }
+
+    public void setFamilyLiveSharing(int familyLiveSharing) {
+        this.familyLiveSharing = familyLiveSharing;
     }
 }

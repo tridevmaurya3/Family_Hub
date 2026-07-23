@@ -87,9 +87,32 @@ public class DashboardRepository {
     ) {
         databaseExecutor.execute(() -> {
             DashboardStats stats = dashboardData.getStats();
+            long thirtyDaysFromNow = System.currentTimeMillis()
+                    + (30L * 24L * 60L * 60L * 1000L);
             stats.setTotalMembers(database.familyMemberDao().count());
             stats.setDocuments(database.documentDao().count());
             stats.setHealthAlerts(database.healthRecordDao().count());
+            stats.setPlannerOpen(database.plannerItemDao().countOpen());
+            stats.setPlannerCompleted(
+                    database.plannerItemDao().countCompleted()
+            );
+            stats.setGroceryPending(
+                    database.groceryItemDao().countPending()
+            );
+            stats.setGroceryPurchased(
+                    database.groceryItemDao().countPurchased()
+            );
+            stats.setDocumentsExpiringSoon(
+                    database.documentDao().countExpiringBy(thirtyDaysFromNow)
+            );
+            stats.setVehiclesDueSoon(
+                    database.vehicleDao().countDueBy(thirtyDaysFromNow)
+            );
+            stats.setActiveNotes(database.noteDao().countActive());
+            stats.setPinnedNotes(database.noteDao().countPinned());
+            stats.setFamilyLiveSharing(
+                    database.familyLiveStatusDao().countSharingEnabled()
+            );
 
             // These fields become live when the corresponding modules exist.
             stats.setMaleMembers(0);

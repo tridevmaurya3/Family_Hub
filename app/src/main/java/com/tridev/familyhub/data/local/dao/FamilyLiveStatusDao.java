@@ -13,6 +13,10 @@ import java.util.List;
 @Dao
 public interface FamilyLiveStatusDao {
 
+    @Query("SELECT COUNT(*) FROM family_live_status "
+            + "WHERE isLocationSharingEnabled = 1")
+    int countSharingEnabled();
+
     @Query("SELECT "
             + "member.id AS familyMemberId, "
             + "member.name AS memberName, "

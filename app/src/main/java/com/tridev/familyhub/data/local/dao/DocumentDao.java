@@ -14,6 +14,8 @@ public interface DocumentDao {
     @Query("SELECT * FROM documents ORDER BY createdAt DESC") List<DocumentEntry> getAll();
     @Query("SELECT * FROM documents WHERE title LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%' ORDER BY createdAt DESC") List<DocumentEntry> search(String query);
     @Query("SELECT COUNT(*) FROM documents") int count();
+    @Query("SELECT COUNT(*) FROM documents WHERE expiryAt > 0 AND expiryAt <= :deadline")
+    int countExpiringBy(long deadline);
     @Insert(onConflict = OnConflictStrategy.ABORT) long insert(DocumentEntry entry);
     @Update int update(DocumentEntry entry);
     @Delete int delete(DocumentEntry entry);

@@ -39,6 +39,12 @@ public interface PlannerItemDao {
             + "WHERE isCompleted = 0 AND startAt >= :now")
     int countUpcoming(long now);
 
+    @Query("SELECT COUNT(*) FROM planner_items WHERE isCompleted = 0")
+    int countOpen();
+
+    @Query("SELECT COUNT(*) FROM planner_items WHERE isCompleted = 1")
+    int countCompleted();
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(PlannerItem item);
 

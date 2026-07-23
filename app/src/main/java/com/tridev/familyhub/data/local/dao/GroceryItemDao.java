@@ -32,6 +32,9 @@ public interface GroceryItemDao {
     @Query("SELECT COUNT(*) FROM grocery_items WHERE isPurchased = 0")
     int countPending();
 
+    @Query("SELECT COUNT(*) FROM grocery_items WHERE isPurchased = 1")
+    int countPurchased();
+
     @Query("SELECT COALESCE(SUM(estimatedCost), 0) "
             + "FROM grocery_items WHERE isPurchased = 0")
     double pendingEstimatedCost();
