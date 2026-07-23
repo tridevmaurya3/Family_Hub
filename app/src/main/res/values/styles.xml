@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Product-style Fluent cards -->
+    <style name="Widget.FamilyHub.Card" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardBackgroundColor">@color/fh_surface</item>
+        <item name="cardCornerRadius">@dimen/radius_18</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
+        <item name="strokeColor">@color/fh_outline</item>
+        <item name="strokeWidth">@dimen/border_width</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Card.Flat" parent="Widget.FamilyHub.Card">
+        <item name="cardElevation">0dp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Card.Subtle" parent="Widget.FamilyHub.Card.Flat">
+        <item name="cardBackgroundColor">@color/fh_surface_container</item>
+        <item name="cardCornerRadius">@dimen/radius_14</item>
+        <item name="strokeColor">@color/fh_outline_variant</item>
+    </style>
+
+    <!-- Office-blue primary and supporting actions -->
+    <style name="Widget.FamilyHub.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textAppearance">@style/TextAppearance.FamilyHub.Label</item>
+        <item name="backgroundTint">@color/fh_primary</item>
+        <item name="cornerRadius">@dimen/radius_24</item>
+        <item name="iconTint">@color/fh_on_primary</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textAppearance">@style/TextAppearance.FamilyHub.Label</item>
+        <item name="backgroundTint">@color/fh_primary_container</item>
+        <item name="cornerRadius">@dimen/radius_24</item>
+        <item name="iconTint">@color/fh_primary</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/button_height</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textAppearance">@style/TextAppearance.FamilyHub.Label</item>
+        <item name="cornerRadius">@dimen/radius_24</item>
+        <item name="iconTint">@color/fh_primary</item>
+        <item name="strokeColor">@color/fh_outline</item>
+        <item name="strokeWidth">@dimen/border_width</item>
+    </style>
+
+    <style name="Widget.FamilyHub.StatusChip" parent="Widget.Material3.Chip.Assist">
+        <item name="android:textAppearance">@style/TextAppearance.FamilyHub.Label</item>
+        <item name="chipBackgroundColor">@color/fh_primary_container</item>
+        <item name="chipCornerRadius">@dimen/radius_14</item>
+        <item name="chipStrokeColor">@color/fh_outline</item>
+        <item name="chipStrokeWidth">@dimen/border_width</item>
+    </style>
+
+</resources>
