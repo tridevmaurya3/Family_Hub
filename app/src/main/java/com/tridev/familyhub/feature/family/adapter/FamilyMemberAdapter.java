@@ -1,4 +1,4 @@
-package com.tridev.familyhub.feature.familylive.adapter;
+package com.tridev.familyhub.feature.family.adapter;
 
 import android.text.TextUtils;
 import android.view.LayoutInflater;

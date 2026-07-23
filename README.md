@@ -2,7 +2,7 @@
 
 A private, offline-first family organizer for Android, built in Java and XML.
 
-## Version 0.3.0
+## Version 0.3.1
 
 - Family, Reminders, and Finance use one fixed floating add button above bottom navigation.
 - Header add buttons were removed and existing add/edit dialogs are reused.
@@ -21,9 +21,9 @@ A private, offline-first family organizer for Android, built in Java and XML.
 - Main activity with five-tab bottom navigation
 - Dashboard with family status, quick actions, reminders, and finance snapshot
 - Feature-first package structure ready for Room, WorkManager, and later cloud sync
-- Complete offline Family Members module: add, edit, delete, com.tridev.familyhub.core.ui.search, validation, and Room persistence
-- Complete offline Finance module: income and expense entries, month summary, add/edit/delete/com.tridev.familyhub.core.ui.search, validation, and Room migration
-- Complete offline Reminders module: add/edit/delete/com.tridev.familyhub.core.ui.search, daily repeat, notification scheduling, and restart restoration
+- Complete offline Family Members module: add, edit, delete, search, validation, and Room persistence
+- Complete offline Finance module: income and expense entries, month summary, add, edit, delete, search, validation, and Room migration
+- Complete offline Reminders module: add, edit, delete, search, daily repeat, notification scheduling, and restart restoration
 
 ## Open it in Android Studio
 

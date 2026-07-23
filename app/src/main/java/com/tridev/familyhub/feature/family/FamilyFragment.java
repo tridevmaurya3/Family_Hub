@@ -24,7 +24,7 @@ import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.databinding.DialogMemberEditorBinding;
 import com.tridev.familyhub.databinding.FragmentFamilyBinding;
-import com.tridev.familyhub.feature.familylive.adapter.FamilyMemberAdapter;
+import com.tridev.familyhub.feature.family.adapter.FamilyMemberAdapter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

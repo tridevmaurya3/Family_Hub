@@ -1,4 +1,4 @@
-package com.tridev.familyhub.core.ui;
+package com.tridev.familyhub.core.ui.search;
 
 import android.content.Context;
 import android.text.Editable;
@@ -17,7 +17,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.tridev.familyhub.R;
-import com.tridev.familyhub.core.ui.search.SearchBarModel;
 
 /**
  * Reusable search-bar component for Family Hub.

@@ -60,7 +60,7 @@
         </LinearLayout>
 
         <!-- Reusable dashboard search -->
-        <com.tridev.familyhub.core.ui.SearchBarView
+        <com.tridev.familyhub.core.ui.search.SearchBarView
             android:id="@+id/dashboard_search_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
