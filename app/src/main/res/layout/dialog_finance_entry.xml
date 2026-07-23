@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -9,14 +10,43 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/space_24">
+        android:padding="@dimen/space_20">
 
-        <TextView
-            android:id="@+id/finance_editor_title"
-            style="@style/TextAppearance.FamilyHub.SectionTitle"
-            android:layout_width="wrap_content"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/fh_on_surface" />
+            app:cardBackgroundColor="@color/fh_module_finance_container"
+            app:strokeColor="@color/fh_module_finance">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/card_padding">
+
+                <ImageView
+                    android:layout_width="@dimen/icon_tile_size"
+                    android:layout_height="@dimen/icon_tile_size"
+                    android:background="@drawable/bg_placeholder_icon"
+                    android:contentDescription="@null"
+                    android:padding="@dimen/space_10"
+                    android:src="@drawable/ic_wallet"
+                    app:tint="@color/fh_module_finance" />
+
+                <TextView
+                    android:id="@+id/finance_editor_title"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:textColor="@color/fh_on_success_container" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             style="@style/TextAppearance.FamilyHub.Overline"
@@ -24,38 +54,49 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
             android:text="@string/finance_type"
-            android:textColor="@color/fh_on_surface_variant" />
+            android:textColor="@color/fh_module_finance" />
 
-        <RadioGroup
-            android:id="@+id/finance_type_group"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_4"
-            android:orientation="horizontal">
+            android:layout_marginTop="@dimen/space_6">
 
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/type_expense_button"
-                android:layout_width="wrap_content"
+            <RadioGroup
+                android:id="@+id/finance_type_group"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/finance_expense"
-                android:textColor="@color/fh_on_surface" />
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_10"
+                android:paddingEnd="@dimen/space_10">
 
-            <com.google.android.material.radiobutton.MaterialRadioButton
-                android:id="@+id/type_income_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_24"
-                android:text="@string/finance_income"
-                android:textColor="@color/fh_on_surface" />
-        </RadioGroup>
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/type_expense_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:checked="true"
+                    android:text="@string/finance_expense"
+                    android:textColor="@color/fh_on_surface" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/type_income_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:text="@string/finance_income"
+                    android:textColor="@color/fh_on_surface" />
+
+            </RadioGroup>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/finance_amount_layout"
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/finance_amount"
             app:prefixText="₹ ">
 
@@ -65,6 +106,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="numberDecimal"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -72,7 +114,7 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/finance_category">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -81,6 +123,7 @@
                 android:layout_height="wrap_content"
                 android:inputType="textCapSentences"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -88,10 +131,11 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/finance_entry_date"
             app:endIconDrawable="@drawable/ic_reminder"
-            app:endIconMode="custom">
+            app:endIconMode="custom"
+            app:endIconTint="@color/fh_module_finance">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/finance_entry_date_input"
@@ -101,6 +145,7 @@
                 android:focusable="false"
                 android:inputType="none"
                 android:maxLines="1" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -108,7 +153,7 @@
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/finance_note">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -119,31 +164,35 @@
                 android:inputType="textMultiLine|textCapSentences"
                 android:maxLines="4"
                 android:minLines="3" />
+
         </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
-            android:gravity="end"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_finance_button"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/cancel"
-                android:textColor="@color/fh_on_surface_variant" />
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                android:text="@string/cancel" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_finance_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_8"
-                android:text="@string/save_finance_entry"
-                android:textColor="@color/fh_on_primary"
-                app:backgroundTint="@color/fh_primary" />
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                android:text="@string/save_finance_entry" />
+
         </LinearLayout>
+
     </LinearLayout>
-</ScrollView>
+
+</androidx.core.widget.NestedScrollView>
