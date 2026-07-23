@@ -229,4 +229,30 @@
     <string name="open">Open</string>
     <string name="remove">Remove</string>
 
+    <!-- Password Vault -->
+    <string name="vault_title">Password Vault</string>
+    <string name="vault_subtitle">AES-GCM encrypted credentials protected by Android Keystore</string>
+    <string name="vault_search_hint">Search title or website</string>
+    <string name="vault_empty_title">Your private vault is empty</string>
+    <string name="vault_empty_detail">Save a credential securely on this device. Screenshots are blocked while the vault is open.</string>
+    <string name="vault_add_credential">Add credential</string>
+    <string name="vault_edit_credential">Edit credential</string>
+    <string name="vault_credential_title">Title</string>
+    <string name="vault_website">Website or app</string>
+    <string name="vault_username">Username</string>
+    <string name="vault_password">Password</string>
+    <string name="vault_notes">Secure notes</string>
+    <string name="vault_encryption_note">Username, password and notes are encrypted before they are stored.</string>
+    <string name="vault_save_credential">Save securely</string>
+    <string name="vault_title_required">Enter a title</string>
+    <string name="vault_password_required">Enter a password</string>
+    <string name="vault_credential_added">Credential encrypted and saved</string>
+    <string name="vault_credential_updated">Credential updated securely</string>
+    <string name="vault_delete_title">Remove credential?</string>
+    <string name="vault_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="vault_credential_removed">Credential removed</string>
+    <string name="vault_no_website">No website provided</string>
+    <string name="vault_not_provided">Not provided</string>
+    <string name="close">Close</string>
+
 </resources>
