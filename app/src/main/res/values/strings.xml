@@ -356,4 +356,57 @@
         <item>@string/vehicle_type_other</item>
     </string-array>
 
+    <!-- Property -->
+    <string name="property_title">Properties</string>
+    <string name="property_subtitle">Ownership, location, registry, and value information</string>
+    <string name="property_search_hint">Search property, type, city, or owner</string>
+    <string name="property_empty_title">No properties yet</string>
+    <string name="property_empty_detail">Add a house, flat, land, shop, office, or agricultural property.</string>
+    <string name="property_add">Add property</string>
+    <string name="property_edit">Edit property</string>
+    <string name="property_save">Save property</string>
+    <string name="property_owner_label">Owner</string>
+    <string name="property_type_label">Property type</string>
+    <string name="property_name_label">Property name</string>
+    <string name="property_address_label">Address</string>
+    <string name="property_city_label">City</string>
+    <string name="property_state_label">State</string>
+    <string name="property_postal_label">PIN code</string>
+    <string name="property_area_label">Area with unit</string>
+    <string name="property_purchase_value_label">Purchase value (optional)</string>
+    <string name="property_estimated_value_label">Estimated current value (optional)</string>
+    <string name="property_purchase_date_label">Purchase date (optional)</string>
+    <string name="property_registration_label">Registry or reference number (optional)</string>
+    <string name="property_notes_label">Notes (optional)</string>
+    <string name="property_owner_required">Select an owner</string>
+    <string name="property_type_required">Select a property type</string>
+    <string name="property_title_required">Enter a property name</string>
+    <string name="property_add_member_first">Add a family member before creating a property profile.</string>
+    <string name="property_added">Property added</string>
+    <string name="property_updated">Property updated</string>
+    <string name="property_delete_title">Remove property?</string>
+    <string name="property_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="property_removed">Property removed</string>
+    <string name="property_location_not_added">Location not added</string>
+    <string name="property_area_not_added">Area not added</string>
+    <string name="property_value_not_added">Value not added</string>
+    <string name="property_type_house">House</string>
+    <string name="property_type_flat">Flat</string>
+    <string name="property_type_land">Land</string>
+    <string name="property_type_shop">Shop</string>
+    <string name="property_type_office">Office</string>
+    <string name="property_type_agricultural">Agricultural</string>
+    <string name="property_type_other">Other</string>
+    <string name="more_property_title">Property Management</string>
+    <string name="more_property_detail">House, land, registry, location, and values</string>
+    <string-array name="property_type_labels">
+        <item>@string/property_type_house</item>
+        <item>@string/property_type_flat</item>
+        <item>@string/property_type_land</item>
+        <item>@string/property_type_shop</item>
+        <item>@string/property_type_office</item>
+        <item>@string/property_type_agricultural</item>
+        <item>@string/property_type_other</item>
+    </string-array>
+
 </resources>
