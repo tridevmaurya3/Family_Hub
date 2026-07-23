@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fh_background"
+    android:paddingStart="@dimen/screen_padding_horizontal"
+    android:paddingTop="@dimen/space_24"
+    android:paddingEnd="@dimen/screen_padding_horizontal">
+
+    <TextView
+        android:id="@+id/notes_title"
+        style="@style/TextAppearance.FamilyHub.Heading"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/notes_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/notes_subtitle"
+        style="@style/TextAppearance.FamilyHub.Body"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4"
+        android:text="@string/notes_subtitle"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/notes_title" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/notes_summary"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        app:cardBackgroundColor="@color/fh_primary_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/notes_subtitle"
+        app:strokeColor="@color/fh_primary">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/card_padding">
+
+            <ImageView
+                android:layout_width="@dimen/icon_tile_size"
+                android:layout_height="@dimen/icon_tile_size"
+                android:background="@drawable/bg_placeholder_icon"
+                android:contentDescription="@null"
+                android:padding="@dimen/space_10"
+                android:src="@drawable/ic_note"
+                app:tint="@color/fh_primary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/notes_count_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/fh_primary" />
+
+                <TextView
+                    android:id="@+id/notes_count_label"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/notes_active_count" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/notes_archive_toggle"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/notes_show_archived"
+                android:textColor="@color/fh_primary" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/notes_search_layout"
+        style="@style/Widget.FamilyHub.TextInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        android:hint="@string/notes_search_hint"
+        app:endIconMode="clear_text"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/fh_primary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/notes_summary">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/notes_search_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/notes_recycler_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/space_12"
+        android:paddingBottom="104dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/notes_search_layout" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/notes_empty_state"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_16"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/fh_primary_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/notes_search_layout"
+        app:strokeColor="@color/fh_primary">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="@dimen/space_32">
+
+            <ImageView
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="@drawable/bg_placeholder_icon"
+                android:contentDescription="@null"
+                android:padding="@dimen/space_20"
+                android:src="@drawable/ic_note"
+                app:tint="@color/fh_primary" />
+
+            <TextView
+                android:id="@+id/notes_empty_title"
+                style="@style/TextAppearance.FamilyHub.SectionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/notes_empty_title" />
+
+            <TextView
+                android:id="@+id/notes_empty_detail"
+                style="@style/TextAppearance.FamilyHub.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:gravity="center"
+                android:text="@string/notes_empty_detail"
+                android:textAlignment="center" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/empty_add_note_button"
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/notes_add"
+                app:icon="@drawable/ic_add" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -28,6 +28,7 @@ import com.tridev.familyhub.feature.health.HealthFragment;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
+import com.tridev.familyhub.feature.notes.NotesFragment;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -271,6 +272,14 @@ public class DashboardFragment extends Fragment {
                 || normalizedQuery.contains("list")) {
             binding.dashboardSearchBar.clearSearchFocus();
             openFeature(new GroceryFragment());
+            return;
+        }
+
+        if (normalizedQuery.contains("note")
+                || normalizedQuery.contains("checklist")
+                || normalizedQuery.contains("memo")) {
+            binding.dashboardSearchBar.clearSearchFocus();
+            openFeature(new NotesFragment());
             return;
         }
 

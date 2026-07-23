@@ -449,4 +449,57 @@
         <item>@string/grocery_priority_urgent</item>
     </string-array>
 
+    <!-- Notes -->
+    <string name="notes_title">Notes &amp; Checklists</string>
+    <string name="notes_subtitle">Keep family information, ideas, and lists organized privately</string>
+    <string name="notes_active_count">Active notes</string>
+    <string name="notes_archived_count">Archived notes</string>
+    <string name="notes_show_archived">View archived</string>
+    <string name="notes_show_active">View active</string>
+    <string name="notes_search_hint">Search title, content, or category</string>
+    <string name="notes_empty_title">No notes yet</string>
+    <string name="notes_empty_detail">Create a note or checklist for information you want to keep handy.</string>
+    <string name="notes_archived_empty_title">Archive is empty</string>
+    <string name="notes_archived_empty_detail">Notes you archive will appear here and can be restored later.</string>
+    <string name="notes_add">Add note</string>
+    <string name="notes_edit">Edit note</string>
+    <string name="notes_save">Save note</string>
+    <string name="notes_title_label">Title</string>
+    <string name="notes_content_label">Note or checklist items</string>
+    <string name="notes_category_label">Category (optional)</string>
+    <string name="notes_type_label">Note type</string>
+    <string name="notes_color_label">Card color</string>
+    <string name="notes_title_required">Enter a note title</string>
+    <string name="notes_added">Note added</string>
+    <string name="notes_updated">Note updated</string>
+    <string name="notes_delete_title">Delete note permanently?</string>
+    <string name="notes_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="notes_no_content">No content added</string>
+    <string name="notes_uncategorized">Uncategorized</string>
+    <string name="notes_type_text">Text note</string>
+    <string name="notes_type_checklist">Checklist</string>
+    <string name="notes_color_blue">Office blue</string>
+    <string name="notes_color_green">Green</string>
+    <string name="notes_color_amber">Amber</string>
+    <string name="notes_color_pink">Pink</string>
+    <string name="notes_color_neutral">Neutral</string>
+    <string name="notes_pinned">PINNED</string>
+    <string name="notes_pin">Pin</string>
+    <string name="notes_unpin">Unpin</string>
+    <string name="notes_archive">Archive</string>
+    <string name="notes_restore">Restore</string>
+    <string name="more_notes_title">Notes &amp; Checklists</string>
+    <string name="more_notes_detail">Private notes, checklists, pinning, and archive</string>
+    <string-array name="notes_type_labels">
+        <item>@string/notes_type_text</item>
+        <item>@string/notes_type_checklist</item>
+    </string-array>
+    <string-array name="notes_color_labels">
+        <item>@string/notes_color_blue</item>
+        <item>@string/notes_color_green</item>
+        <item>@string/notes_color_amber</item>
+        <item>@string/notes_color_pink</item>
+        <item>@string/notes_color_neutral</item>
+    </string-array>
+
 </resources>
