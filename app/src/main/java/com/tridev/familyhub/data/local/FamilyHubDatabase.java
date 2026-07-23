@@ -18,6 +18,7 @@ import com.tridev.familyhub.data.local.dao.HealthRecordDao;
 import com.tridev.familyhub.data.local.dao.VehicleDao;
 import com.tridev.familyhub.data.local.dao.PropertyDao;
 import com.tridev.familyhub.data.local.dao.GroceryItemDao;
+import com.tridev.familyhub.data.local.dao.NoteDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -28,6 +29,7 @@ import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.PropertyEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.local.entity.NoteEntry;
 
 /**
  * The private on-device database.
@@ -46,9 +48,10 @@ import com.tridev.familyhub.data.local.entity.GroceryItem;
                 HealthRecord.class,
                 Vehicle.class,
                 PropertyEntry.class,
-                GroceryItem.class
+                GroceryItem.class,
+                NoteEntry.class
         },
-        version = 9,
+        version = 10,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -68,6 +71,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract VehicleDao vehicleDao();
     public abstract PropertyDao propertyDao();
     public abstract GroceryItemDao groceryItemDao();
+    public abstract NoteDao noteDao();
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -347,6 +351,42 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Adds local text notes and checklist foundations. */
+    private static final Migration MIGRATION_9_10 = new Migration(9, 10) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `notes` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`noteType` TEXT NOT NULL, "
+                            + "`title` TEXT NOT NULL, "
+                            + "`content` TEXT NOT NULL, "
+                            + "`category` TEXT NOT NULL, "
+                            + "`colorKey` TEXT NOT NULL, "
+                            + "`isPinned` INTEGER NOT NULL, "
+                            + "`isArchived` INTEGER NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "`updatedAt` INTEGER NOT NULL)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_notes_category` "
+                            + "ON `notes` (`category`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_notes_isPinned` "
+                            + "ON `notes` (`isPinned`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_notes_isArchived` "
+                            + "ON `notes` (`isArchived`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_notes_updatedAt` "
+                            + "ON `notes` (`updatedAt`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -364,7 +404,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_5_6,
                                     MIGRATION_6_7,
                                     MIGRATION_7_8,
-                                    MIGRATION_8_9
+                                    MIGRATION_8_9,
+                                    MIGRATION_9_10
                             )
                             .build();
                 }
