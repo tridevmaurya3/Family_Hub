@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Original Fluent folded-family symbol -->
+    <path
+        android:fillColor="#0F6CBD"
+        android:pathData="M54,14L25,31L25,67L54,84L54,64L42,57L42,41L54,34Z" />
+    <path
+        android:fillColor="#36A9E1"
+        android:pathData="M54,14L83,31L66,41L54,34Z" />
+    <path
+        android:fillColor="#5B5FC7"
+        android:pathData="M83,31L83,67L66,57L66,41Z" />
+    <path
+        android:fillColor="#0F7A5A"
+        android:pathData="M83,67L54,84L54,64L66,57Z" />
+
+    <!-- Calm white home hub -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,31a23,23 0,1 0,0 46a23,23 0,1 0,0 -46" />
+    <path
+        android:fillColor="#0F6CBD"
+        android:pathData="M54,39L38,51v17h10V58h12v10h10V51L54,39z" />
+
+    <!-- Family members -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M49,48a4,4 0,1 0,8 0a4,4 0,1 0,-8 0M43,54a3,3 0,1 0,6 0a3,3 0,1 0,-6 0M59,54a3,3 0,1 0,6 0a3,3 0,1 0,-6 0" />
+
+</vector>

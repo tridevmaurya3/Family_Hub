@@ -1,22 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <style name="Theme.FamilyHub" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#BAC3FF</item>
-        <item name="colorOnPrimary">#00217A</item>
-        <item name="colorPrimaryContainer">#17349D</item>
-        <item name="colorSecondary">#9CD8BB</item>
-        <item name="colorSecondaryContainer">#20513F</item>
-        <item name="colorTertiary">#FFB86E</item>
-        <item name="colorTertiaryContainer">#713900</item>
-        <item name="colorSurface">#121318</item>
-        <item name="colorSurfaceVariant">#22242D</item>
-        <item name="colorOnSurface">#E3E2E9</item>
-        <item name="colorOnSurfaceVariant">#C4C6D0</item>
-        <item name="android:colorAccent">#BAC3FF</item>
+        <item name="colorPrimary">@color/fh_primary</item>
+        <item name="colorOnPrimary">@color/fh_on_primary</item>
+        <item name="colorPrimaryContainer">@color/fh_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/fh_on_primary_container</item>
+        <item name="colorSecondary">@color/fh_secondary</item>
+        <item name="colorOnSecondary">@color/fh_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/fh_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/fh_on_secondary_container</item>
+        <item name="colorTertiary">@color/fh_tertiary</item>
+        <item name="colorOnTertiary">@color/fh_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/fh_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/fh_on_tertiary_container</item>
+        <item name="android:colorBackground">@color/fh_background</item>
+        <item name="colorSurface">@color/fh_surface</item>
+        <item name="colorSurfaceVariant">@color/fh_surface_variant</item>
+        <item name="colorOnSurface">@color/fh_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/fh_on_surface_variant</item>
+        <item name="colorOutline">@color/fh_outline</item>
+        <item name="colorError">@color/fh_error</item>
+        <item name="android:colorAccent">@color/fh_primary</item>
         <item name="android:fontFamily">sans</item>
-        <item name="android:navigationBarColor">#121318</item>
-        <item name="android:statusBarColor">#121318</item>
+        <item name="materialButtonStyle">@style/Widget.FamilyHub.Button.Primary</item>
+        <item name="textInputStyle">@style/Widget.FamilyHub.TextInputLayout</item>
+        <item name="android:navigationBarColor">@color/fh_surface</item>
+        <item name="android:statusBarColor">@color/fh_background</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:windowNoTitle">true</item>
     </style>
+
 </resources>

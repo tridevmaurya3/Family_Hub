@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Family Hub Fluent dark palette -->
+    <color name="fh_primary">#62ABF5</color>
+    <color name="fh_primary_dark">#A9D3FF</color>
+    <color name="fh_primary_container">#163A5A</color>
+    <color name="fh_on_primary">#06233A</color>
+    <color name="fh_on_primary_container">#D6EAFF</color>
+
+    <color name="fh_secondary">#64C9A5</color>
+    <color name="fh_secondary_container">#173D31</color>
+    <color name="fh_on_secondary">#08271F</color>
+    <color name="fh_on_secondary_container">#C7F5E4</color>
+
+    <color name="fh_tertiary">#F2C66D</color>
+    <color name="fh_tertiary_container">#4A3815</color>
+    <color name="fh_on_tertiary">#382800</color>
+    <color name="fh_on_tertiary_container">#FFE8AD</color>
+
+    <color name="fh_background">#111315</color>
+    <color name="fh_surface">#1B1D20</color>
+    <color name="fh_surface_variant">#24272B</color>
+    <color name="fh_surface_container">#202326</color>
+    <color name="fh_surface_container_high">#2A2D31</color>
+    <color name="fh_surface_blue">#17232D</color>
+
+    <color name="fh_text_primary">#F1F1F1</color>
+    <color name="fh_text_secondary">#C7C7C7</color>
+    <color name="fh_text_disabled">#797979</color>
+    <color name="fh_on_surface">#F1F1F1</color>
+    <color name="fh_on_surface_variant">#C7C7C7</color>
+
+    <color name="fh_outline">#454A50</color>
+    <color name="fh_outline_variant">#34383D</color>
+    <color name="fh_divider">#34383D</color>
+
+    <color name="fh_success">#6CCB6C</color>
+    <color name="fh_success_container">#173D20</color>
+    <color name="fh_on_success_container">#C9F3CC</color>
+
+    <color name="fh_warning">#F2C66D</color>
+    <color name="fh_warning_container">#4A3815</color>
+    <color name="fh_on_warning_container">#FFE8AD</color>
+
+    <color name="fh_error">#FF8A7E</color>
+    <color name="fh_error_container">#4B211E</color>
+    <color name="fh_on_error_container">#FFDAD6</color>
+
+    <color name="fh_info">#62ABF5</color>
+    <color name="fh_info_container">#163A5A</color>
+    <color name="fh_on_info_container">#D6EAFF</color>
+
+    <color name="fh_module_family">#62ABF5</color>
+    <color name="fh_module_family_container">#163A5A</color>
+    <color name="fh_module_finance">#6CCB6C</color>
+    <color name="fh_module_finance_container">#173D20</color>
+    <color name="fh_module_reminders">#F2C66D</color>
+    <color name="fh_module_reminders_container">#4A3815</color>
+    <color name="fh_module_documents">#B9A1F2</color>
+    <color name="fh_module_documents_container">#372C50</color>
+    <color name="fh_module_health">#F08AB2</color>
+    <color name="fh_module_health_container">#4A2334</color>
+    <color name="fh_module_vehicle">#8FC3EA</color>
+    <color name="fh_module_vehicle_container">#203849</color>
+    <color name="fh_module_property">#E4B86A</color>
+    <color name="fh_module_property_container">#45351A</color>
+    <color name="fh_module_vault">#AAADEF</color>
+    <color name="fh_module_vault_container">#303260</color>
+
+    <color name="fh_white">#FFFFFF</color>
+    <color name="fh_black">#000000</color>
+    <color name="fh_transparent">#00000000</color>
+    <color name="fh_launcher_background">#F4F9FD</color>
+
+</resources>

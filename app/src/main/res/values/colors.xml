@@ -78,5 +78,6 @@
     <color name="fh_white">#FFFFFF</color>
     <color name="fh_black">#000000</color>
     <color name="fh_transparent">#00000000</color>
+    <color name="fh_launcher_background">#F4F9FD</color>
 
 </resources>
