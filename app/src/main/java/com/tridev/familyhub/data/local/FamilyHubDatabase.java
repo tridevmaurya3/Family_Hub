@@ -14,12 +14,14 @@ import com.tridev.familyhub.data.local.dao.FinanceEntryDao;
 import com.tridev.familyhub.data.local.dao.ReminderDao;
 import com.tridev.familyhub.data.local.dao.DocumentDao;
 import com.tridev.familyhub.data.local.dao.PasswordEntryDao;
+import com.tridev.familyhub.data.local.dao.HealthRecordDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.PasswordEntry;
+import com.tridev.familyhub.data.local.entity.HealthRecord;
 
 /**
  * The private on-device database.
@@ -34,9 +36,10 @@ import com.tridev.familyhub.data.local.entity.PasswordEntry;
                 Reminder.class,
                 FamilyLiveStatus.class,
                 DocumentEntry.class,
-                PasswordEntry.class
+                PasswordEntry.class,
+                HealthRecord.class
         },
-        version = 5,
+        version = 6,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -52,6 +55,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract FamilyLiveStatusDao familyLiveStatusDao();
     public abstract DocumentDao documentDao();
     public abstract PasswordEntryDao passwordEntryDao();
+    public abstract HealthRecordDao healthRecordDao();
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -168,6 +172,44 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /**
+     * Adds private health records linked to existing family members.
+     */
+    private static final Migration MIGRATION_5_6 = new Migration(5, 6) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `health_records` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`familyMemberId` INTEGER NOT NULL, "
+                            + "`recordType` TEXT NOT NULL, "
+                            + "`title` TEXT NOT NULL, "
+                            + "`value` TEXT NOT NULL, "
+                            + "`notes` TEXT NOT NULL, "
+                            + "`recordedAt` INTEGER NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "FOREIGN KEY(`familyMemberId`) "
+                            + "REFERENCES `family_members`(`id`) "
+                            + "ON UPDATE CASCADE ON DELETE CASCADE)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_health_records_familyMemberId` "
+                            + "ON `health_records` (`familyMemberId`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_health_records_recordType` "
+                            + "ON `health_records` (`recordType`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_health_records_recordedAt` "
+                            + "ON `health_records` (`recordedAt`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -181,7 +223,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_1_2,
                                     MIGRATION_2_3,
                                     MIGRATION_3_4,
-                                    MIGRATION_4_5
+                                    MIGRATION_4_5,
+                                    MIGRATION_5_6
                             )
                             .build();
                 }
