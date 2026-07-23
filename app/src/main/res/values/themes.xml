@@ -49,6 +49,7 @@
         <item name="boxStrokeColor">@color/fh_outline</item>
         <item name="boxStrokeWidth">@dimen/border_width</item>
         <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="hintTextAppearance">@style/TextAppearance.FamilyHub.FormHint</item>
         <item name="hintTextColor">@color/fh_on_surface_variant</item>
     </style>
 </resources>

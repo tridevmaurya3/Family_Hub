@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/fh_surface"
     android:fillViewport="true">
 
     <LinearLayout
@@ -116,50 +117,42 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <LinearLayout
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.Form.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
-            android:orientation="horizontal">
+            android:hint="@string/member_gender">
 
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
-                android:layout_width="0dp"
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/member_gender_input"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1"
-                android:hint="@string/member_gender"
-                app:endIconMode="dropdown_menu">
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/member_gender_input"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:inputType="none" />
 
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1"
-                android:hint="@string/member_blood_group"
-                app:endIconMode="dropdown_menu">
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/member_blood_group_input"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/member_family_role"
-            app:endIconMode="dropdown_menu">
+            android:hint="@string/member_blood_group">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/member_blood_group_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/member_family_role">
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:id="@+id/member_role_input"
                 android:layout_width="match_parent"

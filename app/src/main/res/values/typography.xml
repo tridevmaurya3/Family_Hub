@@ -54,4 +54,10 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="TextAppearance.FamilyHub.FormHint" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/fh_on_surface_variant</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
 </resources>
