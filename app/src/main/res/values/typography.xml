@@ -1,27 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="TextAppearance.FamilyHub.Overline" parent="TextAppearance.Material3.LabelMedium">
+
+    <style name="TextAppearance.FamilyHub.Display" parent="TextAppearance.Material3.DisplaySmall">
         <item name="android:fontFamily">sans</item>
-        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="TextAppearance.FamilyHub.Heading" parent="TextAppearance.Material3.HeadlineMedium">
         <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="TextAppearance.FamilyHub.SectionTitle" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="TextAppearance.FamilyHub.CardTitle" parent="TextAppearance.Material3.TitleMedium">
         <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="TextAppearance.FamilyHub.Body" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">sans</item>
         <item name="android:lineSpacingExtra">2dp</item>
+        <item name="android:textColor">@color/fh_on_surface_variant</item>
     </style>
+
+    <style name="TextAppearance.FamilyHub.BodyStrong" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textColor">@color/fh_on_surface_variant</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.Label" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.Overline" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textColor">@color/fh_on_surface_variant</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
 </resources>

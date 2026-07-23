@@ -1,13 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Fluent spacing scale -->
+    <dimen name="space_2">2dp</dimen>
     <dimen name="space_4">4dp</dimen>
+    <dimen name="space_6">6dp</dimen>
     <dimen name="space_8">8dp</dimen>
+    <dimen name="space_10">10dp</dimen>
     <dimen name="space_12">12dp</dimen>
+    <dimen name="space_14">14dp</dimen>
     <dimen name="space_16">16dp</dimen>
     <dimen name="space_20">20dp</dimen>
     <dimen name="space_24">24dp</dimen>
+    <dimen name="space_28">28dp</dimen>
     <dimen name="space_32">32dp</dimen>
     <dimen name="space_40">40dp</dimen>
+
+    <!-- Standard screen and component spacing -->
+    <dimen name="screen_padding_horizontal">16dp</dimen>
+    <dimen name="screen_padding_vertical">16dp</dimen>
+    <dimen name="card_padding">14dp</dimen>
+    <dimen name="card_spacing">12dp</dimen>
+    <dimen name="form_field_spacing">12dp</dimen>
+    <dimen name="section_spacing">24dp</dimen>
+
+    <!-- Fluent corner-radius scale -->
+    <dimen name="radius_4">4dp</dimen>
+    <dimen name="radius_8">8dp</dimen>
+    <dimen name="radius_12">12dp</dimen>
+    <dimen name="radius_14">14dp</dimen>
     <dimen name="radius_16">16dp</dimen>
+    <dimen name="radius_18">18dp</dimen>
     <dimen name="radius_20">20dp</dimen>
     <dimen name="radius_24">24dp</dimen>
+    <dimen name="radius_full">999dp</dimen>
+
+    <!-- Reusable component sizes -->
+    <dimen name="icon_size_small">18dp</dimen>
+    <dimen name="icon_size_medium">24dp</dimen>
+    <dimen name="icon_size_large">28dp</dimen>
+    <dimen name="icon_tile_size">46dp</dimen>
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="input_min_height">56dp</dimen>
+    <dimen name="touch_target_min">48dp</dimen>
+    <dimen name="border_width">1dp</dimen>
+    <dimen name="card_elevation">1dp</dimen>
+
 </resources>

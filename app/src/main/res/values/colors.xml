@@ -1,58 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Primary brand colors -->
-    <color name="fh_primary">#3159D6</color>
-    <color name="fh_primary_dark">#203DA1</color>
-    <color name="fh_primary_container">#E2E8FF</color>
+    <!-- Family Hub Office 365 / Fluent light brand -->
+    <color name="fh_primary">#0F6CBD</color>
+    <color name="fh_primary_dark">#0C3B5E</color>
+    <color name="fh_primary_container">#E8F3FC</color>
     <color name="fh_on_primary">#FFFFFF</color>
-    <color name="fh_on_primary_container">#132A73</color>
+    <color name="fh_on_primary_container">#0C3B5E</color>
 
-    <!-- Secondary colors -->
-    <color name="fh_secondary">#386A56</color>
-    <color name="fh_secondary_container">#B9F3D6</color>
+    <!-- Secondary and tertiary accents -->
+    <color name="fh_secondary">#0F7A5A</color>
+    <color name="fh_secondary_container">#E7F6F0</color>
     <color name="fh_on_secondary">#FFFFFF</color>
-    <color name="fh_on_secondary_container">#002116</color>
+    <color name="fh_on_secondary_container">#0B4F3B</color>
 
-    <!-- Tertiary colors -->
-    <color name="fh_tertiary">#A65E00</color>
-    <color name="fh_tertiary_container">#FFE0BA</color>
+    <color name="fh_tertiary">#8A5A00</color>
+    <color name="fh_tertiary_container">#FFF4CE</color>
     <color name="fh_on_tertiary">#FFFFFF</color>
-    <color name="fh_on_tertiary_container">#351A00</color>
+    <color name="fh_on_tertiary_container">#5C3B00</color>
 
-    <!-- Background and surfaces -->
-    <color name="fh_background">#F8F9FD</color>
+    <!-- Fluent light canvas and layered surfaces -->
+    <color name="fh_background">#F5F7FA</color>
     <color name="fh_surface">#FFFFFF</color>
-    <color name="fh_surface_variant">#EEF1F8</color>
-    <color name="fh_surface_container">#F2F4FA</color>
-    <color name="fh_surface_container_high">#E9ECF4</color>
+    <color name="fh_surface_variant">#F3F5F7</color>
+    <color name="fh_surface_container">#F8F9FA</color>
+    <color name="fh_surface_container_high">#EEF1F4</color>
+    <color name="fh_surface_blue">#F4F9FD</color>
 
-    <!-- Text colors -->
-    <color name="fh_text_primary">#1A1C22</color>
-    <color name="fh_text_secondary">#5F6370</color>
-    <color name="fh_text_disabled">#9B9FAA</color>
+    <!-- Fluent neutral text -->
+    <color name="fh_text_primary">#242424</color>
+    <color name="fh_text_secondary">#616161</color>
+    <color name="fh_text_disabled">#A0A0A0</color>
+    <color name="fh_on_surface">#242424</color>
+    <color name="fh_on_surface_variant">#616161</color>
 
-    <!-- Material-compatible aliases -->
-    <color name="fh_on_surface">#1A1C22</color>
-    <color name="fh_on_surface_variant">#5F6370</color>
+    <!-- Subtle borders and dividers -->
+    <color name="fh_outline">#D6DCE3</color>
+    <color name="fh_outline_variant">#E5E9ED</color>
+    <color name="fh_divider">#E5E9ED</color>
 
-    <!-- Borders and dividers -->
-    <color name="fh_outline">#D8DDEA</color>
-    <color name="fh_outline_variant">#E5E8F0</color>
-    <color name="fh_divider">#E5E8F0</color>
-
-    <!-- Status colors -->
-    <color name="fh_success">#137A4A</color>
-    <color name="fh_success_container">#C0F0D4</color>
+    <!-- Semantic feedback colors -->
+    <color name="fh_success">#107C10</color>
+    <color name="fh_success_container">#EAF7EE</color>
+    <color name="fh_on_success_container">#0B5A1E</color>
 
     <color name="fh_warning">#9A6700</color>
-    <color name="fh_warning_container">#FFE5A3</color>
+    <color name="fh_warning_container">#FFF4CE</color>
+    <color name="fh_on_warning_container">#6D4A00</color>
 
-    <color name="fh_error">#BA1A1A</color>
-    <color name="fh_error_container">#FFDAD6</color>
+    <color name="fh_error">#C42B1C</color>
+    <color name="fh_error_container">#FDE7E9</color>
+    <color name="fh_on_error_container">#8E1C13</color>
 
-    <color name="fh_info">#246BCE</color>
-    <color name="fh_info_container">#D9E7FF</color>
+    <color name="fh_info">#0F6CBD</color>
+    <color name="fh_info_container">#E8F3FC</color>
+    <color name="fh_on_info_container">#0C3B5E</color>
+
+    <!-- Module identity colors -->
+    <color name="fh_module_family">#0F6CBD</color>
+    <color name="fh_module_family_container">#E8F3FC</color>
+    <color name="fh_module_finance">#107C10</color>
+    <color name="fh_module_finance_container">#EAF7EE</color>
+    <color name="fh_module_reminders">#9A6700</color>
+    <color name="fh_module_reminders_container">#FFF4CE</color>
+    <color name="fh_module_documents">#6B4FA1</color>
+    <color name="fh_module_documents_container">#F2EDFA</color>
+    <color name="fh_module_health">#C2396F</color>
+    <color name="fh_module_health_container">#FCEEF4</color>
+    <color name="fh_module_vehicle">#315F83</color>
+    <color name="fh_module_vehicle_container">#EEF6FD</color>
+    <color name="fh_module_property">#8A5A00</color>
+    <color name="fh_module_property_container">#FFF7E6</color>
+    <color name="fh_module_vault">#5B5FC7</color>
+    <color name="fh_module_vault_container">#EEEFFD</color>
 
     <!-- Common colors -->
     <color name="fh_white">#FFFFFF</color>
