@@ -34,6 +34,7 @@ import com.tridev.familyhub.feature.planner.PlannerFragment;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -109,8 +110,35 @@ public class DashboardFragment extends Fragment {
         setupStatusCards();
         setupActionCards();
         setupNotificationAction();
+        renderHeader();
 
         loadDashboardData();
+    }
+
+    /** Renders a time-aware greeting and a locale-aware current date. */
+    private void renderHeader() {
+        if (binding == null) {
+            return;
+        }
+
+        int hourOfDay = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int greetingResId;
+
+        if (hourOfDay < 12) {
+            greetingResId = R.string.dashboard_greeting_morning;
+        } else if (hourOfDay < 17) {
+            greetingResId = R.string.dashboard_greeting_afternoon;
+        } else {
+            greetingResId = R.string.dashboard_greeting_evening;
+        }
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                getString(R.string.dashboard_date_format),
+                Locale.getDefault()
+        );
+
+        binding.dashboardGreeting.setText(greetingResId);
+        binding.dashboardCurrentDate.setText(dateFormat.format(new Date()));
     }
 
     /**
@@ -471,6 +499,7 @@ public class DashboardFragment extends Fragment {
         super.onResume();
 
         if (dashboardRepository != null) {
+            renderHeader();
             loadDashboardData();
         }
     }
