@@ -7,6 +7,10 @@
     <!-- Dashboard -->
     <string name="dashboard_greeting">Good evening</string>
     <string name="dashboard_intro">Your family, all in one place.</string>
+    <string name="dashboard_greeting_morning">Good morning</string>
+    <string name="dashboard_greeting_afternoon">Good afternoon</string>
+    <string name="dashboard_greeting_evening">Good evening</string>
+    <string name="dashboard_date_format" translatable="false">EEEE, dd MMMM yyyy</string>
     <string name="family_status">Private by default</string>
     <string name="family_status_detail">Start building a calm space for the people who matter.</string>
     <string name="quick_actions">Quick actions</string>
