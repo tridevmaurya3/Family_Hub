@@ -796,5 +796,11 @@
     <string name="auth_account_exists">This email cannot be registered. Try signing in or resetting the password.</string>
     <string name="auth_invalid_credentials">The email or password is incorrect.</string>
     <string name="auth_error_generic">Authentication could not be completed. Please try again.</string>
+    <!-- Account session -->
+    <string name="auth_account_section">Account</string>
+    <string name="auth_signed_in_as">Signed in as</string>
+    <string name="auth_account_unknown">Verified Family Hub account</string>
+    <string name="auth_logout">Log out</string>
+    <string name="auth_logout_confirm">Log out of this device? Local family records will remain on the device.</string>
 
 </resources>
