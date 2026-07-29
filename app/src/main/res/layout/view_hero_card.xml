@@ -13,19 +13,19 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="@dimen/space_16">
+        android:padding="@dimen/space_8">
 
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="@dimen/icon_tile_size"
-            android:layout_height="@dimen/icon_tile_size"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             app:cardBackgroundColor="@color/fh_surface"
-            app:cardCornerRadius="@dimen/radius_14"
+            app:cardCornerRadius="@dimen/radius_12"
             app:cardElevation="0dp">
 
             <ImageView
                 android:id="@+id/imgHeroIcon"
-                android:layout_width="@dimen/icon_size_large"
-                android:layout_height="@dimen/icon_size_large"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:layout_gravity="center"
                 android:contentDescription="@string/app_name"
                 android:src="@drawable/ic_family_hub_mark"
@@ -36,7 +36,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/space_12"
+            android:layout_marginStart="@dimen/space_8"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -45,8 +45,11 @@
                 style="@style/TextAppearance.FamilyHub.CardTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="@string/family_status"
-                android:textColor="@color/fh_on_primary_container" />
+                android:textColor="@color/fh_on_primary_container"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/txtHeroSubtitle"
@@ -54,8 +57,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_4"
+                android:ellipsize="end"
+                android:maxLines="2"
                 android:text="@string/family_status_detail"
-                android:textColor="@color/fh_on_primary_container" />
+                android:textColor="@color/fh_on_primary_container"
+                android:textSize="11sp" />
 
         </LinearLayout>
 
@@ -67,6 +73,7 @@
             android:layout_marginStart="@dimen/space_8"
             android:minWidth="0dp"
             android:text="@string/family_live"
+            android:textSize="11sp"
             app:icon="@drawable/ic_arrow_right"
             app:iconGravity="textEnd"
             app:iconPadding="@dimen/space_4"
