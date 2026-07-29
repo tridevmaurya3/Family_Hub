@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
@@ -14,7 +15,12 @@ import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
 
 import java.util.Calendar;
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,6 +29,10 @@ public class DashboardRepository {
 
     public interface DashboardDataCallback {
         void onLoaded(@NonNull DashboardData dashboardData);
+    }
+
+    public interface DashboardErrorCallback {
+        void onError(@NonNull Throwable error);
     }
 
     private final FinanceRepository financeRepository;
@@ -41,7 +51,8 @@ public class DashboardRepository {
     }
 
     public void loadDashboardData(
-            @NonNull DashboardDataCallback callback
+            @NonNull DashboardDataCallback callback,
+            @NonNull DashboardErrorCallback errorCallback
     ) {
 
         DashboardStats stats = new DashboardStats();
@@ -76,7 +87,15 @@ public class DashboardRepository {
                     );
                 }
 
-                loadLocalCounts(dashboardData, callback);
+                Reminder nextBill = findNextBillReminder(reminders);
+                dashboardData.setNextBillReminder(nextBill);
+                if (nextBill != null) {
+                    dashboardData.setNextBillTriggerAt(
+                            nextTriggerTime(nextBill)
+                    );
+                }
+
+                loadLocalCounts(dashboardData, callback, errorCallback);
             });
 
         });
@@ -84,51 +103,145 @@ public class DashboardRepository {
 
     private void loadLocalCounts(
             @NonNull DashboardData dashboardData,
-            @NonNull DashboardDataCallback callback
+            @NonNull DashboardDataCallback callback,
+            @NonNull DashboardErrorCallback errorCallback
     ) {
         databaseExecutor.execute(() -> {
-            DashboardStats stats = dashboardData.getStats();
-            long thirtyDaysFromNow = System.currentTimeMillis()
-                    + (30L * 24L * 60L * 60L * 1000L);
-            stats.setTotalMembers(database.familyMemberDao().count());
-            stats.setDocuments(database.documentDao().count());
-            stats.setHealthAlerts(database.healthRecordDao().count());
-            stats.setPlannerOpen(database.plannerItemDao().countOpen());
-            stats.setPlannerCompleted(
-                    database.plannerItemDao().countCompleted()
-            );
-            stats.setGroceryPending(
-                    database.groceryItemDao().countPending()
-            );
-            stats.setGroceryPurchased(
-                    database.groceryItemDao().countPurchased()
-            );
-            stats.setDocumentsExpiringSoon(
-                    database.documentDao().countExpiringBy(thirtyDaysFromNow)
-            );
-            stats.setVehiclesDueSoon(
-                    database.vehicleDao().countDueBy(thirtyDaysFromNow)
-            );
-            stats.setActiveNotes(database.noteDao().countActive());
-            stats.setPinnedNotes(database.noteDao().countPinned());
-            stats.setFamilyLiveSharing(
-                    database.familyLiveStatusDao().countSharingEnabled()
-            );
+            try {
+                DashboardStats stats = dashboardData.getStats();
+                long thirtyDaysFromNow = System.currentTimeMillis()
+                        + (30L * 24L * 60L * 60L * 1000L);
+                List<FamilyMember> members = database.familyMemberDao().getAll();
+                stats.setTotalMembers(members.size());
+                stats.setDocuments(database.documentDao().count());
+                stats.setHealthAlerts(database.healthRecordDao().count());
+                stats.setPlannerOpen(database.plannerItemDao().countOpen());
+                stats.setPlannerCompleted(
+                        database.plannerItemDao().countCompleted()
+                );
+                stats.setGroceryPending(
+                        database.groceryItemDao().countPending()
+                );
+                stats.setGroceryPurchased(
+                        database.groceryItemDao().countPurchased()
+                );
+                stats.setDocumentsExpiringSoon(
+                        database.documentDao().countExpiringBy(thirtyDaysFromNow)
+                );
+                stats.setVehiclesDueSoon(
+                        database.vehicleDao().countDueBy(thirtyDaysFromNow)
+                );
+                stats.setActiveNotes(database.noteDao().countActive());
+                stats.setPinnedNotes(database.noteDao().countPinned());
+                stats.setFamilyLiveSharing(
+                        database.familyLiveStatusDao().countSharingEnabled()
+                );
+                stats.setMaleMembers(
+                        database.familyMemberDao().countByGender("Male")
+                );
+                stats.setFemaleMembers(
+                        database.familyMemberDao().countByGender("Female")
+                );
+                stats.setChildren(
+                        database.familyMemberDao().countByRole(
+                                FamilyMember.ROLE_CHILD
+                        )
+                );
 
-            stats.setMaleMembers(
-                    database.familyMemberDao().countByGender("Male")
-            );
-            stats.setFemaleMembers(
-                    database.familyMemberDao().countByGender("Female")
-            );
-            stats.setChildren(
-                    database.familyMemberDao().countByRole(
-                            FamilyMember.ROLE_CHILD
-                    )
-            );
+                BirthdayCandidate birthday = findNextBirthday(members);
+                if (birthday != null) {
+                    dashboardData.setNextBirthdayMember(birthday.member);
+                    dashboardData.setNextBirthdayAt(birthday.when);
+                }
 
-            mainHandler.post(() -> callback.onLoaded(dashboardData));
+                mainHandler.post(() -> callback.onLoaded(dashboardData));
+            } catch (RuntimeException error) {
+                mainHandler.post(() -> errorCallback.onError(error));
+            }
         });
+    }
+
+    @Nullable
+    private Reminder findNextBillReminder(@NonNull List<Reminder> reminders) {
+        Reminder closest = null;
+        long nearest = Long.MAX_VALUE;
+
+        for (Reminder reminder : reminders) {
+            String searchable = (reminder.title + " " + reminder.note)
+                    .toLowerCase(Locale.ROOT);
+            boolean isBill = searchable.contains("bill")
+                    || searchable.contains("payment")
+                    || searchable.contains("emi")
+                    || searchable.contains("electricity")
+                    || searchable.contains("insurance")
+                    || searchable.contains("fee")
+                    || searchable.contains("recharge")
+                    || searchable.contains("बिल")
+                    || searchable.contains("भुगतान")
+                    || searchable.contains("किश्त")
+                    || searchable.contains("ईएमआई");
+            long trigger = nextTriggerTime(reminder);
+            if (isBill && trigger > 0L && trigger < nearest) {
+                nearest = trigger;
+                closest = reminder;
+            }
+        }
+        return closest;
+    }
+
+    @Nullable
+    private BirthdayCandidate findNextBirthday(
+            @NonNull List<FamilyMember> members
+    ) {
+        LocalDate today = LocalDate.now();
+        BirthdayCandidate closest = null;
+
+        for (FamilyMember member : members) {
+            if (member.dateOfBirth.trim().isEmpty()) {
+                continue;
+            }
+            try {
+                LocalDate birthDate = LocalDate.parse(
+                        member.dateOfBirth,
+                        DateTimeFormatter.ISO_LOCAL_DATE
+                );
+                LocalDate next = birthdayInYear(birthDate, today.getYear());
+                if (next.isBefore(today)) {
+                    next = birthdayInYear(birthDate, today.getYear() + 1);
+                }
+                long when = next.atStartOfDay(ZoneId.systemDefault())
+                        .toInstant()
+                        .toEpochMilli();
+                if (closest == null || when < closest.when) {
+                    closest = new BirthdayCandidate(member, when);
+                }
+            } catch (DateTimeException ignored) {
+                // Invalid legacy dates are skipped instead of breaking Dashboard.
+            }
+        }
+        return closest;
+    }
+
+    @NonNull
+    private LocalDate birthdayInYear(
+            @NonNull LocalDate birthDate,
+            int year
+    ) {
+        try {
+            return birthDate.withYear(year);
+        } catch (DateTimeException leapDay) {
+            return LocalDate.of(year, 2, 28);
+        }
+    }
+
+    private static final class BirthdayCandidate {
+        @NonNull final FamilyMember member;
+        final long when;
+
+        BirthdayCandidate(@NonNull FamilyMember member, long when) {
+            this.member = member;
+            this.when = when;
+        }
     }
 
     private Reminder findNextReminder(
