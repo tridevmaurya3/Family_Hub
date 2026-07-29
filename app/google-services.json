@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "392641506000",
+    "project_id": "family-hub-1bebe",
+    "storage_bucket": "family-hub-1bebe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392641506000:android:4e2641a86c4cc08184ccd5",
+        "android_client_info": {
+          "package_name": "com.tridev.familyhub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxFTL8yyvM_Hgv3q9sQfYIthDaxrQSCLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
