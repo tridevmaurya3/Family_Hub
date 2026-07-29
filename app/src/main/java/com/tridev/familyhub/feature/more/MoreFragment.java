@@ -1,5 +1,6 @@
 package com.tridev.familyhub.feature.more;
 
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -12,19 +13,22 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.BuildConfig;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
+import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
-import com.tridev.familyhub.feature.health.HealthFragment;
-import com.tridev.familyhub.feature.vehicle.VehicleFragment;
-import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
-import com.tridev.familyhub.feature.notes.NotesFragment;
-import com.tridev.familyhub.feature.planner.PlannerFragment;
+import com.tridev.familyhub.feature.health.HealthFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.notes.NotesFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
+import com.tridev.familyhub.feature.planner.PlannerFragment;
+import com.tridev.familyhub.feature.property.PropertyFragment;
+import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
 /** Fluent module hub for secondary features and essential settings. */
 public class MoreFragment extends Fragment {
@@ -97,6 +101,15 @@ public class MoreFragment extends Fragment {
         binding.cardPrivacyAbout.setOnClickListener(
                 clickedView -> showPrivacyInformation()
         );
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String email = user != null ? user.getEmail() : null;
+        binding.tvSignedInEmail.setText(
+                email == null || email.trim().isEmpty()
+                        ? getString(R.string.auth_account_unknown)
+                        : email
+        );
+        binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
     }
 
     private void openFeature(@NonNull Fragment fragment) {
@@ -122,6 +135,24 @@ public class MoreFragment extends Fragment {
                 ))
                 .setPositiveButton(R.string.ok, null)
                 .show();
+    }
+
+    private void confirmLogout() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.auth_logout)
+                .setMessage(R.string.auth_logout_confirm)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.auth_logout, (dialog, which) -> logout())
+                .show();
+    }
+
+    private void logout() {
+        FirebaseAuth.getInstance().signOut();
+
+        Intent intent = new Intent(requireContext(), AuthActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        requireActivity().finish();
     }
 
     @Override
