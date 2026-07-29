@@ -738,6 +738,15 @@
                     android:text="@string/auth_account_unknown" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_family_settings"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:text="@string/family_admin_title"
+                    app:cornerRadius="@dimen/radius_12" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_logout"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
