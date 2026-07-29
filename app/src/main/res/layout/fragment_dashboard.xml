@@ -97,6 +97,55 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_12" />
 
+        <ProgressBar
+            android:id="@+id/dashboard_loading"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/space_8"
+            android:contentDescription="@string/dashboard_loading"
+            android:visibility="gone" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_error_card"
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/fh_surface_container"
+            app:strokeColor="@color/fh_error">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_8">
+
+                <TextView
+                    android:id="@+id/dashboard_error_text"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/dashboard_load_error"
+                    android:textColor="@color/fh_error"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dashboard_retry"
+                    style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:text="@string/dashboard_retry"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Live action center -->
         <TextView
             style="@style/TextAppearance.FamilyHub.SectionTitle"
@@ -415,6 +464,7 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/dashboard_view_all"
                 style="@style/TextAppearance.FamilyHub.Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -545,6 +595,180 @@
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.SectionTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:text="@string/dashboard_highlights"
+            android:textColor="@color/fh_on_surface"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_birthday_card"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                app:cardBackgroundColor="@color/fh_module_family_container"
+                app:strokeColor="@color/fh_module_family">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target_min"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_8">
+
+                    <TextView
+                        android:id="@+id/dashboard_birthday_title"
+                        style="@style/TextAppearance.FamilyHub.CardTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/dashboard_birthday_title"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/dashboard_birthday_detail"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="@string/dashboard_no_birthday_detail"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dashboard_bill_card"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
+                app:cardBackgroundColor="@color/fh_module_reminders_container"
+                app:strokeColor="@color/fh_module_reminders">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="@dimen/touch_target_min"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_8">
+
+                    <TextView
+                        android:id="@+id/dashboard_bill_title"
+                        style="@style/TextAppearance.FamilyHub.CardTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/dashboard_bills_title"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/dashboard_bill_detail"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="@string/dashboard_no_bill_detail"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_8">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_placeholder_icon"
+                    android:contentDescription="@string/dashboard_recent_activity"
+                    android:padding="@dimen/space_6"
+                    android:src="@drawable/ic_note"
+                    app:tint="@color/fh_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.CardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dashboard_recent_activity"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/dashboard_recent_activity_detail"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="@string/dashboard_no_recent_activity"
+                        android:textSize="11sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_sos_button"
+            style="@style/Widget.FamilyHub.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginTop="@dimen/space_8"
+            android:contentDescription="@string/dashboard_sos_detail"
+            android:text="@string/dashboard_sos_action"
+            android:textColor="@color/fh_error"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_health"
+            app:iconTint="@color/fh_error"
+            app:strokeColor="@color/fh_error" />
 
     </LinearLayout>
 
