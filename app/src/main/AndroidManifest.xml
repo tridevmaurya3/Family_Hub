@@ -29,6 +29,11 @@
             android:value="${MAPS_API_KEY}" />
 
         <activity
+            android:name=".feature.auth.AuthActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".feature.main.MainActivity"
             android:exported="false" />
 
