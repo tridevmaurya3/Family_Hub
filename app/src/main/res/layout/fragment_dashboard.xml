@@ -24,6 +24,26 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="@dimen/space_8"
+                app:cardBackgroundColor="@color/fh_primary_container"
+                app:cardCornerRadius="@dimen/radius_12"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/fh_outline"
+                app:strokeWidth="@dimen/border_width">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/ic_family_hub_mark"
+                    app:tint="@color/fh_primary" />
+
+            </com.google.android.material.card.MaterialCardView>
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -31,19 +51,23 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/dashboard_greeting"
                     style="@style/TextAppearance.FamilyHub.Heading"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/dashboard_greeting"
-                    android:textColor="@color/fh_on_surface" />
+                    android:textColor="@color/fh_on_surface"
+                    android:textSize="18sp" />
 
                 <TextView
+                    android:id="@+id/dashboard_current_date"
                     style="@style/TextAppearance.FamilyHub.Body"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_4"
+                    android:layout_marginTop="@dimen/space_2"
                     android:text="@string/dashboard_intro"
-                    android:textColor="@color/fh_on_surface_variant" />
+                    android:textColor="@color/fh_on_surface_variant"
+                    android:textSize="12sp" />
 
             </LinearLayout>
 
