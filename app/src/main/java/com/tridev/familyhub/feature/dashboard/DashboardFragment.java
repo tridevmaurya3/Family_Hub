@@ -1,5 +1,8 @@
 package com.tridev.familyhub.feature.dashboard;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,6 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.cards.HeroCardModel;
 import com.tridev.familyhub.core.ui.cards.ActionCardModel;
@@ -19,6 +23,7 @@ import com.tridev.familyhub.core.ui.search.SearchBarModel;
 import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
 import com.tridev.familyhub.data.local.entity.Reminder;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.DashboardRepository;
 import com.tridev.familyhub.databinding.FragmentDashboardBinding;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
@@ -110,6 +115,7 @@ public class DashboardFragment extends Fragment {
         setupStatusCards();
         setupActionCards();
         setupNotificationAction();
+        setupDashboardHighlights();
         renderHeader();
 
         loadDashboardData();
@@ -168,8 +174,8 @@ public class DashboardFragment extends Fragment {
                                 R.string.search_hint_dashboard
                         ),
                         "",
-                        true,
-                        true
+                        false,
+                        false
                 );
 
         binding.dashboardSearchBar.setModel(
@@ -180,21 +186,6 @@ public class DashboardFragment extends Fragment {
                 this::handleDashboardSearch
         );
 
-        binding.dashboardSearchBar.setOnVoiceClickListener(
-                view -> Snackbar.make(
-                        view,
-                        R.string.dashboard_voice_search_coming_soon,
-                        Snackbar.LENGTH_SHORT
-                ).show()
-        );
-
-        binding.dashboardSearchBar.setOnFilterClickListener(
-                view -> Snackbar.make(
-                        view,
-                        R.string.dashboard_filter_coming_soon,
-                        Snackbar.LENGTH_SHORT
-                ).show()
-        );
     }
 
     /**
@@ -455,26 +446,54 @@ public class DashboardFragment extends Fragment {
      */
     private void setupNotificationAction() {
         binding.notificationButton.setOnClickListener(
-                view -> Snackbar.make(
-                        view,
-                        R.string.notifications_clear,
-                        Snackbar.LENGTH_SHORT
-                ).show()
+                view -> openTab(R.id.nav_reminders)
         );
     }
 
-    /**
-     * Displays a temporary message for unfinished modules.
-     */
-    private void showComingSoonMessage(
-            @NonNull View view,
-            @NonNull String message
-    ) {
-        Snackbar.make(
-                view,
-                message,
-                Snackbar.LENGTH_SHORT
-        ).show();
+    private void setupDashboardHighlights() {
+        binding.dashboardBirthdayCard.setOnClickListener(
+                view -> openTab(R.id.nav_family)
+        );
+        binding.dashboardBillCard.setOnClickListener(
+                view -> openTab(R.id.nav_reminders)
+        );
+        binding.dashboardViewAll.setOnClickListener(
+                view -> openTab(R.id.nav_reminders)
+        );
+        binding.dashboardRetry.setOnClickListener(
+                view -> loadDashboardData()
+        );
+        binding.dashboardSosButton.setOnClickListener(
+                view -> showEmergencyDialerConfirmation()
+        );
+    }
+
+    private void showEmergencyDialerConfirmation() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.dashboard_sos_confirm_title)
+                .setMessage(R.string.dashboard_sos_confirm_message)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(
+                        R.string.dashboard_sos_action,
+                        (dialog, which) -> openEmergencyDialer()
+                )
+                .show();
+    }
+
+    private void openEmergencyDialer() {
+        Intent dialIntent = new Intent(
+                Intent.ACTION_DIAL,
+                Uri.parse("tel:112")
+        );
+        try {
+            startActivity(dialIntent);
+        } catch (ActivityNotFoundException error) {
+            Snackbar.make(
+                    binding.getRoot(),
+                    R.string.dashboard_sos_unavailable,
+                    Snackbar.LENGTH_LONG
+            ).show();
+        }
     }
 
     /**
@@ -505,16 +524,111 @@ public class DashboardFragment extends Fragment {
     }
 
     private void loadDashboardData() {
-        dashboardRepository.loadDashboardData(data -> {
-            if (binding == null) {
-                return;
-            }
+        if (binding == null) {
+            return;
+        }
+        binding.dashboardLoading.setVisibility(View.VISIBLE);
+        binding.dashboardErrorCard.setVisibility(View.GONE);
 
-            renderFinance(data.getStats());
-            renderCounts(data.getStats());
-            renderActionCards(data.getStats());
-            renderReminder(data);
-        });
+        dashboardRepository.loadDashboardData(
+                data -> {
+                    if (binding == null) {
+                        return;
+                    }
+                    binding.dashboardLoading.setVisibility(View.GONE);
+                    binding.dashboardErrorCard.setVisibility(View.GONE);
+                    renderFinance(data.getStats());
+                    renderCounts(data.getStats());
+                    renderActionCards(data.getStats());
+                    renderReminder(data);
+                    renderBirthday(data);
+                    renderBill(data);
+                    renderRecentActivity(data);
+                },
+                error -> {
+                    if (binding == null) {
+                        return;
+                    }
+                    binding.dashboardLoading.setVisibility(View.GONE);
+                    binding.dashboardErrorCard.setVisibility(View.VISIBLE);
+                }
+        );
+    }
+
+    private void renderBirthday(@NonNull DashboardData data) {
+        FamilyMember member = data.getNextBirthdayMember();
+        if (!data.hasUpcomingBirthday() || member == null) {
+            binding.dashboardBirthdayTitle.setText(
+                    R.string.dashboard_no_birthday_title
+            );
+            binding.dashboardBirthdayDetail.setText(
+                    R.string.dashboard_no_birthday_detail
+            );
+            return;
+        }
+
+        binding.dashboardBirthdayTitle.setText(member.name);
+        binding.dashboardBirthdayDetail.setText(
+                getString(
+                        R.string.dashboard_birthday_detail,
+                        member.relation,
+                        reminderDateFormat.format(
+                                new Date(data.getNextBirthdayAt())
+                        )
+                )
+        );
+    }
+
+    private void renderBill(@NonNull DashboardData data) {
+        Reminder bill = data.getNextBillReminder();
+        if (!data.hasUpcomingBill() || bill == null) {
+            binding.dashboardBillTitle.setText(
+                    R.string.dashboard_no_bill_title
+            );
+            binding.dashboardBillDetail.setText(
+                    R.string.dashboard_no_bill_detail
+            );
+            return;
+        }
+
+        Date billDate = new Date(data.getNextBillTriggerAt());
+        binding.dashboardBillTitle.setText(bill.title);
+        binding.dashboardBillDetail.setText(
+                getString(
+                        R.string.dashboard_bill_detail,
+                        reminderDateFormat.format(billDate),
+                        reminderTimeFormat.format(billDate)
+                )
+        );
+    }
+
+    private void renderRecentActivity(@NonNull DashboardData data) {
+        if (data.hasUpcomingReminder() && data.getNextReminder() != null) {
+            binding.dashboardRecentActivityDetail.setText(
+                    getString(
+                            R.string.dashboard_activity_reminder,
+                            data.getNextReminder().title
+                    )
+            );
+        } else if (data.getExpense() > 0d) {
+            binding.dashboardRecentActivityDetail.setText(
+                    getString(
+                            R.string.dashboard_activity_expense,
+                            currencyFormatter.format(data.getExpense())
+                    )
+            );
+        } else if (data.getTotalMembers() > 0) {
+            binding.dashboardRecentActivityDetail.setText(
+                    getString(
+                            R.string.dashboard_activity_family,
+                            data.getTotalMembers()
+                    )
+            );
+        } else {
+            binding.dashboardRecentActivityDetail.setText(
+                    R.string.dashboard_no_recent_activity
+            );
+        }
     }
 
     private void renderActionCards(@NonNull DashboardStats stats) {
@@ -636,7 +750,11 @@ public class DashboardFragment extends Fragment {
         familyStatusCard.setModel(
                 new StatusCardModel(
                         getString(R.string.status_family),
-                        members + (members == 1 ? " member" : " members"),
+                        getResources().getQuantityString(
+                                R.plurals.dashboard_family_member_count,
+                                members,
+                                members
+                        ),
                         getString(R.string.status_family_ready),
                         R.drawable.ic_family
                 )
@@ -645,9 +763,13 @@ public class DashboardFragment extends Fragment {
         documentStatusCard.setModel(
                 new StatusCardModel(
                         getString(R.string.status_documents),
-                        documents + (documents == 1 ? " file" : " files"),
-                        "Stored securely on this device",
-                        R.drawable.ic_wallet
+                        getResources().getQuantityString(
+                                R.plurals.dashboard_document_count,
+                                documents,
+                                documents
+                        ),
+                        getString(R.string.dashboard_documents_local_detail),
+                        R.drawable.ic_document
                 )
         );
 
