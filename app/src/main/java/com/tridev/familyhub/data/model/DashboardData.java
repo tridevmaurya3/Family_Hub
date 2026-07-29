@@ -3,6 +3,7 @@ package com.tridev.familyhub.data.model;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.Reminder;
 
 /**
@@ -27,10 +28,24 @@ public class DashboardData {
 
     private long nextReminderTriggerAt;
 
+    @Nullable
+    private FamilyMember nextBirthdayMember;
+
+    private long nextBirthdayAt;
+
+    @Nullable
+    private Reminder nextBillReminder;
+
+    private long nextBillTriggerAt;
+
     public DashboardData() {
         stats = new DashboardStats();
         nextReminder = null;
         nextReminderTriggerAt = -1L;
+        nextBirthdayMember = null;
+        nextBirthdayAt = -1L;
+        nextBillReminder = null;
+        nextBillTriggerAt = -1L;
     }
 
     public DashboardData(
@@ -41,6 +56,10 @@ public class DashboardData {
         this.stats = stats;
         this.nextReminder = nextReminder;
         this.nextReminderTriggerAt = nextReminderTriggerAt;
+        nextBirthdayMember = null;
+        nextBirthdayAt = -1L;
+        nextBillReminder = null;
+        nextBillTriggerAt = -1L;
     }
 
     @NonNull
@@ -79,6 +98,48 @@ public class DashboardData {
     public boolean hasUpcomingReminder() {
         return nextReminder != null
                 && nextReminderTriggerAt > 0L;
+    }
+
+    @Nullable
+    public FamilyMember getNextBirthdayMember() {
+        return nextBirthdayMember;
+    }
+
+    public void setNextBirthdayMember(@Nullable FamilyMember member) {
+        nextBirthdayMember = member;
+    }
+
+    public long getNextBirthdayAt() {
+        return nextBirthdayAt;
+    }
+
+    public void setNextBirthdayAt(long nextBirthdayAt) {
+        this.nextBirthdayAt = nextBirthdayAt;
+    }
+
+    public boolean hasUpcomingBirthday() {
+        return nextBirthdayMember != null && nextBirthdayAt > 0L;
+    }
+
+    @Nullable
+    public Reminder getNextBillReminder() {
+        return nextBillReminder;
+    }
+
+    public void setNextBillReminder(@Nullable Reminder reminder) {
+        nextBillReminder = reminder;
+    }
+
+    public long getNextBillTriggerAt() {
+        return nextBillTriggerAt;
+    }
+
+    public void setNextBillTriggerAt(long nextBillTriggerAt) {
+        this.nextBillTriggerAt = nextBillTriggerAt;
+    }
+
+    public boolean hasUpcomingBill() {
+        return nextBillReminder != null && nextBillTriggerAt > 0L;
     }
 
     public double getIncome() {
