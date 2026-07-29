@@ -21,6 +21,7 @@ import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
+import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
@@ -109,6 +110,11 @@ public class MoreFragment extends Fragment {
                         ? getString(R.string.auth_account_unknown)
                         : email
         );
+        binding.buttonFamilySettings.setOnClickListener(clickedView ->
+                startActivity(new Intent(
+                        requireContext(),
+                        FamilyManagementActivity.class
+                )));
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
     }
 
