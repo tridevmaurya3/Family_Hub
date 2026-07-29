@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="@dimen/space_12">
+        android:padding="@dimen/space_8">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -23,8 +23,8 @@
 
             <ImageView
                 android:id="@+id/action_card_icon"
-                android:layout_width="@dimen/icon_size_medium"
-                android:layout_height="@dimen/icon_size_medium"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_planner" />
 
@@ -33,14 +33,15 @@
                 style="@style/TextAppearance.FamilyHub.CardTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_8"
+                android:layout_marginStart="@dimen/space_6"
                 android:layout_weight="1"
                 android:ellipsize="end"
-                android:maxLines="1" />
+                android:maxLines="1"
+                android:textSize="12sp" />
 
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_arrow_right"
                 app:tint="@color/fh_text_secondary" />
@@ -51,16 +52,19 @@
             style="@style/TextAppearance.FamilyHub.SectionTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            android:maxLines="1" />
+            android:layout_marginTop="@dimen/space_6"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/action_card_secondary"
             style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_4"
+            android:layout_marginTop="@dimen/space_2"
             android:ellipsize="end"
-            android:maxLines="2" />
+            android:maxLines="1"
+            android:textSize="11sp" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
