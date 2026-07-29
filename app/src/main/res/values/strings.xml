@@ -11,6 +11,38 @@
     <string name="dashboard_greeting_afternoon">Good afternoon</string>
     <string name="dashboard_greeting_evening">Good evening</string>
     <string name="dashboard_date_format" translatable="false">EEEE, dd MMMM yyyy</string>
+    <string name="dashboard_loading">Loading dashboard</string>
+    <string name="dashboard_load_error">Dashboard data could not be loaded.</string>
+    <string name="dashboard_retry">Retry</string>
+    <string name="dashboard_highlights">Family highlights</string>
+    <string name="dashboard_birthday_title">Upcoming birthday</string>
+    <string name="dashboard_no_birthday_title">No birthday available</string>
+    <string name="dashboard_no_birthday_detail">Add a date of birth to a family profile.</string>
+    <string name="dashboard_birthday_detail">%1$s • %2$s</string>
+    <string name="dashboard_bills_title">Bills and payments</string>
+    <string name="dashboard_no_bill_title">No bill reminder due</string>
+    <string name="dashboard_no_bill_detail">Create a bill, EMI or payment reminder.</string>
+    <string name="dashboard_bill_detail">%1$s • %2$s</string>
+    <string name="dashboard_no_recent_activity">No recent activity yet.</string>
+    <string name="dashboard_activity_reminder">Next reminder: %1$s</string>
+    <string name="dashboard_activity_expense">Monthly spending: %1$s</string>
+    <string name="dashboard_activity_family">%1$d family profiles are available.</string>
+    <plurals name="dashboard_family_member_count">
+        <item quantity="one">%d member</item>
+        <item quantity="other">%d members</item>
+    </plurals>
+    <plurals name="dashboard_document_count">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <string name="dashboard_documents_local_detail">Stored securely on this device</string>
+    <string name="dashboard_sos">Emergency SOS</string>
+    <string name="dashboard_sos_detail">Open the phone dialler with India emergency number 112.</string>
+    <string name="dashboard_sos_action">Open dialler</string>
+    <string name="dashboard_sos_confirm_title">Open emergency dialler?</string>
+    <string name="dashboard_sos_confirm_message">The number 112 will be entered. The call will start only after you confirm it in the phone app.</string>
+    <string name="dashboard_sos_unavailable">No phone dialler is available on this device.</string>
+    <string name="action_cancel">Cancel</string>
     <string name="family_status">Private by default</string>
     <string name="family_status_detail">Start building a calm space for the people who matter.</string>
     <string name="quick_actions">Quick actions</string>
