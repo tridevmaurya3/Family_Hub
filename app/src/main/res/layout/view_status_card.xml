@@ -11,19 +11,20 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="@dimen/card_padding">
+        android:minHeight="@dimen/touch_target_min"
+        android:padding="@dimen/space_8">
 
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="@dimen/icon_tile_size"
-            android:layout_height="@dimen/icon_tile_size"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             app:cardBackgroundColor="@color/fh_primary_container"
-            app:cardCornerRadius="@dimen/radius_14"
+            app:cardCornerRadius="@dimen/radius_12"
             app:cardElevation="0dp">
 
             <ImageView
                 android:id="@+id/imgStatusIcon"
-                android:layout_width="@dimen/icon_size_medium"
-                android:layout_height="@dimen/icon_size_medium"
+                android:layout_width="@dimen/icon_size_small"
+                android:layout_height="@dimen/icon_size_small"
                 android:layout_gravity="center"
                 android:contentDescription="@string/app_name"
                 android:src="@drawable/ic_wallet"
@@ -34,7 +35,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/space_12"
+            android:layout_marginStart="@dimen/space_8"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -43,30 +44,39 @@
                 style="@style/TextAppearance.FamilyHub.CardTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/monthly_spend" />
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/monthly_spend"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/txtStatusValue"
                 style="@style/TextAppearance.FamilyHub.SectionTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
+                android:layout_marginTop="@dimen/space_2"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="@string/monthly_spend_value"
-                android:textColor="@color/fh_primary" />
+                android:textColor="@color/fh_primary"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/txtStatusSubtitle"
                 style="@style/TextAppearance.FamilyHub.Caption"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:text="@string/monthly_spend_detail" />
+                android:layout_marginTop="@dimen/space_2"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/monthly_spend_detail"
+                android:textSize="11sp" />
 
         </LinearLayout>
 
         <ImageView
-            android:layout_width="@dimen/icon_size_small"
-            android:layout_height="@dimen/icon_size_small"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_arrow_right"
             app:tint="@color/fh_text_secondary" />
