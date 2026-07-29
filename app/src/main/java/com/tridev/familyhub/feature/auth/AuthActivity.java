@@ -21,7 +21,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserProfileChangeRequest;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.ActivityAuthBinding;
-import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.familyaccount.FamilySetupActivity;
 
 import java.util.Locale;
 
@@ -206,7 +206,7 @@ public class AuthActivity extends AppCompatActivity {
                             return;
                         }
 
-                        openMain();
+                        openFamilySetup();
                     });
                 });
     }
@@ -232,8 +232,8 @@ public class AuthActivity extends AppCompatActivity {
                 });
     }
 
-    private void openMain() {
-        Intent intent = new Intent(this, MainActivity.class);
+    private void openFamilySetup() {
+        Intent intent = new Intent(this, FamilySetupActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
