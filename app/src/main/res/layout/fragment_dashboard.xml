@@ -80,14 +80,16 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
             android:text="@string/dashboard_action_center"
-            android:textColor="@color/fh_on_surface" />
+            android:textColor="@color/fh_on_surface"
+            android:textSize="16sp" />
 
         <TextView
             style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_4"
-            android:text="@string/dashboard_action_center_detail" />
+            android:text="@string/dashboard_action_center_detail"
+            android:textSize="11sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -343,38 +345,39 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
             android:text="@string/dashboard_overview"
-            android:textColor="@color/fh_on_surface" />
+            android:textColor="@color/fh_on_surface"
+            android:textSize="16sp" />
 
         <!-- Reusable overview status cards -->
         <com.tridev.familyhub.core.ui.cards.StatusCardView
             android:id="@+id/card_finance_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12" />
+            android:layout_marginTop="@dimen/space_8" />
 
         <com.tridev.familyhub.core.ui.cards.StatusCardView
             android:id="@+id/card_health_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8" />
+            android:layout_marginTop="@dimen/space_6" />
 
         <com.tridev.familyhub.core.ui.cards.StatusCardView
             android:id="@+id/card_family_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8" />
+            android:layout_marginTop="@dimen/space_6" />
 
         <com.tridev.familyhub.core.ui.cards.StatusCardView
             android:id="@+id/card_document_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8" />
+            android:layout_marginTop="@dimen/space_6" />
 
         <!-- Today overview heading -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
+            android:layout_marginTop="@dimen/space_16"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -384,14 +387,16 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/today_overview"
-                android:textColor="@color/fh_on_surface" />
+                android:textColor="@color/fh_on_surface"
+                android:textSize="16sp" />
 
             <TextView
                 style="@style/TextAppearance.FamilyHub.Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/view_all"
-                android:textColor="@color/fh_primary" />
+                android:textColor="@color/fh_primary"
+                android:textSize="11sp" />
 
         </LinearLayout>
 
@@ -400,7 +405,7 @@
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/space_8"
             app:cardBackgroundColor="@color/fh_module_reminders_container"
             app:strokeColor="@color/fh_module_reminders">
 
@@ -412,11 +417,11 @@
                 android:padding="@dimen/space_12">
 
                 <ImageView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@string/upcoming_reminder"
-                    android:padding="@dimen/space_8"
+                    android:padding="@dimen/space_6"
                     android:src="@drawable/ic_reminder"
                     app:tint="@color/fh_tertiary" />
 
@@ -428,21 +433,23 @@
                     android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/dashboard_upcoming_reminder_title"
-                        style="@style/TextAppearance.FamilyHub.CardTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/upcoming_reminder"
-                        android:textColor="@color/fh_on_surface" />
+                    android:id="@+id/dashboard_upcoming_reminder_title"
+                    style="@style/TextAppearance.FamilyHub.CardTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/upcoming_reminder"
+                    android:textColor="@color/fh_on_surface"
+                    android:textSize="12sp" />
 
                     <TextView
                         android:id="@+id/dashboard_upcoming_reminder_detail"
                         style="@style/TextAppearance.FamilyHub.Body"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/space_4"
-                        android:text="@string/upcoming_reminder_detail"
-                        android:textColor="@color/fh_on_surface_variant" />
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/upcoming_reminder_detail"
+                    android:textColor="@color/fh_on_surface_variant"
+                    android:textSize="11sp" />
 
                 </LinearLayout>
 
@@ -467,11 +474,11 @@
                 android:padding="@dimen/space_12">
 
                 <ImageView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@string/monthly_spend"
-                    android:padding="@dimen/space_8"
+                    android:padding="@dimen/space_6"
                     android:src="@drawable/ic_wallet"
                     app:tint="@color/fh_success" />
 
@@ -487,7 +494,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/monthly_spend"
-                        android:textColor="@color/fh_on_surface" />
+                        android:textColor="@color/fh_on_surface"
+                        android:textSize="12sp" />
 
                     <TextView
                         android:id="@+id/dashboard_monthly_expense_detail"
@@ -496,7 +504,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_4"
                         android:text="@string/monthly_spend_detail"
-                        android:textColor="@color/fh_on_surface_variant" />
+                        android:textColor="@color/fh_on_surface_variant"
+                        android:textSize="11sp" />
 
                 </LinearLayout>
 
@@ -506,7 +515,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/monthly_spend_value"
-                    android:textColor="@color/fh_success" />
+                    android:textColor="@color/fh_success"
+                    android:textSize="14sp" />
 
             </LinearLayout>
 
