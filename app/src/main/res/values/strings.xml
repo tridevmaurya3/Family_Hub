@@ -773,5 +773,28 @@
         <item>Ideas</item>
         <item>Other</item>
     </string-array>
+    <!-- Firebase authentication -->
+    <string name="auth_title">Welcome to Family Hub</string>
+    <string name="auth_subtitle">Secure access for your private family space</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_register">Register</string>
+    <string name="auth_create_account">Create secure account</string>
+    <string name="auth_name_hint">Full name</string>
+    <string name="auth_email_hint">Email address</string>
+    <string name="auth_password_hint">Password</string>
+    <string name="auth_forgot_password">Forgot password?</string>
+    <string name="auth_privacy_note">Your account must be verified before family data can be opened.</string>
+    <string name="auth_name_error">Enter at least 2 characters</string>
+    <string name="auth_email_error">Enter a valid email address</string>
+    <string name="auth_password_error">Use at least 8 characters</string>
+    <string name="auth_verification_sent">Verification email sent. Verify it, then sign in.</string>
+    <string name="auth_email_not_verified">Email is not verified. A new verification email was sent.</string>
+    <string name="auth_verification_send_failed">Email is not verified and the verification message could not be sent.</string>
+    <string name="auth_reset_sent">If the account exists, password reset instructions have been sent.</string>
+    <string name="auth_network_error">Internet is unavailable. Check your connection and try again.</string>
+    <string name="auth_too_many_requests">Too many attempts. Please wait before trying again.</string>
+    <string name="auth_account_exists">This email cannot be registered. Try signing in or resetting the password.</string>
+    <string name="auth_invalid_credentials">The email or password is incorrect.</string>
+    <string name="auth_error_generic">Authentication could not be completed. Please try again.</string>
 
 </resources>
