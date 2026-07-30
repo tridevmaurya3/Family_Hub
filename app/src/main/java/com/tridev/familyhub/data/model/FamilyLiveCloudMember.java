@@ -14,6 +14,8 @@ public final class FamilyLiveCloudMember {
     public final double accuracy;
     public final int batteryPercentage;
     public final boolean charging;
+    public final double speedMetersPerSecond;
+    @NonNull public final String movementType;
     public final boolean sharingEnabled;
     public final boolean online;
     public final long updatedAt;
@@ -28,6 +30,8 @@ public final class FamilyLiveCloudMember {
             double accuracy,
             int batteryPercentage,
             boolean charging,
+            double speedMetersPerSecond,
+            @NonNull String movementType,
             boolean sharingEnabled,
             boolean online,
             long updatedAt
@@ -41,6 +45,8 @@ public final class FamilyLiveCloudMember {
         this.accuracy = accuracy;
         this.batteryPercentage = batteryPercentage;
         this.charging = charging;
+        this.speedMetersPerSecond = speedMetersPerSecond;
+        this.movementType = movementType;
         this.sharingEnabled = sharingEnabled;
         this.online = online;
         this.updatedAt = updatedAt;
