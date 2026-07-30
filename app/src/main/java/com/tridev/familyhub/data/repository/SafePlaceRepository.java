@@ -121,6 +121,36 @@ public final class SafePlaceRepository {
         }
     }
 
+    public void setAlertsEnabled(
+            long id,
+            boolean enabled,
+            @NonNull ActionCallback callback
+    ) {
+        if (closed.get()) return;
+        try {
+            executor.execute(() -> {
+                try {
+                    int changed = dao.updateAlertsEnabled(
+                            id,
+                            enabled,
+                            System.currentTimeMillis()
+                    );
+                    main.post(() -> {
+                        if (closed.get()) return;
+                        if (changed == 1) callback.onComplete();
+                        else callback.onError();
+                    });
+                } catch (RuntimeException error) {
+                    main.post(() -> {
+                        if (!closed.get()) callback.onError();
+                    });
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Repository was closed between guard and submission.
+        }
+    }
+
     public void close() {
         closed.set(true);
         executor.shutdownNow();
