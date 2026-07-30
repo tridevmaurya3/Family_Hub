@@ -231,8 +231,8 @@ public class FamilyLiveFragment extends Fragment {
                     displayName,
                     location,
                     currentlyOnline ? "ONLINE" : "OFFLINE",
-                    -1,
-                    false,
+                    member.batteryPercentage,
+                    member.charging,
                     currentlyOnline,
                     "UNKNOWN",
                     member.updatedAt
