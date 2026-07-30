@@ -194,6 +194,11 @@ public class FamilyLiveRepository {
                             child.child("batteryPercentage").getValue(Long.class);
                     Boolean charging =
                             child.child("charging").getValue(Boolean.class);
+                    Double speed =
+                            child.child("speedMetersPerSecond")
+                                    .getValue(Double.class);
+                    String movementType =
+                            child.child("movementType").getValue(String.class);
                     Boolean sharing =
                             child.child("sharingEnabled").getValue(Boolean.class);
                     Boolean online =
@@ -214,6 +219,10 @@ public class FamilyLiveRepository {
                                             batteryValue.intValue()
                                     )),
                             Boolean.TRUE.equals(charging),
+                            speed == null ? 0D : Math.max(0D, speed),
+                            movementType == null
+                                    ? "UNKNOWN"
+                                    : movementType,
                             Boolean.TRUE.equals(sharing),
                             Boolean.TRUE.equals(online),
                             updatedAt == null ? 0L : updatedAt
@@ -261,6 +270,8 @@ public class FamilyLiveRepository {
                     hasLocation ? location.accuracy : 0D,
                     location == null ? -1 : location.batteryPercentage,
                     location != null && location.charging,
+                    location == null ? 0D : location.speedMetersPerSecond,
+                    location == null ? "UNKNOWN" : location.movementType,
                     location != null && location.sharingEnabled,
                     location != null && location.online,
                     location == null ? 0L : location.updatedAt
@@ -423,6 +434,8 @@ public class FamilyLiveRepository {
         @Nullable final Double accuracy;
         final int batteryPercentage;
         final boolean charging;
+        final double speedMetersPerSecond;
+        @NonNull final String movementType;
         final boolean sharingEnabled;
         final boolean online;
         final long updatedAt;
@@ -433,6 +446,8 @@ public class FamilyLiveRepository {
                 @Nullable Double accuracy,
                 int batteryPercentage,
                 boolean charging,
+                double speedMetersPerSecond,
+                @NonNull String movementType,
                 boolean sharingEnabled,
                 boolean online,
                 long updatedAt
@@ -442,6 +457,8 @@ public class FamilyLiveRepository {
             this.accuracy = accuracy;
             this.batteryPercentage = batteryPercentage;
             this.charging = charging;
+            this.speedMetersPerSecond = speedMetersPerSecond;
+            this.movementType = movementType;
             this.sharingEnabled = sharingEnabled;
             this.online = online;
             this.updatedAt = updatedAt;
