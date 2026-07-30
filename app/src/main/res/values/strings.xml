@@ -877,4 +877,7 @@
     <string name="family_live_gps_explanation">Device location/GPS is off. Turn it on before starting Family Live sharing.</string>
     <string name="family_live_open_location_settings">Open location settings</string>
     <string name="family_live_settings_not_ready">Required permission or device location is still off.</string>
+    <string name="family_live_location_last_known">Last known location — update is stale</string>
+    <string name="family_live_location_accuracy">Live location · accuracy about %1$d m</string>
+    <string name="family_live_sync_error">Family Live could not sync. Showing available local information.</string>
 </resources>
