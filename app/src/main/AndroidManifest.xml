@@ -38,6 +38,9 @@
             android:name=".feature.familylive.SafePlacesActivity"
             android:exported="false" />
         <activity
+            android:name=".feature.familylive.SafePlaceMapPickerActivity"
+            android:exported="false" />
+        <activity
             android:name=".feature.familylive.FamilyMapActivity"
             android:exported="false" />
         <activity
