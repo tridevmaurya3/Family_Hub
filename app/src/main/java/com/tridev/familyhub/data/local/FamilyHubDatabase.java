@@ -20,6 +20,7 @@ import com.tridev.familyhub.data.local.dao.PropertyDao;
 import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.dao.NoteDao;
 import com.tridev.familyhub.data.local.dao.PlannerItemDao;
+import com.tridev.familyhub.data.local.dao.SafePlaceDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -32,6 +33,7 @@ import com.tridev.familyhub.data.local.entity.PropertyEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
+import com.tridev.familyhub.data.local.entity.SafePlace;
 
 /**
  * The private on-device database.
@@ -52,9 +54,10 @@ import com.tridev.familyhub.data.local.entity.PlannerItem;
                 PropertyEntry.class,
                 GroceryItem.class,
                 NoteEntry.class,
-                PlannerItem.class
+                PlannerItem.class,
+                SafePlace.class
         },
-        version = 13,
+        version = 14,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -76,6 +79,25 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract GroceryItemDao groceryItemDao();
     public abstract NoteDao noteDao();
     public abstract PlannerItemDao plannerItemDao();
+    public abstract SafePlaceDao safePlaceDao();
+
+    private static final Migration MIGRATION_13_14 = new Migration(13, 14) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `safe_places` "
+                    + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                    + "`name` TEXT NOT NULL, `placeType` TEXT NOT NULL, "
+                    + "`latitude` REAL NOT NULL, `longitude` REAL NOT NULL, "
+                    + "`radiusMeters` REAL NOT NULL, `memberUid` TEXT NOT NULL, "
+                    + "`alertsEnabled` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, "
+                    + "`updatedAt` INTEGER NOT NULL)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS "
+                    + "`index_safe_places_name_latitude_longitude` ON "
+                    + "`safe_places` (`name`, `latitude`, `longitude`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS "
+                    + "`index_safe_places_alertsEnabled` ON "
+                    + "`safe_places` (`alertsEnabled`)");
+        }
+    };
 
     /**
      * Preserves existing family profiles when the financial table is added.
@@ -533,7 +555,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_9_10,
                                     MIGRATION_10_11,
                                     MIGRATION_11_12,
-                                    MIGRATION_12_13
+                                    MIGRATION_12_13,
+                                    MIGRATION_13_14
                             )
                             .build();
                 }
