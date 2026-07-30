@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.familyaccount;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -286,8 +287,25 @@ public class FamilyManagementActivity extends AppCompatActivity {
                         R.string.family_account_copy_code,
                         (dialog, which) -> copyCode(code)
                 )
-                .setPositiveButton(R.string.ok, null)
+                .setNegativeButton(R.string.ok, null)
+                .setPositiveButton(
+                        R.string.family_account_share_code,
+                        (dialog, which) -> shareCode(code)
+                )
                 .show();
+    }
+
+    private void shareCode(@NonNull String code) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(
+                Intent.EXTRA_TEXT,
+                getString(R.string.family_account_share_text, code)
+        );
+        startActivity(Intent.createChooser(
+                shareIntent,
+                getString(R.string.family_account_share_chooser)
+        ));
     }
 
     private void copyCode(@NonNull String code) {
