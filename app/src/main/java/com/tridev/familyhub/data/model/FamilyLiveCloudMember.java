@@ -12,6 +12,7 @@ public final class FamilyLiveCloudMember {
     public final double latitude;
     public final double longitude;
     public final double accuracy;
+    @NonNull public final String placeLabel;
     public final int batteryPercentage;
     public final boolean charging;
     public final double speedMetersPerSecond;
@@ -28,6 +29,7 @@ public final class FamilyLiveCloudMember {
             double latitude,
             double longitude,
             double accuracy,
+            @NonNull String placeLabel,
             int batteryPercentage,
             boolean charging,
             double speedMetersPerSecond,
@@ -43,6 +45,7 @@ public final class FamilyLiveCloudMember {
         this.latitude = latitude;
         this.longitude = longitude;
         this.accuracy = accuracy;
+        this.placeLabel = placeLabel;
         this.batteryPercentage = batteryPercentage;
         this.charging = charging;
         this.speedMetersPerSecond = speedMetersPerSecond;
