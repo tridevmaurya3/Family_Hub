@@ -271,6 +271,12 @@ public class FamilyLiveFragment extends Fragment {
                 location = getString(
                         R.string.family_live_location_last_known
                 );
+            } else if (!member.placeLabel.trim().isEmpty()) {
+                location = getString(
+                        R.string.family_live_place_with_accuracy,
+                        member.placeLabel,
+                        Math.round(member.accuracy)
+                );
             } else {
                 location = getString(
                         R.string.family_live_location_accuracy,
