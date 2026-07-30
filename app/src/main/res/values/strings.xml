@@ -940,6 +940,8 @@ Last update: %6$s</string>
     <string name="safe_place_save">Save and enable enter/exit alerts</string>
     <string name="safe_place_none">No Safe Places added yet.</string>
     <string name="safe_place_saved">Safe Place saved and geofence enabled</string>
+    <string name="safe_place_duplicate">This Safe Place already exists.</string>
+    <string name="safe_place_save_error">Safe Place could not be saved.</string>
     <string name="safe_place_device_only">%1$s (%2$s) is active on this device. Its coordinates were not uploaded.</string>
     <string name="safe_place_permission">Precise location permission is required.</string>
     <string name="safe_place_location_error">A current GPS location could not be obtained.</string>
