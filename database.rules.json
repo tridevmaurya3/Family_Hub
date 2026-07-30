@@ -41,6 +41,15 @@
         }
       }
     },
+    "familyProfiles": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        "$profileId": {
+          ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child(auth.uid).child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN)$/)",
+          ".validate": "!newData.exists() || (newData.child('profileId').val() === $profileId && newData.child('familyId').val() === $familyId && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 100 && newData.child('relation').isString() && newData.child('relation').val().length <= 60 && newData.child('phone').isString() && newData.child('phone').val().length <= 30 && newData.child('email').isString() && newData.child('email').val().length <= 254 && newData.child('dateOfBirth').isString() && newData.child('dateOfBirth').val().length <= 10 && newData.child('note').isString() && newData.child('note').val().length <= 2000 && newData.child('gender').isString() && newData.child('gender').val().length <= 30 && newData.child('bloodGroup').isString() && newData.child('bloodGroup').val().length <= 20 && newData.child('address').isString() && newData.child('address').val().length <= 500 && newData.child('emergencyContactName').isString() && newData.child('emergencyContactName').val().length <= 100 && newData.child('emergencyContactPhone').isString() && newData.child('emergencyContactPhone').val().length <= 30 && newData.child('familyRole').val().matches(/^(GUARDIAN|ADULT|CHILD)$/) && newData.child('isGuardian').isBoolean() && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedBy').val() === auth.uid)"
+        }
+      }
+    },
     "locations": {
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
