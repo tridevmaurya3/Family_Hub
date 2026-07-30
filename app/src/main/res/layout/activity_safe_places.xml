@@ -22,13 +22,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/safe_places_title" />
-        <TextView
+        <LinearLayout
             android:id="@+id/safe_place_list"
-            style="@style/TextAppearance.FamilyHub.Body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8"
-            android:text="@string/safe_place_none" />
+            android:orientation="vertical" />
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
