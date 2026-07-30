@@ -57,22 +57,71 @@ public class FamilyAccountRepository {
         root.child("users").child(user.getUid()).get()
                 .addOnSuccessListener(snapshot -> {
                     String familyId = stringValue(snapshot.child("familyId"));
-                    String role = stringValue(snapshot.child("role"));
-                    String status = stringValue(snapshot.child("status"));
                     String pendingFamilyId =
                             stringValue(snapshot.child("pendingFamilyId"));
                     String pendingStatus =
                             stringValue(snapshot.child("pendingStatus"));
 
-                    callback.onSuccess(new SessionState(
-                            familyId,
-                            role,
-                            status,
-                            pendingFamilyId,
-                            pendingStatus
-                    ));
+                    if (familyId == null || familyId.trim().isEmpty()) {
+                        callback.onSuccess(new SessionState(
+                                null,
+                                null,
+                                null,
+                                pendingFamilyId,
+                                pendingStatus
+                        ));
+                        return;
+                    }
+
+                    root.child("memberships")
+                            .child(familyId)
+                            .child(user.getUid())
+                            .get()
+                            .addOnSuccessListener(membership -> {
+                                String role = stringValue(
+                                        membership.child("role")
+                                );
+                                String status = stringValue(
+                                        membership.child("status")
+                                );
+                                callback.onSuccess(new SessionState(
+                                        familyId,
+                                        role,
+                                        status,
+                                        pendingFamilyId,
+                                        pendingStatus
+                                ));
+                            })
+                            .addOnFailureListener(callback::onError);
                 })
                 .addOnFailureListener(callback::onError);
+    }
+
+    public void loadAuthorisedMembers(
+            @NonNull ResultCallback<List<Member>> callback
+    ) {
+        loadSession(new ResultCallback<SessionState>() {
+            @Override
+            public void onSuccess(@Nullable SessionState session) {
+                if (session == null
+                        || !session.isActive()
+                        || session.familyId == null) {
+                    callback.onSuccess(Collections.emptyList());
+                    return;
+                }
+                root.child("memberships")
+                        .child(session.familyId)
+                        .get()
+                        .addOnSuccessListener(snapshot ->
+                                callback.onSuccess(parseMembers(snapshot)))
+                        .addOnFailureListener(callback::onError);
+            }
+
+            @Override
+            public void onError(@NonNull Exception error) {
+                callback.onError(error);
+            }
+        });
     }
 
     public void createFamily(
