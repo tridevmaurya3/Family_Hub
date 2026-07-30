@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ui.SemanticValueStyler;
 
 /**
  * Reusable Status Card used throughout Family Hub.
@@ -62,5 +63,9 @@ public class StatusCardView extends FrameLayout {
         if (model.getIconResId() != 0) {
             icon.setImageResource(model.getIconResId());
         }
+    }
+
+    public void setValueColorBySign(double signedValue) {
+        SemanticValueStyler.apply(value, signedValue);
     }
 }
