@@ -190,6 +190,10 @@ public class FamilyLiveRepository {
                             child.child("longitude").getValue(Double.class);
                     Double accuracy =
                             child.child("accuracy").getValue(Double.class);
+                    Long batteryValue =
+                            child.child("batteryPercentage").getValue(Long.class);
+                    Boolean charging =
+                            child.child("charging").getValue(Boolean.class);
                     Boolean sharing =
                             child.child("sharingEnabled").getValue(Boolean.class);
                     Boolean online =
@@ -203,6 +207,13 @@ public class FamilyLiveRepository {
                             latitude,
                             longitude,
                             accuracy,
+                            batteryValue == null
+                                    ? -1
+                                    : Math.max(-1, Math.min(
+                                            100,
+                                            batteryValue.intValue()
+                                    )),
+                            Boolean.TRUE.equals(charging),
                             Boolean.TRUE.equals(sharing),
                             Boolean.TRUE.equals(online),
                             updatedAt == null ? 0L : updatedAt
@@ -248,6 +259,8 @@ public class FamilyLiveRepository {
                     hasLocation ? location.latitude : 0D,
                     hasLocation ? location.longitude : 0D,
                     hasLocation ? location.accuracy : 0D,
+                    location == null ? -1 : location.batteryPercentage,
+                    location != null && location.charging,
                     location != null && location.sharingEnabled,
                     location != null && location.online,
                     location == null ? 0L : location.updatedAt
@@ -408,6 +421,8 @@ public class FamilyLiveRepository {
         @Nullable final Double latitude;
         @Nullable final Double longitude;
         @Nullable final Double accuracy;
+        final int batteryPercentage;
+        final boolean charging;
         final boolean sharingEnabled;
         final boolean online;
         final long updatedAt;
@@ -416,6 +431,8 @@ public class FamilyLiveRepository {
                 @Nullable Double latitude,
                 @Nullable Double longitude,
                 @Nullable Double accuracy,
+                int batteryPercentage,
+                boolean charging,
                 boolean sharingEnabled,
                 boolean online,
                 long updatedAt
@@ -423,6 +440,8 @@ public class FamilyLiveRepository {
             this.latitude = latitude;
             this.longitude = longitude;
             this.accuracy = accuracy;
+            this.batteryPercentage = batteryPercentage;
+            this.charging = charging;
             this.sharingEnabled = sharingEnabled;
             this.online = online;
             this.updatedAt = updatedAt;
