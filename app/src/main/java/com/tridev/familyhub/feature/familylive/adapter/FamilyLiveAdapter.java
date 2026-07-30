@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -26,10 +27,21 @@ import java.util.concurrent.TimeUnit;
 public class FamilyLiveAdapter
         extends RecyclerView.Adapter<FamilyLiveAdapter.ViewHolder> {
 
+    public interface OnMemberClickListener {
+        void onMemberClick(@NonNull FamilyLiveMemberUiModel member);
+    }
+
     private static final String STATUS_ONLINE = "Online";
 
     private final List<FamilyLiveMemberUiModel> members =
             new ArrayList<>();
+    @Nullable private OnMemberClickListener onMemberClickListener;
+
+    public void setOnMemberClickListener(
+            @Nullable OnMemberClickListener listener
+    ) {
+        onMemberClickListener = listener;
+    }
 
     public void submitList(
             @NonNull List<FamilyLiveMemberUiModel> memberList
@@ -64,6 +76,11 @@ public class FamilyLiveAdapter
         FamilyLiveMemberUiModel member = members.get(position);
         Context context = holder.itemView.getContext();
 
+        holder.itemView.setOnClickListener(ignored -> {
+            if (onMemberClickListener != null) {
+                onMemberClickListener.onMemberClick(member);
+            }
+        });
         holder.memberName.setText(member.getMemberName());
         holder.avatar.setText(createInitials(member.getMemberName()));
         holder.location.setText(
