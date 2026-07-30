@@ -37,4 +37,8 @@ public class FamilyLiveMemberData {
     public boolean isLocationSharingEnabled;
 
     public boolean hasLocation;
+
+    public double latitude;
+
+    public double longitude;
 }
