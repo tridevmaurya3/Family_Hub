@@ -922,6 +922,8 @@
     <string name="family_member_detail_movement_section">Movement</string>
     <string name="family_member_detail_accuracy_value">Accuracy about %1$d m</string>
     <string name="family_member_detail_speed_value">%1$d km/h</string>
+    <string name="family_member_detail_view_map">View on family map</string>
+    <string name="family_member_detail_map_unavailable">Map location unavailable</string>
     <string name="family_live_filter_all">All</string>
     <string name="family_live_filter_live">Live</string>
     <string name="family_live_filter_stale">Stale</string>
@@ -967,6 +969,7 @@ Last update: %6$s</string>
     <string name="family_map_gps_off">Device location is off. Family markers show their last available state.</string>
     <string name="family_map_permission_denied">Location permission is denied. Family markers remain available without the my-location layer.</string>
     <string name="family_map_current_unavailable">Your shared marker is unavailable.</string>
+    <string name="family_map_selected_unavailable">This member is not currently sharing a valid map location.</string>
     <string name="family_map_safe_place_enabled">Safe Place alerts enabled</string>
     <string name="family_map_safe_place_disabled">Safe Place alerts disabled</string>
     <string name="family_map_yes">Yes</string>
