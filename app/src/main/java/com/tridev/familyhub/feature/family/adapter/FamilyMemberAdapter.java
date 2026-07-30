@@ -72,9 +72,23 @@ public class FamilyMemberAdapter extends RecyclerView.Adapter<FamilyMemberAdapte
             binding.memberContact.setText(contactSummary(member));
             binding.memberProfileSummary.setText(profileSummary(member));
             showPhoto(member);
-            binding.getRoot().setOnClickListener(v -> listener.onEdit(member));
-            binding.editMemberButton.setOnClickListener(v -> listener.onEdit(member));
-            binding.deleteMemberButton.setOnClickListener(v -> listener.onDelete(member));
+            boolean editable = !member.cloudManaged;
+            binding.editMemberButton.setVisibility(
+                    editable ? View.VISIBLE : View.GONE
+            );
+            binding.deleteMemberButton.setVisibility(
+                    editable ? View.VISIBLE : View.GONE
+            );
+            binding.getRoot().setClickable(editable);
+            binding.getRoot().setOnClickListener(editable
+                    ? v -> listener.onEdit(member)
+                    : null);
+            binding.editMemberButton.setOnClickListener(editable
+                    ? v -> listener.onEdit(member)
+                    : null);
+            binding.deleteMemberButton.setOnClickListener(editable
+                    ? v -> listener.onDelete(member)
+                    : null);
         }
 
         private void showPhoto(@NonNull FamilyMember member) {
@@ -102,6 +116,11 @@ public class FamilyMemberAdapter extends RecyclerView.Adapter<FamilyMemberAdapte
 
         private String profileSummary(@NonNull FamilyMember member) {
             List<String> details = new ArrayList<>();
+            if (member.cloudManaged) {
+                details.add(binding.getRoot().getContext().getString(
+                        R.string.member_authorised_account
+                ));
+            }
             if (member.isGuardian) {
                 details.add(binding.getRoot().getContext().getString(
                         R.string.member_role_guardian
