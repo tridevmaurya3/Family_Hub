@@ -143,6 +143,37 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/viewToggle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        app:checkedButton="@id/buttonListView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/locationSharingCard"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonListView"
+            style="@style/Widget.FamilyHub.Button.Tonal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:checked="true"
+            android:text="@string/family_live_list_view" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonMapView"
+            style="@style/Widget.FamilyHub.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/family_live_map_view" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+
     <LinearLayout
         android:id="@+id/listHeader"
         android:layout_width="0dp"
@@ -152,7 +183,7 @@
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/locationSharingCard">
+        app:layout_constraintTop_toBottomOf="@id/viewToggle">
 
         <TextView
             style="@style/TextAppearance.FamilyHub.SectionTitle"
@@ -168,6 +199,66 @@
             android:text="@string/family_live_list_view"
             android:textColor="@color/fh_module_family" />
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/mapContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_8"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/viewToggle">
+
+        <FrameLayout
+            android:id="@+id/mapHost"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <ProgressBar
+            android:id="@+id/mapLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:contentDescription="@string/family_live_map_loading" />
+
+        <TextView
+            android:id="@+id/mapError"
+            style="@style/TextAppearance.FamilyHub.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@color/fh_surface"
+            android:gravity="center"
+            android:padding="@dimen/card_padding"
+            android:text="@string/family_live_map_no_locations"
+            android:textAlignment="center"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|bottom"
+            android:layout_margin="@dimen/space_12"
+            android:orientation="vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonMapType"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/family_live_map_type_satellite" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonRecenter"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginTop="@dimen/space_8"
+                android:text="@string/family_live_map_recenter" />
+        </LinearLayout>
+    </FrameLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerFamilyLive"
