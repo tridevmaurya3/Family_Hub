@@ -84,16 +84,69 @@ public class FamilyAccountRepository {
                                 String status = stringValue(
                                         membership.child("status")
                                 );
-                                callback.onSuccess(new SessionState(
-                                        familyId,
-                                        role,
-                                        status,
-                                        pendingFamilyId,
-                                        pendingStatus
-                                ));
+                                root.child("families")
+                                        .child(familyId)
+                                        .child("ownerUid")
+                                        .get()
+                                        .addOnSuccessListener(ownerSnapshot -> {
+                                            String ownerUid =
+                                                    stringValue(ownerSnapshot);
+                                            if (user.getUid().equals(ownerUid)
+                                                    && (!FamilyRoles.OWNER_ADMIN.equals(role)
+                                                    || !STATUS_ACTIVE.equals(status))) {
+                                                repairOwnerSession(
+                                                        user,
+                                                        familyId,
+                                                        pendingFamilyId,
+                                                        pendingStatus,
+                                                        callback
+                                                );
+                                                return;
+                                            }
+                                            callback.onSuccess(new SessionState(
+                                                    familyId,
+                                                    role,
+                                                    status,
+                                                    pendingFamilyId,
+                                                    pendingStatus
+                                            ));
+                                        })
+                                        .addOnFailureListener(callback::onError);
                             })
                             .addOnFailureListener(callback::onError);
                 })
+                .addOnFailureListener(callback::onError);
+    }
+
+    private void repairOwnerSession(
+            @NonNull FirebaseUser user,
+            @NonNull String familyId,
+            @Nullable String pendingFamilyId,
+            @Nullable String pendingStatus,
+            @NonNull ResultCallback<SessionState> callback
+    ) {
+        Map<String, Object> repairs = new HashMap<>();
+        String membershipPath = "memberships/" + familyId
+                + "/" + user.getUid();
+        String userPath = "users/" + user.getUid();
+        repairs.put(membershipPath + "/role", FamilyRoles.OWNER_ADMIN);
+        repairs.put(membershipPath + "/status", STATUS_ACTIVE);
+        repairs.put(userPath + "/role", FamilyRoles.OWNER_ADMIN);
+        repairs.put(userPath + "/status", STATUS_ACTIVE);
+        repairs.put(userPath + "/pendingFamilyId", null);
+        repairs.put(userPath + "/pendingStatus", null);
+        repairs.put("joinRequests/" + familyId
+                + "/" + user.getUid(), null);
+
+        root.updateChildren(repairs)
+                .addOnSuccessListener(unused ->
+                        callback.onSuccess(new SessionState(
+                                familyId,
+                                FamilyRoles.OWNER_ADMIN,
+                                STATUS_ACTIVE,
+                                null,
+                                null
+                        )))
                 .addOnFailureListener(callback::onError);
     }
 
@@ -339,39 +392,60 @@ public class FamilyAccountRepository {
             return;
         }
 
-        Map<String, Object> membership = new HashMap<>();
-        membership.put("uid", request.uid);
-        membership.put("displayName", request.displayName);
-        membership.put("email", request.email);
-        membership.put("role", request.requestedRole);
-        membership.put("status", STATUS_ACTIVE);
-        membership.put("joinedAt", ServerValue.TIMESTAMP);
+        root.child("families").child(familyId).child("ownerUid").get()
+                .addOnSuccessListener(ownerSnapshot -> {
+                    String ownerUid = stringValue(ownerSnapshot);
+                    String approvedRole = request.uid.equals(ownerUid)
+                            ? FamilyRoles.OWNER_ADMIN
+                            : request.requestedRole;
 
-        root.child("memberships").child(familyId).child(request.uid)
-                .setValue(membership)
-                .continueWithTask(task -> {
-                    requireSuccess(task);
-                    Map<String, Object> userValues = new HashMap<>();
-                    userValues.put("familyId", familyId);
-                    userValues.put("role", request.requestedRole);
-                    userValues.put("status", STATUS_ACTIVE);
-                    userValues.put("pendingFamilyId", null);
-                    userValues.put("pendingStatus", null);
-                    userValues.put("updatedAt", ServerValue.TIMESTAMP);
-                    return root.child("users").child(request.uid)
-                            .updateChildren(userValues);
-                })
-                .continueWithTask(task -> {
-                    requireSuccess(task);
-                    Map<String, Object> requestValues = new HashMap<>();
-                    requestValues.put("status", "APPROVED");
-                    requestValues.put("resolvedAt", ServerValue.TIMESTAMP);
-                    return root.child("joinRequests")
+                    Map<String, Object> membership = new HashMap<>();
+                    membership.put("uid", request.uid);
+                    membership.put("displayName", request.displayName);
+                    membership.put("email", request.email);
+                    membership.put("role", approvedRole);
+                    membership.put("status", STATUS_ACTIVE);
+                    membership.put("joinedAt", ServerValue.TIMESTAMP);
+
+                    root.child("memberships")
                             .child(familyId)
                             .child(request.uid)
-                            .updateChildren(requestValues);
+                            .setValue(membership)
+                            .continueWithTask(task -> {
+                                requireSuccess(task);
+                                Map<String, Object> userValues =
+                                        new HashMap<>();
+                                userValues.put("familyId", familyId);
+                                userValues.put("role", approvedRole);
+                                userValues.put("status", STATUS_ACTIVE);
+                                userValues.put("pendingFamilyId", null);
+                                userValues.put("pendingStatus", null);
+                                userValues.put(
+                                        "updatedAt",
+                                        ServerValue.TIMESTAMP
+                                );
+                                return root.child("users")
+                                        .child(request.uid)
+                                        .updateChildren(userValues);
+                            })
+                            .continueWithTask(task -> {
+                                requireSuccess(task);
+                                Map<String, Object> requestValues =
+                                        new HashMap<>();
+                                requestValues.put("status", "APPROVED");
+                                requestValues.put(
+                                        "resolvedAt",
+                                        ServerValue.TIMESTAMP
+                                );
+                                return root.child("joinRequests")
+                                        .child(familyId)
+                                        .child(request.uid)
+                                        .updateChildren(requestValues);
+                            })
+                            .addOnSuccessListener(unused ->
+                                    callback.onSuccess(null))
+                            .addOnFailureListener(callback::onError);
                 })
-                .addOnSuccessListener(unused -> callback.onSuccess(null))
                 .addOnFailureListener(callback::onError);
     }
 
