@@ -151,8 +151,9 @@ public class FamilyMemberRepository {
                             Long cloudTimestamp = remoteUpdatedAt.get(
                                     local.cloudProfileId
                             );
-                            if (cloudTimestamp == null
-                                    || local.updatedAt > cloudTimestamp) {
+                            if (local.syncPending
+                                    || (cloudTimestamp == null
+                                    && local.updatedAt > 0L)) {
                                 pendingUploads.add(local);
                             }
                         }
@@ -205,6 +206,7 @@ public class FamilyMemberRepository {
                 member.createdAt = now;
             }
             member.updatedAt = now;
+            member.syncPending = true;
             if (familyId != null) {
                 member.ownerFamilyId = familyId;
                 if (member.cloudProfileId.isEmpty()) {
@@ -234,7 +236,9 @@ public class FamilyMemberRepository {
                             .updateChildren(toCloudValues(
                                     familyId,
                                     member
-                            ));
+                            ))
+                            .addOnSuccessListener(unused ->
+                                    markSynced(member.cloudProfileId));
                 }
                 callback.onComplete();
             });
@@ -290,7 +294,9 @@ public class FamilyMemberRepository {
             firebaseRoot.child("familyProfiles")
                     .child(familyId)
                     .child(member.cloudProfileId)
-                    .updateChildren(toCloudValues(familyId, member));
+                    .updateChildren(toCloudValues(familyId, member))
+                    .addOnSuccessListener(unused ->
+                            markSynced(member.cloudProfileId));
         }
     }
 
@@ -367,6 +373,7 @@ public class FamilyMemberRepository {
             Long updatedAt = child.child("updatedAt").getValue(Long.class);
             member.createdAt = createdAt == null ? 0L : createdAt;
             member.updatedAt = updatedAt == null ? 0L : updatedAt;
+            member.syncPending = false;
             members.add(member);
         }
         return members;
@@ -393,6 +400,12 @@ public class FamilyMemberRepository {
         target.isGuardian = source.isGuardian;
         target.createdAt = source.createdAt;
         target.updatedAt = source.updatedAt;
+        target.syncPending = false;
+    }
+
+    private void markSynced(@NonNull String cloudProfileId) {
+        DATABASE_EXECUTOR.execute(() ->
+                memberDao.markSynced(cloudProfileId));
     }
 
     private void loadLegacyMembers(
