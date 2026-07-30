@@ -64,6 +64,7 @@ public class FamilyLocationService extends Service {
     private String familyId;
     private String userId;
     private boolean requestingUpdates;
+    @Nullable private Location previousMovementLocation;
 
     @NonNull
     public static Intent startIntent(@NonNull Context context) {
@@ -191,16 +192,18 @@ public class FamilyLocationService extends Service {
         }
 
         BatterySnapshot battery = readBatterySnapshot();
+        MovementSnapshot movement = resolveMovement(location);
         Map<String, Object> values = new HashMap<>();
         values.put("uid", userId);
         values.put("familyId", familyId);
         values.put("latitude", location.getLatitude());
         values.put("longitude", location.getLongitude());
         values.put("accuracy", (double) location.getAccuracy());
-        values.put("speedMetersPerSecond", location.hasSpeed()
-                ? (double) Math.max(0F, location.getSpeed())
-                : 0D);
-        values.put("movementType", resolveMovementType(location));
+        values.put(
+                "speedMetersPerSecond",
+                movement.speedMetersPerSecond
+        );
+        values.put("movementType", movement.type);
         values.put("batteryPercentage", battery.percentage);
         values.put("charging", battery.charging);
         values.put("online", true);
@@ -251,22 +254,68 @@ public class FamilyLocationService extends Service {
     }
 
     @NonNull
-    private String resolveMovementType(@NonNull Location location) {
-        if (!location.hasSpeed() || location.getAccuracy() > 100F) {
-            return "UNKNOWN";
+    private MovementSnapshot resolveMovement(@NonNull Location location) {
+        double calculatedSpeed = -1D;
+
+        if (location.getAccuracy() <= 100F && location.hasSpeed()) {
+            calculatedSpeed = Math.max(0D, location.getSpeed());
+        } else if (location.getAccuracy() <= 100F
+                && previousMovementLocation != null) {
+            long elapsedNanos = location.getElapsedRealtimeNanos()
+                    - previousMovementLocation.getElapsedRealtimeNanos();
+            double elapsedSeconds = elapsedNanos / 1_000_000_000D;
+
+            if (elapsedSeconds >= 2D && elapsedSeconds <= 300D) {
+                float distance =
+                        previousMovementLocation.distanceTo(location);
+                float noiseRadius = Math.max(
+                        10F,
+                        (previousMovementLocation.getAccuracy()
+                                + location.getAccuracy()) / 2F
+                );
+                calculatedSpeed = distance <= noiseRadius
+                        ? 0D
+                        : Math.max(
+                                0D,
+                                (distance - noiseRadius) / elapsedSeconds
+                        );
+            }
+        } else if (location.getAccuracy() <= 50F) {
+            // A first accurate fix with no speed is normally a stationary fix.
+            calculatedSpeed = 0D;
         }
 
-        float speed = Math.max(0F, location.getSpeed());
-        if (speed < 0.8F) {
-            return "STATIONARY";
+        previousMovementLocation = new Location(location);
+
+        if (calculatedSpeed < 0D) {
+            return new MovementSnapshot(0D, "UNKNOWN");
         }
-        if (speed < 2.5F) {
-            return "WALKING";
+        if (calculatedSpeed < 0.8D) {
+            return new MovementSnapshot(
+                    calculatedSpeed,
+                    "STATIONARY"
+            );
         }
-        if (speed < 8.5F) {
-            return "CYCLING";
+        if (calculatedSpeed < 2.5D) {
+            return new MovementSnapshot(calculatedSpeed, "WALKING");
         }
-        return "TRAVELLING";
+        if (calculatedSpeed < 8.5D) {
+            return new MovementSnapshot(calculatedSpeed, "CYCLING");
+        }
+        return new MovementSnapshot(calculatedSpeed, "TRAVELLING");
+    }
+
+    private static final class MovementSnapshot {
+        final double speedMetersPerSecond;
+        @NonNull final String type;
+
+        MovementSnapshot(
+                double speedMetersPerSecond,
+                @NonNull String type
+        ) {
+            this.speedMetersPerSecond = speedMetersPerSecond;
+            this.type = type;
+        }
     }
 
     @NonNull
