@@ -915,6 +915,13 @@
     <string name="family_live_reason_device_offline">Device offline</string>
     <string name="family_live_reason_no_recent_update">No recent update</string>
     <string name="family_live_reason_location_unavailable">Location unavailable</string>
+    <string name="family_member_detail_title">Member details</string>
+    <string name="family_member_detail_unavailable">This member is no longer available in your authorised family.</string>
+    <string name="family_member_detail_location_section">Location status</string>
+    <string name="family_member_detail_device_section">Device status</string>
+    <string name="family_member_detail_movement_section">Movement</string>
+    <string name="family_member_detail_accuracy_value">Accuracy about %1$d m</string>
+    <string name="family_member_detail_speed_value">%1$d km/h</string>
     <string name="family_live_location_accuracy">Live location · accuracy about %1$d m</string>
     <string name="family_live_place_with_accuracy">%1$s · accuracy about %2$d m</string>
     <string name="family_live_sync_error">Family Live could not sync. Showing available local information.</string>
