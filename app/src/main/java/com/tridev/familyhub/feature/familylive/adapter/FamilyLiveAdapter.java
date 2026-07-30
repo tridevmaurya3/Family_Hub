@@ -14,6 +14,7 @@ import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.familylive.model.FamilyLiveMemberUiModel;
 
 import java.util.ArrayList;
@@ -30,8 +31,6 @@ public class FamilyLiveAdapter
     public interface OnMemberClickListener {
         void onMemberClick(@NonNull FamilyLiveMemberUiModel member);
     }
-
-    private static final String STATUS_ONLINE = "Online";
 
     private final List<FamilyLiveMemberUiModel> members =
             new ArrayList<>();
@@ -92,12 +91,9 @@ public class FamilyLiveAdapter
                 )
         );
 
-        holder.status.setText(
-                displayLabel(emptyFallback(
-                        member.getOnlineStatus(),
-                        context.getString(R.string.family_live_unknown)
-                ))
-        );
+        holder.status.setText(FamilyLiveAvailability.labelRes(
+                member.getAvailabilityReason()
+        ));
 
         holder.movement.setText(
                 displayLabel(emptyFallback(
@@ -131,7 +127,7 @@ public class FamilyLiveAdapter
 
         applyStatusAppearance(
                 holder,
-                member.getOnlineStatus()
+                member.getAvailabilityReason()
         );
     }
 
@@ -142,23 +138,30 @@ public class FamilyLiveAdapter
 
     private void applyStatusAppearance(
             @NonNull ViewHolder holder,
-            String status
+            String availabilityReason
     ) {
-        boolean online = status != null
-                && STATUS_ONLINE.equalsIgnoreCase(status.trim());
-
         Context context = holder.itemView.getContext();
+        boolean online = FamilyLiveAvailability.isAvailable(
+                availabilityReason
+        );
+        boolean warning = FamilyLiveAvailability.isWarning(
+                availabilityReason
+        );
 
         int statusColor = ContextCompat.getColor(
                 context,
-                online ? R.color.fh_success : R.color.fh_error
+                online
+                        ? R.color.fh_success
+                        : warning ? R.color.fh_warning : R.color.fh_error
         );
 
         int statusBackground = ContextCompat.getColor(
                 context,
                 online
                         ? R.color.fh_success_container
-                        : R.color.fh_error_container
+                        : warning
+                                ? R.color.fh_warning_container
+                                : R.color.fh_error_container
         );
 
         holder.status.setTextColor(statusColor);
