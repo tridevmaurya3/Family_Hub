@@ -363,9 +363,11 @@ public final class FamilyMapActivity extends AppCompatActivity {
         details.setTextSize(16F);
         details.setTextColor(ContextCompat.getColor(
                 this, R.color.fh_text_primary));
-        boolean stale = member.updatedAt <= 0L
-                || System.currentTimeMillis() - member.updatedAt
-                > LIVE_FRESHNESS_MS;
+        String availabilityReason = FamilyLiveAvailability.resolve(
+                member,
+                System.currentTimeMillis(),
+                LIVE_FRESHNESS_MS
+        );
         String updated = member.updatedAt <= 0L
                 ? getString(R.string.family_live_update_unavailable)
                 : DateFormat.getDateTimeInstance().format(
@@ -383,8 +385,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 member.placeLabel.trim().isEmpty()
                         ? getString(R.string.family_live_location_unavailable)
                         : member.placeLabel,
-                getString(stale ? R.string.family_live_map_marker_stale
-                        : R.string.family_live_map_marker_live),
+                getString(FamilyLiveAvailability.labelRes(
+                        availabilityReason
+                )),
                 updated, Math.round(member.accuracy),
                 member.batteryPercentage < 0
                         ? getString(R.string.family_live_unknown)
