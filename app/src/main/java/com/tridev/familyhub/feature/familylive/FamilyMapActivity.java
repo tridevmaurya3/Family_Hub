@@ -63,6 +63,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
     @Nullable private SafePlaceRepository safePlaceRepository;
     private View loading;
     private View stateCard;
+    private View topPanel;
+    private View bottomPanel;
     private TextView stateText;
     private MaterialButton typeButton;
     private MaterialButton trafficButton;
@@ -76,7 +78,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_family_map);
         View root = findViewById(R.id.familyMapRoot);
-        View topPanel = findViewById(R.id.familyMapTopPanel);
+        topPanel = findViewById(R.id.familyMapTopPanel);
+        bottomPanel = findViewById(R.id.familyMapBottomPanel);
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
             androidx.core.graphics.Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars()
@@ -88,6 +91,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
             view.setPadding(0, 0, 0, bars.bottom);
             return insets;
         });
+        root.addOnLayoutChangeListener((view, left, top, right, bottom,
+                                        oldLeft, oldTop, oldRight,
+                                        oldBottom) -> applyMapPadding());
         loading = findViewById(R.id.familyMapLoading);
         stateCard = findViewById(R.id.familyMapStateCard);
         stateText = findViewById(R.id.textFamilyMapState);
@@ -142,6 +148,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 return true;
             });
             enableMyLocationIfAllowed();
+            applyMapPadding();
             renderMarkers();
         });
     }
@@ -422,6 +429,19 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 showState(R.string.family_map_permission_denied);
             }
         }
+    }
+
+    private void applyMapPadding() {
+        if (map == null || topPanel == null || bottomPanel == null) {
+            return;
+        }
+        int edge = getResources().getDimensionPixelSize(R.dimen.space_12);
+        map.setPadding(
+                edge,
+                topPanel.getBottom() + edge,
+                edge,
+                bottomPanel.getHeight() + (edge * 2)
+        );
     }
 
     private void showLoading() {
