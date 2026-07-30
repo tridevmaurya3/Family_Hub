@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.familylive;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.LocationManager;
@@ -52,6 +53,8 @@ import java.util.Map;
 
 /** Dedicated lifecycle-safe map for authorised Family Live memberships. */
 public final class FamilyMapActivity extends AppCompatActivity {
+    public static final String EXTRA_FOCUS_MEMBER_UID =
+            "com.tridev.familyhub.extra.FOCUS_MEMBER_UID";
     private static final long LIVE_FRESHNESS_MS = 3L * 60L * 1000L;
     private static final String STATE_CAMERA = "family_map_camera";
     private static final String STATE_MAP_TYPE = "family_map_type";
@@ -83,7 +86,17 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private boolean dataReady;
     private boolean fitOnNextRender = true;
     private boolean trafficEnabled;
+    private boolean pendingIntentFocus;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
+
+    @NonNull
+    public static Intent createIntent(
+            @NonNull Context context,
+            @NonNull String memberUid
+    ) {
+        return new Intent(context, FamilyMapActivity.class)
+                .putExtra(EXTRA_FOCUS_MEMBER_UID, memberUid);
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -113,6 +126,16 @@ public final class FamilyMapActivity extends AppCompatActivity {
         typeButton = findViewById(R.id.buttonFamilyMapType);
         trafficButton = findViewById(R.id.buttonFamilyMapTraffic);
         restoreUiState(savedInstanceState);
+        if (savedInstanceState == null) {
+            String requestedUid = getIntent().getStringExtra(
+                    EXTRA_FOCUS_MEMBER_UID
+            );
+            if (requestedUid != null && !requestedUid.trim().isEmpty()) {
+                selectedMemberUid = requestedUid;
+                pendingIntentFocus = true;
+                fitOnNextRender = false;
+            }
+        }
         findViewById(R.id.buttonFamilyMapBack).setOnClickListener(
                 ignored -> getOnBackPressedDispatcher().onBackPressed());
         findViewById(R.id.buttonFamilyMapRetry).setOnClickListener(
@@ -222,6 +245,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
 
     private void restartMemberStream() {
         if (familyRepository == null) return;
+        familyRepository.stopObservingCloudMembers();
         dataReady = false;
         showLoading();
         familyRepository.observeCloudMembers(received -> {
@@ -254,7 +278,13 @@ public final class FamilyMapActivity extends AppCompatActivity {
             sharing++;
             if (!member.hasLocation || !validCoordinates(
                     member.latitude, member.longitude)) continue;
-            String searchable = (member.displayName + " " + member.role)
+            String searchable = (
+                    member.displayName
+                            + " "
+                            + member.role
+                            + " "
+                            + member.placeLabel
+            )
                     .toLowerCase(Locale.ROOT);
             if (!normalized.isEmpty() && !searchable.contains(normalized)) {
                 continue;
@@ -287,6 +317,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 shown++;
             }
         }
+        restoreSelectedMemberFocus();
         loading.setVisibility(View.GONE);
         if (!dataReady) showLoading();
         else if (authorised == 0) showState(R.string.family_map_no_authorised);
@@ -333,6 +364,15 @@ public final class FamilyMapActivity extends AppCompatActivity {
 
     private void selectMember(
             @NonNull Marker marker, @NonNull FamilyLiveCloudMember member) {
+        focusMember(marker, member, true, true);
+    }
+
+    private void focusMember(
+            @NonNull Marker marker,
+            @NonNull FamilyLiveCloudMember member,
+            boolean moveCamera,
+            boolean showDetails
+    ) {
         if (map == null) return;
         restoreSelectedMarkerAppearance();
         selectedMemberUid = member.uid;
@@ -342,9 +382,13 @@ public final class FamilyMapActivity extends AppCompatActivity {
         ));
         if (accuracyCircle != null) accuracyCircle.remove();
         marker.showInfoWindow();
-        map.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                marker.getPosition(), 16F));
-        if (member.accuracy > 0D && Double.isFinite(member.accuracy)) {
+        if (moveCamera) {
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                    marker.getPosition(), 16F));
+        }
+        if (member.accuracy > 0D
+                && member.accuracy <= 5000D
+                && Double.isFinite(member.accuracy)) {
             accuracyCircle = map.addCircle(new CircleOptions()
                     .center(marker.getPosition()).radius(member.accuracy)
                     .strokeColor(ContextCompat.getColor(
@@ -352,7 +396,28 @@ public final class FamilyMapActivity extends AppCompatActivity {
                     .fillColor(Color.argb(30, 15, 108, 189))
                     .strokeWidth(3F));
         }
-        showMemberSheet(member);
+        if (showDetails) {
+            showMemberSheet(member);
+        }
+    }
+
+    private void restoreSelectedMemberFocus() {
+        if (selectedMemberUid == null || map == null) {
+            return;
+        }
+        Marker marker = memberMarkers.get(selectedMemberUid);
+        FamilyLiveCloudMember member = marker == null
+                ? null : markerMembers.get(marker);
+        if (marker == null || member == null) {
+            if (pendingIntentFocus && dataReady) {
+                pendingIntentFocus = false;
+                showState(R.string.family_map_selected_unavailable);
+            }
+            return;
+        }
+        boolean moveCamera = pendingIntentFocus && restoredCamera == null;
+        pendingIntentFocus = false;
+        focusMember(marker, member, moveCamera, false);
     }
 
     private void showMemberSheet(@NonNull FamilyLiveCloudMember member) {
@@ -446,7 +511,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
         if (query.isEmpty() || memberMarkers.size() != 1) return;
         Marker marker = memberMarkers.values().iterator().next();
         FamilyLiveCloudMember member = markerMembers.get(marker);
-        if (member != null) selectMember(marker, member);
+        if (member != null) {
+            focusMember(marker, member, true, false);
+        }
     }
 
     private void cycleMapType() {
