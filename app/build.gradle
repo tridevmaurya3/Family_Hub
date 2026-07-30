@@ -2,6 +2,12 @@ plugins {
     id 'com.android.application'
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+
 android {
     namespace 'com.tridev.familyhub'
     compileSdk 36
@@ -12,6 +18,11 @@ android {
         targetSdk 36
         versionCode 6
         versionName '0.3.1'
+        manifestPlaceholders = [
+                MAPS_API_KEY: localProperties.getProperty("MAPS_API_KEY")
+                        ?: project.findProperty("MAPS_API_KEY")
+                        ?: "YOUR_GOOGLE_MAPS_API_KEY"
+        ]
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -35,6 +46,8 @@ dependencies {
     implementation 'androidx.room:room-runtime:2.8.4'
     annotationProcessor 'androidx.room:room-compiler:2.8.4'
     implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.google.android.gms:play-services-maps:19.2.0'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
