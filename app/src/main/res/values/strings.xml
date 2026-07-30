@@ -1066,4 +1066,12 @@ Sharing: %12$s</string>
         <item>Relative Home</item>
         <item>Custom Place</item>
     </string-array>
+    <string name="safe_place_alert_history_title">Alert history</string>
+    <string name="safe_place_alert_mark_all_read">Mark all as read</string>
+    <string name="safe_place_alert_history_empty">No Safe Place alerts yet.</string>
+    <string name="safe_place_alert_unread_count">%1$d unread alerts</string>
+    <string name="safe_place_alert_history_item">%1$s\nSafe Place #%2$s\n%3$s · %4$s</string>
+    <string name="safe_place_alert_read">Read</string>
+    <string name="safe_place_alert_unread">Unread — tap to mark read</string>
+    <string name="safe_place_alert_history_error">Alert history could not be loaded.</string>
 </resources>
