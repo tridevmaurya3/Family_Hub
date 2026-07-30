@@ -12,6 +12,7 @@ public class FamilyLiveMemberUiModel {
     private final String memberName;
     private final String currentLocation;
     private final String onlineStatus;
+    private final String availabilityReason;
     private final int batteryPercentage;
     private final boolean charging;
     private final boolean internetAvailable;
@@ -23,6 +24,7 @@ public class FamilyLiveMemberUiModel {
             String memberName,
             String currentLocation,
             String onlineStatus,
+            String availabilityReason,
             int batteryPercentage,
             boolean charging,
             boolean internetAvailable,
@@ -33,6 +35,7 @@ public class FamilyLiveMemberUiModel {
         this.memberName = memberName;
         this.currentLocation = currentLocation;
         this.onlineStatus = onlineStatus;
+        this.availabilityReason = availabilityReason;
         this.batteryPercentage = batteryPercentage;
         this.charging = charging;
         this.internetAvailable = internetAvailable;
@@ -54,6 +57,10 @@ public class FamilyLiveMemberUiModel {
 
     public String getOnlineStatus() {
         return onlineStatus;
+    }
+
+    public String getAvailabilityReason() {
+        return availabilityReason;
     }
 
     public int getBatteryPercentage() {
