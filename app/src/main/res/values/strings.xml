@@ -853,4 +853,9 @@
     <string name="family_account_share_chooser">Share Family Hub invitation</string>
     <string name="family_admin_flow_explanation">Invitation codes are not sent automatically. Share a generated code with the intended member. Their join request will appear below for your approval.</string>
 
+    <string name="family_live_notification_channel">Family Live location</string>
+    <string name="family_live_notification_channel_detail">Visible updates while you choose to share your location</string>
+    <string name="family_live_notification_title">Family Live sharing is active</string>
+    <string name="family_live_notification_text">Your location is being shared with authorised family members.</string>
+    <string name="family_live_stop_sharing">Stop sharing</string>
 </resources>
