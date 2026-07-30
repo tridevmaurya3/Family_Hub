@@ -10,8 +10,10 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -54,6 +56,8 @@ public class MoreFragment extends Fragment {
             @Nullable Bundle savedInstanceState
     ) {
         super.onViewCreated(view, savedInstanceState);
+
+        applyModuleCardPalette();
 
         binding.cardDocuments.setOnClickListener(
                 clickedView -> openFeature(new DocumentsFragment())
@@ -120,6 +124,82 @@ public class MoreFragment extends Fragment {
                         FamilyManagementActivity.class
                 )));
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
+    }
+
+    private void applyModuleCardPalette() {
+        styleCard(
+                binding.cardVehicle,
+                R.color.fh_module_vehicle_container,
+                R.color.fh_module_vehicle
+        );
+        styleCard(
+                binding.cardProperty,
+                R.color.fh_module_property_container,
+                R.color.fh_module_property
+        );
+        styleCard(
+                binding.cardPlanner,
+                R.color.fh_module_planner_container,
+                R.color.fh_module_planner
+        );
+        styleCard(
+                binding.cardNotes,
+                R.color.fh_module_notes_container,
+                R.color.fh_module_notes
+        );
+        styleCard(
+                binding.cardDocuments,
+                R.color.fh_module_documents_container,
+                R.color.fh_module_documents
+        );
+        styleCard(
+                binding.cardPasswordVault,
+                R.color.fh_module_vault_container,
+                R.color.fh_module_vault
+        );
+        styleCard(
+                binding.cardFamilyLive,
+                R.color.fh_module_family_container,
+                R.color.fh_module_family
+        );
+        styleCard(
+                binding.cardHealth,
+                R.color.fh_module_health_container,
+                R.color.fh_module_health
+        );
+        styleCard(
+                binding.cardGrocery,
+                R.color.fh_module_grocery_container,
+                R.color.fh_module_grocery
+        );
+        styleCard(
+                binding.cardBackupRestore,
+                R.color.fh_primary_container,
+                R.color.fh_primary
+        );
+        styleCard(
+                binding.cardPrivacyAbout,
+                R.color.fh_secondary_container,
+                R.color.fh_secondary
+        );
+    }
+
+    private void styleCard(
+            @NonNull MaterialCardView card,
+            int containerColor,
+            int accentColor
+    ) {
+        card.setCardBackgroundColor(ContextCompat.getColor(
+                requireContext(),
+                containerColor
+        ));
+        card.setStrokeColor(ContextCompat.getColor(
+                requireContext(),
+                accentColor
+        ));
+        card.setStrokeWidth(getResources().getDimensionPixelSize(
+                R.dimen.border_width
+        ));
     }
 
     private void openFeature(@NonNull Fragment fragment) {
