@@ -67,6 +67,13 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:text="@string/safe_place_use_location" />
+        <Button
+            android:id="@+id/button_select_on_map"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:text="@string/safe_place_select_on_map" />
         <TextView
             android:id="@+id/location_status"
             style="@style/TextAppearance.FamilyHub.Caption"
