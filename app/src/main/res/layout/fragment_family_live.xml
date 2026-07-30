@@ -198,6 +198,61 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <HorizontalScrollView
+        android:id="@+id/familyLiveFilterScroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:clipToPadding="false"
+        android:fillViewport="false"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/familyLiveSearchLayout">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/familyLiveFilterGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:checkedChip="@id/chipFamilyLiveAll"
+            app:chipSpacingHorizontal="@dimen/space_8"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFamilyLiveAll"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/family_live_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFamilyLiveLive"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/family_live_filter_live" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFamilyLiveStale"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/family_live_filter_stale" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFamilyLiveAttention"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/family_live_filter_attention" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
     <LinearLayout
         android:id="@+id/listHeader"
         android:layout_width="0dp"
@@ -207,7 +262,7 @@
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/familyLiveSearchLayout">
+        app:layout_constraintTop_toBottomOf="@id/familyLiveFilterScroll">
 
         <TextView
             style="@style/TextAppearance.FamilyHub.SectionTitle"
