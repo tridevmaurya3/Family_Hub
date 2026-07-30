@@ -140,7 +140,11 @@ public class FamilyLiveFragment extends Fragment {
                         return;
                     }
                     if (checkedId == R.id.buttonMapView) {
-                        showMapView();
+                        startActivity(new Intent(
+                                requireContext(),
+                                FamilyMapActivity.class
+                        ));
+                        binding.buttonListView.setChecked(true);
                     } else {
                         showListView();
                     }
@@ -392,74 +396,7 @@ public class FamilyLiveFragment extends Fragment {
                     : member.displayName;
             MarkerOptions marker = new MarkerOptions()
                     .position(position)
-                    .title(displayName)
-                    .snippet(getString(stale
-                            ? R.string.family_live_map_marker_stale
-                            : R.string.family_live_map_marker_live))
-                    .icon(BitmapDescriptorFactory.defaultMarker(stale
-                            ? BitmapDescriptorFactory.HUE_ORANGE
-                            : BitmapDescriptorFactory.HUE_GREEN))
-                    .alpha(stale ? 0.72F : 1F);
-            googleMap.addMarker(marker);
-            bounds.include(position);
-            onlyPosition = position;
-            markerCount++;
-        }
-
-        binding.mapError.setVisibility(
-                markerCount == 0 ? View.VISIBLE : View.GONE
-        );
-        if (!mapViewSelected || markerCount == 0 || !fitMapOnNextRender) {
-            return;
-        }
-
-        fitMapOnNextRender = false;
-        final int safeMarkerCount = markerCount;
-        final LatLng singlePosition = onlyPosition;
-        binding.mapContainer.post(() -> {
-            if (binding == null || googleMap == null) {
-                return;
-            }
-            if (safeMarkerCount == 1 && singlePosition != null) {
-                googleMap.animateCamera(
-                        CameraUpdateFactory.newLatLngZoom(
-                                singlePosition,
-                                15F
-                        )
-                );
-            } else {
-                googleMap.animateCamera(
-                        CameraUpdateFactory.newLatLngBounds(
-                                bounds.build(),
-                                72
-                        )
-                );
-            }
-        });
-    }
-
-    private void toggleMapType() {
-        if (googleMap == null) {
-            ensureMap();
-            return;
-        }
-        satelliteMap = !satelliteMap;
-        googleMap.setMapType(satelliteMap
-                ? GoogleMap.MAP_TYPE_SATELLITE
-                : GoogleMap.MAP_TYPE_NORMAL);
-        binding.buttonMapType.setText(satelliteMap
-                ? R.string.family_live_map_type_normal
-                : R.string.family_live_map_type_satellite);
-    }
-
-    @NonNull
-    private String movementDisplay(
-            @NonNull FamilyLiveCloudMember member
-    ) {
-        int label;
-        switch (member.movementType) {
-            case "STATIONARY":
-                label = R.string.family_live_movement_stationary;
+        󞭢Gǲڮ݆͹׮family_live_movement_stationary;
                 break;
             case "WALKING":
                 label = R.string.family_live_movement_walking;
