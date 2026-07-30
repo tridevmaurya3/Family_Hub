@@ -116,6 +116,15 @@
             <include layout="@layout/view_family_member_location_card" />
             <include layout="@layout/view_family_member_device_card" />
             <include layout="@layout/view_family_member_movement_card" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonMemberDetailMap"
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/space_24"
+                android:minHeight="@dimen/touch_target_min"
+                android:text="@string/family_member_detail_view_map" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
