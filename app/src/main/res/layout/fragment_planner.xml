@@ -30,6 +30,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/planner_title" />
 
+    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
+        android:id="@+id/planner_overview"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/compact_section_spacing"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/planner_subtitle"
+        app:overviewAccentColor="@color/fh_module_planner"
+        app:overviewContainerColor="@color/fh_module_planner_container"
+        app:overviewDetail="@string/planner_subtitle"
+        app:overviewIcon="@drawable/ic_planner"
+        app:overviewTitle="@string/planner_title" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/planner_summary"
         style="@style/Widget.FamilyHub.Card.Flat"
@@ -39,7 +53,7 @@
         app:cardBackgroundColor="@color/fh_tertiary_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/planner_subtitle"
+        app:layout_constraintTop_toBottomOf="@id/planner_overview"
         app:strokeColor="@color/fh_tertiary">
         <LinearLayout
             android:layout_width="match_parent"
