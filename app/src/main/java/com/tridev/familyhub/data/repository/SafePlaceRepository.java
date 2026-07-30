@@ -25,6 +25,10 @@ public final class SafePlaceRepository {
         void onDuplicate();
         void onError();
     }
+    public interface ActionCallback {
+        void onComplete();
+        void onError();
+    }
 
     private final SafePlaceDao dao;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -83,6 +87,29 @@ public final class SafePlaceRepository {
             });
         } catch (RejectedExecutionException ignored) {
             // Repository was closed between the guard and task submission.
+        }
+    }
+
+    public void delete(
+            @NonNull SafePlace place,
+            @NonNull ActionCallback callback
+    ) {
+        if (closed.get()) return;
+        try {
+            executor.execute(() -> {
+                try {
+                    dao.delete(place);
+                    main.post(() -> {
+                        if (!closed.get()) callback.onComplete();
+                    });
+                } catch (RuntimeException error) {
+                    main.post(() -> {
+                        if (!closed.get()) callback.onError();
+                    });
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Repository was closed between the guard and submission.
         }
     }
 
