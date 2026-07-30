@@ -41,6 +41,24 @@
         }
       }
     },
+    "households": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        "$householdId": {
+          ".write": "auth != null && root.child('families').child($familyId).child('ownerUid').val() === auth.uid",
+          ".validate": "!newData.exists() || (newData.child('householdId').val() === $householdId && newData.child('familyId').val() === $familyId && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 60 && newData.child('guardianUid').isString() && root.child('memberships').child($familyId).child(newData.child('guardianUid').val()).child('status').val() === 'ACTIVE' && newData.child('active').isBoolean() && newData.child('createdBy').isString() && newData.child('createdAt').isNumber())"
+        }
+      }
+    },
+    "householdAssignments": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        "$uid": {
+          ".write": "auth != null && root.child('families').child($familyId).child('ownerUid').val() === auth.uid",
+          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('familyId').val() === $familyId && newData.child('householdId').isString() && newData.child('assignedBy').val() === auth.uid && newData.child('updatedAt').isNumber() && root.child('memberships').child($familyId).child($uid).child('status').val() === 'ACTIVE')"
+        }
+      }
+    },
     "familyProfiles": {
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
