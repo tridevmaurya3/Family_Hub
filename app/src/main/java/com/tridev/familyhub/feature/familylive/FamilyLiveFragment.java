@@ -53,6 +53,8 @@ import java.util.Map;
 public class FamilyLiveFragment extends Fragment {
 
     private static final long LIVE_FRESHNESS_MS = 3L * 60L * 1000L;
+    private static final String STATE_MEMBER_FILTER =
+            "family_live_member_filter";
 
     private FragmentFamilyLiveBinding binding;
     private FamilyLiveAdapter familyLiveAdapter;
@@ -67,6 +69,7 @@ public class FamilyLiveFragment extends Fragment {
     private boolean mapViewSelected;
     private boolean fitMapOnNextRender = true;
     private boolean satelliteMap;
+    private int selectedFilterId = R.id.chipFamilyLiveAll;
     @NonNull private String memberQuery = "";
     @Nullable private GoogleMap googleMap;
     @NonNull
@@ -76,6 +79,12 @@ public class FamilyLiveFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) {
+            selectedFilterId = savedInstanceState.getInt(
+                    STATE_MEMBER_FILTER,
+                    R.id.chipFamilyLiveAll
+            );
+        }
 
         foregroundPermissionLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestMultiplePermissions(),
@@ -203,6 +212,17 @@ public class FamilyLiveFragment extends Fragment {
                     }
                 }
         );
+        binding.familyLiveFilterGroup.setOnCheckedStateChangeListener(
+                (group, checkedIds) -> {
+                    selectedFilterId = checkedIds.isEmpty()
+                            ? R.id.chipFamilyLiveAll
+                            : checkedIds.get(0);
+                    if (cloudDataReceived) {
+                        renderCloudMembers(latestCloudMembers);
+                    }
+                }
+        );
+        binding.familyLiveFilterGroup.check(selectedFilterId);
         binding.buttonLocationSharing.setOnClickListener(ignored -> {
             if (LocationSharingStore.isSharingEnabled(requireContext())) {
                 stopSharing();
@@ -259,7 +279,13 @@ public class FamilyLiveFragment extends Fragment {
         String normalizedQuery =
                 memberQuery.toLowerCase(Locale.ROOT);
         for (FamilyLiveCloudMember member : members) {
-            String searchable = (member.displayName + " " + member.role)
+            String searchable = (
+                    member.displayName
+                            + " "
+                            + member.role
+                            + " "
+                            + member.placeLabel
+            )
                     .toLowerCase(Locale.ROOT);
             if (!normalizedQuery.isEmpty()
                     && !searchable.contains(normalizedQuery)) {
@@ -270,6 +296,9 @@ public class FamilyLiveFragment extends Fragment {
                     now,
                     LIVE_FRESHNESS_MS
             );
+            if (!matchesSelectedFilter(availabilityReason)) {
+                continue;
+            }
             boolean stale = FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
                     availabilityReason
             );
@@ -320,6 +349,32 @@ public class FamilyLiveFragment extends Fragment {
 
         renderMemberList(uiModels);
         renderMapMarkers();
+    }
+
+    private boolean matchesSelectedFilter(
+            @NonNull String availabilityReason
+    ) {
+        if (selectedFilterId == R.id.chipFamilyLiveLive) {
+            return FamilyLiveAvailability.isAvailable(availabilityReason);
+        }
+        if (selectedFilterId == R.id.chipFamilyLiveStale) {
+            return FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
+                    availabilityReason
+            );
+        }
+        if (selectedFilterId == R.id.chipFamilyLiveAttention) {
+            return !FamilyLiveAvailability.isAvailable(availabilityReason)
+                    && !FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
+                            availabilityReason
+                    );
+        }
+        return true;
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        outState.putInt(STATE_MEMBER_FILTER, selectedFilterId);
+        super.onSaveInstanceState(outState);
     }
 
     private void refreshFamilyLive() {
