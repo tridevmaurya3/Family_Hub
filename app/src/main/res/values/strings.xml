@@ -1,3 +1,23 @@
+    <string name="household_manage">Manage households</string>
+    <string name="household_title">Family households</string>
+    <string name="household_subtitle">Create separate homes inside this family and assign a Guardian and members to each home.</string>
+    <string name="household_add">Add household</string>
+    <string name="household_create_title">Create household</string>
+    <string name="household_name_hint">Household name</string>
+    <string name="household_guardian_hint">Household Guardian</string>
+    <string name="household_create">Create</string>
+    <string name="household_name_error">Enter at least 2 characters</string>
+    <string name="household_guardian_format">Guardian: %1$s</string>
+    <string name="household_change_guardian">Change Guardian</string>
+    <string name="household_assign_members">Assign members</string>
+    <string name="household_save_assignment">Save assignment</string>
+    <string name="household_load_error">Households could not be loaded. Check internet access and Firebase rules.</string>
+    <string name="household_action_error">The household update could not be completed.</string>
+    <string name="household_members_required">Add or approve at least one authorised family member first.</string>
+    <plurals name="household_member_count">
+        <item quantity="one">%1$d assigned member</item>
+        <item quantity="other">%1$d assigned members</item>
+    </plurals>
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="content_description_add">Add new item</string>
