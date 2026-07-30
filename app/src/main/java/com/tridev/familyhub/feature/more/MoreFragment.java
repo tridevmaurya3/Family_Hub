@@ -21,6 +21,7 @@ import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
+import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
@@ -63,6 +64,9 @@ public class MoreFragment extends Fragment {
         binding.cardFamilyLive.setOnClickListener(
                 clickedView -> openFeature(new FamilyLiveFragment())
         );
+        binding.buttonSafePlaces.setOnClickListener(clickedView -> {
+            startActivity(new Intent(requireContext(), SafePlacesActivity.class));
+        });
         binding.cardHealth.setOnClickListener(
                 clickedView -> openFeature(new HealthFragment())
         );
