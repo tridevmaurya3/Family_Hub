@@ -13,9 +13,9 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingStart="@dimen/screen_padding_horizontal"
-        android:paddingTop="@dimen/space_24"
+        android:paddingTop="@dimen/compact_page_top_padding"
         android:paddingEnd="@dimen/screen_padding_horizontal"
-        android:paddingBottom="104dp">
+        android:paddingBottom="88dp">
 
         <TextView
             style="@style/TextAppearance.FamilyHub.Heading"
@@ -258,7 +258,7 @@
             style="@style/TextAppearance.FamilyHub.Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_24"
+            android:layout_marginTop="@dimen/compact_section_spacing"
             android:text="@string/more_modules_title"
             android:textColor="@color/fh_primary" />
 
@@ -561,7 +561,7 @@
             style="@style/TextAppearance.FamilyHub.Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_24"
+            android:layout_marginTop="@dimen/compact_section_spacing"
             android:text="@string/more_settings_title"
             android:textColor="@color/fh_primary" />
 
@@ -705,7 +705,7 @@
             style="@style/TextAppearance.FamilyHub.Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_24"
+            android:layout_marginTop="@dimen/compact_section_spacing"
             android:text="@string/auth_account_section"
             android:textColor="@color/fh_primary" />
 
