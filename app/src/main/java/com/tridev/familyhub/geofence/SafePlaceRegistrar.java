@@ -14,6 +14,8 @@ import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 
+import java.util.Collections;
+
 public final class SafePlaceRegistrar {
     private SafePlaceRegistrar() {}
 
@@ -44,15 +46,25 @@ public final class SafePlaceRegistrar {
         );
         GeofencingClient client =
                 LocationServices.getGeofencingClient(context);
-        client.addGeofences(
-                new GeofencingRequest.Builder()
-                        .setInitialTrigger(
-                                GeofencingRequest.INITIAL_TRIGGER_ENTER
-                        )
-                        .addGeofence(geofence)
-                        .build(),
-                pendingIntent
-        );
+        client.removeGeofences(Collections.singletonList(id))
+                .addOnCompleteListener(ignored -> client.addGeofences(
+                        new GeofencingRequest.Builder()
+                                .setInitialTrigger(
+                                        GeofencingRequest
+                                                .INITIAL_TRIGGER_ENTER
+                                )
+                                .addGeofence(geofence)
+                                .build(),
+                        pendingIntent
+                ));
         return true;
+    }
+
+    public static void remove(
+            @NonNull Context context,
+            @NonNull String id
+    ) {
+        LocationServices.getGeofencingClient(context)
+                .removeGeofences(Collections.singletonList(id));
     }
 }
