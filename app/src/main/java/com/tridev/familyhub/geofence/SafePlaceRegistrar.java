@@ -17,6 +17,12 @@ import com.google.android.gms.location.LocationServices;
 import java.util.Collections;
 
 public final class SafePlaceRegistrar {
+    public interface RegistrationCallback {
+        void onRegistered();
+        void onPermissionDenied();
+        void onError();
+    }
+
     private SafePlaceRegistrar() {}
 
     public static boolean register(
@@ -26,9 +32,28 @@ public final class SafePlaceRegistrar {
             double longitude,
             float radius
     ) {
+        return register(
+                context,
+                id,
+                latitude,
+                longitude,
+                radius,
+                null
+        );
+    }
+
+    public static boolean register(
+            @NonNull Context context,
+            @NonNull String id,
+            double latitude,
+            double longitude,
+            float radius,
+            RegistrationCallback callback
+    ) {
         if (ContextCompat.checkSelfPermission(
                 context, Manifest.permission.ACCESS_FINE_LOCATION
         ) != PackageManager.PERMISSION_GRANTED) {
+            if (callback != null) callback.onPermissionDenied();
             return false;
         }
         Geofence geofence = new Geofence.Builder()
@@ -48,15 +73,21 @@ public final class SafePlaceRegistrar {
                 LocationServices.getGeofencingClient(context);
         client.removeGeofences(Collections.singletonList(id))
                 .addOnCompleteListener(ignored -> client.addGeofences(
-                        new GeofencingRequest.Builder()
-                                .setInitialTrigger(
-                                        GeofencingRequest
-                                                .INITIAL_TRIGGER_ENTER
-                                )
-                                .addGeofence(geofence)
-                                .build(),
-                        pendingIntent
-                ));
+                                new GeofencingRequest.Builder()
+                                        .setInitialTrigger(
+                                                GeofencingRequest
+                                                        .INITIAL_TRIGGER_ENTER
+                                        )
+                                        .addGeofence(geofence)
+                                        .build(),
+                                pendingIntent
+                        )
+                        .addOnSuccessListener(result -> {
+                            if (callback != null) callback.onRegistered();
+                        })
+                        .addOnFailureListener(error -> {
+                            if (callback != null) callback.onError();
+                        }));
         return true;
     }
 
