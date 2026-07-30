@@ -26,6 +26,29 @@ public interface FamilyMemberDao {
             + "ORDER BY name COLLATE NOCASE ASC")
     List<FamilyMember> search(String query);
 
+    @Query("SELECT * FROM family_members "
+            + "WHERE ownerFamilyId = :familyId "
+            + "ORDER BY name COLLATE NOCASE ASC")
+    List<FamilyMember> getForFamily(String familyId);
+
+    @Query("SELECT * FROM family_members "
+            + "WHERE ownerFamilyId = :familyId AND ("
+            + "name COLLATE NOCASE LIKE '%' || :query || '%' "
+            + "OR relation COLLATE NOCASE LIKE '%' || :query || '%' "
+            + "OR phone LIKE '%' || :query || '%' "
+            + "OR email COLLATE NOCASE LIKE '%' || :query || '%' "
+            + "OR bloodGroup COLLATE NOCASE LIKE '%' || :query || '%' "
+            + "OR address COLLATE NOCASE LIKE '%' || :query || '%') "
+            + "ORDER BY name COLLATE NOCASE ASC")
+    List<FamilyMember> searchForFamily(String familyId, String query);
+
+    @Query("SELECT * FROM family_members WHERE ownerFamilyId = ''")
+    List<FamilyMember> getUnscoped();
+
+    @Query("SELECT * FROM family_members "
+            + "WHERE cloudProfileId = :cloudProfileId LIMIT 1")
+    FamilyMember getByCloudProfileId(String cloudProfileId);
+
     @Query("SELECT COUNT(*) FROM family_members")
     int count();
 
