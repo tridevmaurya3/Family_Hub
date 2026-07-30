@@ -895,4 +895,9 @@ Battery: %3$s
 Connection: %4$s
 Movement: %5$s
 Last update: %6$s</string>
+    <string name="family_live_movement_stationary">Stationary</string>
+    <string name="family_live_movement_walking">Walking</string>
+    <string name="family_live_movement_cycling">Cycling</string>
+    <string name="family_live_movement_travelling">Travelling</string>
+    <string name="family_live_movement_speed">%1$s · %2$d km/h</string>
 </resources>
