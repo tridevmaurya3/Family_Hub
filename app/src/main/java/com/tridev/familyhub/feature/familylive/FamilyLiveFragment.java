@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +31,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.model.FamilyLiveMemberData;
@@ -39,8 +42,11 @@ import com.tridev.familyhub.feature.familylive.model.FamilyLiveMemberUiModel;
 import com.tridev.familyhub.location.FamilyLocationService;
 import com.tridev.familyhub.location.LocationSharingStore;
 
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** Displays family profiles and transparent location-sharing controls. */
@@ -59,6 +65,7 @@ public class FamilyLiveFragment extends Fragment {
     private boolean mapViewSelected;
     private boolean fitMapOnNextRender = true;
     private boolean satelliteMap;
+    @NonNull private String memberQuery = "";
     @Nullable private GoogleMap googleMap;
     @NonNull
     private List<FamilyLiveCloudMember> latestCloudMembers =
@@ -110,6 +117,9 @@ public class FamilyLiveFragment extends Fragment {
 
         repository = new FamilyLiveRepository(requireContext());
         familyLiveAdapter = new FamilyLiveAdapter();
+        familyLiveAdapter.setOnMemberClickListener(
+                this::showMemberDetails
+        );
 
         binding.recyclerFamilyLive.setLayoutManager(
                 new LinearLayoutManager(requireContext())
@@ -132,6 +142,37 @@ public class FamilyLiveFragment extends Fragment {
             renderMapMarkers();
         });
         binding.buttonMapType.setOnClickListener(ignored -> toggleMapType());
+        binding.familyLiveSearchInput.addTextChangedListener(
+                new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(
+                            CharSequence value,
+                            int start,
+                            int count,
+                            int after
+                    ) {
+                    }
+
+                    @Override
+                    public void onTextChanged(
+                            CharSequence value,
+                            int start,
+                            int before,
+                            int count
+                    ) {
+                        memberQuery = value == null
+                                ? ""
+                                : value.toString().trim();
+                        if (cloudDataReceived) {
+                            renderCloudMembers(latestCloudMembers);
+                        }
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable value) {
+                    }
+                }
+        );
         binding.buttonLocationSharing.setOnClickListener(ignored -> {
             if (LocationSharingStore.isSharingEnabled(requireContext())) {
                 stopSharing();
@@ -199,7 +240,15 @@ public class FamilyLiveFragment extends Fragment {
         List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
         long now = System.currentTimeMillis();
 
+        String normalizedQuery =
+                memberQuery.toLowerCase(Locale.ROOT);
         for (FamilyLiveCloudMember member : members) {
+            String searchable = (member.displayName + " " + member.role)
+                    .toLowerCase(Locale.ROOT);
+            if (!normalizedQuery.isEmpty()
+                    && !searchable.contains(normalizedQuery)) {
+                continue;
+            }
             boolean stale = member.updatedAt <= 0L
                     || now - member.updatedAt > LIVE_FRESHNESS_MS;
             String location;
@@ -249,6 +298,7 @@ public class FamilyLiveFragment extends Fragment {
             return;
         }
         binding.mapContainer.setVisibility(View.GONE);
+        binding.familyLiveSearchLayout.setVisibility(View.VISIBLE);
         binding.listHeader.setVisibility(View.VISIBLE);
         boolean isEmpty = familyLiveAdapter == null
                 || familyLiveAdapter.getItemCount() == 0;
@@ -265,6 +315,7 @@ public class FamilyLiveFragment extends Fragment {
         if (binding == null) {
             return;
         }
+        binding.familyLiveSearchLayout.setVisibility(View.GONE);
         binding.listHeader.setVisibility(View.GONE);
         binding.recyclerFamilyLive.setVisibility(View.GONE);
         binding.familyLiveEmptyState.setVisibility(View.GONE);
@@ -384,6 +435,56 @@ public class FamilyLiveFragment extends Fragment {
         binding.buttonMapType.setText(satelliteMap
                 ? R.string.family_live_map_type_normal
                 : R.string.family_live_map_type_satellite);
+    }
+
+    private void showMemberDetails(
+            @NonNull FamilyLiveMemberUiModel member
+    ) {
+        String battery;
+        if (member.getBatteryPercentage() < 0) {
+            battery = getString(
+                    R.string.family_live_battery_unavailable
+            );
+        } else if (member.isCharging()) {
+            battery = getString(
+                    R.string.family_live_charging_format,
+                    member.getBatteryPercentage()
+            );
+        } else {
+            battery = getString(
+                    R.string.family_live_battery_format,
+                    member.getBatteryPercentage()
+            );
+        }
+
+        String updated = member.getLastUpdatedTime() <= 0L
+                ? getString(R.string.family_live_update_unavailable)
+                : DateFormat.getDateTimeInstance(
+                        DateFormat.MEDIUM,
+                        DateFormat.SHORT
+                ).format(new Date(member.getLastUpdatedTime()));
+
+        String message = getString(
+                R.string.family_live_member_details_message,
+                member.getCurrentLocation(),
+                member.getOnlineStatus(),
+                battery,
+                member.isInternetAvailable()
+                        ? getString(
+                        R.string.family_live_internet_available
+                )
+                        : getString(
+                        R.string.family_live_internet_unavailable
+                ),
+                member.getMovementType(),
+                updated
+        );
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(member.getMemberName())
+                .setMessage(message)
+                .setPositiveButton(R.string.ok, null)
+                .show();
     }
 
     private void showSharingEducation() {
