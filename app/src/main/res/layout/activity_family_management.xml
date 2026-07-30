@@ -71,6 +71,15 @@
             app:cornerRadius="@dimen/radius_12" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_manage_households"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginTop="@dimen/space_8"
+            android:text="@string/household_manage"
+            app:cornerRadius="@dimen/radius_12" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/button_refresh_family"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
