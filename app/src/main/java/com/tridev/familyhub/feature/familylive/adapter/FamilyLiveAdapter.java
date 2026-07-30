@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.familylive.model.FamilyLiveMemberUiModel;
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,6 +75,7 @@ public class FamilyLiveAdapter
     ) {
         FamilyLiveMemberUiModel member = members.get(position);
         Context context = holder.itemView.getContext();
+        applyCardPalette(holder, position);
 
         holder.itemView.setOnClickListener(ignored -> {
             if (onMemberClickListener != null) {
@@ -129,6 +131,36 @@ public class FamilyLiveAdapter
                 holder,
                 member.getAvailabilityReason()
         );
+    }
+
+    private void applyCardPalette(
+            @NonNull ViewHolder holder,
+            int position
+    ) {
+        int[] backgrounds = {
+                R.color.fh_module_family_container,
+                R.color.fh_module_grocery_container,
+                R.color.fh_module_documents_container,
+                R.color.fh_module_planner_container,
+                R.color.fh_module_health_container
+        };
+        int[] strokes = {
+                R.color.fh_module_family,
+                R.color.fh_module_grocery,
+                R.color.fh_module_documents,
+                R.color.fh_module_planner,
+                R.color.fh_module_health
+        };
+        int paletteIndex = position % backgrounds.length;
+        Context context = holder.itemView.getContext();
+        holder.card.setCardBackgroundColor(ContextCompat.getColor(
+                context,
+                backgrounds[paletteIndex]
+        ));
+        holder.card.setStrokeColor(ContextCompat.getColor(
+                context,
+                strokes[paletteIndex]
+        ));
     }
 
     @Override
@@ -315,10 +347,12 @@ public class FamilyLiveAdapter
         private final TextView connection;
         private final TextView lastUpdated;
         private final View statusDot;
+        private final MaterialCardView card;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
 
+            card = (MaterialCardView) itemView;
             avatar = itemView.findViewById(R.id.tvAvatar);
             memberName = itemView.findViewById(R.id.tvMemberName);
             location = itemView.findViewById(R.id.tvLocation);
