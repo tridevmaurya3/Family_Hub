@@ -73,6 +73,12 @@
     <color name="fh_module_property_container">#FFF7E6</color>
     <color name="fh_module_vault">#5B5FC7</color>
     <color name="fh_module_vault_container">#EEEFFD</color>
+    <color name="fh_module_grocery">#0F7A5A</color>
+    <color name="fh_module_grocery_container">#E7F6F0</color>
+    <color name="fh_module_notes">#8764B8</color>
+    <color name="fh_module_notes_container">#F3EFF9</color>
+    <color name="fh_module_planner">#C25D1A</color>
+    <color name="fh_module_planner_container">#FFF1E8</color>
 
     <!-- Common colors -->
     <color name="fh_white">#FFFFFF</color>
