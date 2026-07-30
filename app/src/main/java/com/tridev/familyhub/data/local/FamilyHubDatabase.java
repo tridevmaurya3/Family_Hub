@@ -21,6 +21,7 @@ import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.dao.NoteDao;
 import com.tridev.familyhub.data.local.dao.PlannerItemDao;
 import com.tridev.familyhub.data.local.dao.SafePlaceDao;
+import com.tridev.familyhub.data.local.dao.PendingLocationUploadDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -34,6 +35,7 @@ import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
 import com.tridev.familyhub.data.local.entity.SafePlace;
+import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
 
 /**
  * The private on-device database.
@@ -55,9 +57,10 @@ import com.tridev.familyhub.data.local.entity.SafePlace;
                 GroceryItem.class,
                 NoteEntry.class,
                 PlannerItem.class,
-                SafePlace.class
+                SafePlace.class,
+                PendingLocationUpload.class
         },
-        version = 14,
+        version = 15,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -80,6 +83,31 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract NoteDao noteDao();
     public abstract PlannerItemDao plannerItemDao();
     public abstract SafePlaceDao safePlaceDao();
+    public abstract PendingLocationUploadDao pendingLocationUploadDao();
+
+    private static final Migration MIGRATION_14_15 = new Migration(14, 15) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `pending_location_uploads` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`encryptedPayload` TEXT NOT NULL, "
+                            + "`createdAt` INTEGER NOT NULL, "
+                            + "`attemptCount` INTEGER NOT NULL, "
+                            + "`nextAttemptAt` INTEGER NOT NULL)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_pending_location_uploads_createdAt` "
+                            + "ON `pending_location_uploads` (`createdAt`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_pending_location_uploads_nextAttemptAt` "
+                            + "ON `pending_location_uploads` (`nextAttemptAt`)"
+            );
+        }
+    };
 
     private static final Migration MIGRATION_13_14 = new Migration(13, 14) {
         @Override public void migrate(SupportSQLiteDatabase database) {
@@ -556,7 +584,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_10_11,
                                     MIGRATION_11_12,
                                     MIGRATION_12_13,
-                                    MIGRATION_13_14
+                                    MIGRATION_13_14,
+                                    MIGRATION_14_15
                             )
                             .build();
                 }
