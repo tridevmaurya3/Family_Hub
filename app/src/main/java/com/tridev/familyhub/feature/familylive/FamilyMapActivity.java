@@ -24,6 +24,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
@@ -51,6 +52,12 @@ import java.util.Map;
 /** Dedicated lifecycle-safe map for authorised Family Live memberships. */
 public final class FamilyMapActivity extends AppCompatActivity {
     private static final long LIVE_FRESHNESS_MS = 3L * 60L * 1000L;
+    private static final String STATE_CAMERA = "family_map_camera";
+    private static final String STATE_MAP_TYPE = "family_map_type";
+    private static final String STATE_QUERY = "family_map_query";
+    private static final String STATE_SELECTED_MEMBER =
+            "family_map_selected_member";
+    private static final String STATE_TRAFFIC = "family_map_traffic";
     private final Map<Marker, FamilyLiveCloudMember> markerMembers =
             new HashMap<>();
     private final Map<String, Marker> memberMarkers = new HashMap<>();
@@ -59,6 +66,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
     @NonNull private String query = "";
     @Nullable private GoogleMap map;
     @Nullable private Circle accuracyCircle;
+    @Nullable private Marker selectedMarker;
+    @Nullable private CameraPosition restoredCamera;
+    @Nullable private String selectedMemberUid;
     @Nullable private FamilyLiveRepository familyRepository;
     @Nullable private SafePlaceRepository safePlaceRepository;
     private View loading;
@@ -71,6 +81,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private boolean mapReady;
     private boolean dataReady;
     private boolean fitOnNextRender = true;
+    private boolean trafficEnabled;
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
 
     @Override
@@ -99,6 +110,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         stateText = findViewById(R.id.textFamilyMapState);
         typeButton = findViewById(R.id.buttonFamilyMapType);
         trafficButton = findViewById(R.id.buttonFamilyMapTraffic);
+        restoreUiState(savedInstanceState);
         findViewById(R.id.buttonFamilyMapBack).setOnClickListener(
                 ignored -> getOnBackPressedDispatcher().onBackPressed());
         findViewById(R.id.buttonFamilyMapRetry).setOnClickListener(
@@ -121,6 +133,10 @@ public final class FamilyMapActivity extends AppCompatActivity {
             }
             @Override public void afterTextChanged(Editable s) { }
         });
+        if (!query.isEmpty()) {
+            search.setText(query);
+            search.setSelection(search.length());
+        }
         familyRepository = new FamilyLiveRepository(this);
         safePlaceRepository = new SafePlaceRepository(this);
         safePlaceRepository.loadAll(places -> {
@@ -138,6 +154,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
         fragment.getMapAsync(googleMap -> {
             map = googleMap;
             mapReady = true;
+            googleMap.setMapType(mapType);
+            googleMap.setTrafficEnabled(trafficEnabled);
+            updateMapControlLabels();
             googleMap.getUiSettings().setCompassEnabled(true);
             googleMap.getUiSettings().setZoomControlsEnabled(true);
             googleMap.getUiSettings().setMapToolbarEnabled(true);
@@ -150,7 +169,29 @@ public final class FamilyMapActivity extends AppCompatActivity {
             enableMyLocationIfAllowed();
             applyMapPadding();
             renderMarkers();
+            if (restoredCamera != null) {
+                googleMap.moveCamera(CameraUpdateFactory.newCameraPosition(
+                        restoredCamera
+                ));
+                restoredCamera = null;
+                fitOnNextRender = false;
+            }
         });
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(STATE_MAP_TYPE, mapType);
+        outState.putBoolean(STATE_TRAFFIC, trafficEnabled);
+        outState.putString(STATE_QUERY, query);
+        outState.putString(STATE_SELECTED_MEMBER, selectedMemberUid);
+        if (map != null) {
+            outState.putParcelable(
+                    STATE_CAMERA,
+                    map.getCameraPosition()
+            );
+        }
     }
 
     @Override protected void onStart() {
@@ -199,6 +240,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         markerMembers.clear();
         memberMarkers.clear();
         accuracyCircle = null;
+        selectedMarker = null;
         renderSafePlaces();
         long now = System.currentTimeMillis();
         int authorised = members.size();
@@ -234,6 +276,12 @@ public final class FamilyMapActivity extends AppCompatActivity {
             if (marker != null) {
                 markerMembers.put(marker, member);
                 memberMarkers.put(member.uid, marker);
+                if (member.uid.equals(selectedMemberUid)) {
+                    marker.setIcon(BitmapDescriptorFactory.defaultMarker(
+                            BitmapDescriptorFactory.HUE_RED
+                    ));
+                    selectedMarker = marker;
+                }
                 shown++;
             }
         }
@@ -284,6 +332,12 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private void selectMember(
             @NonNull Marker marker, @NonNull FamilyLiveCloudMember member) {
         if (map == null) return;
+        restoreSelectedMarkerAppearance();
+        selectedMemberUid = member.uid;
+        selectedMarker = marker;
+        marker.setIcon(BitmapDescriptorFactory.defaultMarker(
+                BitmapDescriptorFactory.HUE_RED
+        ));
         if (accuracyCircle != null) accuracyCircle.remove();
         marker.showInfoWindow();
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(
@@ -403,15 +457,81 @@ public final class FamilyMapActivity extends AppCompatActivity {
             typeButton.setText(R.string.family_map_normal);
         }
         map.setMapType(mapType);
+        updateMapControlLabels();
     }
 
     private void toggleTraffic() {
         if (map == null) return;
         boolean enabled = !map.isTrafficEnabled();
         map.setTrafficEnabled(enabled);
-        trafficButton.setText(enabled
+        trafficEnabled = enabled;
+        updateMapControlLabels();
+    }
+
+    private void restoreUiState(@Nullable Bundle state) {
+        if (state == null) {
+            return;
+        }
+        int restoredType = state.getInt(
+                STATE_MAP_TYPE,
+                GoogleMap.MAP_TYPE_NORMAL
+        );
+        if (restoredType == GoogleMap.MAP_TYPE_NORMAL
+                || restoredType == GoogleMap.MAP_TYPE_SATELLITE
+                || restoredType == GoogleMap.MAP_TYPE_TERRAIN) {
+            mapType = restoredType;
+        }
+        trafficEnabled = state.getBoolean(STATE_TRAFFIC, false);
+        query = valueOrEmpty(state.getString(STATE_QUERY));
+        selectedMemberUid = state.getString(STATE_SELECTED_MEMBER);
+        restoredCamera = state.getParcelable(STATE_CAMERA);
+        fitOnNextRender = restoredCamera == null;
+    }
+
+    private void updateMapControlLabels() {
+        if (typeButton == null || trafficButton == null) {
+            return;
+        }
+        if (mapType == GoogleMap.MAP_TYPE_SATELLITE) {
+            typeButton.setText(R.string.family_map_satellite);
+        } else if (mapType == GoogleMap.MAP_TYPE_TERRAIN) {
+            typeButton.setText(R.string.family_map_terrain);
+        } else {
+            typeButton.setText(R.string.family_map_normal);
+        }
+        trafficButton.setText(trafficEnabled
                 ? R.string.family_map_traffic_on
                 : R.string.family_map_traffic_off);
+    }
+
+    private void restoreSelectedMarkerAppearance() {
+        if (selectedMarker == null) {
+            return;
+        }
+        FamilyLiveCloudMember previous = markerMembers.get(selectedMarker);
+        if (previous == null) {
+            selectedMarker = null;
+            return;
+        }
+        boolean stale = previous.updatedAt <= 0L
+                || System.currentTimeMillis() - previous.updatedAt
+                > LIVE_FRESHNESS_MS;
+        boolean current = FirebaseAuth.getInstance().getCurrentUser() != null
+                && previous.uid.equals(
+                FirebaseAuth.getInstance().getCurrentUser().getUid()
+        );
+        selectedMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
+                current
+                        ? BitmapDescriptorFactory.HUE_AZURE
+                        : stale
+                        ? BitmapDescriptorFactory.HUE_ORANGE
+                        : BitmapDescriptorFactory.HUE_GREEN
+        ));
+    }
+
+    @NonNull
+    private static String valueOrEmpty(@Nullable String value) {
+        return value == null ? "" : value;
     }
 
     private void enableMyLocationIfAllowed() {
