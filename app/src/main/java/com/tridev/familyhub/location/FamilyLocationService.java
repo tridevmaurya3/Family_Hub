@@ -11,10 +11,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -44,7 +48,10 @@ import com.tridev.familyhub.receiver.MovementTransitionReceiver;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Visible, consent-based Family Live sharing.
@@ -70,6 +77,8 @@ public class FamilyLocationService extends Service {
     private static final String PROFILE_STATIONARY = "STATIONARY";
     private static final String PROFILE_LOW_BATTERY = "LOW_BATTERY";
     private static final long ACTIVITY_FRESHNESS_MS = 2L * 60L * 1000L;
+    private static final long GEOCODE_INTERVAL_MS = 15L * 60L * 1000L;
+    private static final float GEOCODE_DISTANCE_METERS = 500F;
     private static final int ACTIVITY_PENDING_INTENT_REQUEST = 4203;
 
     private FusedLocationProviderClient fusedLocationClient;
@@ -86,6 +95,13 @@ public class FamilyLocationService extends Service {
     @NonNull private String stableMovementType = "UNKNOWN";
     @NonNull private String candidateMovementType = "UNKNOWN";
     private int candidateMovementSamples;
+    private final ExecutorService geocodeExecutor =
+            Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    @Nullable private Location lastGeocodedLocation;
+    private long lastGeocodedAt;
+    private boolean geocodeInProgress;
+    @NonNull private String cachedPlaceLabel = "";
 
     @NonNull
     public static Intent startIntent(@NonNull Context context) {
@@ -299,6 +315,9 @@ public class FamilyLocationService extends Service {
                 movement.speedMetersPerSecond
         );
         values.put("movementType", movement.type);
+        if (!cachedPlaceLabel.isEmpty()) {
+            values.put("placeLabel", cachedPlaceLabel);
+        }
         values.put("batteryPercentage", battery.percentage);
         values.put("charging", battery.charging);
         values.put("online", true);
@@ -306,7 +325,91 @@ public class FamilyLocationService extends Service {
         values.put("clientTimestamp", System.currentTimeMillis());
         values.put("updatedAt", ServerValue.TIMESTAMP);
         locationReference.updateChildren(values);
+        resolvePlaceLabelIfNeeded(location);
         updateTrackingProfile(movement, battery);
+    }
+
+    /**
+     * Resolves only a broad locality label. Street, premise, postal code and
+     * full address lines are deliberately excluded from Family Live.
+     */
+    private void resolvePlaceLabelIfNeeded(@NonNull Location location) {
+        if (!Geocoder.isPresent() || geocodeInProgress) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        boolean intervalElapsed =
+                now - lastGeocodedAt >= GEOCODE_INTERVAL_MS;
+        boolean movedEnough = lastGeocodedLocation == null
+                || lastGeocodedLocation.distanceTo(location)
+                >= GEOCODE_DISTANCE_METERS;
+        if (!intervalElapsed && !movedEnough) {
+            return;
+        }
+
+        geocodeInProgress = true;
+        Location requestedLocation = new Location(location);
+        geocodeExecutor.execute(() -> {
+            String label = "";
+            try {
+                Geocoder geocoder = new Geocoder(
+                        getApplicationContext(),
+                        Locale.getDefault()
+                );
+                List<Address> addresses = geocoder.getFromLocation(
+                        requestedLocation.getLatitude(),
+                        requestedLocation.getLongitude(),
+                        1
+                );
+                if (addresses != null && !addresses.isEmpty()) {
+                    label = createBroadPlaceLabel(addresses.get(0));
+                }
+            } catch (Exception ignored) {
+                // Location sharing must continue if geocoding is unavailable.
+            }
+
+            final String resolvedLabel = label;
+            mainHandler.post(() -> {
+                geocodeInProgress = false;
+                lastGeocodedAt = System.currentTimeMillis();
+                lastGeocodedLocation = requestedLocation;
+                if (resolvedLabel.isEmpty() || locationReference == null) {
+                    return;
+                }
+                cachedPlaceLabel = resolvedLabel;
+                locationReference.child("placeLabel")
+                        .setValue(resolvedLabel);
+            });
+        });
+    }
+
+    @NonNull
+    private String createBroadPlaceLabel(@NonNull Address address) {
+        List<String> parts = new ArrayList<>();
+        addUniquePlacePart(parts, address.getSubLocality());
+        addUniquePlacePart(parts, address.getLocality());
+        addUniquePlacePart(parts, address.getSubAdminArea());
+        addUniquePlacePart(parts, address.getAdminArea());
+        return String.join(", ", parts);
+    }
+
+    private void addUniquePlacePart(
+            @NonNull List<String> parts,
+            @Nullable String value
+    ) {
+        if (value == null) {
+            return;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return;
+        }
+        for (String existing : parts) {
+            if (existing.equalsIgnoreCase(trimmed)) {
+                return;
+            }
+        }
+        parts.add(trimmed);
     }
 
     private void stopSharing() {
@@ -676,6 +779,7 @@ public class FamilyLocationService extends Service {
     public void onDestroy() {
         removeUpdates();
         removeMovementTransitions();
+        geocodeExecutor.shutdownNow();
         super.onDestroy();
     }
 
