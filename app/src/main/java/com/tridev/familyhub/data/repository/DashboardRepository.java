@@ -38,6 +38,7 @@ public class DashboardRepository {
 
     private final FinanceRepository financeRepository;
     private final ReminderRepository reminderRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final FamilyHubDatabase database;
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
@@ -49,6 +50,7 @@ public class DashboardRepository {
         Context applicationContext = context.getApplicationContext();
         financeRepository = new FinanceRepository(applicationContext);
         reminderRepository = new ReminderRepository(applicationContext);
+        familyMemberRepository = new FamilyMemberRepository(applicationContext);
         database = FamilyHubDatabase.getInstance(applicationContext);
         mainHandler = new Handler(Looper.getMainLooper());
     }
@@ -107,7 +109,14 @@ public class DashboardRepository {
                     );
                 }
 
-                loadLocalCounts(dashboardData, callback, errorCallback);
+                familyMemberRepository.loadMembers(
+                        "",
+                        members -> loadLocalCounts(
+                                dashboardData,
+                                callback,
+                                errorCallback
+                        )
+                );
             });
 
         });
