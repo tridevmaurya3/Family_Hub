@@ -36,6 +36,11 @@
             android:stopWithTask="false" />
 
         <activity
+            android:name=".feature.familyaccount.HouseholdManagementActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".feature.familyaccount.FamilyManagementActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
