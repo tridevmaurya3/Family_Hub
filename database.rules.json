@@ -20,7 +20,7 @@
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
         "$uid": {
           ".write": "auth != null && root.child('families').child($familyId).child('ownerUid').val() === auth.uid",
-          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('displayName').isString() && newData.child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN|ADULT_MEMBER|CHILD|SENIOR_CITIZEN|GUEST)$/) && newData.child('status').val() === 'ACTIVE')"
+          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('displayName').isString() && newData.child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN|ADULT_MEMBER|CHILD|SENIOR_CITIZEN|GUEST)$/) && ((root.child('families').child($familyId).child('ownerUid').val() === $uid && newData.child('role').val() === 'OWNER_ADMIN') || (root.child('families').child($familyId).child('ownerUid').val() !== $uid && newData.child('role').val() !== 'OWNER_ADMIN')) && newData.child('status').val() === 'ACTIVE')"
         }
       }
     },
