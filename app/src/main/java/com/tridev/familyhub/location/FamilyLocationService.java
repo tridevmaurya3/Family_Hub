@@ -14,6 +14,7 @@ import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.os.BatteryManager;
@@ -21,6 +22,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -49,6 +51,7 @@ import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.PendingLocationUploadDao;
 import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.receiver.MovementTransitionReceiver;
 
 import java.util.ArrayList;
@@ -176,11 +179,6 @@ public class FamilyLocationService extends Service {
 
         startForeground(NOTIFICATION_ID, buildNotification());
 
-        if (!hasLocationPermission()) {
-            stopWithoutRestart();
-            return START_NOT_STICKY;
-        }
-
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || !user.isEmailVerified()) {
             stopWithoutRestart();
@@ -210,6 +208,20 @@ public class FamilyLocationService extends Service {
                             .child(familyId)
                             .child(userId);
                     registerDisconnectState();
+                    if (!hasLocationPermission()) {
+                        publishUnavailableState(
+                                FamilyLiveAvailability.PERMISSION_OFF
+                        );
+                        stopWithoutRestart();
+                        return;
+                    }
+                    if (!isDeviceLocationEnabled()) {
+                        publishUnavailableState(
+                                FamilyLiveAvailability.GPS_OFF
+                        );
+                        stopWithoutRestart();
+                        return;
+                    }
                     LocationSharingStore.setSharingEnabled(this, true);
                     registerMovementTransitions();
                     requestLocationUpdates();
@@ -321,6 +333,10 @@ public class FamilyLocationService extends Service {
         }
         Map<String, Object> disconnected = new HashMap<>();
         disconnected.put("online", false);
+        disconnected.put(
+                "availabilityReason",
+                FamilyLiveAvailability.DEVICE_OFFLINE
+        );
         disconnected.put("lastDisconnectedAt", ServerValue.TIMESTAMP);
         locationReference.onDisconnect().updateChildren(disconnected);
     }
@@ -350,6 +366,12 @@ public class FamilyLocationService extends Service {
         values.put("charging", battery.charging);
         values.put("online", true);
         values.put("sharingEnabled", true);
+        values.put(
+                "availabilityReason",
+                isPowerSaveMode()
+                        ? FamilyLiveAvailability.BATTERY_SAVER
+                        : FamilyLiveAvailability.AVAILABLE
+        );
         values.put("clientTimestamp", System.currentTimeMillis());
         values.put("updatedAt", ServerValue.TIMESTAMP);
         locationReference.updateChildren(values)
@@ -608,6 +630,10 @@ public class FamilyLocationService extends Service {
             Map<String, Object> stopped = new HashMap<>();
             stopped.put("sharingEnabled", false);
             stopped.put("online", false);
+            stopped.put(
+                    "availabilityReason",
+                    FamilyLiveAvailability.SHARING_PAUSED
+            );
             stopped.put("updatedAt", ServerValue.TIMESTAMP);
             locationReference.updateChildren(stopped);
             locationReference.onDisconnect().cancel();
@@ -625,6 +651,17 @@ public class FamilyLocationService extends Service {
         stopSelf();
     }
 
+    private void publishUnavailableState(@NonNull String reason) {
+        if (locationReference == null) {
+            return;
+        }
+        Map<String, Object> unavailable = new HashMap<>();
+        unavailable.put("availabilityReason", reason);
+        unavailable.put("online", false);
+        unavailable.put("updatedAt", ServerValue.TIMESTAMP);
+        locationReference.updateChildren(unavailable);
+    }
+
     private void removeUpdates() {
         if (requestingUpdates) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
@@ -640,7 +677,19 @@ public class FamilyLocationService extends Service {
                 || ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED;
+                ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean isDeviceLocationEnabled() {
+        LocationManager manager =
+                (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return manager != null && manager.isLocationEnabled();
+    }
+
+    private boolean isPowerSaveMode() {
+        PowerManager manager =
+                (PowerManager) getSystemService(Context.POWER_SERVICE);
+        return manager != null && manager.isPowerSaveMode();
     }
 
     @NonNull
