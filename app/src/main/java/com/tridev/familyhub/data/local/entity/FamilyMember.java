@@ -89,6 +89,9 @@ public class FamilyMember {
     @ColumnInfo(defaultValue = "0")
     public long updatedAt;
 
+    @ColumnInfo(defaultValue = "1")
+    public boolean syncPending = true;
+
     /** Runtime-only marker for an authorised Firebase account row. */
     @Ignore
     public boolean cloudManaged;
