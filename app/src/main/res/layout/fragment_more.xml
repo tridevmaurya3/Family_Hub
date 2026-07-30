@@ -441,11 +441,14 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_safe_places"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.FamilyHub.Button.Tonal"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginTop="@dimen/space_8"
-            android:text="@string/safe_places_open" />
+            android:text="@string/safe_places_open"
+            android:textColor="@color/fh_module_family"
+            app:backgroundTint="@color/fh_module_family_container"
+            app:strokeColor="@color/fh_module_family" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_health"
