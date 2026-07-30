@@ -30,6 +30,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/grocery_title" />
 
+    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
+        android:id="@+id/grocery_overview"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/compact_section_spacing"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/grocery_subtitle"
+        app:overviewAccentColor="@color/fh_module_grocery"
+        app:overviewContainerColor="@color/fh_module_grocery_container"
+        app:overviewDetail="@string/grocery_subtitle"
+        app:overviewIcon="@drawable/ic_grocery"
+        app:overviewTitle="@string/grocery_title" />
+
     <LinearLayout
         android:id="@+id/grocery_summary"
         android:layout_width="0dp"
@@ -38,7 +52,7 @@
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/grocery_subtitle">
+        app:layout_constraintTop_toBottomOf="@id/grocery_overview">
 
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Card.Flat"
