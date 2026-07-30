@@ -23,6 +23,10 @@ public interface SafePlaceDao {
             + "WHERE alertsEnabled = 1 AND id != :excludedId")
     int enabledCountExcluding(long excludedId);
 
+    @Query("UPDATE safe_places SET alertsEnabled = :enabled, "
+            + "updatedAt = :updatedAt WHERE id = :id")
+    int updateAlertsEnabled(long id, boolean enabled, long updatedAt);
+
     @Query("SELECT COUNT(*) FROM safe_places WHERE name = :name AND "
             + "ABS(latitude - :latitude) < 0.0001 AND "
             + "ABS(longitude - :longitude) < 0.0001 AND id != :excludedId")
