@@ -262,8 +262,14 @@ public class FamilyLiveFragment extends Fragment {
                     && !searchable.contains(normalizedQuery)) {
                 continue;
             }
-            boolean stale = member.updatedAt <= 0L
-                    || now - member.updatedAt > LIVE_FRESHNESS_MS;
+            String availabilityReason = FamilyLiveAvailability.resolve(
+                    member,
+                    now,
+                    LIVE_FRESHNESS_MS
+            );
+            boolean stale = FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
+                    availabilityReason
+            );
             String location;
             if (!member.sharingEnabled) {
                 location = getString(R.string.family_live_location_off);
@@ -289,7 +295,7 @@ public class FamilyLiveFragment extends Fragment {
             }
 
             boolean currentlyOnline =
-                    member.sharingEnabled && member.online && !stale;
+                    FamilyLiveAvailability.isAvailable(availabilityReason);
             String displayName = member.displayName.trim().isEmpty()
                     ? getString(R.string.family_account_member_fallback)
                     : member.displayName;
@@ -299,6 +305,7 @@ public class FamilyLiveFragment extends Fragment {
                     displayName,
                     location,
                     currentlyOnline ? "ONLINE" : "OFFLINE",
+                    availabilityReason,
                     member.batteryPercentage,
                     member.charging,
                     currentlyOnline,
@@ -840,6 +847,9 @@ public class FamilyLiveFragment extends Fragment {
                     data.memberName,
                     location,
                     data.onlineStatus,
+                    "ONLINE".equalsIgnoreCase(data.onlineStatus)
+                            ? FamilyLiveAvailability.AVAILABLE
+                            : FamilyLiveAvailability.DEVICE_OFFLINE,
                     data.batteryPercentage,
                     data.isCharging,
                     data.hasInternet,
