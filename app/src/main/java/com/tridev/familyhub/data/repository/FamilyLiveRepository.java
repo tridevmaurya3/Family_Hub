@@ -208,6 +208,9 @@ public class FamilyLiveRepository {
                             child.child("sharingEnabled").getValue(Boolean.class);
                     Boolean online =
                             child.child("online").getValue(Boolean.class);
+                    String availabilityReason = child
+                            .child("availabilityReason")
+                            .getValue(String.class);
                     Long updatedAt =
                             child.child("updatedAt").getValue(Long.class);
                     if (uid == null) {
@@ -231,6 +234,9 @@ public class FamilyLiveRepository {
                                     : movementType,
                             Boolean.TRUE.equals(sharing),
                             Boolean.TRUE.equals(online),
+                            availabilityReason == null
+                                    ? ""
+                                    : availabilityReason,
                             updatedAt == null ? 0L : updatedAt
                     ));
                 }
@@ -285,6 +291,7 @@ public class FamilyLiveRepository {
                     location == null ? "UNKNOWN" : location.movementType,
                     location != null && location.sharingEnabled,
                     location != null && location.online,
+                    location == null ? "" : location.availabilityReason,
                     location == null ? 0L : location.updatedAt
             ));
         }
@@ -452,6 +459,7 @@ public class FamilyLiveRepository {
         @NonNull final String movementType;
         final boolean sharingEnabled;
         final boolean online;
+        @NonNull final String availabilityReason;
         final long updatedAt;
 
         CloudLocation(
@@ -465,6 +473,7 @@ public class FamilyLiveRepository {
                 @NonNull String movementType,
                 boolean sharingEnabled,
                 boolean online,
+                @NonNull String availabilityReason,
                 long updatedAt
         ) {
             this.latitude = latitude;
@@ -477,6 +486,7 @@ public class FamilyLiveRepository {
             this.movementType = movementType;
             this.sharingEnabled = sharingEnabled;
             this.online = online;
+            this.availabilityReason = availabilityReason;
             this.updatedAt = updatedAt;
         }
     }
