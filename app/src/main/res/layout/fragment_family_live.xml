@@ -90,21 +90,69 @@
                     android:textColor="@color/fh_on_primary_container" />
 
             </LinearLayout>
-
         </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/locationSharingCard"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/summaryCard">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/card_padding">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvSharingStatus"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/family_live_sharing_off" />
+
+                <TextView
+                    android:id="@+id/tvSharingDetail"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/family_live_sharing_off_detail" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonLocationSharing"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="@dimen/touch_target_min"
+                android:text="@string/family_live_start_sharing" />
+        </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
     <LinearLayout
         android:id="@+id/listHeader"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_24"
+        android:layout_marginTop="@dimen/space_16"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/summaryCard">
+        app:layout_constraintTop_toBottomOf="@id/locationSharingCard">
 
         <TextView
             style="@style/TextAppearance.FamilyHub.SectionTitle"
@@ -119,7 +167,6 @@
             android:layout_height="wrap_content"
             android:text="@string/family_live_list_view"
             android:textColor="@color/fh_module_family" />
-
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -179,9 +226,7 @@
                 android:gravity="center"
                 android:text="@string/family_live_empty_detail"
                 android:textAlignment="center" />
-
         </LinearLayout>
-
     </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
