@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/card_padding">
+        android:padding="@dimen/family_live_card_padding">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -23,13 +23,13 @@
             android:orientation="horizontal">
 
             <FrameLayout
-                android:layout_width="52dp"
-                android:layout_height="52dp">
+                android:layout_width="@dimen/family_live_avatar_size"
+                android:layout_height="@dimen/family_live_avatar_size">
 
                 <TextView
                     android:id="@+id/tvAvatar"
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
+                    android:layout_width="@dimen/family_live_avatar_size"
+                    android:layout_height="@dimen/family_live_avatar_size"
                     android:background="@drawable/bg_member_avatar"
                     android:gravity="center"
                     android:textColor="@color/fh_on_primary"
@@ -88,13 +88,13 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="@dimen/border_width"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/space_8"
             android:background="@color/fh_divider" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_10"
+            android:layout_marginTop="@dimen/space_8"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
