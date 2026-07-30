@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Central read-only data source for the dashboard. */
 public class DashboardRepository {
@@ -38,15 +39,17 @@ public class DashboardRepository {
     private final FinanceRepository financeRepository;
     private final ReminderRepository reminderRepository;
     private final FamilyHubDatabase database;
-    private final ExecutorService databaseExecutor;
+    private static final ExecutorService DATABASE_EXECUTOR =
+            Executors.newSingleThreadExecutor();
+
     private final Handler mainHandler;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public DashboardRepository(@NonNull Context context) {
         Context applicationContext = context.getApplicationContext();
         financeRepository = new FinanceRepository(applicationContext);
         reminderRepository = new ReminderRepository(applicationContext);
         database = FamilyHubDatabase.getInstance(applicationContext);
-        databaseExecutor = Executors.newSingleThreadExecutor();
         mainHandler = new Handler(Looper.getMainLooper());
     }
 
@@ -54,12 +57,18 @@ public class DashboardRepository {
             @NonNull DashboardDataCallback callback,
             @NonNull DashboardErrorCallback errorCallback
     ) {
+        if (closed.get()) {
+            return;
+        }
 
         DashboardStats stats = new DashboardStats();
         DashboardData dashboardData = new DashboardData();
         dashboardData.setStats(stats);
 
         financeRepository.loadCurrentMonthSummary(summary -> {
+            if (closed.get()) {
+                return;
+            }
 
             FinanceSummary safeSummary =
                     summary == null
@@ -73,6 +82,9 @@ public class DashboardRepository {
             );
 
             reminderRepository.loadEnabledReminders(reminders -> {
+                if (closed.get()) {
+                    return;
+                }
 
                 stats.setUpcomingReminders(reminders.size());
 
@@ -106,7 +118,11 @@ public class DashboardRepository {
             @NonNull DashboardDataCallback callback,
             @NonNull DashboardErrorCallback errorCallback
     ) {
-        databaseExecutor.execute(() -> {
+        if (closed.get()) {
+            return;
+        }
+
+        DATABASE_EXECUTOR.execute(() -> {
             try {
                 DashboardStats stats = dashboardData.getStats();
                 long thirtyDaysFromNow = System.currentTimeMillis()
@@ -154,9 +170,17 @@ public class DashboardRepository {
                     dashboardData.setNextBirthdayAt(birthday.when);
                 }
 
-                mainHandler.post(() -> callback.onLoaded(dashboardData));
+                mainHandler.post(() -> {
+                    if (!closed.get()) {
+                        callback.onLoaded(dashboardData);
+                    }
+                });
             } catch (RuntimeException error) {
-                mainHandler.post(() -> errorCallback.onError(error));
+                mainHandler.post(() -> {
+                    if (!closed.get()) {
+                        errorCallback.onError(error);
+                    }
+                });
             }
         });
     }
@@ -296,6 +320,7 @@ public class DashboardRepository {
     }
 
     public void close() {
-        databaseExecutor.shutdown();
+        closed.set(true);
+        mainHandler.removeCallbacksAndMessages(null);
     }
 }
