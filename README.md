@@ -33,6 +33,20 @@ A private, offline-first family organizer for Android, built in Java and XML.
 
 The application id is `com.tridev.familyhub`. Change it before a Play Store release if required.
 
+## Google Maps setup
+
+1. Enable **Maps SDK for Android** for your Google Cloud project.
+2. Create an Android-restricted API key for package
+   `com.tridev.familyhub` and your signing certificate SHA-1.
+3. Add this line to your untracked `local.properties` file:
+
+   `MAPS_API_KEY=your_key_here`
+
+Family Live now opens an immersive full-screen map with family markers,
+place search, current location, map type selection, live traffic, compass,
+zoom/rotate/tilt gestures, buildings, indoor maps, and a show-all-family
+camera control. Only locations with sharing enabled are placed on the map.
+
 ## Planned data boundary
 
 Family Members, Finance, and Reminders save data in the on-device Room database. Each module is added through a migration so existing private data remains intact.
