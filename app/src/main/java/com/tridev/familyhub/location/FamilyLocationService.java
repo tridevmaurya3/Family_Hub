@@ -21,6 +21,11 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.ActivityRecognitionClient;
+import com.google.android.gms.location.ActivityTransition;
+import com.google.android.gms.location.ActivityTransitionRequest;
+import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -34,8 +39,11 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.receiver.MovementTransitionReceiver;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -57,14 +65,21 @@ public class FamilyLocationService extends Service {
     private static final long UPDATE_INTERVAL_MS = 60_000L;
     private static final long MIN_UPDATE_INTERVAL_MS = 30_000L;
     private static final float MIN_DISTANCE_METERS = 25F;
+    private static final long ACTIVITY_FRESHNESS_MS = 2L * 60L * 1000L;
+    private static final int ACTIVITY_PENDING_INTENT_REQUEST = 4203;
 
     private FusedLocationProviderClient fusedLocationClient;
+    private ActivityRecognitionClient activityRecognitionClient;
+    private PendingIntent movementTransitionPendingIntent;
     private LocationCallback locationCallback;
     private DatabaseReference locationReference;
     private String familyId;
     private String userId;
     private boolean requestingUpdates;
     @Nullable private Location previousMovementLocation;
+    @NonNull private String stableMovementType = "UNKNOWN";
+    @NonNull private String candidateMovementType = "UNKNOWN";
+    private int candidateMovementSamples;
 
     @NonNull
     public static Intent startIntent(@NonNull Context context) {
@@ -83,6 +98,10 @@ public class FamilyLocationService extends Service {
         super.onCreate();
         fusedLocationClient =
                 LocationServices.getFusedLocationProviderClient(this);
+        activityRecognitionClient =
+                ActivityRecognition.getClient(this);
+        movementTransitionPendingIntent =
+                buildMovementTransitionPendingIntent();
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult result) {
@@ -143,6 +162,7 @@ public class FamilyLocationService extends Service {
                             .child(userId);
                     registerDisconnectState();
                     LocationSharingStore.setSharingEnabled(this, true);
+                    registerMovementTransitions();
                     requestLocationUpdates();
                 })
                 .addOnFailureListener(error -> stopSharing());
@@ -216,6 +236,8 @@ public class FamilyLocationService extends Service {
     private void stopSharing() {
         LocationSharingStore.setSharingEnabled(this, false);
         removeUpdates();
+        removeMovementTransitions();
+        MovementActivityStore.clear(this);
         if (locationReference != null) {
             Map<String, Object> stopped = new HashMap<>();
             stopped.put("sharingEnabled", false);
@@ -231,6 +253,8 @@ public class FamilyLocationService extends Service {
     private void stopWithoutRestart() {
         LocationSharingStore.setSharingEnabled(this, false);
         removeUpdates();
+        removeMovementTransitions();
+        MovementActivityStore.clear(this);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
@@ -281,28 +305,187 @@ public class FamilyLocationService extends Service {
                         );
             }
         } else if (location.getAccuracy() <= 50F) {
-            // A first accurate fix with no speed is normally a stationary fix.
             calculatedSpeed = 0D;
         }
 
         previousMovementLocation = new Location(location);
+        String gpsMovement = movementFromSpeed(calculatedSpeed);
+        MovementActivityStore.Snapshot activity =
+                MovementActivityStore.read(this);
+        String fusedMovement = fuseMovement(
+                gpsMovement,
+                calculatedSpeed,
+                activity
+        );
+        return new MovementSnapshot(
+                Math.max(0D, calculatedSpeed),
+                stabilizeMovement(fusedMovement, activity)
+        );
+    }
 
-        if (calculatedSpeed < 0D) {
-            return new MovementSnapshot(0D, "UNKNOWN");
+    @NonNull
+    private String movementFromSpeed(double speedMetersPerSecond) {
+        if (speedMetersPerSecond < 0D) {
+            return "UNKNOWN";
         }
-        if (calculatedSpeed < 0.8D) {
-            return new MovementSnapshot(
-                    calculatedSpeed,
-                    "STATIONARY"
+        if (speedMetersPerSecond < 0.8D) {
+            return "STATIONARY";
+        }
+        if (speedMetersPerSecond < 2.5D) {
+            return "WALKING";
+        }
+        if (speedMetersPerSecond < 8.5D) {
+            return "CYCLING";
+        }
+        return "TRAVELLING";
+    }
+
+    @NonNull
+    private String fuseMovement(
+            @NonNull String gpsMovement,
+            double speedMetersPerSecond,
+            @NonNull MovementActivityStore.Snapshot activity
+    ) {
+        if (!activity.isFresh(
+                System.currentTimeMillis(),
+                ACTIVITY_FRESHNESS_MS
+        )) {
+            return gpsMovement;
+        }
+
+        switch (activity.type) {
+            case MovementActivityStore.STILL:
+                return speedMetersPerSecond >= 2.5D
+                        ? gpsMovement
+                        : "STATIONARY";
+            case MovementActivityStore.WALKING:
+            case MovementActivityStore.RUNNING:
+                return speedMetersPerSecond >= 8.5D
+                        ? "TRAVELLING"
+                        : "WALKING";
+            case MovementActivityStore.CYCLING:
+                return speedMetersPerSecond >= 15D
+                        ? "TRAVELLING"
+                        : "CYCLING";
+            case MovementActivityStore.IN_VEHICLE:
+                return "TRAVELLING";
+            default:
+                return gpsMovement;
+        }
+    }
+
+    @NonNull
+    private String stabilizeMovement(
+            @NonNull String proposed,
+            @NonNull MovementActivityStore.Snapshot activity
+    ) {
+        if ("UNKNOWN".equals(proposed)) {
+            return stableMovementType;
+        }
+
+        boolean freshActivity = activity.isFresh(
+                System.currentTimeMillis(),
+                ACTIVITY_FRESHNESS_MS
+        );
+        if ("UNKNOWN".equals(stableMovementType) || freshActivity) {
+            stableMovementType = proposed;
+            candidateMovementType = "UNKNOWN";
+            candidateMovementSamples = 0;
+            return stableMovementType;
+        }
+
+        if (stableMovementType.equals(proposed)) {
+            candidateMovementType = "UNKNOWN";
+            candidateMovementSamples = 0;
+            return stableMovementType;
+        }
+
+        if (candidateMovementType.equals(proposed)) {
+            candidateMovementSamples++;
+        } else {
+            candidateMovementType = proposed;
+            candidateMovementSamples = 1;
+        }
+
+        if (candidateMovementSamples >= 2) {
+            stableMovementType = proposed;
+            candidateMovementType = "UNKNOWN";
+            candidateMovementSamples = 0;
+        }
+        return stableMovementType;
+    }
+
+    @SuppressLint("MissingPermission")
+    private void registerMovementTransitions() {
+        if (!hasActivityRecognitionPermission()) {
+            return;
+        }
+
+        List<ActivityTransition> transitions = new ArrayList<>();
+        int[] activities = new int[]{
+                DetectedActivity.STILL,
+                DetectedActivity.WALKING,
+                DetectedActivity.RUNNING,
+                DetectedActivity.ON_BICYCLE,
+                DetectedActivity.IN_VEHICLE
+        };
+        for (int activity : activities) {
+            transitions.add(new ActivityTransition.Builder()
+                    .setActivityType(activity)
+                    .setActivityTransition(
+                            ActivityTransition.ACTIVITY_TRANSITION_ENTER
+                    )
+                    .build());
+            transitions.add(new ActivityTransition.Builder()
+                    .setActivityType(activity)
+                    .setActivityTransition(
+                            ActivityTransition.ACTIVITY_TRANSITION_EXIT
+                    )
+                    .build());
+        }
+
+        activityRecognitionClient.requestActivityTransitionUpdates(
+                new ActivityTransitionRequest(transitions),
+                movementTransitionPendingIntent
+        );
+    }
+
+    private void removeMovementTransitions() {
+        if (activityRecognitionClient != null
+                && movementTransitionPendingIntent != null
+                && hasActivityRecognitionPermission()) {
+            activityRecognitionClient.removeActivityTransitionUpdates(
+                    movementTransitionPendingIntent
             );
         }
-        if (calculatedSpeed < 2.5D) {
-            return new MovementSnapshot(calculatedSpeed, "WALKING");
+    }
+
+    private boolean hasActivityRecognitionPermission() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                || ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACTIVITY_RECOGNITION
+        ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @NonNull
+    private PendingIntent buildMovementTransitionPendingIntent() {
+        Intent transitionIntent = new Intent(
+                this,
+                MovementTransitionReceiver.class
+        ).setAction(
+                MovementTransitionReceiver.ACTION_MOVEMENT_TRANSITION
+        );
+        int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            pendingFlags |= PendingIntent.FLAG_MUTABLE;
         }
-        if (calculatedSpeed < 8.5D) {
-            return new MovementSnapshot(calculatedSpeed, "CYCLING");
-        }
-        return new MovementSnapshot(calculatedSpeed, "TRAVELLING");
+        return PendingIntent.getBroadcast(
+                this,
+                ACTIVITY_PENDING_INTENT_REQUEST,
+                transitionIntent,
+                pendingFlags
+        );
     }
 
     private static final class MovementSnapshot {
@@ -416,6 +599,7 @@ public class FamilyLocationService extends Service {
     @Override
     public void onDestroy() {
         removeUpdates();
+        removeMovementTransitions();
         super.onDestroy();
     }
 
