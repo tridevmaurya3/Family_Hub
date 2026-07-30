@@ -242,7 +242,236 @@
     </string-array>
     <string name="family_live_empty_title">No family members yet</string>
     <string name="family_live_empty_detail">Add a family member first. Their sharing status will then appear here.</string>
-    <string name="family_live_location_o…5030 tokens truncated…6amp; Shopping</string>
+    <string name="family_live_location_off">Location sharing is off</string>
+    <string name="family_live_location_unavailable">Location unavailable</string>
+    <string name="family_live_unknown">Unknown</string>
+    <string name="family_live_status_unavailable">Status unavailable</string>
+    <string name="family_live_internet_available">Internet available</string>
+    <string name="family_live_internet_unavailable">No internet connection</string>
+    <string name="family_live_battery_unavailable">Battery unavailable</string>
+    <string name="family_live_battery_format">Battery %1$d%%</string>
+    <string name="family_live_charging_format">Charging %1$d%%</string>
+    <string name="family_live_update_unavailable">Update time unavailable</string>
+    <string name="family_live_updated_now">Updated just now</string>
+    <string name="family_live_updated_minutes">Updated %1$d min ago</string>
+    <string name="family_live_updated_hours">Updated %1$d hr ago</string>
+    <string name="family_live_updated_days">Updated %1$d day ago</string>
+    <string name="more_modules_title">Family Hub modules</string>
+    <string name="more_settings_title">Settings and privacy</string>
+    <string name="more_documents_title">Document Vault</string>
+    <string name="more_documents_detail">PDFs, images, certificates and expiry records</string>
+    <string name="more_password_title">Password Vault</string>
+    <string name="more_password_detail">AES-GCM encrypted credentials stored on this device</string>
+    <string name="more_dark_theme">Dark theme</string>
+    <string name="more_backup_title">Backup &amp; Restore</string>
+    <string name="more_backup_detail">Review local data backup availability</string>
+    <string name="more_backup_message">Your data currently remains offline on this device. Use Android system backup until encrypted export is added.</string>
+    <string name="more_privacy_title">Privacy &amp; About</string>
+    <string name="more_privacy_detail">Family Hub version and privacy information</string>
+    <string name="more_privacy_message">Family Hub • Version %1$s\n\nPrivate, offline-first family organizer. Adult location and documents must only be shared with explicit consent.</string>
+    <string name="ok">OK</string>
+    <string name="documents_title">Document Vault</string>
+    <string name="documents_subtitle">Secure links to your PDFs, images and certificates</string>
+    <string name="documents_search_hint">Search documents or categories</string>
+    <string name="documents_empty_title">No documents yet</string>
+    <string name="documents_empty_detail">Add a PDF or image using Android’s secure document picker.</string>
+    <string name="document_add">Add document</string>
+    <string name="document_title">Document title</string>
+    <string name="document_category">Category (Aadhaar, PAN, Insurance…)</string>
+    <string name="document_default_category">Other</string>
+    <string name="document_title_required">Enter a document title</string>
+    <string name="document_picker_note">Family Hub stores a secure link to the selected file. The original file remains in its current location.</string>
+    <string name="document_choose_file">Choose file</string>
+    <string name="document_added">Document added</string>
+    <string name="document_unavailable">This file is no longer available</string>
+    <string name="document_remove_title">Remove document?</string>
+    <string name="document_remove_message">The original file will not be deleted.</string>
+    <string name="document_removed">Document removed</string>
+    <string name="open">Open</string>
+    <string name="remove">Remove</string>
+
+    <!-- Password Vault -->
+    <string name="vault_title">Password Vault</string>
+    <string name="vault_subtitle">AES-GCM encrypted credentials protected by Android Keystore</string>
+    <string name="vault_search_hint">Search title or website</string>
+    <string name="vault_empty_title">Your private vault is empty</string>
+    <string name="vault_empty_detail">Save a credential securely on this device. Screenshots are blocked while the vault is open.</string>
+    <string name="vault_add_credential">Add credential</string>
+    <string name="vault_edit_credential">Edit credential</string>
+    <string name="vault_credential_title">Title</string>
+    <string name="vault_website">Website or app</string>
+    <string name="vault_username">Username</string>
+    <string name="vault_password">Password</string>
+    <string name="vault_notes">Secure notes</string>
+    <string name="vault_encryption_note">Username, password and notes are encrypted before they are stored.</string>
+    <string name="vault_save_credential">Save securely</string>
+    <string name="vault_title_required">Enter a title</string>
+    <string name="vault_password_required">Enter a password</string>
+    <string name="vault_credential_added">Credential encrypted and saved</string>
+    <string name="vault_credential_updated">Credential updated securely</string>
+    <string name="vault_delete_title">Remove credential?</string>
+    <string name="vault_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="vault_credential_removed">Credential removed</string>
+    <string name="vault_no_website">No website provided</string>
+    <string name="vault_not_provided">Not provided</string>
+    <string name="close">Close</string>
+
+    <!-- Health -->
+    <string name="health_title">Health Records</string>
+    <string name="health_subtitle">Private health information organized for each family member</string>
+    <string name="health_search_hint">Search member, type, title, or value</string>
+    <string name="health_empty_title">No health records yet</string>
+    <string name="health_empty_detail">Add medicines, allergies, measurements, appointments, and vaccinations.</string>
+    <string name="health_add_record">Add health record</string>
+    <string name="health_edit_record">Edit health record</string>
+    <string name="health_family_member">Family member</string>
+    <string name="health_record_type">Record type</string>
+    <string name="health_record_title">Title</string>
+    <string name="health_value">Value or instructions (optional)</string>
+    <string name="health_record_date">Date</string>
+    <string name="health_notes">Notes (optional)</string>
+    <string name="health_save_record">Save record</string>
+    <string name="health_member_required">Select a family member</string>
+    <string name="health_type_required">Select a record type</string>
+    <string name="health_title_required">Enter a title</string>
+    <string name="health_add_member_first">Add a family member before creating a health record.</string>
+    <string name="health_record_added">Health record added</string>
+    <string name="health_record_updated">Health record updated</string>
+    <string name="health_delete_title">Remove health record?</string>
+    <string name="health_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="health_record_removed">Health record removed</string>
+    <string name="health_no_value">No value provided</string>
+    <string name="health_type_medicine">Medicine</string>
+    <string name="health_type_condition">Condition</string>
+    <string name="health_type_allergy">Allergy</string>
+    <string name="health_type_measurement">Measurement</string>
+    <string name="health_type_appointment">Appointment</string>
+    <string name="health_type_vaccination">Vaccination</string>
+    <string name="health_type_other">Other</string>
+    <string name="more_health_title">Health Records</string>
+    <string name="more_health_detail">Medicines, allergies, measurements, and appointments</string>
+    <string name="health_dashboard_detail">Stored privately on this device</string>
+    <plurals name="health_record_count">
+        <item quantity="one">%d record</item>
+        <item quantity="other">%d records</item>
+    </plurals>
+    <string-array name="health_record_type_labels">
+        <item>@string/health_type_medicine</item>
+        <item>@string/health_type_condition</item>
+        <item>@string/health_type_allergy</item>
+        <item>@string/health_type_measurement</item>
+        <item>@string/health_type_appointment</item>
+        <item>@string/health_type_vaccination</item>
+        <item>@string/health_type_other</item>
+    </string-array>
+
+    <!-- Vehicle -->
+    <string name="vehicle_title">Vehicles</string>
+    <string name="vehicle_subtitle">Registration, ownership, documents, and important due dates</string>
+    <string name="vehicle_search_hint">Search vehicle, registration, model, or owner</string>
+    <string name="vehicle_empty_title">No vehicles yet</string>
+    <string name="vehicle_empty_detail">Add your family car, motorcycle, scooter, bicycle, or commercial vehicle.</string>
+    <string name="vehicle_add">Add vehicle</string>
+    <string name="vehicle_edit">Edit vehicle</string>
+    <string name="vehicle_save">Save vehicle</string>
+    <string name="vehicle_owner">Owner</string>
+    <string name="vehicle_type">Vehicle type</string>
+    <string name="vehicle_name">Vehicle name</string>
+    <string name="vehicle_registration">Registration number</string>
+    <string name="vehicle_manufacturer">Manufacturer</string>
+    <string name="vehicle_model">Model</string>
+    <string name="vehicle_fuel">Fuel type</string>
+    <string name="vehicle_year">Year</string>
+    <string name="vehicle_insurance_expiry">Insurance expiry (optional)</string>
+    <string name="vehicle_pollution_expiry">PUC expiry (optional)</string>
+    <string name="vehicle_service_due">Service due date (optional)</string>
+    <string name="vehicle_notes">Notes (optional)</string>
+    <string name="vehicle_manual_status">Manually added • DigiLocker verification can be connected later</string>
+    <string name="vehicle_owner_required">Select an owner</string>
+    <string name="vehicle_type_required">Select a vehicle type</string>
+    <string name="vehicle_name_required">Enter a vehicle name</string>
+    <string name="vehicle_registration_required">Enter a registration number</string>
+    <string name="vehicle_duplicate_registration">This registration number is already saved.</string>
+    <string name="vehicle_add_member_first">Add a family member before creating a vehicle profile.</string>
+    <string name="vehicle_added">Vehicle added</string>
+    <string name="vehicle_updated">Vehicle updated</string>
+    <string name="vehicle_delete_title">Remove vehicle?</string>
+    <string name="vehicle_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="vehicle_removed">Vehicle removed</string>
+    <string name="vehicle_details_not_added">Make and model not added</string>
+    <string name="vehicle_next_due">Next due: %1$s</string>
+    <string name="vehicle_type_car">Car</string>
+    <string name="vehicle_type_motorcycle">Motorcycle</string>
+    <string name="vehicle_type_scooter">Scooter</string>
+    <string name="vehicle_type_bicycle">Bicycle</string>
+    <string name="vehicle_type_commercial">Commercial</string>
+    <string name="vehicle_type_other">Other</string>
+    <string name="more_vehicle_title">Vehicle Management</string>
+    <string name="more_vehicle_detail">Registration, insurance, PUC, and service records</string>
+    <string-array name="vehicle_type_labels">
+        <item>@string/vehicle_type_car</item>
+        <item>@string/vehicle_type_motorcycle</item>
+        <item>@string/vehicle_type_scooter</item>
+        <item>@string/vehicle_type_bicycle</item>
+        <item>@string/vehicle_type_commercial</item>
+        <item>@string/vehicle_type_other</item>
+    </string-array>
+
+    <!-- Property -->
+    <string name="property_title">Properties</string>
+    <string name="property_subtitle">Ownership, location, registry, and value information</string>
+    <string name="property_search_hint">Search property, type, city, or owner</string>
+    <string name="property_empty_title">No properties yet</string>
+    <string name="property_empty_detail">Add a house, flat, land, shop, office, or agricultural property.</string>
+    <string name="property_add">Add property</string>
+    <string name="property_edit">Edit property</string>
+    <string name="property_save">Save property</string>
+    <string name="property_owner_label">Owner</string>
+    <string name="property_type_label">Property type</string>
+    <string name="property_name_label">Property name</string>
+    <string name="property_address_label">Address</string>
+    <string name="property_city_label">City</string>
+    <string name="property_state_label">State</string>
+    <string name="property_postal_label">PIN code</string>
+    <string name="property_area_label">Area with unit</string>
+    <string name="property_purchase_value_label">Purchase value (optional)</string>
+    <string name="property_estimated_value_label">Estimated current value (optional)</string>
+    <string name="property_purchase_date_label">Purchase date (optional)</string>
+    <string name="property_registration_label">Registry or reference number (optional)</string>
+    <string name="property_notes_label">Notes (optional)</string>
+    <string name="property_owner_required">Select an owner</string>
+    <string name="property_type_required">Select a property type</string>
+    <string name="property_title_required">Enter a property name</string>
+    <string name="property_add_member_first">Add a family member before creating a property profile.</string>
+    <string name="property_added">Property added</string>
+    <string name="property_updated">Property updated</string>
+    <string name="property_delete_title">Remove property?</string>
+    <string name="property_delete_message">This permanently removes “%1$s” from this device.</string>
+    <string name="property_removed">Property removed</string>
+    <string name="property_location_not_added">Location not added</string>
+    <string name="property_area_not_added">Area not added</string>
+    <string name="property_value_not_added">Value not added</string>
+    <string name="property_type_house">House</string>
+    <string name="property_type_flat">Flat</string>
+    <string name="property_type_land">Land</string>
+    <string name="property_type_shop">Shop</string>
+    <string name="property_type_office">Office</string>
+    <string name="property_type_agricultural">Agricultural</string>
+    <string name="property_type_other">Other</string>
+    <string name="more_property_title">Property Management</string>
+    <string name="more_property_detail">House, land, registry, location, and values</string>
+    <string-array name="property_type_labels">
+        <item>@string/property_type_house</item>
+        <item>@string/property_type_flat</item>
+        <item>@string/property_type_land</item>
+        <item>@string/property_type_shop</item>
+        <item>@string/property_type_office</item>
+        <item>@string/property_type_agricultural</item>
+        <item>@string/property_type_other</item>
+    </string-array>
+
+    <!-- Grocery -->
+    <string name="grocery_title">Grocery &amp; Shopping</string>
     <string name="grocery_subtitle">A simple private shopping list for the whole family</string>
     <string name="grocery_pending">Pending items</string>
     <string name="grocery_estimated_total">Estimated total</string>
