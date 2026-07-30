@@ -19,6 +19,10 @@ public interface SafePlaceDao {
     @Query("SELECT * FROM safe_places WHERE alertsEnabled = 1 LIMIT 100")
     List<SafePlace> getEnabled();
 
+    @Query("SELECT COUNT(*) FROM safe_places "
+            + "WHERE alertsEnabled = 1 AND id != :excludedId")
+    int enabledCountExcluding(long excludedId);
+
     @Query("SELECT COUNT(*) FROM safe_places WHERE name = :name AND "
             + "ABS(latitude - :latitude) < 0.0001 AND "
             + "ABS(longitude - :longitude) < 0.0001 AND id != :excludedId")
