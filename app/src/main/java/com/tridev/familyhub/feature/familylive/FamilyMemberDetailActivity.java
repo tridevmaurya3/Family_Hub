@@ -16,6 +16,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.button.MaterialButton;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.repository.FamilyLiveRepository;
@@ -37,6 +38,8 @@ public final class FamilyMemberDetailActivity extends AppCompatActivity {
     private ProgressBar loading;
     private View content;
     private View unavailable;
+    private MaterialButton viewOnMap;
+    @Nullable private FamilyLiveCloudMember selectedMember;
 
     @NonNull
     public static Intent createIntent(
@@ -59,6 +62,7 @@ public final class FamilyMemberDetailActivity extends AppCompatActivity {
         loading = findViewById(R.id.memberDetailLoading);
         content = findViewById(R.id.memberDetailContent);
         unavailable = findViewById(R.id.memberDetailUnavailable);
+        viewOnMap = findViewById(R.id.buttonMemberDetailMap);
         repository = new FamilyLiveRepository(this);
         findViewById(R.id.buttonMemberDetailBack).setOnClickListener(
                 ignored -> getOnBackPressedDispatcher().onBackPressed()
@@ -66,6 +70,15 @@ public final class FamilyMemberDetailActivity extends AppCompatActivity {
         findViewById(R.id.buttonMemberDetailRetry).setOnClickListener(
                 ignored -> observeMember()
         );
+        viewOnMap.setOnClickListener(ignored -> {
+            FamilyLiveCloudMember member = selectedMember;
+            if (member != null) {
+                startActivity(FamilyMapActivity.createIntent(
+                        this,
+                        member.uid
+                ));
+            }
+        });
         applyInsets();
     }
 
@@ -160,7 +173,10 @@ public final class FamilyMemberDetailActivity extends AppCompatActivity {
         content.setVisibility(selected == null
                 ? View.GONE : View.VISIBLE);
         if (selected != null) {
+            selectedMember = selected;
             bindMember(selected);
+        } else {
+            selectedMember = null;
         }
     }
 
@@ -229,6 +245,19 @@ public final class FamilyMemberDetailActivity extends AppCompatActivity {
         text(R.id.tvMemberDetailSharing, member.sharingEnabled
                 ? getString(R.string.family_map_sharing_on)
                 : getString(R.string.family_map_sharing_off));
+        boolean mapAvailable = member.sharingEnabled
+                && member.hasLocation
+                && Double.isFinite(member.latitude)
+                && Double.isFinite(member.longitude)
+                && member.latitude >= -90D
+                && member.latitude <= 90D
+                && member.longitude >= -180D
+                && member.longitude <= 180D
+                && !(member.latitude == 0D && member.longitude == 0D);
+        viewOnMap.setEnabled(mapAvailable);
+        viewOnMap.setText(mapAvailable
+                ? R.string.family_member_detail_view_map
+                : R.string.family_member_detail_map_unavailable);
     }
 
     private void text(int id, @NonNull String value) {
