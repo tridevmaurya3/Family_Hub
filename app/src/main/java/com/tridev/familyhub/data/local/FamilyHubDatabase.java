@@ -496,6 +496,10 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                             + "`updatedAt` INTEGER NOT NULL DEFAULT 0"
             );
             database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`syncPending` INTEGER NOT NULL DEFAULT 1"
+            );
+            database.execSQL(
                     "CREATE INDEX IF NOT EXISTS "
                             + "`index_family_members_cloudProfileId` "
                             + "ON `family_members` (`cloudProfileId`)"
