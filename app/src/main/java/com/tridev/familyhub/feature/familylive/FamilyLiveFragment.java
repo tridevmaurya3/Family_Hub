@@ -283,7 +283,7 @@ public class FamilyLiveFragment extends Fragment {
                     member.batteryPercentage,
                     member.charging,
                     currentlyOnline,
-                    "UNKNOWN",
+                    movementDisplay(member),
                     member.updatedAt
             ));
         }
@@ -435,6 +435,40 @@ public class FamilyLiveFragment extends Fragment {
         binding.buttonMapType.setText(satelliteMap
                 ? R.string.family_live_map_type_normal
                 : R.string.family_live_map_type_satellite);
+    }
+
+    @NonNull
+    private String movementDisplay(
+            @NonNull FamilyLiveCloudMember member
+    ) {
+        int label;
+        switch (member.movementType) {
+            case "STATIONARY":
+                label = R.string.family_live_movement_stationary;
+                break;
+            case "WALKING":
+                label = R.string.family_live_movement_walking;
+                break;
+            case "CYCLING":
+                label = R.string.family_live_movement_cycling;
+                break;
+            case "TRAVELLING":
+                label = R.string.family_live_movement_travelling;
+                break;
+            default:
+                return getString(R.string.family_live_unknown);
+        }
+
+        String movement = getString(label);
+        if (member.speedMetersPerSecond < 0.3D) {
+            return movement;
+        }
+        long speedKmh = Math.round(member.speedMetersPerSecond * 3.6D);
+        return getString(
+                R.string.family_live_movement_speed,
+                movement,
+                speedKmh
+        );
     }
 
     private void showMemberDetails(
