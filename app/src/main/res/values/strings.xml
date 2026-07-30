@@ -1,3 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="content_description_add">Add new item</string>
+
+    <string name="app_name">Family Hub</string>
+
+    <!-- Household management -->
     <string name="household_manage">Manage households</string>
     <string name="household_title">Family households</string>
     <string name="household_subtitle">Create separate homes inside this family and assign a Guardian and members to each home.</string>
@@ -19,11 +26,6 @@
         <item quantity="one">%1$d assigned member</item>
         <item quantity="other">%1$d assigned members</item>
     </plurals>
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="content_description_add">Add new item</string>
-
-    <string name="app_name">Family Hub</string>
 
     <!-- Dashboard -->
     <string name="dashboard_greeting">Good evening</string>
@@ -85,7 +87,8 @@
     <string name="dashboard_filter_coming_soon">Search filters will be added in a future update.</string>
 
     <!-- Quick actions -->
-    <string name="family_members">Family members</string>\n    <string name="member_authorised_account">Authorised Family Hub account</string>
+    <string name="family_members">Family members</string>
+    <string name="member_authorised_account">Authorised Family Hub account</string>
     <string name="add_reminder">Add reminder</string>
     <string name="add_expense">Add expense</string>
     <string name="add_new">Add new</string>
@@ -904,6 +907,7 @@
     <string name="family_live_settings_not_ready">Required permission or device location is still off.</string>
     <string name="family_live_location_last_known">Last known location — update is stale</string>
     <string name="family_live_location_accuracy">Live location · accuracy about %1$d m</string>
+    <string name="family_live_place_with_accuracy">%1$s · accuracy about %2$d m</string>
     <string name="family_live_sync_error">Family Live could not sync. Showing available local information.</string>
     <string name="family_live_map_view">Map view</string>
     <string name="family_live_map_loading">Loading family map</string>
