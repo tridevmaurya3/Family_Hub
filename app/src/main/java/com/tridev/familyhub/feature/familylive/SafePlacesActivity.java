@@ -173,21 +173,16 @@ public class SafePlacesActivity extends AppCompatActivity {
             @Override public void onSaved(long id) {
                 place.id = id;
                 if (place.alertsEnabled) {
-                    SafePlaceRegistrar.register(
-                            SafePlacesActivity.this,
-                            String.valueOf(id),
-                            latitude,
-                            longitude,
-                            safeRadius
-                    );
+                    registerGeofence(place, true);
                 } else {
                     SafePlaceRegistrar.remove(
                             SafePlacesActivity.this,
                             String.valueOf(id)
                     );
+                    Toast.makeText(SafePlacesActivity.this,
+                            R.string.safe_place_saved_local,
+                            Toast.LENGTH_SHORT).show();
                 }
-                Toast.makeText(SafePlacesActivity.this,
-                        R.string.safe_place_saved, Toast.LENGTH_SHORT).show();
                 clearEditor();
                 loadPlaces();
             }
@@ -334,20 +329,14 @@ public class SafePlacesActivity extends AppCompatActivity {
         repository.save(place, new SafePlaceRepository.SaveCallback() {
             @Override public void onSaved(long id) {
                 if (place.alertsEnabled) {
-                    SafePlaceRegistrar.register(
-                            SafePlacesActivity.this,
-                            String.valueOf(place.id),
-                            place.latitude,
-                            place.longitude,
-                            place.radiusMeters
-                    );
+                    registerGeofence(place, false);
                 } else {
                     SafePlaceRegistrar.remove(
                             SafePlacesActivity.this,
                             String.valueOf(place.id)
                     );
+                    loadPlaces();
                 }
-                loadPlaces();
             }
             @Override public void onDuplicate() {
                 place.alertsEnabled = !place.alertsEnabled;
@@ -366,6 +355,66 @@ public class SafePlacesActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void registerGeofence(
+            SafePlace place,
+            boolean savedFromEditor
+    ) {
+        SafePlaceRegistrar.register(
+                this,
+                String.valueOf(place.id),
+                place.latitude,
+                place.longitude,
+                place.radiusMeters,
+                new SafePlaceRegistrar.RegistrationCallback() {
+                    @Override public void onRegistered() {
+                        Toast.makeText(
+                                SafePlacesActivity.this,
+                                savedFromEditor
+                                        ? R.string.safe_place_saved
+                                        : R.string.safe_place_alert_enabled,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        loadPlaces();
+                    }
+
+                    @Override public void onPermissionDenied() {
+                        rollbackFailedRegistration(place);
+                    }
+
+                    @Override public void onError() {
+                        rollbackFailedRegistration(place);
+                    }
+                }
+        );
+    }
+
+    private void rollbackFailedRegistration(SafePlace place) {
+        place.alertsEnabled = false;
+        repository.setAlertsEnabled(
+                place.id,
+                false,
+                new SafePlaceRepository.ActionCallback() {
+                    @Override public void onComplete() {
+                        Toast.makeText(
+                                SafePlacesActivity.this,
+                                R.string.safe_place_registration_failed,
+                                Toast.LENGTH_LONG
+                        ).show();
+                        loadPlaces();
+                    }
+
+                    @Override public void onError() {
+                        Toast.makeText(
+                                SafePlacesActivity.this,
+                                R.string.safe_place_save_error,
+                                Toast.LENGTH_LONG
+                        ).show();
+                        loadPlaces();
+                    }
+                }
+        );
     }
 
     private void confirmDelete(SafePlace place) {
