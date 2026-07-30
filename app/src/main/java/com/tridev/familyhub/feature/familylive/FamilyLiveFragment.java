@@ -48,6 +48,7 @@ public class FamilyLiveFragment extends Fragment {
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private boolean retryStartOnResume;
     private boolean cloudErrorShown;
+    private boolean cloudDataReceived;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -129,6 +130,7 @@ public class FamilyLiveFragment extends Fragment {
     public void onStart() {
         super.onStart();
         cloudErrorShown = false;
+        cloudDataReceived = false;
         if (repository != null) {
             repository.observeCloudMembers(
                     this::renderCloudMembers,
@@ -161,6 +163,7 @@ public class FamilyLiveFragment extends Fragment {
         if (binding == null) {
             return;
         }
+        cloudDataReceived = true;
         List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
         long now = System.currentTimeMillis();
 
@@ -420,7 +423,9 @@ public class FamilyLiveFragment extends Fragment {
 
     private void loadLocalFamilyLiveMembers() {
         repository.loadMemberStatuses(memberStatuses -> {
-            if (binding == null || familyLiveAdapter == null) {
+            if (binding == null
+                    || familyLiveAdapter == null
+                    || cloudDataReceived) {
                 return;
             }
             renderMemberList(mapToUiModels(memberStatuses));
