@@ -25,6 +25,7 @@ public class FamilySetupActivity extends AppCompatActivity {
     private ActivityFamilySetupBinding binding;
     private FamilyAccountRepository repository;
     @Nullable private String pendingFamilyId;
+    private boolean openMainAfterShare;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -192,14 +193,47 @@ public class FamilySetupActivity extends AppCompatActivity {
 
         if (continueToApp) {
             dialog.setPositiveButton(
+                    R.string.family_account_share_code,
+                    (ignored, which) -> {
+                        openMainAfterShare = true;
+                        shareCode(code);
+                    }
+            );
+            dialog.setNegativeButton(
                     R.string.family_account_continue,
                     (ignored, which) -> openMain()
             );
         } else {
-            dialog.setPositiveButton(R.string.ok, null);
+            dialog.setPositiveButton(
+                    R.string.family_account_share_code,
+                    (ignored, which) -> shareCode(code)
+            );
+            dialog.setNegativeButton(R.string.ok, null);
         }
 
         dialog.show();
+    }
+
+    private void shareCode(@NonNull String code) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(
+                Intent.EXTRA_TEXT,
+                getString(R.string.family_account_share_text, code)
+        );
+        startActivity(Intent.createChooser(
+                shareIntent,
+                getString(R.string.family_account_share_chooser)
+        ));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (openMainAfterShare) {
+            openMainAfterShare = false;
+            openMain();
+        }
     }
 
     private void copyCode(@NonNull String code) {
