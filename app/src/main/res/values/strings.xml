@@ -64,7 +64,7 @@
     <string name="dashboard_filter_coming_soon">Search filters will be added in a future update.</string>
 
     <!-- Quick actions -->
-    <string name="family_members">Family members</string>
+    <string name="family_members">Family members</string>\n    <string name="member_authorised_account">Authorised Family Hub account</string>
     <string name="add_reminder">Add reminder</string>
     <string name="add_expense">Add expense</string>
     <string name="add_new">Add new</string>
