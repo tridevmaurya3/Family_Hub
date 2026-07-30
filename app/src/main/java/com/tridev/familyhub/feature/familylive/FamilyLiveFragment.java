@@ -303,7 +303,16 @@ public class FamilyLiveFragment extends Fragment {
     private boolean isLocationEnabled() {
         LocationManager manager = (LocationManager) requireContext()
                 .getSystemService(android.content.Context.LOCATION_SERVICE);
-        return manager != null && manager.isLocationEnabled();
+        if (manager == null) {
+            return false;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            return manager.isLocationEnabled();
+        }
+        return manager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                || manager.isProviderEnabled(
+                LocationManager.NETWORK_PROVIDER
+        );
     }
 
     private void updateSharingUi() {
