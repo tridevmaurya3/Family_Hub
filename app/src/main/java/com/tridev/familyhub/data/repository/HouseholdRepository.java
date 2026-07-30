@@ -213,22 +213,40 @@ public class HouseholdRepository {
             callback.onError(new IllegalStateException("AUTH_REQUIRED"));
             return;
         }
-        Map<String, Object> updates = new HashMap<>();
-        for (String uid : selectedUids) {
-            putAssignment(
-                    updates,
-                    familyId,
-                    uid,
-                    householdId,
-                    owner.getUid()
-            );
-        }
-        if (updates.isEmpty()) {
-            callback.onSuccess(null);
-            return;
-        }
-        root.updateChildren(updates)
-                .addOnSuccessListener(unused -> callback.onSuccess(null))
+        root.child("householdAssignments").child(familyId).get()
+                .addOnSuccessListener(snapshot -> {
+                    Map<String, Object> updates = new HashMap<>();
+                    for (DataSnapshot child : snapshot.getChildren()) {
+                        String uid = text(child.child("uid"));
+                        String assignedHousehold =
+                                text(child.child("householdId"));
+                        if (householdId.equals(assignedHousehold)
+                                && !selectedUids.contains(uid)) {
+                            updates.put(
+                                    "householdAssignments/" + familyId
+                                            + "/" + uid,
+                                    null
+                            );
+                        }
+                    }
+                    for (String uid : selectedUids) {
+                        putAssignment(
+                                updates,
+                                familyId,
+                                uid,
+                                householdId,
+                                owner.getUid()
+                        );
+                    }
+                    if (updates.isEmpty()) {
+                        callback.onSuccess(null);
+                        return;
+                    }
+                    root.updateChildren(updates)
+                            .addOnSuccessListener(unused ->
+                                    callback.onSuccess(null))
+                            .addOnFailureListener(callback::onError);
+                })
                 .addOnFailureListener(callback::onError);
     }
 
