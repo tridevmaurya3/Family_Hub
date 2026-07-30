@@ -12,6 +12,8 @@ public final class FamilyLiveCloudMember {
     public final double latitude;
     public final double longitude;
     public final double accuracy;
+    public final int batteryPercentage;
+    public final boolean charging;
     public final boolean sharingEnabled;
     public final boolean online;
     public final long updatedAt;
@@ -24,6 +26,8 @@ public final class FamilyLiveCloudMember {
             double latitude,
             double longitude,
             double accuracy,
+            int batteryPercentage,
+            boolean charging,
             boolean sharingEnabled,
             boolean online,
             long updatedAt
@@ -35,6 +39,8 @@ public final class FamilyLiveCloudMember {
         this.latitude = latitude;
         this.longitude = longitude;
         this.accuracy = accuracy;
+        this.batteryPercentage = batteryPercentage;
+        this.charging = charging;
         this.sharingEnabled = sharingEnabled;
         this.online = online;
         this.updatedAt = updatedAt;
