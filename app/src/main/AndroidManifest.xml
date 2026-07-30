@@ -40,6 +40,9 @@
         <activity
             android:name=".feature.familylive.FamilyMapActivity"
             android:exported="false" />
+        <activity
+            android:name=".feature.familylive.FamilyMemberDetailActivity"
+            android:exported="false" />
         <receiver
             android:name=".geofence.FamilyGeofenceReceiver"
             android:exported="false" />
