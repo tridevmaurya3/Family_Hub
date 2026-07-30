@@ -2,6 +2,7 @@
     <string name="household_title">Family households</string>
     <string name="household_subtitle">Create separate homes inside this family and assign a Guardian and members to each home.</string>
     <string name="household_add">Add household</string>
+    <string name="household_primary">Primary household</string>
     <string name="household_create_title">Create household</string>
     <string name="household_name_hint">Household name</string>
     <string name="household_guardian_hint">Household Guardian</string>
