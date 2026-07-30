@@ -4,7 +4,12 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -88,7 +93,16 @@ public class SafePlacesActivity extends AppCompatActivity {
                 ))
         );
         binding.buttonSave.setOnClickListener(v -> save());
+        binding.buttonSafePlaceSettings.setOnClickListener(v ->
+                openRelevantSettings()
+        );
         loadPlaces();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateAvailabilityGuidance();
     }
 
     @SuppressLint("MissingPermission")
@@ -147,6 +161,14 @@ public class SafePlacesActivity extends AppCompatActivity {
         place.latitude = latitude;
         place.longitude = longitude;
         place.radiusMeters = safeRadius;
+        if (place.alertsEnabled && !hasGeofencePermissions()) {
+            place.alertsEnabled = false;
+            Toast.makeText(
+                    this,
+                    R.string.safe_place_saved_disabled_permissions,
+                    Toast.LENGTH_LONG
+            ).show();
+        }
         repository.save(place, new SafePlaceRepository.SaveCallback() {
             @Override public void onSaved(long id) {
                 place.id = id;
@@ -172,6 +194,11 @@ public class SafePlacesActivity extends AppCompatActivity {
             @Override public void onDuplicate() {
                 Toast.makeText(SafePlacesActivity.this,
                         R.string.safe_place_duplicate, Toast.LENGTH_LONG).show();
+            }
+            @Override public void onLimitReached() {
+                Toast.makeText(SafePlacesActivity.this,
+                        R.string.safe_place_limit_reached,
+                        Toast.LENGTH_LONG).show();
             }
             @Override public void onError() {
                 Toast.makeText(SafePlacesActivity.this,
@@ -296,6 +323,13 @@ public class SafePlacesActivity extends AppCompatActivity {
     }
 
     private void toggleAlerts(SafePlace place) {
+        if (!place.alertsEnabled && !hasGeofencePermissions()) {
+            Toast.makeText(this,
+                    R.string.safe_place_permission_required_for_alerts,
+                    Toast.LENGTH_LONG).show();
+            updateAvailabilityGuidance();
+            return;
+        }
         place.alertsEnabled = !place.alertsEnabled;
         repository.save(place, new SafePlaceRepository.SaveCallback() {
             @Override public void onSaved(long id) {
@@ -317,6 +351,13 @@ public class SafePlacesActivity extends AppCompatActivity {
             }
             @Override public void onDuplicate() {
                 place.alertsEnabled = !place.alertsEnabled;
+            }
+            @Override public void onLimitReached() {
+                place.alertsEnabled = false;
+                Toast.makeText(SafePlacesActivity.this,
+                        R.string.safe_place_limit_reached,
+                        Toast.LENGTH_LONG).show();
+                loadPlaces();
             }
             @Override public void onError() {
                 place.alertsEnabled = !place.alertsEnabled;
@@ -381,6 +422,65 @@ public class SafePlacesActivity extends AppCompatActivity {
     private int dp(int value) {
         return Math.round(value * getResources()
                 .getDisplayMetrics().density);
+    }
+
+    private boolean hasGeofencePermissions() {
+        boolean fine = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED;
+        boolean background = Build.VERSION.SDK_INT
+                < Build.VERSION_CODES.Q
+                || ContextCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED;
+        return fine && background;
+    }
+
+    private boolean isGpsEnabled() {
+        LocationManager manager = (LocationManager) getSystemService(
+                LOCATION_SERVICE
+        );
+        return manager != null && manager.isLocationEnabled();
+    }
+
+    private void updateAvailabilityGuidance() {
+        if (!hasGeofencePermissions()) {
+            binding.safePlacePermissionStatus.setText(
+                    R.string.safe_place_background_permission_state
+            );
+            binding.buttonSafePlaceSettings.setText(
+                    R.string.safe_place_open_app_settings
+            );
+        } else if (!isGpsEnabled()) {
+            binding.safePlacePermissionStatus.setText(
+                    R.string.safe_place_gps_off_state
+            );
+            binding.buttonSafePlaceSettings.setText(
+                    R.string.safe_place_open_location_settings
+            );
+        } else {
+            binding.safePlacePermissionStatus.setText(
+                    R.string.safe_place_ready_state
+            );
+            binding.buttonSafePlaceSettings.setText(
+                    R.string.safe_place_open_settings
+            );
+        }
+    }
+
+    private void openRelevantSettings() {
+        Intent intent;
+        if (!hasGeofencePermissions()) {
+            intent = new Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", getPackageName(), null)
+            );
+        } else {
+            intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        }
+        startActivity(intent);
     }
 
     @Override protected void onDestroy() {
