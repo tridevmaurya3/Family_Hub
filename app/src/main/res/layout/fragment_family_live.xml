@@ -184,7 +184,7 @@
         app:endIconMode="clear_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/familyLiveSearchLayout"
+        app:layout_constraintTop_toBottomOf="@id/viewToggle"
         app:startIconDrawable="@drawable/ic_search"
         app:startIconTint="@color/fh_module_family">
 
