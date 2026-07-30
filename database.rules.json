@@ -1,0 +1,44 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && (auth.uid === $uid || (newData.child('familyId').isString() && root.child('families').child(newData.child('familyId').val()).child('ownerUid').val() === auth.uid && root.child('memberships').child(newData.child('familyId').val()).child($uid).child('status').val() === 'ACTIVE'))"
+      }
+    },
+    "families": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        ".write": "auth != null && ((!data.exists() && newData.child('ownerUid').val() === auth.uid) || data.child('ownerUid').val() === auth.uid)",
+        ".validate": "!newData.exists() || (newData.child('familyId').val() === $familyId && newData.child('name').isString() && newData.child('name').val().length >= 2 && newData.child('name').val().length <= 60 && newData.child('ownerUid').isString())"
+      }
+    },
+    "memberships": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        "$uid": {
+          ".write": "auth != null && root.child('families').child($familyId).child('ownerUid').val() === auth.uid",
+          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('displayName').isString() && newData.child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN|ADULT_MEMBER|CHILD|SENIOR_CITIZEN|GUEST)$/) && newData.child('status').val() === 'ACTIVE')"
+        }
+      }
+    },
+    "invites": {
+      "$inviteHash": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!newData.exists() && data.child('createdBy').val() === auth.uid) || (newData.child('familyId').isString() && root.child('families').child(newData.child('familyId').val()).child('ownerUid').val() === auth.uid && newData.child('createdBy').val() === auth.uid))",
+        ".validate": "!newData.exists() || (newData.child('familyId').isString() && newData.child('createdBy').isString() && newData.child('active').isBoolean() && newData.child('expiresAt').isNumber())"
+      }
+    },
+    "joinRequests": {
+      "$familyId": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('families').child($familyId).child('ownerUid').val() === auth.uid)",
+          ".write": "auth != null && ((auth.uid === $uid && !data.exists() && newData.child('status').val() === 'PENDING' && newData.child('requestedRole').val() === 'ADULT_MEMBER' && newData.child('inviteHash').isString() && root.child('invites').child(newData.child('inviteHash').val()).child('familyId').val() === $familyId && root.child('invites').child(newData.child('inviteHash').val()).child('active').val() === true && root.child('invites').child(newData.child('inviteHash').val()).child('expiresAt').val() > now) || (auth.uid === $uid && data.child('status').val() === 'PENDING' && !newData.exists()) || root.child('families').child($familyId).child('ownerUid').val() === auth.uid)",
+          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('familyId').val() === $familyId && newData.child('displayName').isString() && newData.child('requestedRole').val().matches(/^(ADULT_MEMBER|GUARDIAN|CHILD|SENIOR_CITIZEN|GUEST)$/) && newData.child('status').val().matches(/^(PENDING|APPROVED|REJECTED)$/))"
+        }
+      }
+    }
+  }
+}
