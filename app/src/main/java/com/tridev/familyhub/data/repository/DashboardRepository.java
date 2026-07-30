@@ -39,6 +39,7 @@ public class DashboardRepository {
     private final FinanceRepository financeRepository;
     private final ReminderRepository reminderRepository;
     private final FamilyMemberRepository familyMemberRepository;
+    private final FamilyLiveRepository familyLiveRepository;
     private final FamilyHubDatabase database;
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
@@ -51,6 +52,7 @@ public class DashboardRepository {
         financeRepository = new FinanceRepository(applicationContext);
         reminderRepository = new ReminderRepository(applicationContext);
         familyMemberRepository = new FamilyMemberRepository(applicationContext);
+        familyLiveRepository = new FamilyLiveRepository(applicationContext);
         database = FamilyHubDatabase.getInstance(applicationContext);
         mainHandler = new Handler(Looper.getMainLooper());
     }
@@ -109,16 +111,35 @@ public class DashboardRepository {
                     );
                 }
 
-                familyMemberRepository.loadMembers(
-                        "",
-                        members -> loadLocalCounts(
-                                dashboardData,
-                                callback,
-                                errorCallback
-                        )
-                );
+                familyMemberRepository.loadMembers("", members ->
+                        loadAuthorisedCounts(
+                                dashboardData, callback, errorCallback
+                        ));
             });
 
+        });
+    }
+
+    private void loadAuthorisedCounts(
+            @NonNull DashboardData dashboardData,
+            @NonNull DashboardDataCallback callback,
+            @NonNull DashboardErrorCallback errorCallback
+    ) {
+        familyLiveRepository.observeCloudMembers(members -> {
+            familyLiveRepository.stopObservingCloudMembers();
+            dashboardData.getStats().setTotalMembers(members.size());
+            int sharing = 0;
+            for (com.tridev.familyhub.data.model.FamilyLiveCloudMember member
+                    : members) {
+                if (member.sharingEnabled) {
+                    sharing++;
+                }
+            }
+            dashboardData.getStats().setFamilyLiveSharing(sharing);
+            loadLocalCounts(dashboardData, callback, errorCallback);
+        }, error -> {
+            familyLiveRepository.stopObservingCloudMembers();
+            loadLocalCounts(dashboardData, callback, errorCallback);
         });
     }
 
@@ -137,7 +158,10 @@ public class DashboardRepository {
                 long thirtyDaysFromNow = System.currentTimeMillis()
                         + (30L * 24L * 60L * 60L * 1000L);
                 List<FamilyMember> members = database.familyMemberDao().getAll();
-                stats.setTotalMembers(members.size());
+                stats.setTotalMembers(Math.max(
+                        stats.getTotalMembers(),
+                        members.size()
+                ));
                 stats.setDocuments(database.documentDao().count());
                 stats.setHealthAlerts(database.healthRecordDao().count());
                 stats.setPlannerOpen(database.plannerItemDao().countOpen());
@@ -158,9 +182,10 @@ public class DashboardRepository {
                 );
                 stats.setActiveNotes(database.noteDao().countActive());
                 stats.setPinnedNotes(database.noteDao().countPinned());
-                stats.setFamilyLiveSharing(
+                stats.setFamilyLiveSharing(Math.max(
+                        stats.getFamilyLiveSharing(),
                         database.familyLiveStatusDao().countSharingEnabled()
-                );
+                ));
                 stats.setMaleMembers(
                         database.familyMemberDao().countByGender("Male")
                 );
