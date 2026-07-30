@@ -79,6 +79,8 @@ public class FamilyLiveRepository {
     @Nullable private ValueEventListener locationListener;
     @Nullable private CloudMemberListCallback cloudCallback;
     private int observerGeneration;
+    private boolean initialMembershipsLoaded;
+    private boolean initialLocationsLoaded;
 
     public FamilyLiveRepository(@NonNull Context context) {
         familyLiveStatusDao = FamilyHubDatabase
@@ -164,6 +166,7 @@ public class FamilyLiveRepository {
                             stringValue(child.child("role"))
                     ));
                 }
+                initialMembershipsLoaded = true;
                 dispatchCloudMembers();
             }
 
@@ -231,6 +234,7 @@ public class FamilyLiveRepository {
                             updatedAt == null ? 0L : updatedAt
                     ));
                 }
+                initialLocationsLoaded = true;
                 dispatchCloudMembers();
             }
 
@@ -248,7 +252,10 @@ public class FamilyLiveRepository {
 
     private void dispatchCloudMembers() {
         CloudMemberListCallback callback = cloudCallback;
-        if (callback == null || closed.get()) {
+        if (callback == null
+                || closed.get()
+                || !initialMembershipsLoaded
+                || !initialLocationsLoaded) {
             return;
         }
 
@@ -301,6 +308,8 @@ public class FamilyLiveRepository {
         membershipListener = null;
         locationListener = null;
         cloudCallback = null;
+        initialMembershipsLoaded = false;
+        initialLocationsLoaded = false;
         cloudProfiles.clear();
         cloudLocations.clear();
     }
