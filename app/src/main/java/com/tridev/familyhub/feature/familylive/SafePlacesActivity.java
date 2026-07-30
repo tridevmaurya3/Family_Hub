@@ -88,18 +88,22 @@ public class SafePlacesActivity extends AppCompatActivity {
             );
             return;
         }
+        final float safeRadius = radius;
         SafePlace place = new SafePlace();
         place.name = name;
         place.placeType = type;
         place.latitude = latitude;
         place.longitude = longitude;
-        place.radiusMeters = radius;
+        place.radiusMeters = safeRadius;
         repository.save(place, new SafePlaceRepository.SaveCallback() {
             @Override public void onSaved(long id) {
                 place.id = id;
                 SafePlaceRegistrar.register(
                         SafePlacesActivity.this,
-                        String.valueOf(id), latitude, longitude, radius
+                        String.valueOf(id),
+                        latitude,
+                        longitude,
+                        safeRadius
                 );
                 Toast.makeText(SafePlacesActivity.this,
                         R.string.safe_place_saved, Toast.LENGTH_SHORT).show();
