@@ -38,6 +38,11 @@ public class FamilyManagementActivity extends AppCompatActivity {
         binding.buttonBack.setOnClickListener(v ->
                 getOnBackPressedDispatcher().onBackPressed());
         binding.buttonGenerateInvite.setOnClickListener(v -> generateInvite());
+        binding.buttonManageHouseholds.setOnClickListener(v ->
+                startActivity(new Intent(
+                        this,
+                        HouseholdManagementActivity.class
+                )));
         binding.buttonRefreshFamily.setOnClickListener(v -> loadSession());
 
         loadSession();
@@ -57,11 +62,13 @@ public class FamilyManagementActivity extends AppCompatActivity {
                     setLoading(false);
                     showError(R.string.family_admin_owner_required);
                     binding.buttonGenerateInvite.setVisibility(View.GONE);
+                    binding.buttonManageHouseholds.setVisibility(View.GONE);
                     return;
                 }
 
                 familyId = result.familyId;
                 binding.buttonGenerateInvite.setVisibility(View.VISIBLE);
+                binding.buttonManageHouseholds.setVisibility(View.VISIBLE);
                 loadAdminData();
             }
 
@@ -341,6 +348,7 @@ public class FamilyManagementActivity extends AppCompatActivity {
                 loading ? View.VISIBLE : View.GONE
         );
         binding.buttonGenerateInvite.setEnabled(!loading);
+        binding.buttonManageHouseholds.setEnabled(!loading);
         binding.buttonRefreshFamily.setEnabled(!loading);
     }
 
