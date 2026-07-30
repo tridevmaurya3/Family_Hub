@@ -1,5 +1,6 @@
 package com.tridev.familyhub.feature.familylive;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -56,6 +57,9 @@ public class FamilyLiveFragment extends Fragment {
                 new LinearLayoutManager(requireContext())
         );
         binding.recyclerFamilyLive.setAdapter(familyLiveAdapter);
+        binding.tvMapView.setOnClickListener(v -> startActivity(
+                new Intent(requireContext(), FamilyMapActivity.class)
+        ));
 
         loadFamilyLiveMembers();
     }
