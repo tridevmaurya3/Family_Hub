@@ -49,7 +49,7 @@
         ],
         "$uid": {
           ".write": "auth != null && auth.uid === $uid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
-          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('familyId').val() === $familyId && newData.child('latitude').isNumber() && newData.child('longitude').isNumber() && newData.child('accuracy').isNumber() && newData.child('online').isBoolean() && newData.child('sharingEnabled').isBoolean() && newData.child('clientTimestamp').isNumber() && newData.child('updatedAt').isNumber())"
+          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('familyId').val() === $familyId && newData.child('latitude').isNumber() && newData.child('longitude').isNumber() && newData.child('accuracy').isNumber() && (!newData.child('batteryPercentage').exists() || (newData.child('batteryPercentage').isNumber() && newData.child('batteryPercentage').val() >= -1 && newData.child('batteryPercentage').val() <= 100)) && (!newData.child('charging').exists() || newData.child('charging').isBoolean()) && newData.child('online').isBoolean() && newData.child('sharingEnabled').isBoolean() && newData.child('clientTimestamp').isNumber() && newData.child('updatedAt').isNumber())"
         }
       }
     }
