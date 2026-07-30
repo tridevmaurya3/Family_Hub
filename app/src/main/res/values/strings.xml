@@ -906,6 +906,15 @@
     <string name="family_live_open_location_settings">Open location settings</string>
     <string name="family_live_settings_not_ready">Required permission or device location is still off.</string>
     <string name="family_live_location_last_known">Last known location — update is stale</string>
+    <string name="family_live_reason_available">Live</string>
+    <string name="family_live_reason_sharing_paused">Sharing paused</string>
+    <string name="family_live_reason_permission_off">Location permission off</string>
+    <string name="family_live_reason_gps_off">Device location off</string>
+    <string name="family_live_reason_internet_unavailable">Internet unavailable</string>
+    <string name="family_live_reason_battery_saver">Battery saver</string>
+    <string name="family_live_reason_device_offline">Device offline</string>
+    <string name="family_live_reason_no_recent_update">No recent update</string>
+    <string name="family_live_reason_location_unavailable">Location unavailable</string>
     <string name="family_live_location_accuracy">Live location · accuracy about %1$d m</string>
     <string name="family_live_place_with_accuracy">%1$s · accuracy about %2$d m</string>
     <string name="family_live_sync_error">Family Live could not sync. Showing available local information.</string>
