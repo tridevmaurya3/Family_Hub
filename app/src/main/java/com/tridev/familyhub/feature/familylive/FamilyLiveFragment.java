@@ -23,6 +23,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.model.FamilyLiveMemberData;
 import com.tridev.familyhub.data.repository.FamilyLiveRepository;
 import com.tridev.familyhub.databinding.FragmentFamilyLiveBinding;
@@ -38,12 +39,15 @@ import java.util.Map;
 /** Displays family profiles and transparent location-sharing controls. */
 public class FamilyLiveFragment extends Fragment {
 
+    private static final long LIVE_FRESHNESS_MS = 3L * 60L * 1000L;
+
     private FragmentFamilyLiveBinding binding;
     private FamilyLiveAdapter familyLiveAdapter;
     private FamilyLiveRepository repository;
     private ActivityResultLauncher<String[]> foregroundPermissionLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
     private boolean retryStartOnResume;
+    private boolean cloudErrorShown;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -105,7 +109,7 @@ public class FamilyLiveFragment extends Fragment {
         });
 
         updateSharingUi();
-        loadFamilyLiveMembers();
+        loadLocalFamilyLiveMembers();
     }
 
     @Override
@@ -117,8 +121,90 @@ public class FamilyLiveFragment extends Fragment {
             startAfterSettingsIfReady();
         }
         if (repository != null) {
-            loadFamilyLiveMembers();
+            loadLocalFamilyLiveMembers();
         }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        cloudErrorShown = false;
+        if (repository != null) {
+            repository.observeCloudMembers(
+                    this::renderCloudMembers,
+                    error -> {
+                        if (binding == null || cloudErrorShown) {
+                            return;
+                        }
+                        cloudErrorShown = true;
+                        Toast.makeText(
+                                requireContext(),
+                                R.string.family_live_sync_error,
+                                Toast.LENGTH_LONG
+                        ).show();
+                    }
+            );
+        }
+    }
+
+    @Override
+    public void onStop() {
+        if (repository != null) {
+            repository.stopObservingCloudMembers();
+        }
+        super.onStop();
+    }
+
+    private void renderCloudMembers(
+            @NonNull List<FamilyLiveCloudMember> members
+    ) {
+        if (binding == null) {
+            return;
+        }
+        List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
+        long now = System.currentTimeMillis();
+
+        for (FamilyLiveCloudMember member : members) {
+            boolean stale = member.updatedAt <= 0L
+                    || now - member.updatedAt > LIVE_FRESHNESS_MS;
+            String location;
+            if (!member.sharingEnabled) {
+                location = getString(R.string.family_live_location_off);
+            } else if (!member.hasLocation) {
+                location = getString(
+                        R.string.family_live_location_unavailable
+                );
+            } else if (stale) {
+                location = getString(
+                        R.string.family_live_location_last_known
+                );
+            } else {
+                location = getString(
+                        R.string.family_live_location_accuracy,
+                        Math.round(member.accuracy)
+                );
+            }
+
+            boolean currentlyOnline =
+                    member.sharingEnabled && member.online && !stale;
+            String displayName = member.displayName.trim().isEmpty()
+                    ? getString(R.string.family_account_member_fallback)
+                    : member.displayName;
+
+            uiModels.add(new FamilyLiveMemberUiModel(
+                    Integer.toUnsignedLong(member.uid.hashCode()),
+                    displayName,
+                    location,
+                    currentlyOnline ? "ONLINE" : "OFFLINE",
+                    -1,
+                    false,
+                    currentlyOnline,
+                    "UNKNOWN",
+                    member.updatedAt
+            ));
+        }
+
+        renderMemberList(uiModels);
     }
 
     private void showSharingEducation() {
@@ -332,29 +418,34 @@ public class FamilyLiveFragment extends Fragment {
                 : R.string.family_live_start_sharing);
     }
 
-    private void loadFamilyLiveMembers() {
+    private void loadLocalFamilyLiveMembers() {
         repository.loadMemberStatuses(memberStatuses -> {
-            if (binding == null) {
+            if (binding == null || familyLiveAdapter == null) {
                 return;
             }
-
-            List<FamilyLiveMemberUiModel> uiModels =
-                    mapToUiModels(memberStatuses);
-
-            familyLiveAdapter.submitList(uiModels);
-            binding.tvMemberCount.setText(getString(
-                    R.string.family_live_member_count,
-                    uiModels.size()
-            ));
-
-            boolean isEmpty = uiModels.isEmpty();
-            binding.recyclerFamilyLive.setVisibility(
-                    isEmpty ? View.GONE : View.VISIBLE
-            );
-            binding.familyLiveEmptyState.setVisibility(
-                    isEmpty ? View.VISIBLE : View.GONE
-            );
+            renderMemberList(mapToUiModels(memberStatuses));
         });
+    }
+
+    private void renderMemberList(
+            @NonNull List<FamilyLiveMemberUiModel> uiModels
+    ) {
+        if (binding == null || familyLiveAdapter == null) {
+            return;
+        }
+        familyLiveAdapter.submitList(uiModels);
+        binding.tvMemberCount.setText(getString(
+                R.string.family_live_member_count,
+                uiModels.size()
+        ));
+
+        boolean isEmpty = uiModels.isEmpty();
+        binding.recyclerFamilyLive.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.familyLiveEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
     }
 
     @NonNull
@@ -389,7 +480,12 @@ public class FamilyLiveFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        if (repository != null) {
+            repository.close();
+            repository = null;
+        }
         binding.recyclerFamilyLive.setAdapter(null);
+        familyLiveAdapter = null;
         binding = null;
         super.onDestroyView();
     }
