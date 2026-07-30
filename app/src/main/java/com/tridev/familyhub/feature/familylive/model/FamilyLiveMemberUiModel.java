@@ -9,6 +9,7 @@ package com.tridev.familyhub.feature.familylive.model;
 public class FamilyLiveMemberUiModel {
 
     private final long memberId;
+    private final String cloudMemberUid;
     private final String memberName;
     private final String currentLocation;
     private final String onlineStatus;
@@ -21,6 +22,7 @@ public class FamilyLiveMemberUiModel {
 
     public FamilyLiveMemberUiModel(
             long memberId,
+            String cloudMemberUid,
             String memberName,
             String currentLocation,
             String onlineStatus,
@@ -32,6 +34,7 @@ public class FamilyLiveMemberUiModel {
             long lastUpdatedTime
     ) {
         this.memberId = memberId;
+        this.cloudMemberUid = cloudMemberUid;
         this.memberName = memberName;
         this.currentLocation = currentLocation;
         this.onlineStatus = onlineStatus;
@@ -45,6 +48,10 @@ public class FamilyLiveMemberUiModel {
 
     public long getMemberId() {
         return memberId;
+    }
+
+    public String getCloudMemberUid() {
+        return cloudMemberUid;
     }
 
     public String getMemberName() {
