@@ -54,7 +54,7 @@ import com.tridev.familyhub.data.local.entity.PlannerItem;
                 NoteEntry.class,
                 PlannerItem.class
         },
-        version = 12,
+        version = 13,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -479,6 +479,35 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
+    /** Adds non-destructive family-scoped profile sync metadata. */
+    private static final Migration MIGRATION_12_13 = new Migration(12, 13) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`cloudProfileId` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`ownerFamilyId` TEXT NOT NULL DEFAULT ''"
+            );
+            database.execSQL(
+                    "ALTER TABLE `family_members` ADD COLUMN "
+                            + "`updatedAt` INTEGER NOT NULL DEFAULT 0"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_family_members_cloudProfileId` "
+                            + "ON `family_members` (`cloudProfileId`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_family_members_ownerFamilyId` "
+                            + "ON `family_members` (`ownerFamilyId`)"
+            );
+        }
+    };
+
     public static FamilyHubDatabase getInstance(Context context) {
         if (instance == null) {
             synchronized (FamilyHubDatabase.class) {
@@ -499,7 +528,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_8_9,
                                     MIGRATION_9_10,
                                     MIGRATION_10_11,
-                                    MIGRATION_11_12
+                                    MIGRATION_11_12,
+                                    MIGRATION_12_13
                             )
                             .build();
                 }
