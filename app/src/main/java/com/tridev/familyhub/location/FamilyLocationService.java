@@ -65,6 +65,10 @@ public class FamilyLocationService extends Service {
     private static final long UPDATE_INTERVAL_MS = 60_000L;
     private static final long MIN_UPDATE_INTERVAL_MS = 30_000L;
     private static final float MIN_DISTANCE_METERS = 25F;
+    private static final String PROFILE_NORMAL = "NORMAL";
+    private static final String PROFILE_ACTIVE = "ACTIVE";
+    private static final String PROFILE_STATIONARY = "STATIONARY";
+    private static final String PROFILE_LOW_BATTERY = "LOW_BATTERY";
     private static final long ACTIVITY_FRESHNESS_MS = 2L * 60L * 1000L;
     private static final int ACTIVITY_PENDING_INTENT_REQUEST = 4203;
 
@@ -76,6 +80,7 @@ public class FamilyLocationService extends Service {
     private String familyId;
     private String userId;
     private boolean requestingUpdates;
+    @NonNull private String currentTrackingProfile = PROFILE_NORMAL;
     @Nullable private Location previousMovementLocation;
     @NonNull private String stableMovementType = "UNKNOWN";
     @NonNull private String candidateMovementType = "UNKNOWN";
@@ -172,20 +177,54 @@ public class FamilyLocationService extends Service {
 
     @SuppressLint("MissingPermission")
     private void requestLocationUpdates() {
+        requestLocationUpdates(currentTrackingProfile);
+    }
+
+    @SuppressLint("MissingPermission")
+    private void requestLocationUpdates(@NonNull String profile) {
         if (requestingUpdates || !hasLocationPermission()) {
             return;
         }
 
+        long interval = UPDATE_INTERVAL_MS;
+        long minInterval = MIN_UPDATE_INTERVAL_MS;
+        float minDistance = MIN_DISTANCE_METERS;
+        int priority = Priority.PRIORITY_BALANCED_POWER_ACCURACY;
+
+        switch (profile) {
+            case PROFILE_ACTIVE:
+                interval = 20_000L;
+                minInterval = 10_000L;
+                minDistance = 10F;
+                priority = Priority.PRIORITY_HIGH_ACCURACY;
+                break;
+            case PROFILE_STATIONARY:
+                interval = 180_000L;
+                minInterval = 60_000L;
+                minDistance = 50F;
+                break;
+            case PROFILE_LOW_BATTERY:
+                interval = 300_000L;
+                minInterval = 120_000L;
+                minDistance = 100F;
+                break;
+            default:
+                break;
+        }
+
         LocationRequest request = new LocationRequest.Builder(
-                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                UPDATE_INTERVAL_MS
+                priority,
+                interval
         )
-                .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL_MS)
-                .setMinUpdateDistanceMeters(MIN_DISTANCE_METERS)
-                .setWaitForAccurateLocation(false)
+                .setMinUpdateIntervalMillis(minInterval)
+                .setMinUpdateDistanceMeters(minDistance)
+                .setWaitForAccurateLocation(
+                        PROFILE_ACTIVE.equals(profile)
+                )
                 .build();
 
         requestingUpdates = true;
+        currentTrackingProfile = profile;
         fusedLocationClient.requestLocationUpdates(
                 request,
                 locationCallback,
@@ -194,6 +233,38 @@ public class FamilyLocationService extends Service {
             requestingUpdates = false;
             stopSharing();
         });
+    }
+
+    private void updateTrackingProfile(
+            @NonNull MovementSnapshot movement,
+            @NonNull BatterySnapshot battery
+    ) {
+        String desiredProfile;
+        if (battery.percentage >= 0
+                && battery.percentage <= 15
+                && !battery.charging) {
+            desiredProfile = PROFILE_LOW_BATTERY;
+        } else if ("WALKING".equals(movement.type)
+                || "CYCLING".equals(movement.type)
+                || "TRAVELLING".equals(movement.type)) {
+            desiredProfile = PROFILE_ACTIVE;
+        } else if ("STATIONARY".equals(movement.type)) {
+            desiredProfile = PROFILE_STATIONARY;
+        } else {
+            desiredProfile = PROFILE_NORMAL;
+        }
+
+        if (desiredProfile.equals(currentTrackingProfile)) {
+            return;
+        }
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+                .addOnCompleteListener(task -> {
+                    requestingUpdates = false;
+                    if (LocationSharingStore.isSharingEnabled(this)
+                            && hasLocationPermission()) {
+                        requestLocationUpdates(desiredProfile);
+                    }
+                });
     }
 
     private void registerDisconnectState() {
@@ -231,6 +302,7 @@ public class FamilyLocationService extends Service {
         values.put("clientTimestamp", System.currentTimeMillis());
         values.put("updatedAt", ServerValue.TIMESTAMP);
         locationReference.updateChildren(values);
+        updateTrackingProfile(movement, battery);
     }
 
     private void stopSharing() {
