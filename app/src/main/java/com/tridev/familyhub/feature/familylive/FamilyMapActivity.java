@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -95,10 +96,11 @@ public final class FamilyMapActivity extends AppCompatActivity {
             androidx.core.graphics.Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars()
             );
-            topPanel.setPadding(topPanel.getPaddingLeft(),
-                    bars.top + getResources().getDimensionPixelSize(
-                            R.dimen.space_8),
-                    topPanel.getPaddingRight(), topPanel.getPaddingBottom());
+            ViewGroup.MarginLayoutParams topParams =
+                    (ViewGroup.MarginLayoutParams) topPanel.getLayoutParams();
+            topParams.topMargin = bars.top
+                    + getResources().getDimensionPixelSize(R.dimen.space_8);
+            topPanel.setLayoutParams(topParams);
             view.setPadding(0, 0, 0, bars.bottom);
             return insets;
         });
