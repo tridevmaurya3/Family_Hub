@@ -126,6 +126,9 @@ public class DashboardRepository {
             @NonNull DashboardErrorCallback errorCallback
     ) {
         familyLiveRepository.observeCloudMembers(members -> {
+            if (closed.get()) {
+                return;
+            }
             familyLiveRepository.stopObservingCloudMembers();
             dashboardData.getStats().setTotalMembers(members.size());
             int sharing = 0;
@@ -136,17 +139,21 @@ public class DashboardRepository {
                 }
             }
             dashboardData.getStats().setFamilyLiveSharing(sharing);
-            loadLocalCounts(dashboardData, callback, errorCallback);
+            loadLocalCounts(dashboardData, callback, errorCallback, true);
         }, error -> {
+            if (closed.get()) {
+                return;
+            }
             familyLiveRepository.stopObservingCloudMembers();
-            loadLocalCounts(dashboardData, callback, errorCallback);
+            loadLocalCounts(dashboardData, callback, errorCallback, false);
         });
     }
 
     private void loadLocalCounts(
             @NonNull DashboardData dashboardData,
             @NonNull DashboardDataCallback callback,
-            @NonNull DashboardErrorCallback errorCallback
+            @NonNull DashboardErrorCallback errorCallback,
+            boolean cloudMembershipsLoaded
     ) {
         if (closed.get()) {
             return;
@@ -158,10 +165,9 @@ public class DashboardRepository {
                 long thirtyDaysFromNow = System.currentTimeMillis()
                         + (30L * 24L * 60L * 60L * 1000L);
                 List<FamilyMember> members = database.familyMemberDao().getAll();
-                stats.setTotalMembers(Math.max(
-                        stats.getTotalMembers(),
-                        members.size()
-                ));
+                if (!cloudMembershipsLoaded) {
+                    stats.setTotalMembers(members.size());
+                }
                 stats.setDocuments(database.documentDao().count());
                 stats.setHealthAlerts(database.healthRecordDao().count());
                 stats.setPlannerOpen(database.plannerItemDao().countOpen());
@@ -182,10 +188,12 @@ public class DashboardRepository {
                 );
                 stats.setActiveNotes(database.noteDao().countActive());
                 stats.setPinnedNotes(database.noteDao().countPinned());
-                stats.setFamilyLiveSharing(Math.max(
-                        stats.getFamilyLiveSharing(),
-                        database.familyLiveStatusDao().countSharingEnabled()
-                ));
+                if (!cloudMembershipsLoaded) {
+                    stats.setFamilyLiveSharing(
+                            database.familyLiveStatusDao()
+                                    .countSharingEnabled()
+                    );
+                }
                 stats.setMaleMembers(
                         database.familyMemberDao().countByGender("Male")
                 );
@@ -355,6 +363,7 @@ public class DashboardRepository {
 
     public void close() {
         closed.set(true);
+        familyLiveRepository.close();
         mainHandler.removeCallbacksAndMessages(null);
     }
 }
