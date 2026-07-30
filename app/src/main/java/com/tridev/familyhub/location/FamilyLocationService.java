@@ -14,6 +14,8 @@ import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.Network;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
@@ -42,6 +44,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.security.VaultCipher;
+import com.tridev.familyhub.data.local.FamilyHubDatabase;
+import com.tridev.familyhub.data.local.dao.PendingLocationUploadDao;
+import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.receiver.MovementTransitionReceiver;
 
@@ -52,6 +58,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * Visible, consent-based Family Live sharing.
@@ -80,12 +91,18 @@ public class FamilyLocationService extends Service {
     private static final long GEOCODE_INTERVAL_MS = 15L * 60L * 1000L;
     private static final float GEOCODE_DISTANCE_METERS = 500F;
     private static final int ACTIVITY_PENDING_INTENT_REQUEST = 4203;
+    private static final int MAX_QUEUED_LOCATIONS = 100;
+    private static final long RETRY_BASE_DELAY_MS = 30_000L;
+    private static final long RETRY_MAX_DELAY_MS = 15L * 60L * 1000L;
 
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityRecognitionClient activityRecognitionClient;
     private PendingIntent movementTransitionPendingIntent;
     private LocationCallback locationCallback;
     private DatabaseReference locationReference;
+    private PendingLocationUploadDao pendingLocationUploadDao;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
     private String familyId;
     private String userId;
     private boolean requestingUpdates;
@@ -97,7 +114,13 @@ public class FamilyLocationService extends Service {
     private int candidateMovementSamples;
     private final ExecutorService geocodeExecutor =
             Executors.newSingleThreadExecutor();
+    private final ExecutorService uploadQueueExecutor =
+            Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final AtomicBoolean queueFlushInProgress =
+            new AtomicBoolean(false);
+    private final AtomicBoolean serviceDestroyed =
+            new AtomicBoolean(false);
     @Nullable private Location lastGeocodedLocation;
     private long lastGeocodedAt;
     private boolean geocodeInProgress;
@@ -124,6 +147,9 @@ public class FamilyLocationService extends Service {
                 ActivityRecognition.getClient(this);
         movementTransitionPendingIntent =
                 buildMovementTransitionPendingIntent();
+        pendingLocationUploadDao = FamilyHubDatabase
+                .getInstance(this)
+                .pendingLocationUploadDao();
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult result) {
@@ -134,6 +160,7 @@ public class FamilyLocationService extends Service {
             }
         };
         createNotificationChannel();
+        registerNetworkCallback();
     }
 
     @Override
@@ -186,6 +213,7 @@ public class FamilyLocationService extends Service {
                     LocationSharingStore.setSharingEnabled(this, true);
                     registerMovementTransitions();
                     requestLocationUpdates();
+                    flushQueuedLocations();
                 })
                 .addOnFailureListener(error -> stopSharing());
 
@@ -324,9 +352,168 @@ public class FamilyLocationService extends Service {
         values.put("sharingEnabled", true);
         values.put("clientTimestamp", System.currentTimeMillis());
         values.put("updatedAt", ServerValue.TIMESTAMP);
-        locationReference.updateChildren(values);
+        locationReference.updateChildren(values)
+                .addOnSuccessListener(ignored -> flushQueuedLocations())
+                .addOnFailureListener(error ->
+                        enqueueLocationForRetry(values));
         resolvePlaceLabelIfNeeded(location);
         updateTrackingProfile(movement, battery);
+    }
+
+    private void enqueueLocationForRetry(
+            @NonNull Map<String, Object> sourceValues
+    ) {
+        Map<String, Object> queueValues = new HashMap<>(sourceValues);
+        queueValues.remove("updatedAt");
+        executeQueueTask(() -> {
+            PendingLocationUpload pending = new PendingLocationUpload();
+            pending.createdAt = System.currentTimeMillis();
+            pending.nextAttemptAt = pending.createdAt;
+            pending.attemptCount = 0;
+            pending.encryptedPayload = VaultCipher.encrypt(
+                    new JSONObject(queueValues).toString()
+            );
+            pendingLocationUploadDao.insert(pending);
+            pendingLocationUploadDao.trimToLatest(MAX_QUEUED_LOCATIONS);
+        });
+    }
+
+    private void flushQueuedLocations() {
+        if (locationReference == null
+                || familyId == null
+                || userId == null
+                || serviceDestroyed.get()
+                || !queueFlushInProgress.compareAndSet(false, true)) {
+            return;
+        }
+        drainNextQueuedLocation();
+    }
+
+    private void drainNextQueuedLocation() {
+        executeQueueTask(() -> {
+            PendingLocationUpload pending =
+                    pendingLocationUploadDao.getNextReady(
+                            System.currentTimeMillis()
+                    );
+            if (pending == null) {
+                queueFlushInProgress.set(false);
+                return;
+            }
+
+            Map<String, Object> values;
+            try {
+                JSONObject payload = new JSONObject(VaultCipher.decrypt(
+                        pending.encryptedPayload
+                ));
+                if (!userId.equals(payload.optString("uid"))
+                        || !familyId.equals(payload.optString("familyId"))) {
+                    pendingLocationUploadDao.deleteById(pending.id);
+                    drainNextQueuedLocation();
+                    return;
+                }
+                values = jsonToMap(payload);
+                values.put("updatedAt", ServerValue.TIMESTAMP);
+            } catch (JSONException error) {
+                pendingLocationUploadDao.deleteById(pending.id);
+                drainNextQueuedLocation();
+                return;
+            }
+
+            mainHandler.post(() -> uploadQueuedLocation(pending, values));
+        });
+    }
+
+    private void uploadQueuedLocation(
+            @NonNull PendingLocationUpload pending,
+            @NonNull Map<String, Object> values
+    ) {
+        if (locationReference == null || serviceDestroyed.get()) {
+            queueFlushInProgress.set(false);
+            return;
+        }
+        locationReference.updateChildren(values)
+                .addOnSuccessListener(ignored -> executeQueueTask(() -> {
+                    pendingLocationUploadDao.deleteById(pending.id);
+                    drainNextQueuedLocation();
+                }))
+                .addOnFailureListener(error -> executeQueueTask(() -> {
+                    long delay = retryDelay(pending.attemptCount);
+                    pendingLocationUploadDao.markRetry(
+                            pending.id,
+                            System.currentTimeMillis() + delay
+                    );
+                    queueFlushInProgress.set(false);
+                    mainHandler.postDelayed(
+                            this::flushQueuedLocations,
+                            delay
+                    );
+                }));
+    }
+
+    @NonNull
+    private Map<String, Object> jsonToMap(
+            @NonNull JSONObject object
+    ) throws JSONException {
+        Map<String, Object> values = new HashMap<>();
+        java.util.Iterator<String> keys = object.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object value = object.get(key);
+            if (value != JSONObject.NULL) {
+                values.put(key, value);
+            }
+        }
+        return values;
+    }
+
+    private long retryDelay(int attemptCount) {
+        int exponent = Math.min(Math.max(0, attemptCount), 5);
+        return Math.min(
+                RETRY_MAX_DELAY_MS,
+                RETRY_BASE_DELAY_MS * (1L << exponent)
+        );
+    }
+
+    private void executeQueueTask(@NonNull Runnable task) {
+        if (serviceDestroyed.get()) {
+            return;
+        }
+        try {
+            uploadQueueExecutor.execute(task);
+        } catch (RejectedExecutionException ignored) {
+            queueFlushInProgress.set(false);
+        }
+    }
+
+    private void registerNetworkCallback() {
+        connectivityManager = (ConnectivityManager) getSystemService(
+                Context.CONNECTIVITY_SERVICE
+        );
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                mainHandler.post(() -> flushQueuedLocations());
+            }
+        };
+        try {
+            connectivityManager.registerDefaultNetworkCallback(
+                    networkCallback
+            );
+        } catch (RuntimeException ignored) {
+            networkCallback = null;
+        }
+    }
+
+    private void unregisterNetworkCallback() {
+        if (connectivityManager == null || networkCallback == null) {
+            return;
+        }
+        try {
+            connectivityManager.unregisterNetworkCallback(networkCallback);
+        } catch (RuntimeException ignored) {
+            // Callback may already have been removed by the system.
+        }
+        networkCallback = null;
     }
 
     /**
@@ -777,9 +964,12 @@ public class FamilyLocationService extends Service {
 
     @Override
     public void onDestroy() {
+        serviceDestroyed.set(true);
+        unregisterNetworkCallback();
         removeUpdates();
         removeMovementTransitions();
         geocodeExecutor.shutdownNow();
+        uploadQueueExecutor.shutdownNow();
         super.onDestroy();
     }
 
