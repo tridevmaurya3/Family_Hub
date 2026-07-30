@@ -81,6 +81,19 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8"
             android:text="@string/safe_place_location_waiting" />
+        <TextView
+            android:id="@+id/safe_place_permission_status"
+            style="@style/TextAppearance.FamilyHub.BodyStrong"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            android:text="@string/safe_place_permission_checking" />
+        <Button
+            android:id="@+id/button_safe_place_settings"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="@string/safe_place_open_settings" />
         <Button
             android:id="@+id/button_save"
             android:layout_width="match_parent"
