@@ -17,71 +17,76 @@
         android:paddingEnd="@dimen/screen_padding_horizontal"
         android:paddingBottom="@dimen/space_32">
 
-        <!-- Dashboard header -->
-        <LinearLayout
+        <!-- Compact Fluent dashboard header -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_header_card"
+            style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginEnd="@dimen/space_8"
-                app:cardBackgroundColor="@color/fh_primary_container"
-                app:cardCornerRadius="@dimen/radius_12"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/fh_outline"
-                app:strokeWidth="@dimen/border_width">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_family_hub_mark"
-                    app:tint="@color/fh_primary" />
-
-            </com.google.android.material.card.MaterialCardView>
+            app:cardBackgroundColor="@color/fh_surface"
+            app:strokeColor="@color/fh_outline">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_10">
 
-                <TextView
-                    android:id="@+id/dashboard_greeting"
-                    style="@style/TextAppearance.FamilyHub.Heading"
-                    android:layout_width="wrap_content"
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="@dimen/space_8"
+                    app:cardBackgroundColor="@color/fh_primary_container"
+                    app:cardCornerRadius="@dimen/radius_12"
+                    app:cardElevation="0dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/app_name"
+                        android:src="@drawable/ic_family_hub_mark"
+                        app:tint="@color/fh_primary" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="@string/dashboard_greeting"
-                    android:textColor="@color/fh_on_surface"
-                    android:textSize="18sp" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/dashboard_current_date"
-                    style="@style/TextAppearance.FamilyHub.Body"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_2"
-                    android:text="@string/dashboard_intro"
-                    android:textColor="@color/fh_on_surface_variant"
-                    android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/dashboard_greeting"
+                        style="@style/TextAppearance.FamilyHub.Heading"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dashboard_greeting"
+                        android:textColor="@color/fh_on_surface"
+                        android:textSize="16sp" />
 
+                    <TextView
+                        android:id="@+id/dashboard_current_date"
+                        style="@style/TextAppearance.FamilyHub.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:text="@string/dashboard_intro"
+                        android:textColor="@color/fh_on_surface_variant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/notification_button"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:background="@drawable/bg_icon_button"
+                    android:contentDescription="@string/content_description_notifications"
+                    android:padding="@dimen/space_12"
+                    android:src="@drawable/ic_bell"
+                    app:tint="@color/fh_on_surface" />
             </LinearLayout>
-
-            <ImageButton
-                android:id="@+id/notification_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_icon_button"
-                android:contentDescription="@string/content_description_notifications"
-                android:padding="12dp"
-                android:src="@drawable/ic_bell"
-                app:tint="@color/fh_on_surface" />
-
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Reusable dashboard search -->
         <com.tridev.familyhub.core.ui.search.SearchBarView
