@@ -439,6 +439,14 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_safe_places"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:text="@string/safe_places_open" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_health"
             style="@style/Widget.FamilyHub.Card.Flat"
