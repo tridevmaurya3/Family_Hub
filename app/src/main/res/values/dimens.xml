@@ -54,5 +54,9 @@
     <dimen name="compact_empty_state_padding">18dp</dimen>
     <dimen name="compact_empty_state_icon_size">52dp</dimen>
     <dimen name="compact_empty_state_icon_padding">14dp</dimen>
+    <dimen name="family_live_section_gap">6dp</dimen>
+    <dimen name="family_live_card_padding">10dp</dimen>
+    <dimen name="family_live_avatar_size">44dp</dimen>
+    <dimen name="family_live_chip_height">34dp</dimen>
 
 </resources>
