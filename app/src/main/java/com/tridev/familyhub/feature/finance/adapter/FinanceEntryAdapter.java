@@ -6,10 +6,10 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ui.SemanticValueStyler;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.databinding.ItemFinanceEntryBinding;
 
@@ -76,7 +76,6 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
 
         void bind(FinanceEntry entry) {
             boolean isIncome = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
-            Context context = binding.getRoot().getContext();
             binding.entryTypeSymbol.setText(isIncome ? "+" : "−");
             binding.entryTypeSymbol.setBackgroundResource(isIncome
                     ? R.drawable.bg_income_avatar
@@ -84,9 +83,10 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
             binding.entryCategory.setText(entry.category);
             binding.entryDetails.setText(details(entry));
             binding.entryAmount.setText((isIncome ? "+" : "−") + currencyFormatter.format(entry.amount));
-            binding.entryAmount.setTextColor(ContextCompat.getColor(
-                    context, isIncome ? R.color.fh_success : R.color.fh_tertiary
-            ));
+            SemanticValueStyler.apply(
+                    binding.entryAmount,
+                    isIncome ? entry.amount : -entry.amount
+            );
             binding.getRoot().setOnClickListener(v -> listener.onEdit(entry));
             binding.editEntryButton.setOnClickListener(v -> listener.onEdit(entry));
             binding.deleteEntryButton.setOnClickListener(v -> listener.onDelete(entry));
