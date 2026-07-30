@@ -59,7 +59,9 @@ public class FamilyLiveFragment extends Fragment {
     private FamilyLiveRepository repository;
     private ActivityResultLauncher<String[]> foregroundPermissionLauncher;
     private ActivityResultLauncher<String> notificationPermissionLauncher;
+    private ActivityResultLauncher<String> activityRecognitionPermissionLauncher;
     private boolean retryStartOnResume;
+    private boolean activityRecognitionPermissionHandled;
     private boolean cloudErrorShown;
     private boolean cloudDataReceived;
     private boolean mapViewSelected;
@@ -89,6 +91,13 @@ public class FamilyLiveFragment extends Fragment {
                                 R.string.family_live_notification_denied
                         );
                     }
+                }
+        );
+        activityRecognitionPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    activityRecognitionPermissionHandled = true;
+                    continueStartFlow();
                 }
         );
     }
@@ -554,6 +563,16 @@ public class FamilyLiveFragment extends Fragment {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                && !activityRecognitionPermissionHandled
+                && ContextCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.ACTIVITY_RECOGNITION
+                ) != PackageManager.PERMISSION_GRANTED) {
+            showActivityRecognitionEducation();
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                 && ContextCompat.checkSelfPermission(
                         requireContext(),
                         Manifest.permission.ACCESS_BACKGROUND_LOCATION
@@ -585,6 +604,29 @@ public class FamilyLiveFragment extends Fragment {
         }
 
         showAppSettingsGuidance(R.string.family_live_location_denied);
+    }
+
+    private void showActivityRecognitionEducation() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.family_live_activity_permission_title)
+                .setMessage(
+                        R.string.family_live_activity_permission_explanation
+                )
+                .setNegativeButton(
+                        R.string.family_live_not_now,
+                        (dialog, which) -> {
+                            activityRecognitionPermissionHandled = true;
+                            continueStartFlow();
+                        }
+                )
+                .setPositiveButton(
+                        R.string.family_live_activity_permission_allow,
+                        (dialog, which) ->
+                                activityRecognitionPermissionLauncher.launch(
+                                        Manifest.permission.ACTIVITY_RECOGNITION
+                                )
+                )
+                .show();
     }
 
     private void showBackgroundLocationGuidance() {
