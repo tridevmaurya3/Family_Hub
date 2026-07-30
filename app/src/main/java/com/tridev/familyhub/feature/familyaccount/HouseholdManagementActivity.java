@@ -85,6 +85,7 @@ public class HouseholdManagementActivity extends AppCompatActivity {
         setLoading(true);
         repository.load(
                 familyId,
+                getString(R.string.household_primary),
                 new FamilyAccountRepository.ResultCallback<HouseholdRepository.Data>() {
                     @Override
                     public void onSuccess(
@@ -306,6 +307,9 @@ public class HouseholdManagementActivity extends AppCompatActivity {
     }
 
     private void setLoading(boolean loading) {
+        if (binding == null) {
+            return;
+        }
         binding.progressHouseholds.setVisibility(
                 loading ? View.VISIBLE : View.GONE
         );
@@ -314,6 +318,9 @@ public class HouseholdManagementActivity extends AppCompatActivity {
     }
 
     private void showError(int messageRes) {
+        if (binding == null) {
+            return;
+        }
         binding.tvHouseholdError.setText(messageRes);
         binding.tvHouseholdError.setVisibility(View.VISIBLE);
     }
