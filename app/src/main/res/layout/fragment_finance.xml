@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/fh_background"
     android:paddingStart="@dimen/screen_padding_horizontal"
-    android:paddingTop="@dimen/space_24"
+    android:paddingTop="@dimen/compact_page_top_padding"
     android:paddingEnd="@dimen/screen_padding_horizontal">
 
     <TextView
@@ -35,7 +35,7 @@
         style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_20"
+        android:layout_marginTop="@dimen/compact_section_spacing"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/finance_subtitle">
@@ -71,7 +71,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="72dp"
+                        android:minHeight="64dp"
                         android:orientation="vertical"
                         android:padding="@dimen/space_10">
 
@@ -107,7 +107,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="72dp"
+                        android:minHeight="64dp"
                         android:orientation="vertical"
                         android:padding="@dimen/space_10">
 
@@ -142,7 +142,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:minHeight="72dp"
+                        android:minHeight="64dp"
                         android:orientation="vertical"
                         android:padding="@dimen/space_10">
 
@@ -203,7 +203,7 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:paddingTop="@dimen/space_16"
-        android:paddingBottom="104dp"
+        android:paddingBottom="88dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -214,7 +214,7 @@
         style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_24"
+        android:layout_marginTop="@dimen/compact_section_spacing"
         android:visibility="gone"
         app:cardBackgroundColor="@color/fh_module_finance_container"
         app:layout_constraintEnd_toEndOf="parent"
@@ -227,14 +227,14 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="@dimen/space_32">
+            android:padding="@dimen/compact_empty_state_padding">
 
             <ImageView
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:layout_width="@dimen/compact_empty_state_icon_size"
+                android:layout_height="@dimen/compact_empty_state_icon_size"
                 android:background="@drawable/bg_placeholder_icon"
                 android:contentDescription="@null"
-                android:padding="@dimen/space_20"
+                android:padding="@dimen/compact_empty_state_icon_padding"
                 android:src="@drawable/ic_wallet"
                 app:tint="@color/fh_module_finance" />
 
@@ -242,7 +242,7 @@
                 style="@style/TextAppearance.FamilyHub.SectionTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_20"
+                android:layout_marginTop="@dimen/compact_section_spacing"
                 android:gravity="center"
                 android:text="@string/no_finance_entries_title" />
 
@@ -260,7 +260,7 @@
                 style="@style/Widget.FamilyHub.Button.Primary"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/button_height"
-                android:layout_marginTop="@dimen/space_20"
+                android:layout_marginTop="@dimen/compact_section_spacing"
                 android:text="@string/add_finance_entry"
                 app:icon="@drawable/ic_add"
                 app:iconGravity="textStart"
