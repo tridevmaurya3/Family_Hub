@@ -2,6 +2,8 @@ package com.tridev.familyhub.feature.familylive;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -11,6 +13,8 @@ import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
@@ -31,6 +35,7 @@ public class SafePlacesActivity extends AppCompatActivity {
     private double longitude;
     private boolean hasLocation;
     @Nullable private SafePlace editingPlace;
+    private ActivityResultLauncher<Intent> mapPickerLauncher;
 
     @Override
     protected void onCreate(@Nullable Bundle state) {
@@ -38,12 +43,50 @@ public class SafePlacesActivity extends AppCompatActivity {
         binding = ActivitySafePlacesBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         repository = new SafePlaceRepository(getApplicationContext());
+        mapPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    Intent data = result.getData();
+                    if (result.getResultCode() != Activity.RESULT_OK
+                            || data == null
+                            || !data.hasExtra(
+                                    SafePlaceMapPickerActivity.RESULT_LATITUDE
+                            )
+                            || !data.hasExtra(
+                                    SafePlaceMapPickerActivity.RESULT_LONGITUDE
+                            )) {
+                        return;
+                    }
+                    latitude = data.getDoubleExtra(
+                            SafePlaceMapPickerActivity.RESULT_LATITUDE,
+                            0D
+                    );
+                    longitude = data.getDoubleExtra(
+                            SafePlaceMapPickerActivity.RESULT_LONGITUDE,
+                            0D
+                    );
+                    hasLocation = Double.isFinite(latitude)
+                            && Double.isFinite(longitude)
+                            && !(latitude == 0D && longitude == 0D);
+                    if (hasLocation) {
+                        binding.locationStatus.setText(
+                                R.string.safe_place_map_location_ready
+                        );
+                    }
+                }
+        );
         binding.safePlaceType.setAdapter(new ArrayAdapter<>(
                 this, android.R.layout.simple_dropdown_item_1line,
                 getResources().getStringArray(R.array.safe_place_types)
         ));
         binding.buttonBack.setOnClickListener(v -> finish());
         binding.buttonUseLocation.setOnClickListener(v -> loadLocation());
+        binding.buttonSelectOnMap.setOnClickListener(v ->
+                mapPickerLauncher.launch(new Intent(
+                        this,
+                        SafePlaceMapPickerActivity.class
+                ))
+        );
         binding.buttonSave.setOnClickListener(v -> save());
         loadPlaces();
     }
