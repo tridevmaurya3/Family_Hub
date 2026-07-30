@@ -818,12 +818,12 @@
     <string name="family_account_code_error">Enter the complete 10-character code</string>
     <string name="family_account_invite_invalid">This invitation is invalid, expired or disabled.</string>
     <string name="family_account_invite_ready">Invitation created</string>
-    <string name="family_account_invite_message">Share this code only with the intended family member:\n\n%1$s\n\nIt expires after 7 days and does not grant access until approval.</string>
+    <string name="family_account_invite_message">This code is not sent automatically. Copy or share it manually with the intended family member:\n\n%1$s\n\nIt expires after 7 days. When the member enters it, their request appears in Family settings → Pending approvals.</string>
     <string name="family_account_copy_code">Copy code</string>
     <string name="family_account_invite_code_label">Family Hub invitation code</string>
     <string name="family_account_continue">Continue to Family Hub</string>
     <string name="family_account_pending_title">Approval pending</string>
-    <string name="family_account_pending_detail">The family Owner must approve this device account before family data becomes available.</string>
+    <string name="family_account_pending_detail">Request sent to this family’s Owner/Admin. Ask the Owner to open More → Family settings → Pending approvals. Family data remains blocked until approval.</string>
     <string name="family_account_refresh">Refresh</string>
     <string name="family_account_cancel_request">Cancel join request</string>
     <string name="family_account_error">Family account could not be loaded. Check your internet connection and Firebase rules.</string>
@@ -848,6 +848,9 @@
     <string name="family_role_adult">Adult member</string>
     <string name="family_role_child">Child</string>
     <string name="family_role_senior">Senior citizen</string>
-    <string name="family_role_guest">Guest</string>
+    <string name="family_role_guest">Guest</string>    <string name="family_account_share_code">Share code</string>
+    <string name="family_account_share_text">Family Hub invitation code: %1$s\nOpen Family Hub, sign in, choose Join Family and enter this code. The Owner must approve the request.</string>
+    <string name="family_account_share_chooser">Share Family Hub invitation</string>
+    <string name="family_admin_flow_explanation">Invitation codes are not sent automatically. Share a generated code with the intended member. Their join request will appear below for your approval.</string>
 
 </resources>
