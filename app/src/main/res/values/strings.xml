@@ -888,4 +888,11 @@
     <string name="family_live_map_type_normal">Normal map</string>
     <string name="family_live_map_marker_live">Live location</string>
     <string name="family_live_map_marker_stale">Last known location</string>
+    <string name="family_live_search_hint">Search family member or role</string>
+    <string name="family_live_member_details_message">Location: %1$s
+Status: %2$s
+Battery: %3$s
+Connection: %4$s
+Movement: %5$s
+Last update: %6$s</string>
 </resources>
