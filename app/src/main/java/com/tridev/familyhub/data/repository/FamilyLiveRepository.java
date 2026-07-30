@@ -7,19 +7,30 @@ import android.os.Looper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyLiveStatusDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
+import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.model.FamilyLiveMemberData;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Repository boundary for the local Family Live status feature.
- *
- * All Room operations are performed away from the main UI thread.
+ * Offline-first Family Live repository with lifecycle-aware Firebase listeners.
  */
 public class FamilyLiveRepository {
 
@@ -27,6 +38,16 @@ public class FamilyLiveRepository {
         void onMemberStatusesLoaded(
                 @NonNull List<FamilyLiveMemberData> memberStatuses
         );
+    }
+
+    public interface CloudMemberListCallback {
+        void onMembersChanged(
+                @NonNull List<FamilyLiveCloudMember> members
+        );
+    }
+
+    public interface ErrorCallback {
+        void onError(@NonNull Throwable error);
     }
 
     public interface StatusListCallback {
@@ -46,11 +67,214 @@ public class FamilyLiveRepository {
 
     private final FamilyLiveStatusDao familyLiveStatusDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final DatabaseReference firebaseRoot =
+            FirebaseDatabase.getInstance().getReference();
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+    private final Map<String, MemberProfile> cloudProfiles = new HashMap<>();
+    private final Map<String, CloudLocation> cloudLocations = new HashMap<>();
+
+    @Nullable private DatabaseReference membershipReference;
+    @Nullable private DatabaseReference locationReference;
+    @Nullable private ValueEventListener membershipListener;
+    @Nullable private ValueEventListener locationListener;
+    @Nullable private CloudMemberListCallback cloudCallback;
+    private int observerGeneration;
 
     public FamilyLiveRepository(@NonNull Context context) {
         familyLiveStatusDao = FamilyHubDatabase
                 .getInstance(context)
                 .familyLiveStatusDao();
+    }
+
+    public void observeCloudMembers(
+            @NonNull CloudMemberListCallback callback,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        stopObservingCloudMembers();
+        if (closed.get()) {
+            return;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || !user.isEmailVerified()) {
+            errorCallback.onError(new IllegalStateException("AUTH_REQUIRED"));
+            return;
+        }
+
+        cloudCallback = callback;
+        int generation = ++observerGeneration;
+        firebaseRoot.child("users").child(user.getUid()).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (closed.get() || generation != observerGeneration) {
+                        return;
+                    }
+                    String familyId =
+                            snapshot.child("familyId").getValue(String.class);
+                    String status =
+                            snapshot.child("status").getValue(String.class);
+                    if (familyId == null
+                            || familyId.trim().isEmpty()
+                            || !"ACTIVE".equals(status)) {
+                        errorCallback.onError(
+                                new IllegalStateException("ACTIVE_FAMILY_REQUIRED")
+                        );
+                        return;
+                    }
+                    attachFamilyListeners(
+                            familyId,
+                            generation,
+                            errorCallback
+                    );
+                })
+                .addOnFailureListener(error -> {
+                    if (!closed.get() && generation == observerGeneration) {
+                        errorCallback.onError(error);
+                    }
+                });
+    }
+
+    private void attachFamilyListeners(
+            @NonNull String familyId,
+            int generation,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        membershipReference = firebaseRoot
+                .child("memberships")
+                .child(familyId);
+        locationReference = firebaseRoot
+                .child("locations")
+                .child(familyId);
+
+        membershipListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (closed.get() || generation != observerGeneration) {
+                    return;
+                }
+                cloudProfiles.clear();
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    String uid = child.child("uid").getValue(String.class);
+                    String status =
+                            child.child("status").getValue(String.class);
+                    if (uid == null || !"ACTIVE".equals(status)) {
+                        continue;
+                    }
+                    cloudProfiles.put(uid, new MemberProfile(
+                            stringValue(child.child("displayName")),
+                            stringValue(child.child("role"))
+                    ));
+                }
+                dispatchCloudMembers();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                if (!closed.get() && generation == observerGeneration) {
+                    errorCallback.onError(error.toException());
+                }
+            }
+        };
+
+        locationListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (closed.get() || generation != observerGeneration) {
+                    return;
+                }
+                cloudLocations.clear();
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    String uid = child.child("uid").getValue(String.class);
+                    Double latitude =
+                            child.child("latitude").getValue(Double.class);
+                    Double longitude =
+                            child.child("longitude").getValue(Double.class);
+                    Double accuracy =
+                            child.child("accuracy").getValue(Double.class);
+                    Boolean sharing =
+                            child.child("sharingEnabled").getValue(Boolean.class);
+                    Boolean online =
+                            child.child("online").getValue(Boolean.class);
+                    Long updatedAt =
+                            child.child("updatedAt").getValue(Long.class);
+                    if (uid == null) {
+                        continue;
+                    }
+                    cloudLocations.put(uid, new CloudLocation(
+                            latitude,
+                            longitude,
+                            accuracy,
+                            Boolean.TRUE.equals(sharing),
+                            Boolean.TRUE.equals(online),
+                            updatedAt == null ? 0L : updatedAt
+                    ));
+                }
+                dispatchCloudMembers();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                if (!closed.get() && generation == observerGeneration) {
+                    errorCallback.onError(error.toException());
+                }
+            }
+        };
+
+        membershipReference.addValueEventListener(membershipListener);
+        locationReference.addValueEventListener(locationListener);
+    }
+
+    private void dispatchCloudMembers() {
+        CloudMemberListCallback callback = cloudCallback;
+        if (callback == null || closed.get()) {
+            return;
+        }
+
+        List<FamilyLiveCloudMember> members = new ArrayList<>();
+        for (Map.Entry<String, MemberProfile> entry
+                : cloudProfiles.entrySet()) {
+            String uid = entry.getKey();
+            MemberProfile profile = entry.getValue();
+            CloudLocation location = cloudLocations.get(uid);
+            boolean hasLocation = location != null
+                    && location.latitude != null
+                    && location.longitude != null
+                    && location.accuracy != null;
+
+            members.add(new FamilyLiveCloudMember(
+                    uid,
+                    profile.displayName,
+                    profile.role,
+                    hasLocation,
+                    hasLocation ? location.latitude : 0D,
+                    hasLocation ? location.longitude : 0D,
+                    hasLocation ? location.accuracy : 0D,
+                    location != null && location.sharingEnabled,
+                    location != null && location.online,
+                    location == null ? 0L : location.updatedAt
+            ));
+        }
+
+        members.sort(Comparator.comparing(
+                member -> member.displayName.toLowerCase()
+        ));
+        callback.onMembersChanged(members);
+    }
+
+    public void stopObservingCloudMembers() {
+        observerGeneration++;
+        if (membershipReference != null && membershipListener != null) {
+            membershipReference.removeEventListener(membershipListener);
+        }
+        if (locationReference != null && locationListener != null) {
+            locationReference.removeEventListener(locationListener);
+        }
+        membershipReference = null;
+        locationReference = null;
+        membershipListener = null;
+        locationListener = null;
+        cloudCallback = null;
+        cloudProfiles.clear();
+        cloudLocations.clear();
     }
 
     public void loadMemberStatuses(
@@ -59,17 +283,22 @@ public class FamilyLiveRepository {
         DATABASE_EXECUTOR.execute(() -> {
             List<FamilyLiveMemberData> memberStatuses =
                     familyLiveStatusDao.getMemberStatuses();
-
-            mainHandler.post(
-                    () -> callback.onMemberStatusesLoaded(memberStatuses)
-            );
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onMemberStatusesLoaded(memberStatuses);
+                }
+            });
         });
     }
 
     public void loadAll(@NonNull StatusListCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             List<FamilyLiveStatus> statusList = familyLiveStatusDao.getAll();
-            mainHandler.post(() -> callback.onStatusListLoaded(statusList));
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onStatusListLoaded(statusList);
+                }
+            });
         });
     }
 
@@ -77,8 +306,11 @@ public class FamilyLiveRepository {
         DATABASE_EXECUTOR.execute(() -> {
             List<FamilyLiveStatus> statusList =
                     familyLiveStatusDao.getSharingEnabled();
-
-            mainHandler.post(() -> callback.onStatusListLoaded(statusList));
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onStatusListLoaded(statusList);
+                }
+            });
         });
     }
 
@@ -89,8 +321,11 @@ public class FamilyLiveRepository {
         DATABASE_EXECUTOR.execute(() -> {
             FamilyLiveStatus status =
                     familyLiveStatusDao.getByMemberId(familyMemberId);
-
-            mainHandler.post(() -> callback.onStatusLoaded(status));
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onStatusLoaded(status);
+                }
+            });
         });
     }
 
@@ -102,9 +337,12 @@ public class FamilyLiveRepository {
             if (status.lastUpdatedAt == 0L) {
                 status.lastUpdatedAt = System.currentTimeMillis();
             }
-
             familyLiveStatusDao.save(status);
-            mainHandler.post(callback::onComplete);
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onComplete();
+                }
+            });
         });
     }
 
@@ -119,8 +357,11 @@ public class FamilyLiveRepository {
                     enabled,
                     System.currentTimeMillis()
             );
-
-            mainHandler.post(callback::onComplete);
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onComplete();
+                }
+            });
         });
     }
 
@@ -130,7 +371,61 @@ public class FamilyLiveRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             familyLiveStatusDao.deleteByMemberId(familyMemberId);
-            mainHandler.post(callback::onComplete);
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onComplete();
+                }
+            });
         });
+    }
+
+    public void close() {
+        closed.set(true);
+        stopObservingCloudMembers();
+        mainHandler.removeCallbacksAndMessages(null);
+    }
+
+    @NonNull
+    private static String stringValue(@NonNull DataSnapshot snapshot) {
+        String value = snapshot.getValue(String.class);
+        return value == null ? "" : value.trim();
+    }
+
+    private static final class MemberProfile {
+        @NonNull final String displayName;
+        @NonNull final String role;
+
+        MemberProfile(
+                @NonNull String displayName,
+                @NonNull String role
+        ) {
+            this.displayName = displayName;
+            this.role = role;
+        }
+    }
+
+    private static final class CloudLocation {
+        @Nullable final Double latitude;
+        @Nullable final Double longitude;
+        @Nullable final Double accuracy;
+        final boolean sharingEnabled;
+        final boolean online;
+        final long updatedAt;
+
+        CloudLocation(
+                @Nullable Double latitude,
+                @Nullable Double longitude,
+                @Nullable Double accuracy,
+                boolean sharingEnabled,
+                boolean online,
+                long updatedAt
+        ) {
+            this.latitude = latitude;
+            this.longitude = longitude;
+            this.accuracy = accuracy;
+            this.sharingEnabled = sharingEnabled;
+            this.online = online;
+            this.updatedAt = updatedAt;
+        }
     }
 }
