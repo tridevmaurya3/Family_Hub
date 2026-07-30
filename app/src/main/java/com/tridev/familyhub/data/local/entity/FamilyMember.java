@@ -3,6 +3,7 @@ package com.tridev.familyhub.data.local.entity;
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
@@ -69,4 +70,13 @@ public class FamilyMember {
     public boolean isGuardian;
 
     public long createdAt;
+
+    /** Runtime-only marker for an authorised Firebase account row. */
+    @Ignore
+    public boolean cloudManaged;
+
+    /** Runtime-only Firebase uid; never added to the existing Room schema. */
+    @Ignore
+    @NonNull
+    public String cloudUid = "";
 }
