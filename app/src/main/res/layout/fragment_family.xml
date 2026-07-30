@@ -30,6 +30,20 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/family_title" />
 
+    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
+        android:id="@+id/family_overview"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/compact_section_spacing"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/family_subtitle"
+        app:overviewAccentColor="@color/fh_module_family"
+        app:overviewContainerColor="@color/fh_module_family_container"
+        app:overviewDetail="@string/family_subtitle"
+        app:overviewIcon="@drawable/ic_family"
+        app:overviewTitle="@string/family_title" />
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/member_search_layout"
         style="@style/Widget.FamilyHub.TextInputLayout"
@@ -42,7 +56,7 @@
         app:startIconTint="@color/fh_primary"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/family_subtitle">
+        app:layout_constraintTop_toBottomOf="@id/family_overview">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/member_search_input"
