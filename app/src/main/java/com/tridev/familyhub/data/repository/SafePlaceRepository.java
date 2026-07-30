@@ -23,6 +23,7 @@ public final class SafePlaceRepository {
     public interface SaveCallback {
         void onSaved(long id);
         void onDuplicate();
+        void onLimitReached();
         void onError();
     }
     public interface ActionCallback {
@@ -61,6 +62,13 @@ public final class SafePlaceRepository {
                     place.longitude, place.id) > 0) {
                 main.post(() -> {
                     if (!closed.get()) callback.onDuplicate();
+                });
+                return;
+            }
+            if (place.alertsEnabled
+                    && dao.enabledCountExcluding(place.id) >= 100) {
+                main.post(() -> {
+                    if (!closed.get()) callback.onLimitReached();
                 });
                 return;
             }
