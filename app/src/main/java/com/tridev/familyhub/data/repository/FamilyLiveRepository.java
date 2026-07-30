@@ -190,6 +190,8 @@ public class FamilyLiveRepository {
                             child.child("longitude").getValue(Double.class);
                     Double accuracy =
                             child.child("accuracy").getValue(Double.class);
+                    String placeLabel =
+                            child.child("placeLabel").getValue(String.class);
                     Long batteryValue =
                             child.child("batteryPercentage").getValue(Long.class);
                     Boolean charging =
@@ -212,6 +214,7 @@ public class FamilyLiveRepository {
                             latitude,
                             longitude,
                             accuracy,
+                            placeLabel == null ? "" : placeLabel.trim(),
                             batteryValue == null
                                     ? -1
                                     : Math.max(-1, Math.min(
@@ -268,6 +271,7 @@ public class FamilyLiveRepository {
                     hasLocation ? location.latitude : 0D,
                     hasLocation ? location.longitude : 0D,
                     hasLocation ? location.accuracy : 0D,
+                    location == null ? "" : location.placeLabel,
                     location == null ? -1 : location.batteryPercentage,
                     location != null && location.charging,
                     location == null ? 0D : location.speedMetersPerSecond,
@@ -432,6 +436,7 @@ public class FamilyLiveRepository {
         @Nullable final Double latitude;
         @Nullable final Double longitude;
         @Nullable final Double accuracy;
+        @NonNull final String placeLabel;
         final int batteryPercentage;
         final boolean charging;
         final double speedMetersPerSecond;
@@ -444,6 +449,7 @@ public class FamilyLiveRepository {
                 @Nullable Double latitude,
                 @Nullable Double longitude,
                 @Nullable Double accuracy,
+                @NonNull String placeLabel,
                 int batteryPercentage,
                 boolean charging,
                 double speedMetersPerSecond,
@@ -455,6 +461,7 @@ public class FamilyLiveRepository {
             this.latitude = latitude;
             this.longitude = longitude;
             this.accuracy = accuracy;
+            this.placeLabel = placeLabel;
             this.batteryPercentage = batteryPercentage;
             this.charging = charging;
             this.speedMetersPerSecond = speedMetersPerSecond;
