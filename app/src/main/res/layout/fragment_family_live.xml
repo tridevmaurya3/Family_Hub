@@ -114,10 +114,15 @@
             android:text="@string/family_live_members_title" />
 
         <TextView
+            android:id="@+id/tvMapView"
             style="@style/TextAppearance.FamilyHub.Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/family_live_list_view"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="@dimen/space_8"
+            android:text="@string/family_live_map_view"
             android:textColor="@color/fh_module_family" />
 
     </LinearLayout>
