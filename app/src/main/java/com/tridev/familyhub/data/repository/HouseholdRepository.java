@@ -26,9 +26,13 @@ public class HouseholdRepository {
 
     public void load(
             @NonNull String familyId,
+            @NonNull String primaryHouseholdName,
             @NonNull FamilyAccountRepository.ResultCallback<Data> callback
     ) {
-        ensurePrimaryHousehold(familyId, new FamilyAccountRepository.ResultCallback<Void>() {
+        ensurePrimaryHousehold(
+                familyId,
+                primaryHouseholdName,
+                new FamilyAccountRepository.ResultCallback<Void>() {
             @Override
             public void onSuccess(@Nullable Void result) {
                 loadSnapshots(familyId, callback);
@@ -38,7 +42,8 @@ public class HouseholdRepository {
             public void onError(@NonNull Exception error) {
                 callback.onError(error);
             }
-        });
+                }
+        );
     }
 
     private void loadSnapshots(
@@ -67,6 +72,7 @@ public class HouseholdRepository {
 
     private void ensurePrimaryHousehold(
             @NonNull String familyId,
+            @NonNull String primaryHouseholdName,
             @NonNull FamilyAccountRepository.ResultCallback<Void> callback
     ) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -89,7 +95,7 @@ public class HouseholdRepository {
                             + "/" + PRIMARY_HOUSEHOLD_ID;
                     updates.put(base + "/householdId", PRIMARY_HOUSEHOLD_ID);
                     updates.put(base + "/familyId", familyId);
-                    updates.put(base + "/name", "Primary household");
+                    updates.put(base + "/name", primaryHouseholdName);
                     updates.put(base + "/guardianUid", user.getUid());
                     updates.put(base + "/active", true);
                     updates.put(base + "/createdBy", user.getUid());
