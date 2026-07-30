@@ -929,4 +929,38 @@ Last update: %6$s</string>
     <string name="family_live_movement_cycling">Cycling</string>
     <string name="family_live_movement_travelling">Travelling</string>
     <string name="family_live_movement_speed">%1$s · %2$d km/h</string>
+    <!-- Safe Places -->
+    <string name="safe_places_title">Safe Places</string>
+    <string name="safe_place_name">Place name</string>
+    <string name="safe_place_type">Place type</string>
+    <string name="safe_place_radius">Alert radius in metres (100–5000)</string>
+    <string name="safe_place_use_location">Use my current GPS location</string>
+    <string name="safe_place_location_waiting">Choose the location before saving.</string>
+    <string name="safe_place_location_ready">Current GPS location selected securely.</string>
+    <string name="safe_place_save">Save and enable enter/exit alerts</string>
+    <string name="safe_place_none">No Safe Places added yet.</string>
+    <string name="safe_place_saved">Safe Place saved and geofence enabled</string>
+    <string name="safe_place_permission">Precise location permission is required.</string>
+    <string name="safe_place_location_error">A current GPS location could not be obtained.</string>
+    <string name="safe_place_invalid">Enter a name and type, then select the current location.</string>
+    <string name="safe_place_radius_error">Enter a radius from 100 to 5000 metres.</string>
+    <string name="safe_place_channel">Safe Place alerts</string>
+    <string name="safe_place_entered">Safe Place reached</string>
+    <string name="safe_place_exited">Safe Place left</string>
+    <string name="safe_place_alert_detail">A Safe Place boundary changed. Open Family Hub for details.</string>
+    <string name="safe_places_open">Manage Safe Places</string>
+    <plurals name="safe_place_count">
+        <item quantity="one">%1$d Safe Place</item>
+        <item quantity="other">%1$d Safe Places</item>
+    </plurals>
+    <string-array name="safe_place_types">
+        <item>Home</item>
+        <item>School</item>
+        <item>Office</item>
+        <item>College</item>
+        <item>Hospital</item>
+        <item>Village</item>
+        <item>Relative Home</item>
+        <item>Custom Place</item>
+    </string-array>
 </resources>
