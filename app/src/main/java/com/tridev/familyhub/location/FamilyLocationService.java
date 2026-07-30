@@ -197,6 +197,10 @@ public class FamilyLocationService extends Service {
         values.put("latitude", location.getLatitude());
         values.put("longitude", location.getLongitude());
         values.put("accuracy", (double) location.getAccuracy());
+        values.put("speedMetersPerSecond", location.hasSpeed()
+                ? (double) Math.max(0F, location.getSpeed())
+                : 0D);
+        values.put("movementType", resolveMovementType(location));
         values.put("batteryPercentage", battery.percentage);
         values.put("charging", battery.charging);
         values.put("online", true);
@@ -244,6 +248,25 @@ public class FamilyLocationService extends Service {
                 this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @NonNull
+    private String resolveMovementType(@NonNull Location location) {
+        if (!location.hasSpeed() || location.getAccuracy() > 100F) {
+            return "UNKNOWN";
+        }
+
+        float speed = Math.max(0F, location.getSpeed());
+        if (speed < 0.8F) {
+            return "STATIONARY";
+        }
+        if (speed < 2.5F) {
+            return "WALKING";
+        }
+        if (speed < 8.5F) {
+            return "CYCLING";
+        }
+        return "TRAVELLING";
     }
 
     @NonNull
