@@ -26,6 +26,8 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.model.FamilyRoles;
+import com.tridev.familyhub.data.repository.FamilyAccountRepository;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.databinding.DialogMemberEditorBinding;
 import com.tridev.familyhub.databinding.FragmentFamilyBinding;
@@ -33,9 +35,13 @@ import com.tridev.familyhub.feature.family.adapter.FamilyMemberAdapter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /** Complete local-only CRUD screen for family profiles. */
 public class FamilyFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
@@ -50,6 +56,8 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     private FragmentFamilyBinding binding;
     private FamilyMemberAdapter memberAdapter;
     private FamilyMemberRepository repository;
+    private FamilyAccountRepository familyAccountRepository;
+    private int memberLoadGeneration;
     private ActivityResultLauncher<String[]> photoPicker;
     private DialogMemberEditorBinding activeEditor;
     private String selectedPhotoUri = "";
@@ -90,6 +98,7 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         repository = new FamilyMemberRepository(requireContext());
+        familyAccountRepository = new FamilyAccountRepository();
         memberAdapter = new FamilyMemberAdapter(new FamilyMemberAdapter.MemberActionListener() {
             @Override
             public void onEdit(FamilyMember member) {
@@ -130,15 +139,129 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     }
 
     private void loadMembers(String query) {
-        repository.loadMembers(query, members -> {
-            if (binding == null) {
+        int generation = ++memberLoadGeneration;
+        String normalizedQuery = query.trim().toLowerCase(Locale.ROOT);
+        repository.loadMembers(query, localMembers -> {
+            if (binding == null || generation != memberLoadGeneration) {
                 return;
             }
-            memberAdapter.submitList(members);
-            boolean isEmpty = members.isEmpty();
-            binding.memberRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-            binding.familyEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+            familyAccountRepository.loadAuthorisedMembers(
+                    new FamilyAccountRepository.ResultCallback<List<FamilyAccountRepository.Member>>() {
+                        @Override
+                        public void onSuccess(
+                                @Nullable List<FamilyAccountRepository.Member> cloudMembers
+                        ) {
+                            if (binding == null
+                                    || generation != memberLoadGeneration) {
+                                return;
+                            }
+                            renderMembers(mergeMembers(
+                                    localMembers,
+                                    cloudMembers == null
+                                            ? new ArrayList<>()
+                                            : cloudMembers,
+                                    normalizedQuery
+                            ));
+                        }
+
+                        @Override
+                        public void onError(@NonNull Exception error) {
+                            if (binding != null
+                                    && generation == memberLoadGeneration) {
+                                renderMembers(localMembers);
+                            }
+                        }
+                    }
+            );
         });
+    }
+
+    private void renderMembers(@NonNull List<FamilyMember> members) {
+        memberAdapter.submitList(members);
+        boolean isEmpty = members.isEmpty();
+        binding.memberRecyclerView.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.familyEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
+    }
+
+    @NonNull
+    private List<FamilyMember> mergeMembers(
+            @NonNull List<FamilyMember> localMembers,
+            @NonNull List<FamilyAccountRepository.Member> cloudMembers,
+            @NonNull String normalizedQuery
+    ) {
+        List<FamilyMember> merged = new ArrayList<>(localMembers);
+        Set<String> localEmails = new HashSet<>();
+        for (FamilyMember local : localMembers) {
+            if (!local.email.trim().isEmpty()) {
+                localEmails.add(local.email.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+
+        for (FamilyAccountRepository.Member cloud : cloudMembers) {
+            String cloudEmail = cloud.email.trim().toLowerCase(Locale.ROOT);
+            String searchable = (cloud.displayName + " "
+                    + cloud.email + " " + cloud.role)
+                    .toLowerCase(Locale.ROOT);
+            if (!normalizedQuery.isEmpty()
+                    && !searchable.contains(normalizedQuery)) {
+                continue;
+            }
+            if (!cloudEmail.isEmpty() && localEmails.contains(cloudEmail)) {
+                continue;
+            }
+
+            FamilyMember account = new FamilyMember();
+            account.id = -1L
+                    - Integer.toUnsignedLong(cloud.uid.hashCode());
+            account.cloudManaged = true;
+            account.cloudUid = cloud.uid;
+            account.name = cloud.displayName.trim().isEmpty()
+                    ? getString(R.string.family_account_member_fallback)
+                    : cloud.displayName;
+            account.email = cloud.email;
+            account.relation = cloudRoleLabel(cloud.role);
+            account.familyRole = cloudFamilyRole(cloud.role);
+            account.isGuardian = FamilyRoles.OWNER_ADMIN.equals(cloud.role)
+                    || FamilyRoles.GUARDIAN.equals(cloud.role);
+            merged.add(account);
+        }
+        return merged;
+    }
+
+    @NonNull
+    private String cloudRoleLabel(@NonNull String role) {
+        if (FamilyRoles.OWNER_ADMIN.equals(role)) {
+            return getString(R.string.family_role_owner);
+        }
+        if (FamilyRoles.GUARDIAN.equals(role)) {
+            return getString(R.string.family_role_guardian);
+        }
+        if (FamilyRoles.CHILD.equals(role)) {
+            return getString(R.string.family_role_child);
+        }
+        if (FamilyRoles.SENIOR_CITIZEN.equals(role)) {
+            return getString(R.string.family_role_senior);
+        }
+        if (FamilyRoles.GUEST.equals(role)) {
+            return getString(R.string.family_role_guest);
+        }
+        return getString(R.string.family_role_adult);
+    }
+
+    @NonNull
+    private String cloudFamilyRole(@NonNull String role) {
+        if (FamilyRoles.GUARDIAN.equals(role)
+                || FamilyRoles.OWNER_ADMIN.equals(role)) {
+            return FamilyMember.ROLE_GUARDIAN;
+        }
+        if (FamilyRoles.CHILD.equals(role)) {
+            return FamilyMember.ROLE_CHILD;
+        }
+        return FamilyMember.ROLE_ADULT;
     }
 
     private void showMemberEditor(@Nullable FamilyMember existingMember) {
