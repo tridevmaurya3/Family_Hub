@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/fh_background"
     android:paddingStart="@dimen/screen_padding_horizontal"
-    android:paddingTop="@dimen/space_24"
+    android:paddingTop="@dimen/compact_page_top_padding"
     android:paddingEnd="@dimen/screen_padding_horizontal">
 
     <TextView
@@ -35,7 +35,7 @@
         style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_20"
+        android:layout_marginTop="@dimen/compact_section_spacing"
         app:cardBackgroundColor="@color/fh_module_family_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -199,14 +199,14 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="@dimen/space_32">
+            android:padding="@dimen/compact_empty_state_padding">
 
             <ImageView
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:layout_width="@dimen/compact_empty_state_icon_size"
+                android:layout_height="@dimen/compact_empty_state_icon_size"
                 android:background="@drawable/bg_placeholder_icon"
                 android:contentDescription="@null"
-                android:padding="@dimen/space_20"
+                android:padding="@dimen/compact_empty_state_icon_padding"
                 android:src="@drawable/ic_family"
                 app:tint="@color/fh_module_family" />
 
@@ -214,7 +214,7 @@
                 style="@style/TextAppearance.FamilyHub.SectionTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_20"
+                android:layout_marginTop="@dimen/compact_section_spacing"
                 android:gravity="center"
                 android:text="@string/family_live_empty_title" />
 
