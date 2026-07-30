@@ -127,7 +127,16 @@ public class FamilyLiveFragment extends Fragment {
         repository = new FamilyLiveRepository(requireContext());
         familyLiveAdapter = new FamilyLiveAdapter();
         familyLiveAdapter.setOnMemberClickListener(
-                this::showMemberDetails
+                member -> {
+                    if (member.getCloudMemberUid().isEmpty()) {
+                        showMemberDetails(member);
+                    } else {
+                        startActivity(FamilyMemberDetailActivity.createIntent(
+                                requireContext(),
+                                member.getCloudMemberUid()
+                        ));
+                    }
+                }
         );
 
         binding.recyclerFamilyLive.setLayoutManager(
@@ -302,6 +311,7 @@ public class FamilyLiveFragment extends Fragment {
 
             uiModels.add(new FamilyLiveMemberUiModel(
                     Integer.toUnsignedLong(member.uid.hashCode()),
+                    member.uid,
                     displayName,
                     location,
                     currentlyOnline ? "ONLINE" : "OFFLINE",
@@ -844,6 +854,7 @@ public class FamilyLiveFragment extends Fragment {
 
             uiModels.add(new FamilyLiveMemberUiModel(
                     data.familyMemberId,
+                    "",
                     data.memberName,
                     location,
                     data.onlineStatus,
