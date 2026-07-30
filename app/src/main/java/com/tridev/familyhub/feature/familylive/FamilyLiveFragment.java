@@ -22,6 +22,13 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.model.FamilyLiveMemberData;
@@ -49,6 +56,13 @@ public class FamilyLiveFragment extends Fragment {
     private boolean retryStartOnResume;
     private boolean cloudErrorShown;
     private boolean cloudDataReceived;
+    private boolean mapViewSelected;
+    private boolean fitMapOnNextRender = true;
+    private boolean satelliteMap;
+    @Nullable private GoogleMap googleMap;
+    @NonNull
+    private List<FamilyLiveCloudMember> latestCloudMembers =
+            new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -101,6 +115,23 @@ public class FamilyLiveFragment extends Fragment {
                 new LinearLayoutManager(requireContext())
         );
         binding.recyclerFamilyLive.setAdapter(familyLiveAdapter);
+        binding.viewToggle.addOnButtonCheckedListener(
+                (group, checkedId, isChecked) -> {
+                    if (!isChecked) {
+                        return;
+                    }
+                    if (checkedId == R.id.buttonMapView) {
+                        showMapView();
+                    } else {
+                        showListView();
+                    }
+                }
+        );
+        binding.buttonRecenter.setOnClickListener(ignored -> {
+            fitMapOnNextRender = true;
+            renderMapMarkers();
+        });
+        binding.buttonMapType.setOnClickListener(ignored -> toggleMapType());
         binding.buttonLocationSharing.setOnClickListener(ignored -> {
             if (LocationSharingStore.isSharingEnabled(requireContext())) {
                 stopSharing();
@@ -164,6 +195,7 @@ public class FamilyLiveFragment extends Fragment {
             return;
         }
         cloudDataReceived = true;
+        latestCloudMembers = new ArrayList<>(members);
         List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
         long now = System.currentTimeMillis();
 
@@ -208,6 +240,150 @@ public class FamilyLiveFragment extends Fragment {
         }
 
         renderMemberList(uiModels);
+        renderMapMarkers();
+    }
+
+    private void showListView() {
+        mapViewSelected = false;
+        if (binding == null) {
+            return;
+        }
+        binding.mapContainer.setVisibility(View.GONE);
+        binding.listHeader.setVisibility(View.VISIBLE);
+        boolean isEmpty = familyLiveAdapter == null
+                || familyLiveAdapter.getItemCount() == 0;
+        binding.recyclerFamilyLive.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.familyLiveEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
+    }
+
+    private void showMapView() {
+        mapViewSelected = true;
+        if (binding == null) {
+            return;
+        }
+        binding.listHeader.setVisibility(View.GONE);
+        binding.recyclerFamilyLive.setVisibility(View.GONE);
+        binding.familyLiveEmptyState.setVisibility(View.GONE);
+        binding.mapContainer.setVisibility(View.VISIBLE);
+        ensureMap();
+        renderMapMarkers();
+    }
+
+    private void ensureMap() {
+        if (googleMap != null || binding == null) {
+            return;
+        }
+        binding.mapLoading.setVisibility(View.VISIBLE);
+        SupportMapFragment mapFragment =
+                (SupportMapFragment) getChildFragmentManager()
+                        .findFragmentById(R.id.mapHost);
+        if (mapFragment == null) {
+            mapFragment = SupportMapFragment.newInstance();
+            getChildFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.mapHost, mapFragment)
+                    .commitNow();
+        }
+        mapFragment.getMapAsync(map -> {
+            if (binding == null) {
+                return;
+            }
+            googleMap = map;
+            googleMap.getUiSettings().setCompassEnabled(true);
+            googleMap.getUiSettings().setMapToolbarEnabled(false);
+            binding.mapLoading.setVisibility(View.GONE);
+            binding.mapError.setVisibility(View.GONE);
+            renderMapMarkers();
+        });
+    }
+
+    private void renderMapMarkers() {
+        if (binding == null || googleMap == null) {
+            return;
+        }
+        googleMap.clear();
+        LatLngBounds.Builder bounds = new LatLngBounds.Builder();
+        LatLng onlyPosition = null;
+        int markerCount = 0;
+        long now = System.currentTimeMillis();
+
+        for (FamilyLiveCloudMember member : latestCloudMembers) {
+            if (!member.sharingEnabled || !member.hasLocation) {
+                continue;
+            }
+            boolean stale = member.updatedAt <= 0L
+                    || now - member.updatedAt > LIVE_FRESHNESS_MS;
+            LatLng position = new LatLng(
+                    member.latitude,
+                    member.longitude
+            );
+            String displayName = member.displayName.trim().isEmpty()
+                    ? getString(R.string.family_account_member_fallback)
+                    : member.displayName;
+            MarkerOptions marker = new MarkerOptions()
+                    .position(position)
+                    .title(displayName)
+                    .snippet(getString(stale
+                            ? R.string.family_live_map_marker_stale
+                            : R.string.family_live_map_marker_live))
+                    .icon(BitmapDescriptorFactory.defaultMarker(stale
+                            ? BitmapDescriptorFactory.HUE_ORANGE
+                            : BitmapDescriptorFactory.HUE_GREEN))
+                    .alpha(stale ? 0.72F : 1F);
+            googleMap.addMarker(marker);
+            bounds.include(position);
+            onlyPosition = position;
+            markerCount++;
+        }
+
+        binding.mapError.setVisibility(
+                markerCount == 0 ? View.VISIBLE : View.GONE
+        );
+        if (!mapViewSelected || markerCount == 0 || !fitMapOnNextRender) {
+            return;
+        }
+
+        fitMapOnNextRender = false;
+        final int safeMarkerCount = markerCount;
+        final LatLng singlePosition = onlyPosition;
+        binding.mapContainer.post(() -> {
+            if (binding == null || googleMap == null) {
+                return;
+            }
+            if (safeMarkerCount == 1 && singlePosition != null) {
+                googleMap.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                                singlePosition,
+                                15F
+                        )
+                );
+            } else {
+                googleMap.animateCamera(
+                        CameraUpdateFactory.newLatLngBounds(
+                                bounds.build(),
+                                72
+                        )
+                );
+            }
+        });
+    }
+
+    private void toggleMapType() {
+        if (googleMap == null) {
+            ensureMap();
+            return;
+        }
+        satelliteMap = !satelliteMap;
+        googleMap.setMapType(satelliteMap
+                ? GoogleMap.MAP_TYPE_SATELLITE
+                : GoogleMap.MAP_TYPE_NORMAL);
+        binding.buttonMapType.setText(satelliteMap
+                ? R.string.family_live_map_type_normal
+                : R.string.family_live_map_type_satellite);
     }
 
     private void showSharingEducation() {
@@ -445,12 +621,17 @@ public class FamilyLiveFragment extends Fragment {
         ));
 
         boolean isEmpty = uiModels.isEmpty();
-        binding.recyclerFamilyLive.setVisibility(
-                isEmpty ? View.GONE : View.VISIBLE
-        );
-        binding.familyLiveEmptyState.setVisibility(
-                isEmpty ? View.VISIBLE : View.GONE
-        );
+        if (mapViewSelected) {
+            binding.recyclerFamilyLive.setVisibility(View.GONE);
+            binding.familyLiveEmptyState.setVisibility(View.GONE);
+        } else {
+            binding.recyclerFamilyLive.setVisibility(
+                    isEmpty ? View.GONE : View.VISIBLE
+            );
+            binding.familyLiveEmptyState.setVisibility(
+                    isEmpty ? View.VISIBLE : View.GONE
+            );
+        }
     }
 
     @NonNull
@@ -491,6 +672,8 @@ public class FamilyLiveFragment extends Fragment {
         }
         binding.recyclerFamilyLive.setAdapter(null);
         familyLiveAdapter = null;
+        googleMap = null;
+        latestCloudMembers = new ArrayList<>();
         binding = null;
         super.onDestroyView();
     }
