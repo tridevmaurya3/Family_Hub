@@ -85,6 +85,9 @@ public class SafePlacesActivity extends AppCompatActivity {
                 getResources().getStringArray(R.array.safe_place_types)
         ));
         binding.buttonBack.setOnClickListener(v -> finish());
+        binding.buttonAlertHistory.setOnClickListener(v -> startActivity(
+                new Intent(this, SafePlaceAlertHistoryActivity.class)
+        ));
         binding.buttonUseLocation.setOnClickListener(v -> loadLocation());
         binding.buttonSelectOnMap.setOnClickListener(v ->
                 mapPickerLauncher.launch(new Intent(
