@@ -143,6 +143,14 @@ public class FamilyLiveFragment extends Fragment {
                 new LinearLayoutManager(requireContext())
         );
         binding.recyclerFamilyLive.setAdapter(familyLiveAdapter);
+        binding.familyLiveRefresh.setColorSchemeResources(
+                R.color.fh_module_family,
+                R.color.fh_primary,
+                R.color.fh_secondary
+        );
+        binding.familyLiveRefresh.setOnRefreshListener(
+                this::refreshFamilyLive
+        );
         binding.viewToggle.addOnButtonCheckedListener(
                 (group, checkedId, isChecked) -> {
                     if (!isChecked) {
@@ -225,22 +233,7 @@ public class FamilyLiveFragment extends Fragment {
         super.onStart();
         cloudErrorShown = false;
         cloudDataReceived = false;
-        if (repository != null) {
-            repository.observeCloudMembers(
-                    this::renderCloudMembers,
-                    error -> {
-                        if (binding == null || cloudErrorShown) {
-                            return;
-                        }
-                        cloudErrorShown = true;
-                        Toast.makeText(
-                                requireContext(),
-                                R.string.family_live_sync_error,
-                                Toast.LENGTH_LONG
-                        ).show();
-                    }
-            );
-        }
+        observeCloudMembers();
     }
 
     @Override
@@ -257,6 +250,7 @@ public class FamilyLiveFragment extends Fragment {
         if (binding == null) {
             return;
         }
+        binding.familyLiveRefresh.setRefreshing(false);
         cloudDataReceived = true;
         latestCloudMembers = new ArrayList<>(members);
         List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
@@ -326,6 +320,43 @@ public class FamilyLiveFragment extends Fragment {
 
         renderMemberList(uiModels);
         renderMapMarkers();
+    }
+
+    private void refreshFamilyLive() {
+        if (binding == null || repository == null) {
+            return;
+        }
+        cloudErrorShown = false;
+        repository.stopObservingCloudMembers();
+        loadLocalFamilyLiveMembers();
+        observeCloudMembers();
+    }
+
+    private void observeCloudMembers() {
+        if (repository == null) {
+            if (binding != null) {
+                binding.familyLiveRefresh.setRefreshing(false);
+            }
+            return;
+        }
+        repository.observeCloudMembers(
+                this::renderCloudMembers,
+                error -> {
+                    if (binding == null) {
+                        return;
+                    }
+                    binding.familyLiveRefresh.setRefreshing(false);
+                    if (cloudErrorShown) {
+                        return;
+                    }
+                    cloudErrorShown = true;
+                    Toast.makeText(
+                            requireContext(),
+                            R.string.family_live_sync_error,
+                            Toast.LENGTH_LONG
+                    ).show();
+                }
+        );
     }
 
     private void showListView() {
