@@ -1030,6 +1030,9 @@ Sharing: %12$s</string>
     <string name="safe_place_permission_required_for_alerts">Allow precise and background location before enabling alerts.</string>
     <string name="safe_place_saved_disabled_permissions">Safe Place was saved locally with alerts disabled because location permission is unavailable.</string>
     <string name="safe_place_limit_reached">Android allows at most 100 enabled Safe Places. Disable another alert first.</string>
+    <string name="safe_place_saved_local">Safe Place saved locally with alerts disabled.</string>
+    <string name="safe_place_alert_enabled">Safe Place alert enabled.</string>
+    <string name="safe_place_registration_failed">Geofence registration failed, so alerts were disabled. Check Google Play Services, permissions and GPS, then tap Enable to retry.</string>
     <string name="safe_place_location_waiting">Choose the location before saving.</string>
     <string name="safe_place_location_ready">Current GPS location selected securely.</string>
     <string name="safe_place_map_location_ready">Map location selected securely.</string>
