@@ -22,6 +22,7 @@ import com.tridev.familyhub.data.local.dao.NoteDao;
 import com.tridev.familyhub.data.local.dao.PlannerItemDao;
 import com.tridev.familyhub.data.local.dao.SafePlaceDao;
 import com.tridev.familyhub.data.local.dao.PendingLocationUploadDao;
+import com.tridev.familyhub.data.local.dao.SafePlaceAlertDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -36,6 +37,7 @@ import com.tridev.familyhub.data.local.entity.NoteEntry;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
 import com.tridev.familyhub.data.local.entity.SafePlace;
 import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
+import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
 
 /**
  * The private on-device database.
@@ -58,9 +60,10 @@ import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
                 NoteEntry.class,
                 PlannerItem.class,
                 SafePlace.class,
-                PendingLocationUpload.class
+                PendingLocationUpload.class,
+                SafePlaceAlert.class
         },
-        version = 15,
+        version = 16,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -84,6 +87,38 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract PlannerItemDao plannerItemDao();
     public abstract SafePlaceDao safePlaceDao();
     public abstract PendingLocationUploadDao pendingLocationUploadDao();
+    public abstract SafePlaceAlertDao safePlaceAlertDao();
+
+    private static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `safe_place_alerts` "
+                            + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                            + "`placeId` TEXT NOT NULL, "
+                            + "`transitionType` TEXT NOT NULL, "
+                            + "`occurredAt` INTEGER NOT NULL, "
+                            + "`deduplicationBucket` INTEGER NOT NULL, "
+                            + "`isRead` INTEGER NOT NULL)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_safe_place_alerts_occurredAt` "
+                            + "ON `safe_place_alerts` (`occurredAt`)"
+            );
+            database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS "
+                            + "`index_safe_place_alerts_isRead` "
+                            + "ON `safe_place_alerts` (`isRead`)"
+            );
+            database.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS "
+                            + "`index_safe_place_alerts_placeId_transitionType_deduplicationBucket` "
+                            + "ON `safe_place_alerts` "
+                            + "(`placeId`, `transitionType`, `deduplicationBucket`)"
+            );
+        }
+    };
 
     private static final Migration MIGRATION_14_15 = new Migration(14, 15) {
         @Override
@@ -585,7 +620,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_11_12,
                                     MIGRATION_12_13,
                                     MIGRATION_13_14,
-                                    MIGRATION_14_15
+                                    MIGRATION_14_15,
+                                    MIGRATION_15_16
                             )
                             .build();
                 }
