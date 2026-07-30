@@ -45,6 +45,8 @@
     <dimen name="touch_target_min">48dp</dimen>
     <dimen name="border_width">1dp</dimen>
     <dimen name="card_elevation">1dp</dimen>
+    <dimen name="family_map_panel_elevation">6dp</dimen>
+    <dimen name="family_map_control_text_size">11sp</dimen>
 
     <!-- Compact module surfaces; touch targets remain at least 48dp. -->
     <dimen name="compact_page_top_padding">16dp</dimen>
