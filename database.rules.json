@@ -40,6 +40,18 @@
           ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('familyId').val() === $familyId && newData.child('displayName').isString() && newData.child('requestedRole').val().matches(/^(ADULT_MEMBER|GUARDIAN|CHILD|SENIOR_CITIZEN|GUEST)$/) && newData.child('status').val().matches(/^(PENDING|APPROVED|REJECTED)$/))"
         }
       }
+    },
+    "locations": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        ".indexOn": [
+          "updatedAt"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+          ".validate": "!newData.exists() || (newData.child('uid').val() === $uid && newData.child('familyId').val() === $familyId && newData.child('latitude').isNumber() && newData.child('longitude').isNumber() && newData.child('accuracy').isNumber() && newData.child('online').isBoolean() && newData.child('sharingEnabled').isBoolean() && newData.child('clientTimestamp').isNumber() && newData.child('updatedAt').isNumber())"
+        }
+      }
     }
   }
 }
