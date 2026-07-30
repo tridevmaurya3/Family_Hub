@@ -80,6 +80,7 @@ public class FamilyLocationService extends Service {
     private String familyId;
     private String userId;
     private boolean requestingUpdates;
+    private boolean trackingProfileChangeInProgress;
     @NonNull private String currentTrackingProfile = PROFILE_NORMAL;
     @Nullable private Location previousMovementLocation;
     @NonNull private String stableMovementType = "UNKNOWN";
@@ -254,12 +255,15 @@ public class FamilyLocationService extends Service {
             desiredProfile = PROFILE_NORMAL;
         }
 
-        if (desiredProfile.equals(currentTrackingProfile)) {
+        if (desiredProfile.equals(currentTrackingProfile)
+                || trackingProfileChangeInProgress) {
             return;
         }
+        trackingProfileChangeInProgress = true;
         fusedLocationClient.removeLocationUpdates(locationCallback)
                 .addOnCompleteListener(task -> {
                     requestingUpdates = false;
+                    trackingProfileChangeInProgress = false;
                     if (LocationSharingStore.isSharingEnabled(this)
                             && hasLocationPermission()) {
                         requestLocationUpdates(desiredProfile);
