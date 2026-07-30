@@ -34,6 +34,12 @@
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
+        <activity
+            android:name=".feature.familylive.SafePlacesActivity"
+            android:exported="false" />
+        <receiver
+            android:name=".geofence.FamilyGeofenceReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".feature.familyaccount.HouseholdManagementActivity"
