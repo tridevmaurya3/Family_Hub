@@ -8,7 +8,14 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 /** A local-only family profile. Cloud sync can be added later without changing this feature's UI. */
-@Entity(tableName = "family_members", indices = {@Index(value = {"name"})})
+@Entity(
+        tableName = "family_members",
+        indices = {
+                @Index(value = {"name"}),
+                @Index(value = {"cloudProfileId"}),
+                @Index(value = {"ownerFamilyId"})
+        }
+)
 public class FamilyMember {
 
     public static final String ROLE_GUARDIAN = "GUARDIAN";
@@ -70,6 +77,17 @@ public class FamilyMember {
     public boolean isGuardian;
 
     public long createdAt;
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''")
+    public String cloudProfileId = "";
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''")
+    public String ownerFamilyId = "";
+
+    @ColumnInfo(defaultValue = "0")
+    public long updatedAt;
 
     /** Runtime-only marker for an authorised Firebase account row. */
     @Ignore
