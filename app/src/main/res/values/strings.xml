@@ -931,7 +931,8 @@ Last update: %6$s</string>
     <string name="family_live_movement_speed">%1$s · %2$d km/h</string>
     <string name="family_map_title">Family map</string>
     <string name="family_map_back">Back</string>
-    <string name="family_map_retry">Retry</string>
+    <string name="family_map_retry">Refresh</string>
+    <string name="family_map_back_description">Go back</string>
     <string name="family_map_all_members">All members</string>
     <string name="family_map_normal">Normal</string>
     <string name="family_map_satellite">Satellite</string>
