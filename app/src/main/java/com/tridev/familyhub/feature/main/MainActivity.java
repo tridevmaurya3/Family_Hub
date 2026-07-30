@@ -8,6 +8,10 @@ import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 
@@ -39,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        applySystemBarInsets();
 
         binding.fabAdd.setOnClickListener(v -> {
             Fragment active = getSupportFragmentManager().findFragmentById(R.id.main_content);
@@ -74,6 +79,33 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
         }
+    }
+
+    private void applySystemBarInsets() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        ViewCompat.setOnApplyWindowInsetsListener(
+                binding.getRoot(),
+                (view, windowInsets) -> {
+                    Insets safeInsets = windowInsets.getInsets(
+                            WindowInsetsCompat.Type.systemBars()
+                                    | WindowInsetsCompat.Type.displayCutout()
+                    );
+                    binding.mainContent.setPadding(
+                            safeInsets.left,
+                            safeInsets.top,
+                            safeInsets.right,
+                            0
+                    );
+                    binding.bottomNavigation.setPadding(
+                            safeInsets.left,
+                            0,
+                            safeInsets.right,
+                            safeInsets.bottom
+                    );
+                    return windowInsets;
+                }
+        );
+        ViewCompat.requestApplyInsets(binding.getRoot());
     }
 
     @Override
