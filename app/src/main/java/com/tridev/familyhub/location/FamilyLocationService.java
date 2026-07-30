@@ -9,8 +9,10 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -188,12 +190,15 @@ public class FamilyLocationService extends Service {
             return;
         }
 
+        BatterySnapshot battery = readBatterySnapshot();
         Map<String, Object> values = new HashMap<>();
         values.put("uid", userId);
         values.put("familyId", familyId);
         values.put("latitude", location.getLatitude());
         values.put("longitude", location.getLongitude());
         values.put("accuracy", (double) location.getAccuracy());
+        values.put("batteryPercentage", battery.percentage);
+        values.put("charging", battery.charging);
         values.put("online", true);
         values.put("sharingEnabled", true);
         values.put("clientTimestamp", System.currentTimeMillis());
@@ -239,6 +244,47 @@ public class FamilyLocationService extends Service {
                 this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @NonNull
+    private BatterySnapshot readBatterySnapshot() {
+        Intent batteryIntent = registerReceiver(
+                null,
+                new IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        );
+        if (batteryIntent == null) {
+            return new BatterySnapshot(-1, false);
+        }
+
+        int level = batteryIntent.getIntExtra(
+                BatteryManager.EXTRA_LEVEL,
+                -1
+        );
+        int scale = batteryIntent.getIntExtra(
+                BatteryManager.EXTRA_SCALE,
+                -1
+        );
+        int status = batteryIntent.getIntExtra(
+                BatteryManager.EXTRA_STATUS,
+                BatteryManager.BATTERY_STATUS_UNKNOWN
+        );
+        int percentage = level >= 0 && scale > 0
+                ? Math.min(100, Math.round(level * 100F / scale))
+                : -1;
+        boolean charging =
+                status == BatteryManager.BATTERY_STATUS_CHARGING
+                        || status == BatteryManager.BATTERY_STATUS_FULL;
+        return new BatterySnapshot(percentage, charging);
+    }
+
+    private static final class BatterySnapshot {
+        final int percentage;
+        final boolean charging;
+
+        BatterySnapshot(int percentage, boolean charging) {
+            this.percentage = percentage;
+            this.charging = charging;
+        }
     }
 
     private void createNotificationChannel() {
