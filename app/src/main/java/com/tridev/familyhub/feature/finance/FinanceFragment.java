@@ -20,6 +20,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ui.SemanticValueStyler;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.tridev.familyhub.data.repository.FinanceRepository;
@@ -131,6 +132,18 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             binding.monthBalanceValue.setText(currencyFormatter.format(
                     safeSummary.income - safeSummary.expense
             ));
+            SemanticValueStyler.apply(
+                    binding.monthExpenseValue,
+                    -safeSummary.expense
+            );
+            SemanticValueStyler.apply(
+                    binding.monthIncomeValue,
+                    safeSummary.income
+            );
+            SemanticValueStyler.apply(
+                    binding.monthBalanceValue,
+                    safeSummary.income - safeSummary.expense
+            );
         });
     }
 
