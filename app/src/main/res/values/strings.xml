@@ -858,4 +858,23 @@
     <string name="family_live_notification_title">Family Live sharing is active</string>
     <string name="family_live_notification_text">Your location is being shared with authorised family members.</string>
     <string name="family_live_stop_sharing">Stop sharing</string>
+    <string name="family_live_start_sharing">Start sharing</string>
+    <string name="family_live_sharing_off">Location sharing is off</string>
+    <string name="family_live_sharing_off_detail">Only you can start sharing. Nothing is tracked secretly.</string>
+    <string name="family_live_sharing_on">Location sharing is on</string>
+    <string name="family_live_sharing_on_detail">Authorised members of your family can see your latest location.</string>
+    <string name="family_live_sharing_starting">Starting secure sharing…</string>
+    <string name="family_live_permission_title">Share your location?</string>
+    <string name="family_live_permission_explanation">Family Hub needs location permission to update authorised family members. Sharing remains visible through a persistent notification and can be stopped at any time.</string>
+    <string name="family_live_continue">Continue</string>
+    <string name="family_live_permission_required">Permission required</string>
+    <string name="family_live_location_denied">Location permission is off. Open App settings, choose Permissions → Location and allow access.</string>
+    <string name="family_live_notification_denied">Notification permission is required so location sharing always remains visible.</string>
+    <string name="family_live_background_title">Allow background location</string>
+    <string name="family_live_background_explanation">For updates while the screen is off, open App settings → Permissions → Location and choose “Allow all the time”. Return to Family Live afterwards.</string>
+    <string name="family_live_open_app_settings">Open app settings</string>
+    <string name="family_live_gps_title">Turn on device location</string>
+    <string name="family_live_gps_explanation">Device location/GPS is off. Turn it on before starting Family Live sharing.</string>
+    <string name="family_live_open_location_settings">Open location settings</string>
+    <string name="family_live_settings_not_ready">Required permission or device location is still off.</string>
 </resources>
