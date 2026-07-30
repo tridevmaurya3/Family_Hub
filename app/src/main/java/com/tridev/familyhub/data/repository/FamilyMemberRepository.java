@@ -122,7 +122,8 @@ public class FamilyMemberRepository {
                             );
                             if (local == null) {
                                 memberDao.insert(remote);
-                            } else if (remote.updatedAt > local.updatedAt) {
+                            } else if (!local.syncPending
+                                    && remote.updatedAt > local.updatedAt) {
                                 long localId = local.id;
                                 String localPhoto = local.profilePhotoUri;
                                 copyProfile(remote, local);
@@ -151,9 +152,7 @@ public class FamilyMemberRepository {
                             Long cloudTimestamp = remoteUpdatedAt.get(
                                     local.cloudProfileId
                             );
-                            if (local.syncPending
-                                    || (cloudTimestamp == null
-                                    && local.updatedAt > 0L)) {
+                            if (local.syncPending) {
                                 pendingUploads.add(local);
                             }
                         }
