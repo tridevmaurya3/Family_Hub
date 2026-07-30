@@ -970,6 +970,17 @@ Last update: %6$s</string>
     <string name="family_map_permission_denied">Location permission is denied. Family markers remain available without the my-location layer.</string>
     <string name="family_map_current_unavailable">Your shared marker is unavailable.</string>
     <string name="family_map_selected_unavailable">This member is not currently sharing a valid map location.</string>
+    <string name="safe_place_card_detail">%1$s · %2$d m · %3$s</string>
+    <string name="safe_place_alerts_on">Alerts on</string>
+    <string name="safe_place_alerts_off">Alerts off</string>
+    <string name="safe_place_edit">Edit</string>
+    <string name="safe_place_enable">Enable</string>
+    <string name="safe_place_disable">Disable</string>
+    <string name="safe_place_delete">Delete</string>
+    <string name="safe_place_update">Update Safe Place</string>
+    <string name="safe_place_delete_title">Delete Safe Place?</string>
+    <string name="safe_place_delete_message">Delete %1$s and remove its geofence alert from this device?</string>
+    <string name="safe_place_delete_error">Safe Place could not be deleted.</string>
     <string name="family_map_safe_place_enabled">Safe Place alerts enabled</string>
     <string name="family_map_safe_place_disabled">Safe Place alerts disabled</string>
     <string name="family_map_yes">Yes</string>
