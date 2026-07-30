@@ -724,6 +724,10 @@ public class DashboardFragment extends Fragment {
         binding.dashboardMonthlyExpenseValue.setText(
                 currencyFormatter.format(stats.getExpense())
         );
+        com.tridev.familyhub.core.ui.SemanticValueStyler.apply(
+                binding.dashboardMonthlyExpenseValue,
+                -stats.getExpense()
+        );
 
         String detail = getString(
                 R.string.dashboard_finance_detail,
@@ -740,6 +744,7 @@ public class DashboardFragment extends Fragment {
                         R.drawable.ic_wallet
                 )
         );
+        financeStatusCard.setValueColorBySign(stats.getBalance());
     }
 
     private void renderCounts(@NonNull DashboardStats stats) {
