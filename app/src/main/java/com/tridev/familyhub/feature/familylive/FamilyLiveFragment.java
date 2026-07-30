@@ -160,6 +160,10 @@ public class FamilyLiveFragment extends Fragment {
         binding.familyLiveRefresh.setOnRefreshListener(
                 this::refreshFamilyLive
         );
+        binding.buttonRefreshList.setOnClickListener(ignored -> {
+            binding.familyLiveRefresh.setRefreshing(true);
+            refreshFamilyLive();
+        });
         binding.viewToggle.addOnButtonCheckedListener(
                 (group, checkedId, isChecked) -> {
                     if (!isChecked) {
