@@ -144,13 +144,6 @@ public class FamilyLiveAdapter
                 R.color.fh_module_planner_container,
                 R.color.fh_module_health_container
         };
-        int[] strokes = {
-                R.color.fh_module_family,
-                R.color.fh_module_grocery,
-                R.color.fh_module_documents,
-                R.color.fh_module_planner,
-                R.color.fh_module_health
-        };
         int paletteIndex = position % backgrounds.length;
         Context context = holder.itemView.getContext();
         holder.card.setCardBackgroundColor(ContextCompat.getColor(
@@ -159,7 +152,7 @@ public class FamilyLiveAdapter
         ));
         holder.card.setStrokeColor(ContextCompat.getColor(
                 context,
-                strokes[paletteIndex]
+                R.color.fh_outline_variant
         ));
     }
 
