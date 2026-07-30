@@ -928,6 +928,7 @@
     <string name="family_live_filter_live">Live</string>
     <string name="family_live_filter_stale">Stale</string>
     <string name="family_live_filter_attention">Attention</string>
+    <string name="family_live_refresh">Refresh</string>
     <string name="family_live_location_accuracy">Live location · accuracy about %1$d m</string>
     <string name="family_live_place_with_accuracy">%1$s · accuracy about %2$d m</string>
     <string name="family_live_sync_error">Family Live could not sync. Showing available local information.</string>
