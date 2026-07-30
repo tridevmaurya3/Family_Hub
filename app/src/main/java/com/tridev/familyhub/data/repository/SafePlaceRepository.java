@@ -13,6 +13,8 @@ import com.tridev.familyhub.data.local.entity.SafePlace;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class SafePlaceRepository {
     public interface ListCallback {
@@ -27,23 +29,35 @@ public final class SafePlaceRepository {
     private final SafePlaceDao dao;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public SafePlaceRepository(@NonNull Context context) {
         dao = FamilyHubDatabase.getInstance(context).safePlaceDao();
     }
 
     public void loadAll(@NonNull ListCallback callback) {
-        executor.execute(() -> {
-            List<SafePlace> places = dao.getAll();
-            main.post(() -> callback.onLoaded(places));
-        });
+        if (closed.get()) return;
+        try {
+            executor.execute(() -> {
+                List<SafePlace> places = dao.getAll();
+                main.post(() -> {
+                    if (!closed.get()) callback.onLoaded(places);
+                });
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Repository was closed between the guard and task submission.
+        }
     }
 
     public void save(@NonNull SafePlace place, @NonNull SaveCallback callback) {
-        executor.execute(() -> {
+        if (closed.get()) return;
+        try {
+            executor.execute(() -> {
             if (dao.duplicateCount(place.name, place.latitude,
                     place.longitude, place.id) > 0) {
-                main.post(callback::onDuplicate);
+                main.post(() -> {
+                    if (!closed.get()) callback.onDuplicate();
+                });
                 return;
             }
             try {
@@ -58,14 +72,22 @@ public final class SafePlaceRepository {
                     id = place.id;
                 }
                 long result = id;
-                main.post(() -> callback.onSaved(result));
+                main.post(() -> {
+                    if (!closed.get()) callback.onSaved(result);
+                });
             } catch (RuntimeException error) {
-                main.post(callback::onError);
+                main.post(() -> {
+                    if (!closed.get()) callback.onError();
+                });
             }
-        });
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Repository was closed between the guard and task submission.
+        }
     }
 
     public void close() {
+        closed.set(true);
         executor.shutdownNow();
         main.removeCallbacksAndMessages(null);
     }
