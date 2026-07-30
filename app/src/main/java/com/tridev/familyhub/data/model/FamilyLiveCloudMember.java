@@ -19,6 +19,7 @@ public final class FamilyLiveCloudMember {
     @NonNull public final String movementType;
     public final boolean sharingEnabled;
     public final boolean online;
+    @NonNull public final String availabilityReason;
     public final long updatedAt;
 
     public FamilyLiveCloudMember(
@@ -36,6 +37,7 @@ public final class FamilyLiveCloudMember {
             @NonNull String movementType,
             boolean sharingEnabled,
             boolean online,
+            @NonNull String availabilityReason,
             long updatedAt
     ) {
         this.uid = uid;
@@ -52,6 +54,7 @@ public final class FamilyLiveCloudMember {
         this.movementType = movementType;
         this.sharingEnabled = sharingEnabled;
         this.online = online;
+        this.availabilityReason = availabilityReason;
         this.updatedAt = updatedAt;
     }
 }
