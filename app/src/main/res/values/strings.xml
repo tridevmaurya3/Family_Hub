@@ -880,4 +880,12 @@
     <string name="family_live_location_last_known">Last known location — update is stale</string>
     <string name="family_live_location_accuracy">Live location · accuracy about %1$d m</string>
     <string name="family_live_sync_error">Family Live could not sync. Showing available local information.</string>
+    <string name="family_live_map_view">Map view</string>
+    <string name="family_live_map_loading">Loading family map</string>
+    <string name="family_live_map_no_locations">No authorised member is currently sharing a location.</string>
+    <string name="family_live_map_recenter">Recenter</string>
+    <string name="family_live_map_type_satellite">Satellite</string>
+    <string name="family_live_map_type_normal">Normal map</string>
+    <string name="family_live_map_marker_live">Live location</string>
+    <string name="family_live_map_marker_stale">Last known location</string>
 </resources>
