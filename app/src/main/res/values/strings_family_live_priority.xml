@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="family_live_filter_all_count">All %1$d</string>
+    <string name="family_live_filter_live_count">Live %1$d</string>
+    <string name="family_live_filter_stale_count">Stale %1$d</string>
+    <string name="family_live_filter_attention_count">Attention %1$d</string>
+
+    <string name="family_live_sort_priority">Priority order</string>
+    <string name="family_live_sort_live">Travelling and newest first</string>
+    <string name="family_live_sort_stale">Oldest updates first</string>
+    <string name="family_live_sort_attention">Urgent issues first</string>
+    <string name="family_live_sort_result_format">%1$s • %2$d shown</string>
+
+</resources>
