@@ -39,8 +39,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvFamilyLiveSubtitle" />
 
-    <!-- Retained for the existing fragment binding while the new summary
-         component independently displays unfiltered total/live metrics. -->
     <TextView
         android:id="@+id/tvMemberCount"
         android:layout_width="0dp"
@@ -257,11 +255,27 @@
         app:layout_constraintTop_toBottomOf="@id/familyLiveFilterRow">
 
         <TextView
+            android:id="@+id/tvListHeaderTitle"
             style="@style/TextAppearance.FamilyHub.SectionTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/family_live_members_title" />
+
+        <TextView
+            android:id="@+id/tvListSortState"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_8"
+            android:background="@drawable/bg_status_pill"
+            android:paddingStart="@dimen/space_8"
+            android:paddingTop="@dimen/space_4"
+            android:paddingEnd="@dimen/space_8"
+            android:paddingBottom="@dimen/space_4"
+            android:text="@string/family_live_sort_priority"
+            android:textColor="@color/fh_module_family"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
