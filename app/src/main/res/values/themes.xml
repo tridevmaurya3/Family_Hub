@@ -23,7 +23,7 @@
         <item name="android:fontFamily">sans</item>
         <item name="materialButtonStyle">@style/Widget.FamilyHub.Button.Primary</item>
         <item name="textInputStyle">@style/Widget.FamilyHub.TextInputLayout</item>
-        <item name="android:navigationBarColor">@color/fh_surface</item>
+        <item name="android:navigationBarColor">@color/fh_background</item>
         <item name="android:statusBarColor">@color/fh_background</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowActionModeOverlay">true</item>
@@ -39,6 +39,18 @@
 
     <style name="Widget.FamilyHub.BottomNavigation.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
         <item name="android:color">@color/fh_primary_container</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.BottomNavigation.Active" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textColor">@color/fh_primary</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.FamilyHub.BottomNavigation.Inactive" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textColor">@color/fh_on_surface_variant</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textStyle">normal</item>
     </style>
 
     <style name="Widget.FamilyHub.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
