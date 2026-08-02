@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="family_live_sharing_overline">Private family location</string>
-    <string name="family_live_sharing_privacy">Visible only to approved family members</string>
+    <string name="family_live_sharing_overline">Family location sharing</string>
+    <string name="family_live_sharing_privacy">Only approved family members can view this</string>
     <string name="family_live_view_title">Choose view</string>
-    <string name="family_live_view_detail">Switch between the priority list and the full family map.</string>
+    <string name="family_live_view_detail">Priority list or family map</string>
     <string name="family_live_refresh_content_description">Refresh Family Live members</string>
 
 </resources>
