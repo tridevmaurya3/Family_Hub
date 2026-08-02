@@ -297,7 +297,9 @@ public final class FamilyLiveSummaryView extends FrameLayout {
         int detail = color(detailRes);
 
         summarySurface.setCardBackgroundColor(container);
-        summarySurface.setStrokeColor(accent);
+        summarySurface.setStrokeColor(
+                color(R.color.fh_outline_variant)
+        );
         summaryIconContainer.setCardBackgroundColor(
                 color(R.color.fh_surface)
         );
