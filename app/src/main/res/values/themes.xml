@@ -43,13 +43,13 @@
 
     <style name="TextAppearance.FamilyHub.BottomNavigation.Active" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:textColor">@color/fh_primary</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">10sp</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="TextAppearance.FamilyHub.BottomNavigation.Inactive" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:textColor">@color/fh_on_surface_variant</item>
-        <item name="android:textSize">10sp</item>
+        <item name="android:textSize">9sp</item>
         <item name="android:textStyle">normal</item>
     </style>
 
