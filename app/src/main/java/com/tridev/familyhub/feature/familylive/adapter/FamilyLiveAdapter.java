@@ -25,8 +25,8 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Displays premium Family Live member cards with clear location,
- * availability, movement, battery, network and freshness states.
+ * Displays premium Family Live member cards with truthful availability,
+ * movement, battery, network and freshness states.
  */
 public class FamilyLiveAdapter
         extends RecyclerView.Adapter<FamilyLiveAdapter.ViewHolder> {
@@ -79,6 +79,9 @@ public class FamilyLiveAdapter
     ) {
         FamilyLiveMemberUiModel member = members.get(position);
         Context context = holder.itemView.getContext();
+        String reason = FamilyLiveAvailability.normalize(
+                member.getAvailabilityReason()
+        );
 
         holder.itemView.setOnClickListener(ignored -> {
             if (onMemberClickListener != null) {
@@ -98,10 +101,9 @@ public class FamilyLiveAdapter
                 )
         );
 
-        holder.status.setText(
-                FamilyLiveAvailability.labelRes(
-                        member.getAvailabilityReason()
-                )
+        holder.status.setText(FamilyLiveAvailability.labelRes(reason));
+        holder.statusDetail.setText(
+                FamilyLiveAvailability.detailRes(reason)
         );
 
         String movementLabel = displayLabel(
@@ -122,11 +124,11 @@ public class FamilyLiveAdapter
                 )
         );
 
-        holder.connection.setText(
+        int connectionState = FamilyLiveAvailability.connectionState(
+                reason,
                 member.isInternetAvailable()
-                        ? R.string.family_live_internet_available
-                        : R.string.family_live_internet_unavailable
         );
+        holder.connection.setText(connectionLabel(connectionState));
 
         holder.lastUpdated.setText(
                 createUpdatedText(
@@ -135,25 +137,18 @@ public class FamilyLiveAdapter
                 )
         );
 
-        applyStatusAppearance(
-                holder,
-                member.getAvailabilityReason()
-        );
-
-        applyMovementAppearance(
-                holder,
-                member.getMovementType()
-        );
-
+        applyStatusAppearance(holder, reason);
+        applyMovementAppearance(holder, member.getMovementType());
         applyBatteryAppearance(
                 holder,
                 member.getBatteryPercentage(),
                 member.isCharging()
         );
-
-        applyConnectionAppearance(
+        applyConnectionAppearance(holder, connectionState);
+        applyLowBatteryAlert(
                 holder,
-                member.isInternetAvailable()
+                member.getBatteryPercentage(),
+                member.isCharging()
         );
     }
 
@@ -164,26 +159,22 @@ public class FamilyLiveAdapter
 
     private void applyStatusAppearance(
             @NonNull ViewHolder holder,
-            String availabilityReason
+            @NonNull String availabilityReason
     ) {
         Context context = holder.itemView.getContext();
-
-        boolean online = FamilyLiveAvailability.isAvailable(
-                availabilityReason
-        );
-        boolean warning = FamilyLiveAvailability.isWarning(
-                availabilityReason
-        );
 
         int foregroundRes;
         int backgroundRes;
 
-        if (online) {
+        if (FamilyLiveAvailability.isAvailable(availabilityReason)) {
             foregroundRes = R.color.fh_success;
             backgroundRes = R.color.fh_success_container;
-        } else if (warning) {
+        } else if (FamilyLiveAvailability.isWarning(availabilityReason)) {
             foregroundRes = R.color.fh_warning;
             backgroundRes = R.color.fh_warning_container;
+        } else if (FamilyLiveAvailability.isPaused(availabilityReason)) {
+            foregroundRes = R.color.fh_primary;
+            backgroundRes = R.color.fh_primary_container;
         } else {
             foregroundRes = R.color.fh_error;
             backgroundRes = R.color.fh_error_container;
@@ -207,17 +198,16 @@ public class FamilyLiveAdapter
         holder.card.setStrokeColor(foreground);
 
         holder.status.setTextColor(foreground);
+        holder.statusDetail.setTextColor(foreground);
 
         ViewCompat.setBackgroundTintList(
                 holder.status,
                 ColorStateList.valueOf(background)
         );
-
         ViewCompat.setBackgroundTintList(
                 holder.statusDot,
                 ColorStateList.valueOf(foreground)
         );
-
         ViewCompat.setBackgroundTintList(
                 holder.avatar,
                 ColorStateList.valueOf(foreground)
@@ -229,7 +219,8 @@ public class FamilyLiveAdapter
             String movementType
     ) {
         boolean unavailable = movementType == null
-                || movementType.trim().isEmpty();
+                || movementType.trim().isEmpty()
+                || "UNKNOWN".equalsIgnoreCase(movementType);
 
         applyMetricAppearance(
                 holder,
@@ -259,7 +250,10 @@ public class FamilyLiveAdapter
         } else if (charging) {
             backgroundRes = R.color.fh_primary_container;
             foregroundRes = R.color.fh_primary;
-        } else if (batteryPercentage <= 20) {
+        } else if (FamilyLiveAvailability.isLowBattery(
+                batteryPercentage,
+                false
+        )) {
             backgroundRes = R.color.fh_error_container;
             foregroundRes = R.color.fh_error;
         } else if (batteryPercentage <= 40) {
@@ -282,19 +276,70 @@ public class FamilyLiveAdapter
 
     private void applyConnectionAppearance(
             @NonNull ViewHolder holder,
-            boolean internetAvailable
+            int connectionState
     ) {
+        int backgroundRes;
+        int foregroundRes;
+
+        if (connectionState
+                == FamilyLiveAvailability.CONNECTION_CONNECTED) {
+            backgroundRes = R.color.fh_success_container;
+            foregroundRes = R.color.fh_success;
+        } else if (connectionState
+                == FamilyLiveAvailability.CONNECTION_OFFLINE) {
+            backgroundRes = R.color.fh_error_container;
+            foregroundRes = R.color.fh_error;
+        } else {
+            backgroundRes = R.color.fh_surface_variant;
+            foregroundRes = R.color.fh_text_secondary;
+        }
+
         applyMetricAppearance(
                 holder,
                 holder.connectionCard,
                 holder.connectionIcon,
                 holder.connection,
-                internetAvailable
-                        ? R.color.fh_success_container
-                        : R.color.fh_error_container,
-                internetAvailable
-                        ? R.color.fh_success
-                        : R.color.fh_error
+                backgroundRes,
+                foregroundRes
+        );
+    }
+
+    private void applyLowBatteryAlert(
+            @NonNull ViewHolder holder,
+            int batteryPercentage,
+            boolean charging
+    ) {
+        boolean lowBattery = FamilyLiveAvailability.isLowBattery(
+                batteryPercentage,
+                charging
+        );
+
+        holder.lowBatteryAlert.setVisibility(
+                lowBattery ? View.VISIBLE : View.GONE
+        );
+
+        if (!lowBattery) {
+            return;
+        }
+
+        holder.lowBatteryAlert.setText(
+                holder.itemView.getContext().getString(
+                        R.string.family_live_low_battery_alert,
+                        batteryPercentage
+                )
+        );
+        holder.lowBatteryAlert.setTextColor(
+                ContextCompat.getColor(
+                        holder.itemView.getContext(),
+                        R.color.fh_error
+                )
+        );
+        ViewCompat.setBackgroundTintList(
+                holder.lowBatteryAlert,
+                ColorStateList.valueOf(ContextCompat.getColor(
+                        holder.itemView.getContext(),
+                        R.color.fh_error_container
+                ))
         );
     }
 
@@ -323,10 +368,20 @@ public class FamilyLiveAdapter
                         R.color.fh_outline_variant
                 )
         );
-        icon.setImageTintList(
-                ColorStateList.valueOf(foreground)
-        );
+        icon.setImageTintList(ColorStateList.valueOf(foreground));
         value.setTextColor(foreground);
+    }
+
+    private int connectionLabel(int connectionState) {
+        if (connectionState
+                == FamilyLiveAvailability.CONNECTION_CONNECTED) {
+            return R.string.family_live_network_connected;
+        }
+        if (connectionState
+                == FamilyLiveAvailability.CONNECTION_OFFLINE) {
+            return R.string.family_live_network_off;
+        }
+        return R.string.family_live_network_unknown;
     }
 
     @NonNull
@@ -374,7 +429,6 @@ public class FamilyLiveAdapter
                 0L,
                 System.currentTimeMillis() - updatedTime
         );
-
         long minutes = TimeUnit.MILLISECONDS.toMinutes(difference);
 
         if (minutes < 1L) {
@@ -391,7 +445,6 @@ public class FamilyLiveAdapter
         }
 
         long hours = TimeUnit.MILLISECONDS.toHours(difference);
-
         if (hours < 24L) {
             return context.getString(
                     R.string.family_live_updated_hours,
@@ -465,6 +518,8 @@ public class FamilyLiveAdapter
         private final TextView memberName;
         private final TextView location;
         private final TextView status;
+        private final TextView statusDetail;
+        private final TextView lowBatteryAlert;
         private final TextView battery;
         private final TextView movement;
         private final TextView connection;
@@ -489,6 +544,10 @@ public class FamilyLiveAdapter
             memberName = itemView.findViewById(R.id.tvMemberName);
             location = itemView.findViewById(R.id.tvLocation);
             status = itemView.findViewById(R.id.tvStatus);
+            statusDetail = itemView.findViewById(R.id.tvStatusDetail);
+            lowBatteryAlert = itemView.findViewById(
+                    R.id.tvLowBatteryAlert
+            );
             battery = itemView.findViewById(R.id.tvBattery);
             movement = itemView.findViewById(R.id.tvMovement);
             connection = itemView.findViewById(R.id.tvConnection);
