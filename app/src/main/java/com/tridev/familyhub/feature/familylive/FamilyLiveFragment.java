@@ -3,6 +3,7 @@ package com.tridev.familyhub.feature.familylive;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
@@ -21,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -74,6 +76,9 @@ public class FamilyLiveFragment extends Fragment {
     @Nullable private GoogleMap googleMap;
     @NonNull
     private List<FamilyLiveCloudMember> latestCloudMembers =
+            new ArrayList<>();
+    @NonNull
+    private List<FamilyLiveMemberData> latestLocalMembers =
             new ArrayList<>();
 
     @Override
@@ -206,9 +211,7 @@ public class FamilyLiveFragment extends Fragment {
                         memberQuery = value == null
                                 ? ""
                                 : value.toString().trim();
-                        if (cloudDataReceived) {
-                            renderCloudMembers(latestCloudMembers);
-                        }
+                        renderCurrentMemberData();
                     }
 
                     @Override
@@ -221,9 +224,7 @@ public class FamilyLiveFragment extends Fragment {
                     selectedFilterId = checkedIds.isEmpty()
                             ? R.id.chipFamilyLiveAll
                             : checkedIds.get(0);
-                    if (cloudDataReceived) {
-                        renderCloudMembers(latestCloudMembers);
-                    }
+                    renderCurrentMemberData();
                 }
         );
         binding.familyLiveFilterGroup.check(selectedFilterId);
@@ -236,6 +237,8 @@ public class FamilyLiveFragment extends Fragment {
         });
 
         updateSharingUi();
+        updateFilterCounts(0, 0, 0, 0);
+        updateListSortState(0);
         loadLocalFamilyLiveMembers();
     }
 
@@ -268,41 +271,80 @@ public class FamilyLiveFragment extends Fragment {
         super.onStop();
     }
 
+    private void renderCurrentMemberData() {
+        if (binding == null) {
+            return;
+        }
+        if (cloudDataReceived) {
+            renderCloudMembers(latestCloudMembers);
+        } else {
+            renderLocalMembers(latestLocalMembers);
+        }
+    }
+
     private void renderCloudMembers(
             @NonNull List<FamilyLiveCloudMember> members
     ) {
         if (binding == null) {
             return;
         }
+
         binding.familyLiveRefresh.setRefreshing(false);
         cloudDataReceived = true;
         latestCloudMembers = new ArrayList<>(members);
+
         List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
         long now = System.currentTimeMillis();
+        String normalizedQuery = memberQuery.toLowerCase(Locale.ROOT);
 
-        String normalizedQuery =
-                memberQuery.toLowerCase(Locale.ROOT);
+        int liveCount = 0;
+        int staleCount = 0;
+        int attentionCount = 0;
+
         for (FamilyLiveCloudMember member : members) {
+            String availabilityReason = FamilyLiveAvailability.resolve(
+                    member,
+                    now,
+                    LIVE_FRESHNESS_MS
+            );
+
+            if (FamilyLiveAvailability.isAvailable(availabilityReason)) {
+                liveCount++;
+            }
+            if (FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
+                    availabilityReason
+            )) {
+                staleCount++;
+            }
+            if (FamilyLiveAvailability.needsAttention(
+                    availabilityReason,
+                    member.batteryPercentage,
+                    member.charging
+            )) {
+                attentionCount++;
+            }
+
             String searchable = (
                     member.displayName
                             + " "
                             + member.role
                             + " "
                             + member.placeLabel
-            )
-                    .toLowerCase(Locale.ROOT);
+            ).toLowerCase(Locale.ROOT);
+
             if (!normalizedQuery.isEmpty()
                     && !searchable.contains(normalizedQuery)) {
                 continue;
             }
-            String availabilityReason = FamilyLiveAvailability.resolve(
-                    member,
-                    now,
-                    LIVE_FRESHNESS_MS
-            );
-            if (!matchesSelectedFilter(availabilityReason)) {
+
+            if (!matchesSelectedFilter(
+                    availabilityReason,
+                    member.batteryPercentage,
+                    member.charging
+            )) {
                 continue;
             }
+
             boolean stale = FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
                     availabilityReason
             );
@@ -345,18 +387,139 @@ public class FamilyLiveFragment extends Fragment {
                     availabilityReason,
                     member.batteryPercentage,
                     member.charging,
-                    currentlyOnline,
+                    member.online,
                     movementDisplay(member),
                     member.updatedAt
             ));
         }
 
+        updateFilterCounts(
+                members.size(),
+                liveCount,
+                staleCount,
+                attentionCount
+        );
+        sortMemberModels(uiModels);
         renderMemberList(uiModels);
         renderMapMarkers();
     }
 
+    private void renderLocalMembers(
+            @NonNull List<FamilyLiveMemberData> members
+    ) {
+        if (binding == null || cloudDataReceived) {
+            return;
+        }
+
+        List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        String normalizedQuery = memberQuery.toLowerCase(Locale.ROOT);
+
+        int liveCount = 0;
+        int staleCount = 0;
+        int attentionCount = 0;
+
+        for (FamilyLiveMemberData member : members) {
+            String availabilityReason = resolveLocalAvailability(member, now);
+
+            if (FamilyLiveAvailability.isAvailable(availabilityReason)) {
+                liveCount++;
+            }
+            if (FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
+                    availabilityReason
+            )) {
+                staleCount++;
+            }
+            if (FamilyLiveAvailability.needsAttention(
+                    availabilityReason,
+                    member.batteryPercentage,
+                    member.isCharging
+            )) {
+                attentionCount++;
+            }
+
+            String searchable = (
+                    member.memberName
+                            + " "
+                            + member.relation
+                            + " "
+                            + member.currentPlaceName
+            ).toLowerCase(Locale.ROOT);
+
+            if (!normalizedQuery.isEmpty()
+                    && !searchable.contains(normalizedQuery)) {
+                continue;
+            }
+
+            if (!matchesSelectedFilter(
+                    availabilityReason,
+                    member.batteryPercentage,
+                    member.isCharging
+            )) {
+                continue;
+            }
+
+            boolean locationVisible =
+                    member.isLocationSharingEnabled && member.hasLocation;
+            String location = locationVisible
+                    ? member.currentPlaceName
+                    : getString(R.string.family_live_location_off);
+
+            uiModels.add(new FamilyLiveMemberUiModel(
+                    member.familyMemberId,
+                    "",
+                    member.memberName,
+                    location,
+                    FamilyLiveAvailability.isAvailable(availabilityReason)
+                            ? "ONLINE"
+                            : "OFFLINE",
+                    availabilityReason,
+                    member.batteryPercentage,
+                    member.isCharging,
+                    member.hasInternet,
+                    member.movementType,
+                    member.lastUpdatedAt
+            ));
+        }
+
+        updateFilterCounts(
+                members.size(),
+                liveCount,
+                staleCount,
+                attentionCount
+        );
+        sortMemberModels(uiModels);
+        renderMemberList(uiModels);
+    }
+
+    @NonNull
+    private String resolveLocalAvailability(
+            @NonNull FamilyLiveMemberData member,
+            long now
+    ) {
+        if (!member.isLocationSharingEnabled) {
+            return FamilyLiveAvailability.SHARING_PAUSED;
+        }
+        if (!"ONLINE".equalsIgnoreCase(member.onlineStatus)) {
+            return FamilyLiveAvailability.DEVICE_OFFLINE;
+        }
+        if (!member.hasInternet) {
+            return FamilyLiveAvailability.INTERNET_UNAVAILABLE;
+        }
+        if (member.lastUpdatedAt <= 0L
+                || now - member.lastUpdatedAt > LIVE_FRESHNESS_MS) {
+            return FamilyLiveAvailability.NO_RECENT_UPDATE;
+        }
+        if (!member.hasLocation) {
+            return FamilyLiveAvailability.LOCATION_UNAVAILABLE;
+        }
+        return FamilyLiveAvailability.AVAILABLE;
+    }
+
     private boolean matchesSelectedFilter(
-            @NonNull String availabilityReason
+            @NonNull String availabilityReason,
+            int batteryPercentage,
+            boolean charging
     ) {
         if (selectedFilterId == R.id.chipFamilyLiveLive) {
             return FamilyLiveAvailability.isAvailable(availabilityReason);
@@ -367,12 +530,203 @@ public class FamilyLiveFragment extends Fragment {
             );
         }
         if (selectedFilterId == R.id.chipFamilyLiveAttention) {
-            return !FamilyLiveAvailability.isAvailable(availabilityReason)
-                    && !FamilyLiveAvailability.NO_RECENT_UPDATE.equals(
-                            availabilityReason
-                    );
+            return FamilyLiveAvailability.needsAttention(
+                    availabilityReason,
+                    batteryPercentage,
+                    charging
+            );
         }
         return true;
+    }
+
+    private void sortMemberModels(
+            @NonNull List<FamilyLiveMemberUiModel> members
+    ) {
+        members.sort((first, second) -> {
+            int priorityCompare = Integer.compare(
+                    priorityOf(first),
+                    priorityOf(second)
+            );
+            if (priorityCompare != 0) {
+                return priorityCompare;
+            }
+
+            boolean firstLowBattery = FamilyLiveAvailability.isLowBattery(
+                    first.getBatteryPercentage(),
+                    first.isCharging()
+            );
+            boolean secondLowBattery = FamilyLiveAvailability.isLowBattery(
+                    second.getBatteryPercentage(),
+                    second.isCharging()
+            );
+            if (firstLowBattery && secondLowBattery) {
+                int batteryCompare = Integer.compare(
+                        first.getBatteryPercentage(),
+                        second.getBatteryPercentage()
+                );
+                if (batteryCompare != 0) {
+                    return batteryCompare;
+                }
+            }
+
+            if (selectedFilterId == R.id.chipFamilyLiveLive) {
+                int travellingCompare = Boolean.compare(
+                        isTravelling(second),
+                        isTravelling(first)
+                );
+                if (travellingCompare != 0) {
+                    return travellingCompare;
+                }
+            }
+
+            boolean firstNeedsAttention =
+                    FamilyLiveAvailability.needsAttention(
+                            first.getAvailabilityReason(),
+                            first.getBatteryPercentage(),
+                            first.isCharging()
+                    );
+            boolean secondNeedsAttention =
+                    FamilyLiveAvailability.needsAttention(
+                            second.getAvailabilityReason(),
+                            second.getBatteryPercentage(),
+                            second.isCharging()
+                    );
+
+            int timeCompare;
+            if (firstNeedsAttention || secondNeedsAttention
+                    || selectedFilterId == R.id.chipFamilyLiveStale) {
+                timeCompare = Long.compare(
+                        urgencyTime(first.getLastUpdatedTime()),
+                        urgencyTime(second.getLastUpdatedTime())
+                );
+            } else {
+                timeCompare = Long.compare(
+                        second.getLastUpdatedTime(),
+                        first.getLastUpdatedTime()
+                );
+            }
+            if (timeCompare != 0) {
+                return timeCompare;
+            }
+
+            return String.CASE_INSENSITIVE_ORDER.compare(
+                    first.getMemberName(),
+                    second.getMemberName()
+            );
+        });
+    }
+
+    private int priorityOf(@NonNull FamilyLiveMemberUiModel member) {
+        String reason = FamilyLiveAvailability.normalize(
+                member.getAvailabilityReason()
+        );
+
+        if (FamilyLiveAvailability.isCritical(reason)) {
+            return 0;
+        }
+        if (FamilyLiveAvailability.isLowBattery(
+                member.getBatteryPercentage(),
+                member.isCharging()
+        )) {
+            return 1;
+        }
+        if (FamilyLiveAvailability.isWarning(reason)) {
+            return 2;
+        }
+        if (FamilyLiveAvailability.isPaused(reason)) {
+            return 3;
+        }
+        if (FamilyLiveAvailability.isAvailable(reason)
+                && isTravelling(member)) {
+            return 4;
+        }
+        if (FamilyLiveAvailability.isAvailable(reason)) {
+            return 5;
+        }
+        return 6;
+    }
+
+    private boolean isTravelling(
+            @NonNull FamilyLiveMemberUiModel member
+    ) {
+        String movement = member.getMovementType();
+        return movement != null
+                && movement.toLowerCase(Locale.ROOT).contains("travell");
+    }
+
+    private long urgencyTime(long updatedTime) {
+        return updatedTime <= 0L ? Long.MIN_VALUE : updatedTime;
+    }
+
+    private void updateFilterCounts(
+            int total,
+            int live,
+            int stale,
+            int attention
+    ) {
+        if (binding == null) {
+            return;
+        }
+        binding.chipFamilyLiveAll.setText(getString(
+                R.string.family_live_filter_all_count,
+                total
+        ));
+        binding.chipFamilyLiveLive.setText(getString(
+                R.string.family_live_filter_live_count,
+                live
+        ));
+        binding.chipFamilyLiveStale.setText(getString(
+                R.string.family_live_filter_stale_count,
+                stale
+        ));
+        binding.chipFamilyLiveAttention.setText(getString(
+                R.string.family_live_filter_attention_count,
+                attention
+        ));
+    }
+
+    private void updateListSortState(int shownCount) {
+        if (binding == null) {
+            return;
+        }
+
+        int labelRes;
+        int foregroundRes;
+        int backgroundRes;
+
+        if (selectedFilterId == R.id.chipFamilyLiveLive) {
+            labelRes = R.string.family_live_sort_live;
+            foregroundRes = R.color.fh_success;
+            backgroundRes = R.color.fh_success_container;
+        } else if (selectedFilterId == R.id.chipFamilyLiveStale) {
+            labelRes = R.string.family_live_sort_stale;
+            foregroundRes = R.color.fh_warning;
+            backgroundRes = R.color.fh_warning_container;
+        } else if (selectedFilterId == R.id.chipFamilyLiveAttention) {
+            labelRes = R.string.family_live_sort_attention;
+            foregroundRes = R.color.fh_error;
+            backgroundRes = R.color.fh_error_container;
+        } else {
+            labelRes = R.string.family_live_sort_priority;
+            foregroundRes = R.color.fh_module_family;
+            backgroundRes = R.color.fh_module_family_container;
+        }
+
+        binding.tvListSortState.setText(getString(
+                R.string.family_live_sort_result_format,
+                getString(labelRes),
+                shownCount
+        ));
+        binding.tvListSortState.setTextColor(
+                ContextCompat.getColor(requireContext(), foregroundRes)
+        );
+        ViewCompat.setBackgroundTintList(
+                binding.tvListSortState,
+                ColorStateList.valueOf(ContextCompat.getColor(
+                        requireContext(),
+                        backgroundRes
+                ))
+        );
     }
 
     @Override
@@ -892,13 +1246,17 @@ public class FamilyLiveFragment extends Fragment {
     }
 
     private void loadLocalFamilyLiveMembers() {
+        if (repository == null) {
+            return;
+        }
         repository.loadMemberStatuses(memberStatuses -> {
-            if (binding == null
-                    || familyLiveAdapter == null
-                    || cloudDataReceived) {
+            if (binding == null || familyLiveAdapter == null) {
                 return;
             }
-            renderMemberList(mapToUiModels(memberStatuses));
+            latestLocalMembers = new ArrayList<>(memberStatuses);
+            if (!cloudDataReceived) {
+                renderLocalMembers(latestLocalMembers);
+            }
         });
     }
 
@@ -913,6 +1271,7 @@ public class FamilyLiveFragment extends Fragment {
                 R.string.family_live_member_count,
                 uiModels.size()
         ));
+        updateListSortState(uiModels.size());
 
         boolean isEmpty = uiModels.isEmpty();
         if (mapViewSelected) {
@@ -928,40 +1287,6 @@ public class FamilyLiveFragment extends Fragment {
         }
     }
 
-    @NonNull
-    private List<FamilyLiveMemberUiModel> mapToUiModels(
-            @NonNull List<FamilyLiveMemberData> memberStatuses
-    ) {
-        List<FamilyLiveMemberUiModel> uiModels = new ArrayList<>();
-
-        for (FamilyLiveMemberData data : memberStatuses) {
-            boolean locationVisible =
-                    data.isLocationSharingEnabled && data.hasLocation;
-
-            String location = locationVisible
-                    ? data.currentPlaceName
-                    : getString(R.string.family_live_location_off);
-
-            uiModels.add(new FamilyLiveMemberUiModel(
-                    data.familyMemberId,
-                    "",
-                    data.memberName,
-                    location,
-                    data.onlineStatus,
-                    "ONLINE".equalsIgnoreCase(data.onlineStatus)
-                            ? FamilyLiveAvailability.AVAILABLE
-                            : FamilyLiveAvailability.DEVICE_OFFLINE,
-                    data.batteryPercentage,
-                    data.isCharging,
-                    data.hasInternet,
-                    data.movementType,
-                    data.lastUpdatedAt
-            ));
-        }
-
-        return uiModels;
-    }
-
     @Override
     public void onDestroyView() {
         if (repository != null) {
@@ -972,6 +1297,7 @@ public class FamilyLiveFragment extends Fragment {
         familyLiveAdapter = null;
         googleMap = null;
         latestCloudMembers = new ArrayList<>();
+        latestLocalMembers = new ArrayList<>();
         binding = null;
         super.onDestroyView();
     }
