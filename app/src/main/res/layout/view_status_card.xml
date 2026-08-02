@@ -25,7 +25,7 @@
             android:layout_width="34dp"
             android:layout_height="34dp"
             app:cardBackgroundColor="@color/fh_primary_container"
-            app:cardCornerRadius="@dimen/radius_10"
+            app:cardCornerRadius="@dimen/radius_8"
             app:cardElevation="0dp"
             app:strokeColor="@color/fh_outline_variant"
             app:strokeWidth="@dimen/border_width">
