@@ -1,25 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Comfortable spacing for taller phones and tablets. -->
-    <dimen name="family_live_responsive_top_padding">16dp</dimen>
-    <dimen name="family_live_responsive_horizontal_padding">16dp</dimen>
-    <dimen name="family_live_responsive_section_gap">6dp</dimen>
-    <dimen name="family_live_responsive_header_bottom_padding">6dp</dimen>
+    <!-- Comfortable but compact spacing for taller phones and tablets. -->
+    <dimen name="family_live_responsive_top_padding">12dp</dimen>
+    <dimen name="family_live_responsive_horizontal_padding">8dp</dimen>
+    <dimen name="family_live_responsive_section_gap">4dp</dimen>
+    <dimen name="family_live_responsive_header_bottom_padding">4dp</dimen>
 
-    <dimen name="family_live_summary_padding">12dp</dimen>
-    <dimen name="family_live_summary_icon_container">44dp</dimen>
-    <dimen name="family_live_summary_icon_size">24dp</dimen>
-    <dimen name="family_live_summary_metric_height">52dp</dimen>
-    <dimen name="family_live_summary_metric_gap">3dp</dimen>
+    <dimen name="family_live_summary_padding">10dp</dimen>
+    <dimen name="family_live_summary_icon_container">40dp</dimen>
+    <dimen name="family_live_summary_icon_size">22dp</dimen>
+    <dimen name="family_live_summary_metric_height">48dp</dimen>
+    <dimen name="family_live_summary_metric_gap">2dp</dimen>
 
-    <dimen name="family_live_sharing_padding">10dp</dimen>
-    <dimen name="family_live_sharing_icon_container">42dp</dimen>
-    <dimen name="family_live_sharing_icon_size">22dp</dimen>
+    <dimen name="family_live_sharing_padding">8dp</dimen>
+    <dimen name="family_live_sharing_icon_container">38dp</dimen>
+    <dimen name="family_live_sharing_icon_size">20dp</dimen>
 
-    <dimen name="family_live_controls_padding">8dp</dimen>
-    <dimen name="family_live_filter_row_height">48dp</dimen>
-    <dimen name="family_live_list_top_padding">6dp</dimen>
-    <dimen name="family_live_list_bottom_padding">24dp</dimen>
+    <dimen name="family_live_controls_padding">6dp</dimen>
+    <dimen name="family_live_filter_row_height">46dp</dimen>
+    <dimen name="family_live_list_top_padding">4dp</dimen>
+    <dimen name="family_live_list_bottom_padding">104dp</dimen>
+
+    <dimen name="family_live_member_card_padding">12dp</dimen>
+    <dimen name="family_live_member_metric_height">46dp</dimen>
 
 </resources>
