@@ -8,7 +8,10 @@ import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 
 import java.util.Locale;
 
-/** Single source of truth for truthful Family Live availability states. */
+/**
+ * Single source of truth for Family Live availability, severity,
+ * battery attention and network confidence.
+ */
 public final class FamilyLiveAvailability {
 
     public static final String AVAILABLE = "AVAILABLE";
@@ -20,6 +23,12 @@ public final class FamilyLiveAvailability {
     public static final String DEVICE_OFFLINE = "DEVICE_OFFLINE";
     public static final String NO_RECENT_UPDATE = "NO_RECENT_UPDATE";
     public static final String LOCATION_UNAVAILABLE = "LOCATION_UNAVAILABLE";
+
+    public static final int CONNECTION_UNKNOWN = -1;
+    public static final int CONNECTION_OFFLINE = 0;
+    public static final int CONNECTION_CONNECTED = 1;
+
+    public static final int LOW_BATTERY_PERCENT = 20;
 
     private FamilyLiveAvailability() {
     }
@@ -33,6 +42,7 @@ public final class FamilyLiveAvailability {
         if (!member.sharingEnabled) {
             return SHARING_PAUSED;
         }
+
         String reported = normalize(member.availabilityReason);
         if (PERMISSION_OFF.equals(reported)
                 || GPS_OFF.equals(reported)
@@ -40,16 +50,20 @@ public final class FamilyLiveAvailability {
                 || BATTERY_SAVER.equals(reported)) {
             return reported;
         }
+
         if (!member.online) {
             return DEVICE_OFFLINE;
         }
+
         if (member.updatedAt <= 0L
                 || now - member.updatedAt > freshnessMs) {
             return NO_RECENT_UPDATE;
         }
+
         if (!member.hasLocation) {
             return LOCATION_UNAVAILABLE;
         }
+
         return AVAILABLE;
     }
 
@@ -58,6 +72,7 @@ public final class FamilyLiveAvailability {
         if (value == null) {
             return LOCATION_UNAVAILABLE;
         }
+
         String normalized = value.trim().toUpperCase(Locale.ROOT);
         switch (normalized) {
             case AVAILABLE:
@@ -79,23 +94,47 @@ public final class FamilyLiveAvailability {
     public static int labelRes(@NonNull String reason) {
         switch (normalize(reason)) {
             case AVAILABLE:
-                return R.string.family_live_reason_available;
+                return R.string.family_live_state_live_now;
             case SHARING_PAUSED:
-                return R.string.family_live_reason_sharing_paused;
+                return R.string.family_live_state_sharing_paused;
             case PERMISSION_OFF:
-                return R.string.family_live_reason_permission_off;
+                return R.string.family_live_state_permission_off;
             case GPS_OFF:
-                return R.string.family_live_reason_gps_off;
+                return R.string.family_live_state_gps_off;
             case INTERNET_UNAVAILABLE:
-                return R.string.family_live_reason_internet_unavailable;
+                return R.string.family_live_state_internet_off;
             case BATTERY_SAVER:
-                return R.string.family_live_reason_battery_saver;
+                return R.string.family_live_state_battery_saver;
             case DEVICE_OFFLINE:
-                return R.string.family_live_reason_device_offline;
+                return R.string.family_live_state_device_offline;
             case NO_RECENT_UPDATE:
-                return R.string.family_live_reason_no_recent_update;
+                return R.string.family_live_state_update_stale;
             default:
-                return R.string.family_live_reason_location_unavailable;
+                return R.string.family_live_state_location_unavailable;
+        }
+    }
+
+    @StringRes
+    public static int detailRes(@NonNull String reason) {
+        switch (normalize(reason)) {
+            case AVAILABLE:
+                return R.string.family_live_state_detail_live;
+            case SHARING_PAUSED:
+                return R.string.family_live_state_detail_sharing_paused;
+            case PERMISSION_OFF:
+                return R.string.family_live_state_detail_permission_off;
+            case GPS_OFF:
+                return R.string.family_live_state_detail_gps_off;
+            case INTERNET_UNAVAILABLE:
+                return R.string.family_live_state_detail_internet_off;
+            case BATTERY_SAVER:
+                return R.string.family_live_state_detail_battery_saver;
+            case DEVICE_OFFLINE:
+                return R.string.family_live_state_detail_device_offline;
+            case NO_RECENT_UPDATE:
+                return R.string.family_live_state_detail_update_stale;
+            default:
+                return R.string.family_live_state_detail_location_unavailable;
         }
     }
 
@@ -103,9 +142,60 @@ public final class FamilyLiveAvailability {
         return AVAILABLE.equals(normalize(reason));
     }
 
+    public static boolean isPaused(@NonNull String reason) {
+        return SHARING_PAUSED.equals(normalize(reason));
+    }
+
     public static boolean isWarning(@NonNull String reason) {
         String normalized = normalize(reason);
         return BATTERY_SAVER.equals(normalized)
                 || NO_RECENT_UPDATE.equals(normalized);
+    }
+
+    public static boolean isCritical(@NonNull String reason) {
+        String normalized = normalize(reason);
+        return PERMISSION_OFF.equals(normalized)
+                || GPS_OFF.equals(normalized)
+                || INTERNET_UNAVAILABLE.equals(normalized)
+                || DEVICE_OFFLINE.equals(normalized)
+                || LOCATION_UNAVAILABLE.equals(normalized);
+    }
+
+    public static boolean isLowBattery(
+            int batteryPercentage,
+            boolean charging
+    ) {
+        return !charging
+                && batteryPercentage >= 0
+                && batteryPercentage <= LOW_BATTERY_PERCENT;
+    }
+
+    public static boolean needsAttention(
+            @NonNull String reason,
+            int batteryPercentage,
+            boolean charging
+    ) {
+        return !isAvailable(reason)
+                || isLowBattery(batteryPercentage, charging);
+    }
+
+    public static int connectionState(
+            @NonNull String reason,
+            boolean reportedConnected
+    ) {
+        String normalized = normalize(reason);
+
+        if (AVAILABLE.equals(normalized)) {
+            return reportedConnected
+                    ? CONNECTION_CONNECTED
+                    : CONNECTION_UNKNOWN;
+        }
+
+        if (INTERNET_UNAVAILABLE.equals(normalized)
+                || DEVICE_OFFLINE.equals(normalized)) {
+            return CONNECTION_OFFLINE;
+        }
+
+        return CONNECTION_UNKNOWN;
     }
 }
