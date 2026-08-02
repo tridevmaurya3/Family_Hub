@@ -18,7 +18,6 @@
         android:orientation="vertical"
         android:padding="@dimen/space_14">
 
-        <!-- Member identity and live state -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -113,7 +112,6 @@
             android:layout_marginTop="@dimen/space_10"
             android:background="@color/fh_divider" />
 
-        <!-- Compact live-status metrics -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -255,11 +253,43 @@
 
         </LinearLayout>
 
-        <!-- Freshness and navigation cue -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_10"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvStatusDetail"
+                style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:maxLines="2"
+                android:textColor="@color/fh_text_secondary" />
+
+            <TextView
+                android:id="@+id/tvLowBatteryAlert"
+                style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_8"
+                android:background="@drawable/bg_status_pill"
+                android:paddingStart="@dimen/space_8"
+                android:paddingTop="@dimen/space_4"
+                android:paddingEnd="@dimen/space_8"
+                android:paddingBottom="@dimen/space_4"
+                android:textColor="@color/fh_error"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
