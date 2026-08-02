@@ -14,6 +14,7 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -24,6 +25,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -55,6 +57,7 @@ import java.util.Map;
 public class FamilyLiveFragment extends Fragment {
 
     private static final long LIVE_FRESHNESS_MS = 3L * 60L * 1000L;
+    private static final long CONTENT_ANIMATION_MS = 220L;
     private static final String STATE_MEMBER_FILTER =
             "family_live_member_filter";
 
@@ -72,6 +75,7 @@ public class FamilyLiveFragment extends Fragment {
     private boolean fitMapOnNextRender = true;
     private boolean satelliteMap;
     private int selectedFilterId = R.id.chipFamilyLiveAll;
+    private int lastRenderedCount = -1;
     @NonNull private String memberQuery = "";
     @Nullable private GoogleMap googleMap;
     @NonNull
@@ -157,6 +161,13 @@ public class FamilyLiveFragment extends Fragment {
                 new LinearLayoutManager(requireContext())
         );
         binding.recyclerFamilyLive.setAdapter(familyLiveAdapter);
+        DefaultItemAnimator itemAnimator = new DefaultItemAnimator();
+        itemAnimator.setAddDuration(CONTENT_ANIMATION_MS);
+        itemAnimator.setRemoveDuration(CONTENT_ANIMATION_MS);
+        itemAnimator.setMoveDuration(CONTENT_ANIMATION_MS);
+        itemAnimator.setChangeDuration(CONTENT_ANIMATION_MS);
+        binding.recyclerFamilyLive.setItemAnimator(itemAnimator);
+
         binding.familyLiveRefresh.setColorSchemeResources(
                 R.color.fh_module_family,
                 R.color.fh_primary,
@@ -166,6 +177,7 @@ public class FamilyLiveFragment extends Fragment {
                 this::refreshFamilyLive
         );
         binding.buttonRefreshList.setOnClickListener(ignored -> {
+            animateRefreshButton();
             binding.familyLiveRefresh.setRefreshing(true);
             refreshFamilyLive();
         });
@@ -239,6 +251,7 @@ public class FamilyLiveFragment extends Fragment {
         updateSharingUi();
         updateFilterCounts(0, 0, 0, 0);
         updateListSortState(0);
+        showLoadingState(true);
         loadLocalFamilyLiveMembers();
     }
 
@@ -740,6 +753,10 @@ public class FamilyLiveFragment extends Fragment {
             return;
         }
         cloudErrorShown = false;
+        if (familyLiveAdapter == null
+                || familyLiveAdapter.getItemCount() == 0) {
+            showLoadingState(true);
+        }
         repository.stopObservingCloudMembers();
         loadLocalFamilyLiveMembers();
         observeCloudMembers();
@@ -749,6 +766,7 @@ public class FamilyLiveFragment extends Fragment {
         if (repository == null) {
             if (binding != null) {
                 binding.familyLiveRefresh.setRefreshing(false);
+                showLoadingState(false);
             }
             return;
         }
@@ -759,6 +777,11 @@ public class FamilyLiveFragment extends Fragment {
                         return;
                     }
                     binding.familyLiveRefresh.setRefreshing(false);
+                    showLoadingState(false);
+                    if (familyLiveAdapter != null
+                            && familyLiveAdapter.getItemCount() == 0) {
+                        renderMemberList(new ArrayList<>());
+                    }
                     if (cloudErrorShown) {
                         return;
                     }
@@ -780,6 +803,13 @@ public class FamilyLiveFragment extends Fragment {
         binding.mapContainer.setVisibility(View.GONE);
         binding.familyLiveSearchLayout.setVisibility(View.VISIBLE);
         binding.listHeader.setVisibility(View.VISIBLE);
+
+        if (binding.familyLiveLoadingState.getVisibility() == View.VISIBLE) {
+            binding.recyclerFamilyLive.setVisibility(View.GONE);
+            binding.familyLiveEmptyState.setVisibility(View.GONE);
+            return;
+        }
+
         boolean isEmpty = familyLiveAdapter == null
                 || familyLiveAdapter.getItemCount() == 0;
         binding.recyclerFamilyLive.setVisibility(
@@ -797,6 +827,7 @@ public class FamilyLiveFragment extends Fragment {
         }
         binding.familyLiveSearchLayout.setVisibility(View.GONE);
         binding.listHeader.setVisibility(View.GONE);
+        binding.familyLiveLoadingState.setVisibility(View.GONE);
         binding.recyclerFamilyLive.setVisibility(View.GONE);
         binding.familyLiveEmptyState.setVisibility(View.GONE);
         binding.mapContainer.setVisibility(View.VISIBLE);
@@ -1266,25 +1297,135 @@ public class FamilyLiveFragment extends Fragment {
         if (binding == null || familyLiveAdapter == null) {
             return;
         }
+
+        showLoadingState(false);
         familyLiveAdapter.submitList(uiModels);
         binding.tvMemberCount.setText(getString(
                 R.string.family_live_member_count,
                 uiModels.size()
         ));
         updateListSortState(uiModels.size());
+        updateEmptyStateCopy();
 
         boolean isEmpty = uiModels.isEmpty();
+        boolean shouldAnimate = lastRenderedCount != uiModels.size();
+        lastRenderedCount = uiModels.size();
+
         if (mapViewSelected) {
             binding.recyclerFamilyLive.setVisibility(View.GONE);
             binding.familyLiveEmptyState.setVisibility(View.GONE);
-        } else {
-            binding.recyclerFamilyLive.setVisibility(
-                    isEmpty ? View.GONE : View.VISIBLE
+            return;
+        }
+
+        binding.recyclerFamilyLive.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.familyLiveEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
+
+        if (shouldAnimate) {
+            animateVisibleContent(isEmpty
+                    ? binding.familyLiveEmptyState
+                    : binding.recyclerFamilyLive);
+        }
+    }
+
+    private void showLoadingState(boolean show) {
+        if (binding == null) {
+            return;
+        }
+
+        binding.familyLiveLoadingState.setVisibility(
+                show ? View.VISIBLE : View.GONE
+        );
+
+        if (!show) {
+            return;
+        }
+
+        binding.recyclerFamilyLive.setVisibility(View.GONE);
+        binding.familyLiveEmptyState.setVisibility(View.GONE);
+        animateVisibleContent(binding.familyLiveLoadingState);
+    }
+
+    private void updateEmptyStateCopy() {
+        if (binding == null) {
+            return;
+        }
+
+        if (!memberQuery.isEmpty()) {
+            binding.tvFamilyLiveEmptyTitle.setText(
+                    R.string.family_live_empty_search_title
             );
-            binding.familyLiveEmptyState.setVisibility(
-                    isEmpty ? View.VISIBLE : View.GONE
+            binding.tvFamilyLiveEmptyDetail.setText(getString(
+                    R.string.family_live_empty_search_detail,
+                    memberQuery
+            ));
+            return;
+        }
+
+        if (selectedFilterId == R.id.chipFamilyLiveLive) {
+            binding.tvFamilyLiveEmptyTitle.setText(
+                    R.string.family_live_empty_live_title
+            );
+            binding.tvFamilyLiveEmptyDetail.setText(
+                    R.string.family_live_empty_live_detail
+            );
+        } else if (selectedFilterId == R.id.chipFamilyLiveStale) {
+            binding.tvFamilyLiveEmptyTitle.setText(
+                    R.string.family_live_empty_stale_title
+            );
+            binding.tvFamilyLiveEmptyDetail.setText(
+                    R.string.family_live_empty_stale_detail
+            );
+        } else if (selectedFilterId == R.id.chipFamilyLiveAttention) {
+            binding.tvFamilyLiveEmptyTitle.setText(
+                    R.string.family_live_empty_attention_title
+            );
+            binding.tvFamilyLiveEmptyDetail.setText(
+                    R.string.family_live_empty_attention_detail
+            );
+        } else {
+            binding.tvFamilyLiveEmptyTitle.setText(
+                    R.string.family_live_empty_title
+            );
+            binding.tvFamilyLiveEmptyDetail.setText(
+                    R.string.family_live_empty_detail
             );
         }
+    }
+
+    private void animateVisibleContent(@NonNull View view) {
+        float distance = 8F * getResources()
+                .getDisplayMetrics()
+                .density;
+        view.animate().cancel();
+        view.setAlpha(0F);
+        view.setTranslationY(distance);
+        view.animate()
+                .alpha(1F)
+                .translationY(0F)
+                .setDuration(CONTENT_ANIMATION_MS)
+                .setInterpolator(new DecelerateInterpolator())
+                .start();
+    }
+
+    private void animateRefreshButton() {
+        if (binding == null) {
+            return;
+        }
+        binding.buttonRefreshList.animate().cancel();
+        binding.buttonRefreshList.animate()
+                .rotationBy(360F)
+                .setDuration(420L)
+                .setInterpolator(new DecelerateInterpolator())
+                .withEndAction(() -> {
+                    if (binding != null) {
+                        binding.buttonRefreshList.setRotation(0F);
+                    }
+                })
+                .start();
     }
 
     @Override
