@@ -413,8 +413,10 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <FrameLayout
+            android:id="@+id/familyLiveContentFrame"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:animateLayoutChanges="true">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerFamilyLive"
@@ -426,6 +428,49 @@
                 android:paddingBottom="@dimen/family_live_list_bottom_padding" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/family_live_loading_state"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                app:cardBackgroundColor="@color/fh_surface"
+                app:strokeColor="@color/fh_outline_variant">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/compact_empty_state_padding">
+
+                    <ProgressBar
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:contentDescription="@string/family_live_loading_content_description"
+                        android:indeterminateTint="@color/fh_module_family" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:gravity="center"
+                        android:text="@string/family_live_loading_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_6"
+                        android:gravity="center"
+                        android:text="@string/family_live_loading_detail"
+                        android:textAlignment="center"
+                        android:textColor="@color/fh_text_secondary" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/family_live_empty_state"
                 style="@style/Widget.FamilyHub.Card.Flat"
                 android:layout_width="match_parent"
@@ -433,7 +478,7 @@
                 android:layout_marginTop="@dimen/space_12"
                 android:visibility="gone"
                 app:cardBackgroundColor="@color/fh_module_family_container"
-                app:strokeColor="@color/fh_module_family">
+                app:strokeColor="@color/fh_outline_variant">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -452,6 +497,7 @@
                         app:tint="@color/fh_module_family" />
 
                     <TextView
+                        android:id="@+id/tvFamilyLiveEmptyTitle"
                         style="@style/TextAppearance.FamilyHub.SectionTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -460,15 +506,19 @@
                         android:text="@string/family_live_empty_title" />
 
                     <TextView
+                        android:id="@+id/tvFamilyLiveEmptyDetail"
                         style="@style/TextAppearance.FamilyHub.Body"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
                         android:gravity="center"
                         android:text="@string/family_live_empty_detail"
-                        android:textAlignment="center" />
+                        android:textAlignment="center"
+                        android:textColor="@color/fh_text_secondary" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
         </FrameLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
@@ -527,6 +577,7 @@
                 android:layout_height="@dimen/touch_target_min"
                 android:layout_marginTop="@dimen/space_8"
                 android:text="@string/family_live_map_recenter" />
+
         </LinearLayout>
     </FrameLayout>
 
