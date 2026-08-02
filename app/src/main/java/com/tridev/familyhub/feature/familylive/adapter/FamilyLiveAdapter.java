@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -13,10 +14,10 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.familylive.model.FamilyLiveMemberUiModel;
-import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +25,8 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Displays Family Live member status cards.
+ * Displays premium Family Live member cards with clear location,
+ * availability, movement, battery, network and freshness states.
  */
 public class FamilyLiveAdapter
         extends RecyclerView.Adapter<FamilyLiveAdapter.ViewHolder> {
@@ -35,7 +37,9 @@ public class FamilyLiveAdapter
 
     private final List<FamilyLiveMemberUiModel> members =
             new ArrayList<>();
-    @Nullable private OnMemberClickListener onMemberClickListener;
+
+    @Nullable
+    private OnMemberClickListener onMemberClickListener;
 
     public void setOnMemberClickListener(
             @Nullable OnMemberClickListener listener
@@ -75,15 +79,16 @@ public class FamilyLiveAdapter
     ) {
         FamilyLiveMemberUiModel member = members.get(position);
         Context context = holder.itemView.getContext();
-        applyCardPalette(holder, position);
 
         holder.itemView.setOnClickListener(ignored -> {
             if (onMemberClickListener != null) {
                 onMemberClickListener.onMemberClick(member);
             }
         });
+
         holder.memberName.setText(member.getMemberName());
         holder.avatar.setText(createInitials(member.getMemberName()));
+
         holder.location.setText(
                 emptyFallback(
                         member.getCurrentLocation(),
@@ -93,18 +98,21 @@ public class FamilyLiveAdapter
                 )
         );
 
-        holder.status.setText(FamilyLiveAvailability.labelRes(
-                member.getAvailabilityReason()
-        ));
+        holder.status.setText(
+                FamilyLiveAvailability.labelRes(
+                        member.getAvailabilityReason()
+                )
+        );
 
-        holder.movement.setText(
-                displayLabel(emptyFallback(
+        String movementLabel = displayLabel(
+                emptyFallback(
                         member.getMovementType(),
                         context.getString(
                                 R.string.family_live_status_unavailable
                         )
-                ))
+                )
         );
+        holder.movement.setText(movementLabel);
 
         holder.battery.setText(
                 createBatteryText(
@@ -131,29 +139,22 @@ public class FamilyLiveAdapter
                 holder,
                 member.getAvailabilityReason()
         );
-    }
 
-    private void applyCardPalette(
-            @NonNull ViewHolder holder,
-            int position
-    ) {
-        int[] backgrounds = {
-                R.color.fh_module_family_container,
-                R.color.fh_module_grocery_container,
-                R.color.fh_module_documents_container,
-                R.color.fh_module_planner_container,
-                R.color.fh_module_health_container
-        };
-        int paletteIndex = position % backgrounds.length;
-        Context context = holder.itemView.getContext();
-        holder.card.setCardBackgroundColor(ContextCompat.getColor(
-                context,
-                backgrounds[paletteIndex]
-        ));
-        holder.card.setStrokeColor(ContextCompat.getColor(
-                context,
-                R.color.fh_outline_variant
-        ));
+        applyMovementAppearance(
+                holder,
+                member.getMovementType()
+        );
+
+        applyBatteryAppearance(
+                holder,
+                member.getBatteryPercentage(),
+                member.isCharging()
+        );
+
+        applyConnectionAppearance(
+                holder,
+                member.isInternetAvailable()
+        );
     }
 
     @Override
@@ -166,6 +167,7 @@ public class FamilyLiveAdapter
             String availabilityReason
     ) {
         Context context = holder.itemView.getContext();
+
         boolean online = FamilyLiveAvailability.isAvailable(
                 availabilityReason
         );
@@ -173,33 +175,158 @@ public class FamilyLiveAdapter
                 availabilityReason
         );
 
-        int statusColor = ContextCompat.getColor(
+        int foregroundRes;
+        int backgroundRes;
+
+        if (online) {
+            foregroundRes = R.color.fh_success;
+            backgroundRes = R.color.fh_success_container;
+        } else if (warning) {
+            foregroundRes = R.color.fh_warning;
+            backgroundRes = R.color.fh_warning_container;
+        } else {
+            foregroundRes = R.color.fh_error;
+            backgroundRes = R.color.fh_error_container;
+        }
+
+        int foreground = ContextCompat.getColor(
                 context,
-                online
-                        ? R.color.fh_success
-                        : warning ? R.color.fh_warning : R.color.fh_error
+                foregroundRes
+        );
+        int background = ContextCompat.getColor(
+                context,
+                backgroundRes
         );
 
-        int statusBackground = ContextCompat.getColor(
-                context,
-                online
-                        ? R.color.fh_success_container
-                        : warning
-                                ? R.color.fh_warning_container
-                                : R.color.fh_error_container
+        holder.card.setCardBackgroundColor(
+                ContextCompat.getColor(
+                        context,
+                        R.color.fh_surface
+                )
         );
+        holder.card.setStrokeColor(foreground);
 
-        holder.status.setTextColor(statusColor);
+        holder.status.setTextColor(foreground);
 
         ViewCompat.setBackgroundTintList(
                 holder.status,
-                ColorStateList.valueOf(statusBackground)
+                ColorStateList.valueOf(background)
         );
 
         ViewCompat.setBackgroundTintList(
                 holder.statusDot,
-                ColorStateList.valueOf(statusColor)
+                ColorStateList.valueOf(foreground)
         );
+
+        ViewCompat.setBackgroundTintList(
+                holder.avatar,
+                ColorStateList.valueOf(foreground)
+        );
+    }
+
+    private void applyMovementAppearance(
+            @NonNull ViewHolder holder,
+            String movementType
+    ) {
+        boolean unavailable = movementType == null
+                || movementType.trim().isEmpty();
+
+        applyMetricAppearance(
+                holder,
+                holder.movementCard,
+                holder.movementIcon,
+                holder.movement,
+                unavailable
+                        ? R.color.fh_surface_variant
+                        : R.color.fh_module_family_container,
+                unavailable
+                        ? R.color.fh_text_secondary
+                        : R.color.fh_module_family
+        );
+    }
+
+    private void applyBatteryAppearance(
+            @NonNull ViewHolder holder,
+            int batteryPercentage,
+            boolean charging
+    ) {
+        int backgroundRes;
+        int foregroundRes;
+
+        if (batteryPercentage < 0) {
+            backgroundRes = R.color.fh_surface_variant;
+            foregroundRes = R.color.fh_text_secondary;
+        } else if (charging) {
+            backgroundRes = R.color.fh_primary_container;
+            foregroundRes = R.color.fh_primary;
+        } else if (batteryPercentage <= 20) {
+            backgroundRes = R.color.fh_error_container;
+            foregroundRes = R.color.fh_error;
+        } else if (batteryPercentage <= 40) {
+            backgroundRes = R.color.fh_warning_container;
+            foregroundRes = R.color.fh_warning;
+        } else {
+            backgroundRes = R.color.fh_success_container;
+            foregroundRes = R.color.fh_success;
+        }
+
+        applyMetricAppearance(
+                holder,
+                holder.batteryCard,
+                holder.batteryIcon,
+                holder.battery,
+                backgroundRes,
+                foregroundRes
+        );
+    }
+
+    private void applyConnectionAppearance(
+            @NonNull ViewHolder holder,
+            boolean internetAvailable
+    ) {
+        applyMetricAppearance(
+                holder,
+                holder.connectionCard,
+                holder.connectionIcon,
+                holder.connection,
+                internetAvailable
+                        ? R.color.fh_success_container
+                        : R.color.fh_error_container,
+                internetAvailable
+                        ? R.color.fh_success
+                        : R.color.fh_error
+        );
+    }
+
+    private void applyMetricAppearance(
+            @NonNull ViewHolder holder,
+            @NonNull MaterialCardView card,
+            @NonNull ImageView icon,
+            @NonNull TextView value,
+            int backgroundRes,
+            int foregroundRes
+    ) {
+        Context context = holder.itemView.getContext();
+        int background = ContextCompat.getColor(
+                context,
+                backgroundRes
+        );
+        int foreground = ContextCompat.getColor(
+                context,
+                foregroundRes
+        );
+
+        card.setCardBackgroundColor(background);
+        card.setStrokeColor(
+                ContextCompat.getColor(
+                        context,
+                        R.color.fh_outline_variant
+                )
+        );
+        icon.setImageTintList(
+                ColorStateList.valueOf(foreground)
+        );
+        value.setTextColor(foreground);
     }
 
     @NonNull
@@ -214,7 +341,10 @@ public class FamilyLiveAdapter
             );
         }
 
-        int safeBattery = Math.min(batteryPercentage, 100);
+        int safeBattery = Math.min(
+                Math.max(batteryPercentage, 0),
+                100
+        );
 
         if (charging) {
             return context.getString(
@@ -339,8 +469,17 @@ public class FamilyLiveAdapter
         private final TextView movement;
         private final TextView connection;
         private final TextView lastUpdated;
+
+        private final ImageView movementIcon;
+        private final ImageView batteryIcon;
+        private final ImageView connectionIcon;
+
         private final View statusDot;
+
         private final MaterialCardView card;
+        private final MaterialCardView movementCard;
+        private final MaterialCardView batteryCard;
+        private final MaterialCardView connectionCard;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -355,6 +494,26 @@ public class FamilyLiveAdapter
             connection = itemView.findViewById(R.id.tvConnection);
             lastUpdated = itemView.findViewById(R.id.tvLastUpdated);
             statusDot = itemView.findViewById(R.id.viewStatusDot);
+
+            movementCard = itemView.findViewById(
+                    R.id.cardMovementMetric
+            );
+            batteryCard = itemView.findViewById(
+                    R.id.cardBatteryMetric
+            );
+            connectionCard = itemView.findViewById(
+                    R.id.cardConnectionMetric
+            );
+
+            movementIcon = itemView.findViewById(
+                    R.id.iconMovement
+            );
+            batteryIcon = itemView.findViewById(
+                    R.id.iconBattery
+            );
+            connectionIcon = itemView.findViewById(
+                    R.id.iconConnection
+            );
         }
     }
 }
