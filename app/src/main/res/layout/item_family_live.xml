@@ -123,7 +123,7 @@
                 style="@style/Widget.FamilyHub.Card.Subtle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/space_3"
+                android:layout_marginEnd="@dimen/space_2"
                 android:layout_weight="1"
                 app:cardBackgroundColor="@color/fh_module_family_container">
 
@@ -165,8 +165,8 @@
                 style="@style/Widget.FamilyHub.Card.Subtle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_3"
-                android:layout_marginEnd="@dimen/space_3"
+                android:layout_marginStart="@dimen/space_2"
+                android:layout_marginEnd="@dimen/space_2"
                 android:layout_weight="1"
                 app:cardBackgroundColor="@color/fh_success_container">
 
@@ -208,7 +208,7 @@
                 style="@style/Widget.FamilyHub.Card.Subtle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_3"
+                android:layout_marginStart="@dimen/space_2"
                 android:layout_weight="1"
                 app:cardBackgroundColor="@color/fh_surface_variant">
 
