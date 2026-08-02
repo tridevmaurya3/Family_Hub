@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Compact defaults for phones with limited vertical space. -->
+    <dimen name="family_live_responsive_top_padding">8dp</dimen>
+    <dimen name="family_live_responsive_horizontal_padding">16dp</dimen>
+    <dimen name="family_live_responsive_section_gap">4dp</dimen>
+    <dimen name="family_live_responsive_header_bottom_padding">4dp</dimen>
+
+    <dimen name="family_live_summary_padding">8dp</dimen>
+    <dimen name="family_live_summary_icon_container">38dp</dimen>
+    <dimen name="family_live_summary_icon_size">20dp</dimen>
+    <dimen name="family_live_summary_metric_height">44dp</dimen>
+    <dimen name="family_live_summary_metric_gap">2dp</dimen>
+
+    <dimen name="family_live_sharing_padding">8dp</dimen>
+    <dimen name="family_live_sharing_icon_container">36dp</dimen>
+    <dimen name="family_live_sharing_icon_size">20dp</dimen>
+
+    <dimen name="family_live_controls_padding">6dp</dimen>
+    <dimen name="family_live_filter_row_height">44dp</dimen>
+    <dimen name="family_live_list_top_padding">4dp</dimen>
+    <dimen name="family_live_list_bottom_padding">16dp</dimen>
+
+</resources>
