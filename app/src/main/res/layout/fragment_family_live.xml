@@ -63,8 +63,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/family_live_responsive_section_gap"
-                app:cardBackgroundColor="@color/fh_primary_container"
-                app:strokeColor="@color/fh_outline_variant">
+                app:cardBackgroundColor="@color/fh_surface"
+                app:strokeColor="@color/fh_outline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -81,8 +81,8 @@
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="@dimen/family_live_sharing_icon_container"
                             android:layout_height="@dimen/family_live_sharing_icon_container"
-                            app:cardBackgroundColor="@color/fh_surface"
-                            app:cardCornerRadius="@dimen/radius_14"
+                            app:cardBackgroundColor="@color/fh_primary_container"
+                            app:cardCornerRadius="@dimen/radius_12"
                             app:cardElevation="0dp"
                             app:strokeColor="@color/fh_outline_variant"
                             app:strokeWidth="@dimen/border_width">
@@ -100,7 +100,8 @@
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_10"
+                            android:layout_marginStart="@dimen/space_8"
+                            android:layout_marginEnd="@dimen/space_6"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
@@ -111,7 +112,8 @@
                                 android:ellipsize="end"
                                 android:maxLines="1"
                                 android:text="@string/family_live_sharing_overline"
-                                android:textColor="@color/fh_primary" />
+                                android:textColor="@color/fh_primary"
+                                android:textSize="9sp" />
 
                             <TextView
                                 android:id="@+id/tvSharingStatus"
@@ -119,9 +121,11 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_2"
+                                android:ellipsize="end"
                                 android:maxLines="2"
                                 android:text="@string/family_live_sharing_off"
-                                android:textColor="@color/fh_on_primary_container" />
+                                android:textColor="@color/fh_on_surface"
+                                android:textSize="15sp" />
 
                             <TextView
                                 android:id="@+id/tvSharingDetail"
@@ -132,9 +136,28 @@
                                 android:ellipsize="end"
                                 android:maxLines="2"
                                 android:text="@string/family_live_sharing_off_detail"
-                                android:textColor="@color/fh_on_primary_container" />
+                                android:textColor="@color/fh_text_secondary"
+                                android:textSize="10sp" />
 
                         </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/buttonLocationSharing"
+                            style="@style/Widget.FamilyHub.Button.Tonal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="44dp"
+                            android:minWidth="0dp"
+                            android:paddingStart="@dimen/space_10"
+                            android:paddingEnd="@dimen/space_10"
+                            android:text="@string/family_live_start_sharing"
+                            android:textColor="@color/fh_primary"
+                            android:textSize="11sp"
+                            app:backgroundTint="@color/fh_primary_container"
+                            app:icon="@drawable/ic_fh_location_pin"
+                            app:iconGravity="textStart"
+                            app:iconPadding="@dimen/space_4"
+                            app:iconSize="16dp"
+                            app:iconTint="@color/fh_primary" />
 
                     </LinearLayout>
 
@@ -146,8 +169,8 @@
                         android:orientation="horizontal">
 
                         <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="15dp"
+                            android:layout_height="15dp"
                             android:contentDescription="@null"
                             android:src="@drawable/ic_fh_shield_check"
                             app:tint="@color/fh_primary" />
@@ -157,27 +180,12 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/space_6"
-                            android:layout_marginEnd="@dimen/space_8"
                             android:layout_weight="1"
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/family_live_sharing_privacy"
-                            android:textColor="@color/fh_on_primary_container" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/buttonLocationSharing"
-                            style="@style/Widget.FamilyHub.Button.Tonal"
-                            android:layout_width="wrap_content"
-                            android:layout_height="@dimen/touch_target_min"
-                            android:minWidth="0dp"
-                            android:text="@string/family_live_start_sharing"
-                            android:textColor="@color/fh_primary"
-                            app:backgroundTint="@color/fh_surface"
-                            app:icon="@drawable/ic_fh_location_pin"
-                            app:iconGravity="textStart"
-                            app:iconPadding="@dimen/space_4"
-                            app:iconSize="18dp"
-                            app:iconTint="@color/fh_primary" />
+                            android:textColor="@color/fh_text_secondary"
+                            android:textSize="10sp" />
 
                     </LinearLayout>
 
@@ -202,7 +210,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/fh_surface"
-                app:strokeColor="@color/fh_outline_variant">
+                app:strokeColor="@color/fh_outline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -214,7 +222,8 @@
                         style="@style/TextAppearance.FamilyHub.SectionTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/family_live_view_title" />
+                        android:text="@string/family_live_view_title"
+                        android:textSize="15sp" />
 
                     <com.google.android.material.button.MaterialButtonToggleGroup
                         android:id="@+id/viewToggle"
@@ -229,31 +238,33 @@
                             android:id="@+id/buttonListView"
                             style="@style/Widget.FamilyHub.Button.Tonal"
                             android:layout_width="0dp"
-                            android:layout_height="@dimen/touch_target_min"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:checked="true"
                             android:text="@string/family_live_list_view"
                             android:textColor="@color/fh_module_family"
+                            android:textSize="11sp"
                             app:backgroundTint="@color/fh_module_family_container"
                             app:icon="@drawable/ic_fh_list_view"
                             app:iconGravity="textStart"
                             app:iconPadding="@dimen/space_6"
-                            app:iconSize="18dp"
+                            app:iconSize="17dp"
                             app:iconTint="@color/fh_module_family" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/buttonMapView"
                             style="@style/Widget.FamilyHub.Button.Outlined"
                             android:layout_width="0dp"
-                            android:layout_height="@dimen/touch_target_min"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:text="@string/family_live_map_view"
                             android:textColor="@color/fh_module_documents"
+                            android:textSize="11sp"
                             app:backgroundTint="@color/fh_module_documents_container"
                             app:icon="@drawable/ic_fh_map_view"
                             app:iconGravity="textStart"
                             app:iconPadding="@dimen/space_6"
-                            app:iconSize="18dp"
+                            app:iconSize="17dp"
                             app:iconTint="@color/fh_module_documents" />
 
                     </com.google.android.material.button.MaterialButtonToggleGroup>
@@ -282,73 +293,98 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <HorizontalScrollView
-                android:id="@+id/familyLiveFilterScroll"
-                android:layout_width="match_parent"
-                android:layout_height="@dimen/family_live_filter_row_height"
-                android:layout_marginTop="@dimen/space_2"
-                android:clipToPadding="false"
-                android:fillViewport="false"
-                android:scrollbars="none">
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/familyLiveFilterGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    app:checkedChip="@id/chipFamilyLiveAll"
-                    app:chipSpacingHorizontal="@dimen/space_6"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFamilyLiveAll"
-                        style="@style/Widget.FamilyHub.StatusChip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="@string/family_live_filter_all"
-                        app:chipBackgroundColor="@color/fh_module_family_container"
-                        app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFamilyLiveLive"
-                        style="@style/Widget.FamilyHub.StatusChip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="@string/family_live_filter_live"
-                        app:chipBackgroundColor="@color/fh_module_finance_container"
-                        app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFamilyLiveStale"
-                        style="@style/Widget.FamilyHub.StatusChip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="@string/family_live_filter_stale"
-                        app:chipBackgroundColor="@color/fh_module_reminders_container"
-                        app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFamilyLiveAttention"
-                        style="@style/Widget.FamilyHub.StatusChip"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checkable="true"
-                        android:text="@string/family_live_filter_attention"
-                        app:chipBackgroundColor="@color/fh_error_container"
-                        app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                </com.google.android.material.chip.ChipGroup>
-            </HorizontalScrollView>
-
             <LinearLayout
                 android:id="@+id/familyLiveFilterRow"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:visibility="gone" />
+                android:layout_height="@dimen/family_live_filter_row_height"
+                android:layout_marginTop="@dimen/space_2"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <HorizontalScrollView
+                    android:id="@+id/familyLiveFilterScroll"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:fillViewport="false"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/familyLiveFilterGroup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        app:checkedChip="@id/chipFamilyLiveAll"
+                        app:chipSpacingHorizontal="@dimen/space_4"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFamilyLiveAll"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="@string/family_live_filter_all"
+                            android:textSize="10sp"
+                            app:chipBackgroundColor="@color/fh_module_family_container"
+                            app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFamilyLiveLive"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="@string/family_live_filter_live"
+                            android:textSize="10sp"
+                            app:chipBackgroundColor="@color/fh_module_finance_container"
+                            app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFamilyLiveStale"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="@string/family_live_filter_stale"
+                            android:textSize="10sp"
+                            app:chipBackgroundColor="@color/fh_module_reminders_container"
+                            app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFamilyLiveAttention"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="@string/family_live_filter_attention"
+                            android:textSize="10sp"
+                            app:chipBackgroundColor="@color/fh_error_container"
+                            app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonRefreshList"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:contentDescription="@string/family_live_refresh_content_description"
+                    android:minWidth="44dp"
+                    android:padding="0dp"
+                    android:text=""
+                    app:backgroundTint="@color/fh_module_family_container"
+                    app:icon="@drawable/ic_fh_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="18dp"
+                    app:iconTint="@color/fh_module_family" />
+
+            </LinearLayout>
 
             <LinearLayout
                 android:id="@+id/listHeader"
@@ -364,7 +400,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/family_live_members_title" />
+                    android:text="@string/family_live_members_title"
+                    android:textSize="16sp" />
 
                 <TextView
                     android:id="@+id/tvListSortState"
@@ -379,24 +416,8 @@
                     android:paddingBottom="@dimen/space_4"
                     android:text="@string/family_live_sort_priority"
                     android:textColor="@color/fh_module_family"
+                    android:textSize="10sp"
                     android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonRefreshList"
-                    style="@style/Widget.FamilyHub.Button.Tonal"
-                    android:layout_width="@dimen/touch_target_min"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:layout_marginStart="@dimen/space_4"
-                    android:contentDescription="@string/family_live_refresh_content_description"
-                    android:minWidth="@dimen/touch_target_min"
-                    android:padding="0dp"
-                    android:text=""
-                    app:backgroundTint="@color/fh_module_family_container"
-                    app:icon="@drawable/ic_fh_refresh"
-                    app:iconGravity="textStart"
-                    app:iconPadding="0dp"
-                    app:iconSize="18dp"
-                    app:iconTint="@color/fh_module_family" />
 
             </LinearLayout>
 
@@ -434,7 +455,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_12"
                 app:cardBackgroundColor="@color/fh_surface"
-                app:strokeColor="@color/fh_outline_variant">
+                app:strokeColor="@color/fh_outline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -477,8 +498,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_12"
                 android:visibility="gone"
-                app:cardBackgroundColor="@color/fh_module_family_container"
-                app:strokeColor="@color/fh_outline_variant">
+                app:cardBackgroundColor="@color/fh_surface"
+                app:strokeColor="@color/fh_outline">
 
                 <LinearLayout
                     android:layout_width="match_parent"
