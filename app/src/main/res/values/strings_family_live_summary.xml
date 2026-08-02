@@ -4,11 +4,11 @@
     <string name="family_live_summary_all_safe">All safe</string>
     <string name="family_live_summary_waiting">Family status</string>
     <string name="family_live_summary_waiting_detail">Add or approve family members to start live safety status.</string>
-    <string name="family_live_summary_detail">%1$d live • %2$d travelling • %3$d members</string>
+    <string name="family_live_summary_detail">%1$d live • %2$d travelling • %3$d total</string>
 
     <plurals name="family_live_summary_attention_count">
-        <item quantity="one">%1$d member needs attention</item>
-        <item quantity="other">%1$d members need attention</item>
+        <item quantity="one">%1$d needs attention</item>
+        <item quantity="other">%1$d need attention</item>
     </plurals>
 
     <string name="family_live_summary_total">Members</string>
