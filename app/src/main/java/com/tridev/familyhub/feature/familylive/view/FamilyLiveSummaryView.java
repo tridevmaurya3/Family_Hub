@@ -249,8 +249,7 @@ public final class FamilyLiveSummaryView extends FrameLayout {
             );
             applyHeaderPalette(
                     R.color.fh_module_family,
-                    R.color.fh_module_family_container,
-                    R.color.fh_on_primary_container
+                    R.color.fh_module_family_container
             );
         } else if (attention == 0) {
             safetyState.setText(R.string.family_live_summary_all_safe);
@@ -262,8 +261,7 @@ public final class FamilyLiveSummaryView extends FrameLayout {
             ));
             applyHeaderPalette(
                     R.color.fh_success,
-                    R.color.fh_success_container,
-                    R.color.fh_on_success_container
+                    R.color.fh_success_container
             );
         } else {
             safetyState.setText(getResources().getQuantityString(
@@ -279,8 +277,7 @@ public final class FamilyLiveSummaryView extends FrameLayout {
             ));
             applyHeaderPalette(
                     R.color.fh_error,
-                    R.color.fh_error_container,
-                    R.color.fh_on_error_container
+                    R.color.fh_error_container
             );
         }
 
@@ -289,27 +286,21 @@ public final class FamilyLiveSummaryView extends FrameLayout {
 
     private void applyHeaderPalette(
             @ColorRes int accentRes,
-            @ColorRes int containerRes,
-            @ColorRes int detailRes
+            @ColorRes int containerRes
     ) {
         int accent = color(accentRes);
         int container = color(containerRes);
-        int detail = color(detailRes);
 
-        summarySurface.setCardBackgroundColor(container);
-        summarySurface.setStrokeColor(
-                color(R.color.fh_outline_variant)
-        );
-        summaryIconContainer.setCardBackgroundColor(
-                color(R.color.fh_surface)
-        );
+        summarySurface.setCardBackgroundColor(color(R.color.fh_surface));
+        summarySurface.setStrokeColor(color(R.color.fh_outline));
+        summaryIconContainer.setCardBackgroundColor(container);
         summaryIconContainer.setStrokeColor(
                 color(R.color.fh_outline_variant)
         );
         summaryIcon.setImageTintList(ColorStateList.valueOf(accent));
         syncIcon.setImageTintList(ColorStateList.valueOf(accent));
         safetyState.setTextColor(accent);
-        safetyDetail.setTextColor(detail);
+        safetyDetail.setTextColor(color(R.color.fh_text_secondary));
     }
 
     private void applyAttentionPalette(boolean needsAttention) {
