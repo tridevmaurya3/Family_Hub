@@ -85,7 +85,7 @@
                 style="@style/TextAppearance.FamilyHub.Caption"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_3"
+                android:layout_marginTop="@dimen/space_2"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:text="@string/monthly_spend_detail"
