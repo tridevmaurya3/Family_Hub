@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="family_live_loading_title">Updating family status</string>
+    <string name="family_live_loading_detail">Checking the latest location, battery and connection details.</string>
+    <string name="family_live_loading_content_description">Loading Family Live status</string>
+
+    <string name="family_live_empty_search_title">No matching family member</string>
+    <string name="family_live_empty_search_detail">No result for “%1$s”. Try a different name, role or place.</string>
+
+    <string name="family_live_empty_live_title">No member is live now</string>
+    <string name="family_live_empty_live_detail">Live members will appear here as soon as a fresh location update is received.</string>
+
+    <string name="family_live_empty_stale_title">No stale updates</string>
+    <string name="family_live_empty_stale_detail">Every available member has a recent update.</string>
+
+    <string name="family_live_empty_attention_title">No attention needed</string>
+    <string name="family_live_empty_attention_detail">There are no offline, stale, low-battery or location-sharing issues right now.</string>
+
+</resources>
