@@ -30,69 +30,24 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvFamilyLiveTitle" />
 
-    <com.google.android.material.card.MaterialCardView
+    <com.tridev.familyhub.feature.familylive.view.FamilyLiveSummaryView
         android:id="@+id/summaryCard"
-        style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/family_live_section_gap"
-        app:cardBackgroundColor="@color/fh_module_family_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvFamilyLiveSubtitle"
-        app:strokeColor="@color/fh_module_family">
+        app:layout_constraintTop_toBottomOf="@id/tvFamilyLiveSubtitle" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="@dimen/family_live_card_padding">
-
-            <ImageView
-                android:layout_width="@dimen/family_live_avatar_size"
-                android:layout_height="@dimen/family_live_avatar_size"
-                android:background="@drawable/bg_placeholder_icon"
-                android:contentDescription="@null"
-                android:padding="@dimen/space_8"
-                android:src="@drawable/ic_family"
-                app:tint="@color/fh_module_family" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_12"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.Overline"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/family_live_status_title"
-                    android:textColor="@color/fh_module_family" />
-
-                <TextView
-                    android:id="@+id/tvMemberCount"
-                    style="@style/TextAppearance.FamilyHub.SectionTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_2"
-                    android:text="@string/family_live_member_count"
-                    android:textColor="@color/fh_on_primary_container" />
-
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.Caption"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_2"
-                    android:maxLines="1"
-                    android:text="@string/family_live_privacy_detail"
-                    android:textColor="@color/fh_on_primary_container" />
-
-            </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    <!-- Retained for the existing fragment binding while the new summary
+         component independently displays unfiltered total/live metrics. -->
+    <TextView
+        android:id="@+id/tvMemberCount"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/summaryCard" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/locationSharingCard"
@@ -182,7 +137,6 @@
             app:backgroundTint="@color/fh_module_documents_container" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
-
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/familyLiveSearchLayout"
         style="@style/Widget.FamilyHub.TextInputLayout"
@@ -237,10 +191,45 @@
                 app:selectionRequired="true"
                 app:singleSelection="true">
 
-                <com.google.android.material.chip.Chip android:id="@+id/chipFamilyLiveAll" style="@style/Widget.FamilyHub.StatusChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="@string/family_live_filter_all" app:chipBackgroundColor="@color/fh_module_family_container" app:chipMinHeight="@dimen/family_live_chip_height" />
-                <com.google.android.material.chip.Chip android:id="@+id/chipFamilyLiveLive" style="@style/Widget.FamilyHub.StatusChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="@string/family_live_filter_live" app:chipBackgroundColor="@color/fh_module_finance_container" app:chipMinHeight="@dimen/family_live_chip_height" />
-                <com.google.android.material.chip.Chip android:id="@+id/chipFamilyLiveStale" style="@style/Widget.FamilyHub.StatusChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="@string/family_live_filter_stale" app:chipBackgroundColor="@color/fh_module_reminders_container" app:chipMinHeight="@dimen/family_live_chip_height" />
-                <com.google.android.material.chip.Chip android:id="@+id/chipFamilyLiveAttention" style="@style/Widget.FamilyHub.StatusChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checkable="true" android:text="@string/family_live_filter_attention" app:chipBackgroundColor="@color/fh_error_container" app:chipMinHeight="@dimen/family_live_chip_height" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFamilyLiveAll"
+                    style="@style/Widget.FamilyHub.StatusChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/family_live_filter_all"
+                    app:chipBackgroundColor="@color/fh_module_family_container"
+                    app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFamilyLiveLive"
+                    style="@style/Widget.FamilyHub.StatusChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/family_live_filter_live"
+                    app:chipBackgroundColor="@color/fh_module_finance_container"
+                    app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFamilyLiveStale"
+                    style="@style/Widget.FamilyHub.StatusChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/family_live_filter_stale"
+                    app:chipBackgroundColor="@color/fh_module_reminders_container"
+                    app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFamilyLiveAttention"
+                    style="@style/Widget.FamilyHub.StatusChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/family_live_filter_attention"
+                    app:chipBackgroundColor="@color/fh_error_container"
+                    app:chipMinHeight="@dimen/family_live_chip_height" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 
