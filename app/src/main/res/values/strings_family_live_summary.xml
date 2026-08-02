@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="family_live_summary_all_safe">All safe</string>
+    <string name="family_live_summary_waiting">Family status</string>
+    <string name="family_live_summary_waiting_detail">Add or approve family members to start live safety status.</string>
+    <string name="family_live_summary_detail">%1$d live • %2$d travelling • %3$d members</string>
+
+    <plurals name="family_live_summary_attention_count">
+        <item quantity="one">%1$d member needs attention</item>
+        <item quantity="other">%1$d members need attention</item>
+    </plurals>
+
+    <string name="family_live_summary_total">Members</string>
+    <string name="family_live_summary_live">Live now</string>
+    <string name="family_live_summary_travelling">Travelling</string>
+    <string name="family_live_summary_attention">Attention</string>
+    <string name="family_live_summary_zero">0</string>
+
+    <string name="family_live_summary_sync_none">No live sync yet</string>
+    <string name="family_live_summary_sync_now">Synced just now</string>
+    <string name="family_live_summary_sync_minutes">Synced %1$d min ago</string>
+    <string name="family_live_summary_sync_hours">Synced %1$d hr ago</string>
+    <string name="family_live_summary_sync_date">Last sync %1$s</string>
+
+</resources>
