@@ -195,10 +195,20 @@ public class FamilyLiveAdapter
                         R.color.fh_surface
                 )
         );
-        holder.card.setStrokeColor(foreground);
+        holder.card.setStrokeColor(
+                ContextCompat.getColor(
+                        context,
+                        R.color.fh_outline_variant
+                )
+        );
 
         holder.status.setTextColor(foreground);
-        holder.statusDetail.setTextColor(foreground);
+        holder.statusDetail.setTextColor(
+                ContextCompat.getColor(
+                        context,
+                        R.color.fh_text_secondary
+                )
+        );
 
         ViewCompat.setBackgroundTintList(
                 holder.status,
