@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Clear and truthful Family Live state labels -->
+    <string name="family_live_state_live_now">Live now</string>
+    <string name="family_live_state_sharing_paused">Sharing paused</string>
+    <string name="family_live_state_permission_off">Permission off</string>
+    <string name="family_live_state_gps_off">GPS off</string>
+    <string name="family_live_state_internet_off">Internet off</string>
+    <string name="family_live_state_battery_saver">Battery saver</string>
+    <string name="family_live_state_device_offline">Device offline</string>
+    <string name="family_live_state_update_stale">Update stale</string>
+    <string name="family_live_state_location_unavailable">Location unavailable</string>
+
+    <!-- Human-readable explanation shown on each member card -->
+    <string name="family_live_state_detail_live">A recent location update was received.</string>
+    <string name="family_live_state_detail_sharing_paused">This member has paused location sharing.</string>
+    <string name="family_live_state_detail_permission_off">Location permission is disabled on this member’s phone.</string>
+    <string name="family_live_state_detail_gps_off">Device location or GPS is switched off.</string>
+    <string name="family_live_state_detail_internet_off">The phone cannot send a fresh update without internet.</string>
+    <string name="family_live_state_detail_battery_saver">Battery restrictions may delay location updates.</string>
+    <string name="family_live_state_detail_device_offline">The member’s phone is currently unreachable.</string>
+    <string name="family_live_state_detail_update_stale">The last update is old and may not show the current position.</string>
+    <string name="family_live_state_detail_location_unavailable">The device is online, but a usable location is not available yet.</string>
+
+    <!-- Independent battery and network truth -->
+    <string name="family_live_low_battery_alert">Low battery • %1$d%% • Charge soon</string>
+    <string name="family_live_network_connected">Connected</string>
+    <string name="family_live_network_off">Internet off</string>
+    <string name="family_live_network_unknown">Network unknown</string>
+
+</resources>
