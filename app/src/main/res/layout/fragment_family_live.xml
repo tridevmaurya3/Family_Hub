@@ -15,7 +15,6 @@
         app:elevation="0dp"
         app:liftOnScroll="true">
 
-        <!-- Large status surfaces collapse as the member list scrolls. -->
         <LinearLayout
             android:id="@+id/familyLiveCollapsibleHeader"
             android:layout_width="match_parent"
@@ -65,7 +64,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/family_live_responsive_section_gap"
                 app:cardBackgroundColor="@color/fh_primary_container"
-                app:strokeColor="@color/fh_primary">
+                app:strokeColor="@color/fh_outline_variant">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -102,14 +101,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/space_10"
-                            android:layout_marginEnd="@dimen/space_8"
                             android:layout_weight="1"
                             android:orientation="vertical">
 
                             <TextView
                                 style="@style/TextAppearance.FamilyHub.Overline"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
                                 android:text="@string/family_live_sharing_overline"
                                 android:textColor="@color/fh_primary" />
 
@@ -119,8 +119,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_2"
-                                android:ellipsize="end"
-                                android:maxLines="1"
+                                android:maxLines="2"
                                 android:text="@string/family_live_sharing_off"
                                 android:textColor="@color/fh_on_primary_container" />
 
@@ -131,26 +130,11 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_2"
                                 android:ellipsize="end"
-                                android:maxLines="1"
+                                android:maxLines="2"
                                 android:text="@string/family_live_sharing_off_detail"
                                 android:textColor="@color/fh_on_primary_container" />
 
                         </LinearLayout>
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/buttonLocationSharing"
-                            style="@style/Widget.FamilyHub.Button.Tonal"
-                            android:layout_width="wrap_content"
-                            android:layout_height="@dimen/touch_target_min"
-                            android:minWidth="0dp"
-                            android:text="@string/family_live_start_sharing"
-                            android:textColor="@color/fh_primary"
-                            app:backgroundTint="@color/fh_surface"
-                            app:icon="@drawable/ic_fh_location_pin"
-                            app:iconGravity="textStart"
-                            app:iconPadding="@dimen/space_6"
-                            app:iconSize="18dp"
-                            app:iconTint="@color/fh_primary" />
 
                     </LinearLayout>
 
@@ -173,11 +157,27 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/space_6"
+                            android:layout_marginEnd="@dimen/space_8"
                             android:layout_weight="1"
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/family_live_sharing_privacy"
                             android:textColor="@color/fh_on_primary_container" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/buttonLocationSharing"
+                            style="@style/Widget.FamilyHub.Button.Tonal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/touch_target_min"
+                            android:minWidth="0dp"
+                            android:text="@string/family_live_start_sharing"
+                            android:textColor="@color/fh_primary"
+                            app:backgroundTint="@color/fh_surface"
+                            app:icon="@drawable/ic_fh_location_pin"
+                            app:iconGravity="textStart"
+                            app:iconPadding="@dimen/space_4"
+                            app:iconSize="18dp"
+                            app:iconTint="@color/fh_primary" />
 
                     </LinearLayout>
 
@@ -186,7 +186,6 @@
 
         </LinearLayout>
 
-        <!-- Search and filters remain pinned while the large header collapses. -->
         <LinearLayout
             android:id="@+id/familyLivePinnedControls"
             android:layout_width="match_parent"
@@ -211,33 +210,11 @@
                     android:orientation="vertical"
                     android:padding="@dimen/family_live_controls_padding">
 
-                    <LinearLayout
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="@dimen/space_2"
-                        android:paddingEnd="@dimen/space_2">
-
-                        <TextView
-                            style="@style/TextAppearance.FamilyHub.SectionTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/family_live_view_title" />
-
-                        <TextView
-                            style="@style/TextAppearance.FamilyHub.Caption"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/space_8"
-                            android:layout_weight="1"
-                            android:ellipsize="end"
-                            android:gravity="end"
-                            android:maxLines="1"
-                            android:text="@string/family_live_view_detail"
-                            android:textColor="@color/fh_text_secondary" />
-
-                    </LinearLayout>
+                        android:text="@string/family_live_view_title" />
 
                     <com.google.android.material.button.MaterialButtonToggleGroup
                         android:id="@+id/viewToggle"
@@ -305,92 +282,73 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <LinearLayout
-                android:id="@+id/familyLiveFilterRow"
+            <HorizontalScrollView
+                android:id="@+id/familyLiveFilterScroll"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/family_live_filter_row_height"
                 android:layout_marginTop="@dimen/space_2"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:clipToPadding="false"
+                android:fillViewport="false"
+                android:scrollbars="none">
 
-                <HorizontalScrollView
-                    android:id="@+id/familyLiveFilterScroll"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:clipToPadding="false"
-                    android:fillViewport="false"
-                    android:scrollbars="none">
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/familyLiveFilterGroup"
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:gravity="center_vertical"
-                        app:checkedChip="@id/chipFamilyLiveAll"
-                        app:chipSpacingHorizontal="@dimen/space_6"
-                        app:selectionRequired="true"
-                        app:singleSelection="true">
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipFamilyLiveAll"
-                            style="@style/Widget.FamilyHub.StatusChip"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="@string/family_live_filter_all"
-                            app:chipBackgroundColor="@color/fh_module_family_container"
-                            app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipFamilyLiveLive"
-                            style="@style/Widget.FamilyHub.StatusChip"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="@string/family_live_filter_live"
-                            app:chipBackgroundColor="@color/fh_module_finance_container"
-                            app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipFamilyLiveStale"
-                            style="@style/Widget.FamilyHub.StatusChip"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="@string/family_live_filter_stale"
-                            app:chipBackgroundColor="@color/fh_module_reminders_container"
-                            app:chipMinHeight="@dimen/family_live_chip_height" />
-
-                        <com.google.android.material.chip.Chip
-                            android:id="@+id/chipFamilyLiveAttention"
-                            style="@style/Widget.FamilyHub.StatusChip"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checkable="true"
-                            android:text="@string/family_live_filter_attention"
-                            app:chipBackgroundColor="@color/fh_error_container"
-                            app:chipMinHeight="@dimen/family_live_chip_height" />
-                    </com.google.android.material.chip.ChipGroup>
-                </HorizontalScrollView>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonRefreshList"
-                    style="@style/Widget.FamilyHub.Button.Tonal"
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/familyLiveFilterGroup"
                     android:layout_width="wrap_content"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:layout_marginStart="@dimen/space_6"
-                    android:contentDescription="@string/family_live_refresh_content_description"
-                    android:minWidth="0dp"
-                    android:text="@string/family_live_refresh"
-                    android:textColor="@color/fh_module_family"
-                    app:backgroundTint="@color/fh_module_family_container"
-                    app:icon="@drawable/ic_fh_refresh"
-                    app:iconGravity="textStart"
-                    app:iconPadding="@dimen/space_4"
-                    app:iconSize="18dp"
-                    app:iconTint="@color/fh_module_family" />
-            </LinearLayout>
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    app:checkedChip="@id/chipFamilyLiveAll"
+                    app:chipSpacingHorizontal="@dimen/space_6"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFamilyLiveAll"
+                        style="@style/Widget.FamilyHub.StatusChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="@string/family_live_filter_all"
+                        app:chipBackgroundColor="@color/fh_module_family_container"
+                        app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFamilyLiveLive"
+                        style="@style/Widget.FamilyHub.StatusChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="@string/family_live_filter_live"
+                        app:chipBackgroundColor="@color/fh_module_finance_container"
+                        app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFamilyLiveStale"
+                        style="@style/Widget.FamilyHub.StatusChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="@string/family_live_filter_stale"
+                        app:chipBackgroundColor="@color/fh_module_reminders_container"
+                        app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipFamilyLiveAttention"
+                        style="@style/Widget.FamilyHub.StatusChip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        android:text="@string/family_live_filter_attention"
+                        app:chipBackgroundColor="@color/fh_error_container"
+                        app:chipMinHeight="@dimen/family_live_chip_height" />
+
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+
+            <LinearLayout
+                android:id="@+id/familyLiveFilterRow"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/listHeader"
@@ -413,15 +371,32 @@
                     style="@style/TextAppearance.FamilyHub.Caption"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_8"
+                    android:layout_marginStart="@dimen/space_6"
                     android:background="@drawable/bg_status_pill"
-                    android:paddingStart="@dimen/space_8"
+                    android:paddingStart="@dimen/space_6"
                     android:paddingTop="@dimen/space_4"
-                    android:paddingEnd="@dimen/space_8"
+                    android:paddingEnd="@dimen/space_6"
                     android:paddingBottom="@dimen/space_4"
                     android:text="@string/family_live_sort_priority"
                     android:textColor="@color/fh_module_family"
                     android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonRefreshList"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:contentDescription="@string/family_live_refresh_content_description"
+                    android:minWidth="@dimen/touch_target_min"
+                    android:padding="0dp"
+                    android:text=""
+                    app:backgroundTint="@color/fh_module_family_container"
+                    app:icon="@drawable/ic_fh_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconSize="18dp"
+                    app:iconTint="@color/fh_module_family" />
 
             </LinearLayout>
 
