@@ -164,7 +164,13 @@ public final class FamilyLiveSummaryView extends FrameLayout {
                 if ("TRAVELLING".equalsIgnoreCase(member.movementType)) {
                     travelling++;
                 }
-            } else {
+            }
+
+            if (FamilyLiveAvailability.needsAttention(
+                    reason,
+                    member.batteryPercentage,
+                    member.charging
+            )) {
                 attention++;
             }
 
@@ -185,18 +191,32 @@ public final class FamilyLiveSummaryView extends FrameLayout {
     ) {
         int live = 0;
         int travelling = 0;
+        int attention = 0;
         long latestUpdate = 0L;
 
         for (FamilyLiveMemberData member : members) {
             boolean available = "ONLINE".equalsIgnoreCase(
                     member.onlineStatus
             );
+
             if (available) {
                 live++;
                 if ("TRAVELLING".equalsIgnoreCase(member.movementType)) {
                     travelling++;
                 }
             }
+
+            String localReason = available
+                    ? FamilyLiveAvailability.AVAILABLE
+                    : FamilyLiveAvailability.DEVICE_OFFLINE;
+            if (FamilyLiveAvailability.needsAttention(
+                    localReason,
+                    member.batteryPercentage,
+                    member.isCharging
+            )) {
+                attention++;
+            }
+
             latestUpdate = Math.max(latestUpdate, member.lastUpdatedAt);
         }
 
@@ -204,7 +224,7 @@ public final class FamilyLiveSummaryView extends FrameLayout {
                 members.size(),
                 live,
                 travelling,
-                Math.max(0, members.size() - live),
+                attention,
                 latestUpdate
         );
     }
@@ -285,6 +305,7 @@ public final class FamilyLiveSummaryView extends FrameLayout {
                 color(R.color.fh_outline_variant)
         );
         summaryIcon.setImageTintList(ColorStateList.valueOf(accent));
+        syncIcon.setImageTintList(ColorStateList.valueOf(accent));
         safetyState.setTextColor(accent);
         safetyDetail.setTextColor(detail);
     }
