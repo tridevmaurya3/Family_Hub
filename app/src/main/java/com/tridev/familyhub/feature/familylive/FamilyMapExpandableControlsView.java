@@ -78,6 +78,7 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         bindCollapseAfterAction(R.id.buttonFamilyMapRecenter);
         bindCollapseAfterAction(R.id.buttonFamilyMapType);
         bindCollapseAfterAction(R.id.buttonFamilyMapTraffic);
+        bindCollapseAfterAction(R.id.buttonFamilyMapStreetView);
 
         collapse(false);
     }
