@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="safe_place_smart_alert_channel_description">Confirmed Safe Place arrival, exit and stay alerts</string>
+    <string name="safe_place_unknown_name">Safe Place</string>
+
+    <string name="safe_place_smart_arrived_title">Arrived at %1$s</string>
+    <string name="safe_place_smart_arrived_detail">Family Hub confirmed a stable arrival at %1$s.</string>
+    <string name="safe_place_smart_left_title">Left %1$s</string>
+    <string name="safe_place_smart_left_detail">Family Hub confirmed the device remained outside %1$s after a safety check.</string>
+    <string name="safe_place_smart_dwell_title">Still at %1$s</string>
+    <string name="safe_place_smart_dwell_detail">The device has stayed inside %1$s long enough for a dwell confirmation.</string>
+
+    <string name="safe_place_alert_arrived">Arrived</string>
+    <string name="safe_place_alert_left">Left</string>
+    <string name="safe_place_alert_dwell">Stayed</string>
+</resources>
