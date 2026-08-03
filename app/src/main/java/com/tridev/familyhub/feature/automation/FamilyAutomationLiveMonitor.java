@@ -17,8 +17,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.tridev.familyhub.R;
 
 import java.util.ArrayList;
@@ -37,7 +37,7 @@ public final class FamilyAutomationLiveMonitor {
     @Nullable private Context appContext;
     @Nullable private FirebaseAuth.AuthStateListener authListener;
     @Nullable private String viewerUid;
-    private final List<DatabaseReference> references = new ArrayList<>();
+    private final List<Query> queries = new ArrayList<>();
     private final List<ChildEventListener> listeners = new ArrayList<>();
     private int generation;
 
@@ -103,11 +103,12 @@ public final class FamilyAutomationLiveMonitor {
             @NonNull String targetUid,
             int requestGeneration
     ) {
-        DatabaseReference reference = FirebaseDatabase.getInstance()
+        Query query = FirebaseDatabase.getInstance()
                 .getReference()
                 .child("familyAutomationEvents")
                 .child(familyId)
-                .child(targetUid);
+                .child(targetUid)
+                .limitToLast(30);
         ChildEventListener listener = new ChildEventListener() {
             @Override
             public void onChildAdded(
@@ -147,9 +148,9 @@ public final class FamilyAutomationLiveMonitor {
                 // Existing screens remain available without notifications.
             }
         };
-        references.add(reference);
+        queries.add(query);
         listeners.add(listener);
-        reference.limitToLast(30).addChildEventListener(listener);
+        query.addChildEventListener(listener);
     }
 
     private void handleEvent(@NonNull DataSnapshot snapshot) {
@@ -306,11 +307,11 @@ public final class FamilyAutomationLiveMonitor {
 
     private synchronized void detachListeners() {
         generation++;
-        int count = Math.min(references.size(), listeners.size());
+        int count = Math.min(queries.size(), listeners.size());
         for (int index = 0; index < count; index++) {
-            references.get(index).removeEventListener(listeners.get(index));
+            queries.get(index).removeEventListener(listeners.get(index));
         }
-        references.clear();
+        queries.clear();
         listeners.clear();
     }
 }
