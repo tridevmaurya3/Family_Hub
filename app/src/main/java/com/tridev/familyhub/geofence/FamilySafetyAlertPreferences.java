@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.tridev.familyhub.location.FamilyDeviceSafetyAlertPolicy;
 
 import java.util.Calendar;
 
@@ -21,6 +22,9 @@ public final class FamilySafetyAlertPreferences {
     private static final String KEY_ARRIVED = "arrived";
     private static final String KEY_LEFT = "left";
     private static final String KEY_DWELL = "dwell";
+    private static final String KEY_NO_UPDATE = "no_update";
+    private static final String KEY_LOW_BATTERY = "low_battery";
+    private static final String KEY_DEVICE_OFFLINE = "device_offline";
     private static final String KEY_QUIET_HOURS = "quiet_hours";
     private static final String KEY_QUIET_START = "quiet_start";
     private static final String KEY_QUIET_END = "quiet_end";
@@ -66,6 +70,30 @@ public final class FamilySafetyAlertPreferences {
         preferences.edit().putBoolean(key(KEY_DWELL), enabled).apply();
     }
 
+    public boolean noUpdateEnabled() {
+        return preferences.getBoolean(key(KEY_NO_UPDATE), true);
+    }
+
+    public void setNoUpdateEnabled(boolean enabled) {
+        preferences.edit().putBoolean(key(KEY_NO_UPDATE), enabled).apply();
+    }
+
+    public boolean lowBatteryEnabled() {
+        return preferences.getBoolean(key(KEY_LOW_BATTERY), true);
+    }
+
+    public void setLowBatteryEnabled(boolean enabled) {
+        preferences.edit().putBoolean(key(KEY_LOW_BATTERY), enabled).apply();
+    }
+
+    public boolean deviceOfflineEnabled() {
+        return preferences.getBoolean(key(KEY_DEVICE_OFFLINE), true);
+    }
+
+    public void setDeviceOfflineEnabled(boolean enabled) {
+        preferences.edit().putBoolean(key(KEY_DEVICE_OFFLINE), enabled).apply();
+    }
+
     public boolean quietHoursEnabled() {
         return preferences.getBoolean(key(KEY_QUIET_HOURS), false);
     }
@@ -97,6 +125,15 @@ public final class FamilySafetyAlertPreferences {
         }
         if (SafePlaceSmartAlertPolicy.ALERT_DWELL.equals(alertType)) {
             return dwellEnabled();
+        }
+        if (FamilyDeviceSafetyAlertPolicy.ALERT_NO_UPDATE.equals(alertType)) {
+            return noUpdateEnabled();
+        }
+        if (FamilyDeviceSafetyAlertPolicy.ALERT_LOW_BATTERY.equals(alertType)) {
+            return lowBatteryEnabled();
+        }
+        if (FamilyDeviceSafetyAlertPolicy.ALERT_DEVICE_OFFLINE.equals(alertType)) {
+            return deviceOfflineEnabled();
         }
         return false;
     }
