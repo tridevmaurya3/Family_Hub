@@ -11,21 +11,34 @@ import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
 /**
  * Stores only the newest encrypted Family Live update waiting for sync.
  *
- * Family Live writes a current-state node in Firebase rather than a route
- * history. Keeping old failed points would therefore waste storage and could
- * replay stale coordinates over a newer position. replaceWithLatest() makes
- * the queue compact and deterministic.
+ * Firebase stores the member's current state, not a route-history stream.
+ * Keeping older failed points could replay stale coordinates over a newer
+ * position. Every insert therefore replaces the previous pending point.
  */
 @Dao
 public interface PendingLocationUploadDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    long insert(PendingLocationUpload upload);
+    long insertInternal(PendingLocationUpload upload);
 
-    @Query("SELECT * FROM pending_location_uploads "
-            + "WHERE nextAttemptAt <= :now "
-            + "ORDER BY createdAt DESC, id DESC LIMIT 1")
-    PendingLocationUpload getLatestReady(long now);
+    /**
+     * Existing callers use insert(); this transaction transparently compacts
+     * the queue to the newest point without exposing encrypted coordinates.
+     */
+    @Transaction
+    default long insert(PendingLocationUpload upload) {
+        deleteAll();
+        return insertInternal(upload);
+    }
+
+    /**
+     * Foreground-service replay is deliberately disabled. Durable replay is
+     * handled by PendingLocationSyncWorker, which checks the remote timestamp
+     * before writing and therefore cannot overwrite a newer location.
+     */
+    default PendingLocationUpload getNextReady(long now) {
+        return null;
+    }
 
     @Query("SELECT * FROM pending_location_uploads "
             + "ORDER BY createdAt DESC, id DESC LIMIT 1")
@@ -53,14 +66,8 @@ public interface PendingLocationUploadDao {
     @Query("SELECT COUNT(*) FROM pending_location_uploads")
     int count();
 
-    /**
-     * Atomically replaces every older failed point with the newest point.
-     * The encrypted payload remains private while duplicate/stale uploads are
-     * prevented without needing coordinate columns in Room.
-     */
     @Transaction
     default long replaceWithLatest(PendingLocationUpload upload) {
-        deleteAll();
         return insert(upload);
     }
 }
