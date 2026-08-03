@@ -9,4 +9,9 @@
     <string name="family_live_tracking_low_battery">Low battery • Essential updates only</string>
     <string name="family_live_tracking_retrying">Location service reconnecting…</string>
 
+    <string name="family_live_tracking_permission_off">Location permission off • Open Family Live to restore</string>
+    <string name="family_live_tracking_gps_off">GPS is off • Waiting for device location</string>
+    <string name="family_live_tracking_internet_off">Internet off • Saving the newest location securely</string>
+    <string name="family_live_tracking_restoring">Device ready • Restoring a fresh live update…</string>
+
 </resources>
