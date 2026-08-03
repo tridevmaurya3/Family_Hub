@@ -5,12 +5,13 @@ import androidx.annotation.StringRes;
 
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
+import com.tridev.familyhub.location.LocationHeartbeatPolicy;
 
 import java.util.Locale;
 
 /**
  * Single source of truth for Family Live availability, severity,
- * battery attention and network confidence.
+ * battery attention, network confidence and tracking heartbeat health.
  */
 public final class FamilyLiveAvailability {
 
@@ -21,6 +22,7 @@ public final class FamilyLiveAvailability {
     public static final String INTERNET_UNAVAILABLE = "INTERNET_UNAVAILABLE";
     public static final String BATTERY_SAVER = "BATTERY_SAVER";
     public static final String DEVICE_OFFLINE = "DEVICE_OFFLINE";
+    public static final String TRACKING_STALLED = "TRACKING_STALLED";
     public static final String NO_RECENT_UPDATE = "NO_RECENT_UPDATE";
     public static final String LOCATION_UNAVAILABLE = "LOCATION_UNAVAILABLE";
 
@@ -55,6 +57,14 @@ public final class FamilyLiveAvailability {
             return DEVICE_OFFLINE;
         }
 
+        if (LocationHeartbeatPolicy.isCloudHeartbeatStale(
+                member.serviceState,
+                member.serviceHeartbeatAt,
+                now
+        )) {
+            return TRACKING_STALLED;
+        }
+
         if (member.updatedAt <= 0L
                 || now - member.updatedAt > freshnessMs) {
             return NO_RECENT_UPDATE;
@@ -82,6 +92,7 @@ public final class FamilyLiveAvailability {
             case INTERNET_UNAVAILABLE:
             case BATTERY_SAVER:
             case DEVICE_OFFLINE:
+            case TRACKING_STALLED:
             case NO_RECENT_UPDATE:
             case LOCATION_UNAVAILABLE:
                 return normalized;
@@ -107,6 +118,8 @@ public final class FamilyLiveAvailability {
                 return R.string.family_live_state_battery_saver;
             case DEVICE_OFFLINE:
                 return R.string.family_live_state_device_offline;
+            case TRACKING_STALLED:
+                return R.string.family_live_state_tracking_stalled;
             case NO_RECENT_UPDATE:
                 return R.string.family_live_state_update_stale;
             default:
@@ -131,6 +144,8 @@ public final class FamilyLiveAvailability {
                 return R.string.family_live_state_detail_battery_saver;
             case DEVICE_OFFLINE:
                 return R.string.family_live_state_detail_device_offline;
+            case TRACKING_STALLED:
+                return R.string.family_live_state_detail_tracking_stalled;
             case NO_RECENT_UPDATE:
                 return R.string.family_live_state_detail_update_stale;
             default:
@@ -158,6 +173,7 @@ public final class FamilyLiveAvailability {
                 || GPS_OFF.equals(normalized)
                 || INTERNET_UNAVAILABLE.equals(normalized)
                 || DEVICE_OFFLINE.equals(normalized)
+                || TRACKING_STALLED.equals(normalized)
                 || LOCATION_UNAVAILABLE.equals(normalized);
     }
 
