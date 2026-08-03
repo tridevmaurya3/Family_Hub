@@ -36,6 +36,9 @@
             android:stopWithTask="false" />
 
         <activity
+            android:name=".feature.insights.FamilyLocationReportsActivity"
+            android:exported="false" />
+        <activity
             android:name=".feature.journey.FamilyJourneyMapActivity"
             android:exported="false" />
         <activity
