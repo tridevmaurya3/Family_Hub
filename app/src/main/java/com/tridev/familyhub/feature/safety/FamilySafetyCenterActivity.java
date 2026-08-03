@@ -2,9 +2,13 @@ package com.tridev.familyhub.feature.safety;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -23,6 +27,7 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.familylive.FamilyMapActivity;
 import com.tridev.familyhub.feature.familylive.SafePlaceAlertHistoryActivity;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
+import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
 import com.tridev.familyhub.feature.sos.FamilySosAlert;
 import com.tridev.familyhub.feature.sos.FamilySosPolicy;
@@ -32,8 +37,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Unified Office 365-style hub for Family Live safety, SOS, Safe Places and
- * confirmed alert history. No exact location is copied or stored here.
+ * Unified Office 365-style hub for Family Live safety, SOS, Safe Places,
+ * Journey History and confirmed alert history. No exact location is copied or
+ * stored by this overview screen.
  */
 public final class FamilySafetyCenterActivity extends AppCompatActivity {
 
@@ -96,11 +102,112 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
                 open(FamilyMapActivity.class));
         findViewById(R.id.cardFamilySafetyPlaces).setOnClickListener(v ->
                 open(SafePlacesActivity.class));
-        findViewById(R.id.cardFamilySafetyAlerts).setOnClickListener(v ->
+        View alertCard = findViewById(R.id.cardFamilySafetyAlerts);
+        alertCard.setOnClickListener(v ->
                 open(SafePlaceAlertHistoryActivity.class));
+        addJourneyHistoryCard(alertCard);
 
         renderCounts();
         renderOverview();
+    }
+
+    /** Adds Phase 4 without restructuring the existing verified safety layout. */
+    private void addJourneyHistoryCard(@NonNull View alertCard) {
+        if (!(alertCard.getParent() instanceof ViewGroup)) {
+            return;
+        }
+        ViewGroup parent = (ViewGroup) alertCard.getParent();
+        MaterialCardView card = new MaterialCardView(this);
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        cardParams.topMargin = dp(8);
+        card.setLayoutParams(cardParams);
+        card.setRadius(dp(18));
+        card.setCardElevation(0F);
+        card.setStrokeWidth(dp(1));
+        card.setStrokeColor(ContextCompat.getColor(
+                this,
+                R.color.fh_secondary
+        ));
+        card.setCardBackgroundColor(ContextCompat.getColor(
+                this,
+                R.color.fh_secondary_container
+        ));
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setForeground(ContextCompat.getDrawable(
+                this,
+                android.R.drawable.list_selector_background
+        ));
+        card.setOnClickListener(v -> open(FamilyJourneyActivity.class));
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(14), dp(14), dp(14), dp(14));
+
+        ImageView icon = new ImageView(this);
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                dp(44),
+                dp(44)
+        );
+        icon.setLayoutParams(iconParams);
+        icon.setBackgroundResource(R.drawable.bg_placeholder_icon);
+        icon.setPadding(dp(10), dp(10), dp(10), dp(10));
+        icon.setImageResource(R.drawable.ic_family_map_route);
+        icon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(
+                this,
+                R.color.fh_secondary
+        )));
+        row.addView(icon);
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1F
+        );
+        copyParams.leftMargin = dp(12);
+        row.addView(copy, copyParams);
+
+        TextView title = new TextView(this);
+        title.setText(R.string.family_journey_more_button);
+        title.setTextSize(16F);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        title.setTextColor(ContextCompat.getColor(
+                this,
+                R.color.fh_secondary
+        ));
+        copy.addView(title);
+
+        TextView detail = new TextView(this);
+        detail.setText(R.string.family_journey_more_description);
+        detail.setTextSize(13F);
+        detail.setTextColor(ContextCompat.getColor(
+                this,
+                R.color.fh_text_secondary
+        ));
+        LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        detailParams.topMargin = dp(2);
+        copy.addView(detail, detailParams);
+
+        ImageView arrow = new ImageView(this);
+        arrow.setImageResource(R.drawable.ic_arrow_right);
+        arrow.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(
+                this,
+                R.color.fh_secondary
+        )));
+        row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(20)));
+
+        card.addView(row);
+        int index = parent.indexOfChild(alertCard);
+        parent.addView(card, Math.min(index + 1, parent.getChildCount()));
     }
 
     @Override
@@ -298,6 +405,10 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
 
     private void open(@NonNull Class<?> activityClass) {
         startActivity(new Intent(this, activityClass));
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override
