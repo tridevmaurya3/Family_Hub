@@ -122,6 +122,30 @@
         }
       }
     },
+    "familyAutomationRules": {
+      "$familyId": {
+        "$targetUid": {
+          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $targetUid || root.child('memberships').child($familyId).child(auth.uid).child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN)$/) || root.child('journeyPrivacy').child($familyId).child($targetUid).child('viewers').child(auth.uid).val() === true)",
+          ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $targetUid || root.child('memberships').child($familyId).child(auth.uid).child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN)$/)) && root.child('memberships').child($familyId).child($targetUid).child('status').val() === 'ACTIVE'",
+          ".indexOn": ["enabled", "type", "updatedAt"],
+          "$ruleId": {
+            ".validate": "!newData.exists() || (newData.child('ruleId').val() === $ruleId && newData.child('familyId').val() === $familyId && newData.child('targetUid').val() === $targetUid && newData.child('targetName').isString() && newData.child('targetName').val().length >= 1 && newData.child('targetName').val().length <= 100 && newData.child('createdByUid').isString() && newData.child('createdByUid').val().length >= 8 && root.child('memberships').child($familyId).child(newData.child('createdByUid').val()).child('status').val() === 'ACTIVE' && newData.child('title').isString() && newData.child('title').val().length >= 1 && newData.child('title').val().length <= 100 && newData.child('type').val().matches(/^(EXPECTED_ARRIVAL|EXPECTED_DEPARTURE|LATE_RETURN|SCHEDULED_SHARING)$/) && newData.child('placeName').isString() && newData.child('placeName').val().length <= 100 && ((newData.child('type').val() === 'SCHEDULED_SHARING' && newData.child('latitude').isNumber() && newData.child('longitude').isNumber() && newData.child('radiusMeters').isNumber()) || (newData.child('type').val() !== 'SCHEDULED_SHARING' && newData.child('placeName').val().length >= 1 && newData.child('latitude').isNumber() && newData.child('latitude').val() >= -90 && newData.child('latitude').val() <= 90 && newData.child('longitude').isNumber() && newData.child('longitude').val() >= -180 && newData.child('longitude').val() <= 180 && !(newData.child('latitude').val() === 0 && newData.child('longitude').val() === 0) && newData.child('radiusMeters').isNumber() && newData.child('radiusMeters').val() >= 50 && newData.child('radiusMeters').val() <= 2000)) && newData.child('daysMask').isNumber() && newData.child('daysMask').val() >= 1 && newData.child('daysMask').val() <= 127 && newData.child('startMinute').isNumber() && newData.child('startMinute').val() >= 0 && newData.child('startMinute').val() <= 1439 && newData.child('endMinute').isNumber() && newData.child('endMinute').val() >= 0 && newData.child('endMinute').val() <= 1439 && newData.child('graceMinutes').isNumber() && newData.child('graceMinutes').val() >= 0 && newData.child('graceMinutes').val() <= 180 && newData.child('enabled').isBoolean() && newData.child('notifyTrustedViewers').isBoolean() && newData.child('createdAt').isNumber() && newData.child('updatedAt').isNumber())"
+          }
+        }
+      }
+    },
+    "familyAutomationEvents": {
+      "$familyId": {
+        "$targetUid": {
+          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $targetUid || root.child('memberships').child($familyId).child(auth.uid).child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN)$/) || root.child('journeyPrivacy').child($familyId).child($targetUid).child('viewers').child(auth.uid).val() === true)",
+          ".write": "auth != null && auth.uid === $targetUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+          ".indexOn": ["occurredAt", "type", "severity"],
+          "$eventId": {
+            ".validate": "!newData.exists() || (newData.child('eventId').val() === $eventId && newData.child('familyId').val() === $familyId && newData.child('targetUid').val() === $targetUid && newData.child('targetName').isString() && newData.child('targetName').val().length >= 1 && newData.child('targetName').val().length <= 100 && newData.child('ruleId').isString() && newData.child('ruleId').val().length <= 128 && newData.child('ruleTitle').isString() && newData.child('ruleTitle').val().length <= 100 && newData.child('type').val().matches(/^(ARRIVED|DEPARTED|LATE|MISSED|TRIP_STARTED|TRIP_ENDED|SHARING_STARTED|SHARING_STOPPED|LOW_BATTERY_PAUSED)$/) && newData.child('severity').val().matches(/^(INFO|WARNING)$/) && newData.child('placeName').isString() && newData.child('placeName').val().length <= 100 && newData.child('detail').isString() && newData.child('detail').val().length <= 240 && newData.child('deduplicationKey').isString() && newData.child('deduplicationKey').val().length >= 1 && newData.child('deduplicationKey').val().length <= 160 && newData.child('notifyTrustedViewers').isBoolean() && newData.child('occurredAt').isNumber() && newData.child('createdAt').isNumber())"
+          }
+        }
+      }
+    },
     "locations": {
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
