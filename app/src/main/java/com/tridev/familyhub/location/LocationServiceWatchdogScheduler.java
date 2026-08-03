@@ -64,7 +64,7 @@ public final class LocationServiceWatchdogScheduler {
         WorkManager.getInstance(context.getApplicationContext())
                 .enqueueUniqueWork(
                         UNIQUE_ROLLING_WORK,
-                        ExistingWorkPolicy.APPEND_OR_REPLACE,
+                        ExistingWorkPolicy.REPLACE,
                         request
                 );
     }
