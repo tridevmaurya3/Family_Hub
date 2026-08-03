@@ -25,9 +25,17 @@ public final class LocationSharingStore {
             @NonNull Context context,
             boolean enabled
     ) {
-        preferences(context).edit()
+        Context appContext = context.getApplicationContext();
+        preferences(appContext).edit()
                 .putBoolean(KEY_SHARING_ENABLED, enabled)
                 .apply();
+
+        if (enabled) {
+            PendingLocationSyncScheduler.enablePeriodicSync(appContext);
+            PendingLocationSyncScheduler.schedule(appContext);
+        } else {
+            PendingLocationSyncScheduler.disableAndClear(appContext);
+        }
     }
 
     @NonNull
