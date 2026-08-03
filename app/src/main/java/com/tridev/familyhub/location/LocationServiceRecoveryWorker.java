@@ -12,7 +12,8 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 /**
- * Rechecks Family Live after reboot, package replacement or process restart.
+ * Rechecks Family Live after reboot, package replacement, watchdog failure or
+ * process restart.
  *
  * Restoration happens only when the user previously enabled sharing and all
  * required permissions are still present. When Android blocks a background
@@ -33,17 +34,23 @@ public final class LocationServiceRecoveryWorker extends Worker {
         Context context = getApplicationContext();
 
         if (!LocationSharingStore.isSharingEnabled(context)) {
+            LocationServiceWatchdogScheduler.disable(context);
+            LocationServiceDiagnosticsStore.clear(context);
             LocationRecoveryNotifier.cancelAll(context);
             return Result.success();
         }
 
+        LocationServiceDiagnosticsStore.recordRecoveryAttempt(context);
         PendingLocationSyncScheduler.enablePeriodicSync(context);
         PendingLocationSyncScheduler.schedule(context);
+        LocationServiceWatchdogScheduler.enable(context);
         LocationRecoveryNotifier.showBatteryRestrictionIfNeeded(context);
 
         if (!hasRequiredPermissions(context)
                 || !isLocationEnabled(context)) {
             LocationRecoveryNotifier.showResumeRequired(context);
+            LocationServiceWatchdogScheduler
+                    .scheduleRecoveryVerification(context);
             return Result.success();
         }
 
@@ -57,6 +64,9 @@ public final class LocationServiceRecoveryWorker extends Worker {
             LocationRecoveryNotifier.showResumeRequired(context);
         }
 
+        LocationServiceWatchdogScheduler.scheduleRecoveryVerification(
+                context
+        );
         return Result.success();
     }
 
