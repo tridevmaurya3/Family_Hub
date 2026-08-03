@@ -167,16 +167,14 @@
                     android:id="@+id/switchSafetyAlertNotifications"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="56dp"
-                    android:text="@string/family_safety_alert_notifications"
-                    app:switchPadding="@dimen/space_12" />
+                    android:minHeight="52dp"
+                    android:text="@string/family_safety_alert_notifications" />
 
                 <TextView
                     style="@style/TextAppearance.FamilyHub.Caption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_4"
-                    android:layout_marginTop="-6dp"
                     android:layout_marginEnd="56dp"
                     android:text="@string/family_safety_alert_notifications_detail" />
 
@@ -190,7 +188,7 @@
                     android:id="@+id/switchSafetyAlertArrived"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="52dp"
+                    android:minHeight="48dp"
                     android:text="@string/family_safety_alert_arrived_control" />
 
                 <TextView
@@ -198,7 +196,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_4"
-                    android:layout_marginTop="-6dp"
                     android:layout_marginEnd="56dp"
                     android:text="@string/family_safety_alert_arrived_detail" />
 
@@ -207,7 +204,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
-                    android:minHeight="52dp"
+                    android:minHeight="48dp"
                     android:text="@string/family_safety_alert_left_control" />
 
                 <TextView
@@ -215,7 +212,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_4"
-                    android:layout_marginTop="-6dp"
                     android:layout_marginEnd="56dp"
                     android:text="@string/family_safety_alert_left_detail" />
 
@@ -224,7 +220,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
-                    android:minHeight="52dp"
+                    android:minHeight="48dp"
                     android:text="@string/family_safety_alert_dwell_control" />
 
                 <TextView
@@ -232,7 +228,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_4"
-                    android:layout_marginTop="-6dp"
                     android:layout_marginEnd="56dp"
                     android:text="@string/family_safety_alert_dwell_detail" />
 
@@ -246,7 +241,7 @@
                     android:id="@+id/switchSafetyAlertQuiet"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:minHeight="56dp"
+                    android:minHeight="52dp"
                     android:text="@string/family_safety_alert_quiet_hours" />
 
                 <TextView
@@ -254,7 +249,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_4"
-                    android:layout_marginTop="-6dp"
                     android:layout_marginEnd="56dp"
                     android:text="@string/family_safety_alert_quiet_hours_detail" />
             </LinearLayout>
