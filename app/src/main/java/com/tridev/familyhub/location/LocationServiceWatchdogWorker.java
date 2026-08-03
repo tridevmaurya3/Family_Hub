@@ -62,8 +62,6 @@ public final class LocationServiceWatchdogWorker extends Worker {
                 true,
                 serviceRunning
         )) {
-            snapshot = LocationServiceDiagnosticsStore
-                    .recordRecoveryAttempt(context);
             publishServiceDiagnostics(
                     context,
                     LocationHeartbeatPolicy.STATE_RECOVERY_PENDING,
