@@ -85,6 +85,8 @@ public final class LocationServiceWatchdogWorker extends Worker {
                 );
             }
         }
+
+        FamilyDeviceSafetyMonitorScheduler.scheduleNow(context);
         return Result.success();
     }
 
