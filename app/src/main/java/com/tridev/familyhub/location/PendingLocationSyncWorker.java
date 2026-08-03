@@ -83,10 +83,7 @@ public final class PendingLocationSyncWorker extends Worker {
                 return Result.success();
             }
 
-            if (!LocationSyncPolicy.belongsToCurrentSharingSession(
-                    queuedTimestamp,
-                    LocationSharingStore.sharingEnabledAt(context)
-            )) {
+            if (!belongsToCurrentSession(context, queuedTimestamp)) {
                 dao.deleteById(pending.id);
                 return Result.success();
             }
@@ -115,12 +112,12 @@ public final class PendingLocationSyncWorker extends Worker {
                 return Result.success();
             }
 
-            if (!LocationSharingStore.isSharingEnabled(context)
-                    || !LocationSyncPolicy.belongsToCurrentSharingSession(
-                    queuedTimestamp,
-                    LocationSharingStore.sharingEnabledAt(context)
-            )) {
+            if (!LocationSharingStore.isSharingEnabled(context)) {
                 dao.deleteAll();
+                return Result.success();
+            }
+            if (!belongsToCurrentSession(context, queuedTimestamp)) {
+                dao.deleteById(pending.id);
                 return Result.success();
             }
 
@@ -170,12 +167,12 @@ public final class PendingLocationSyncWorker extends Worker {
             values.put("updatedAt", queuedTimestamp);
             values.put("syncedAt", ServerValue.TIMESTAMP);
 
-            if (!LocationSharingStore.isSharingEnabled(context)
-                    || !LocationSyncPolicy.belongsToCurrentSharingSession(
-                    queuedTimestamp,
-                    LocationSharingStore.sharingEnabledAt(context)
-            )) {
+            if (!LocationSharingStore.isSharingEnabled(context)) {
                 dao.deleteAll();
+                return Result.success();
+            }
+            if (!belongsToCurrentSession(context, queuedTimestamp)) {
+                dao.deleteById(pending.id);
                 return Result.success();
             }
 
@@ -196,6 +193,16 @@ public final class PendingLocationSyncWorker extends Worker {
             );
             return Result.retry();
         }
+    }
+
+    private boolean belongsToCurrentSession(
+            @NonNull Context context,
+            long queuedTimestamp
+    ) {
+        return LocationSyncPolicy.belongsToCurrentSharingSession(
+                queuedTimestamp,
+                LocationSharingStore.sharingEnabledAt(context)
+        );
     }
 
     @NonNull
