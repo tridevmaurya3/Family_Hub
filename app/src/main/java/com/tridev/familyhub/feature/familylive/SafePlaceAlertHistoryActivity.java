@@ -25,6 +25,8 @@ import com.tridev.familyhub.data.repository.SafePlaceAlertRepository;
 import com.tridev.familyhub.geofence.FamilySafetyAlertPolicy;
 import com.tridev.familyhub.geofence.FamilySafetyAlertPreferences;
 import com.tridev.familyhub.geofence.SafePlaceSmartAlertPolicy;
+import com.tridev.familyhub.location.FamilyDeviceSafetyAlertPolicy;
+import com.tridev.familyhub.location.FamilyDeviceSafetyMonitorScheduler;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -72,6 +74,7 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        FamilyDeviceSafetyMonitorScheduler.scheduleNow(this);
         load();
     }
 
@@ -107,6 +110,15 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
         MaterialSwitch dwell = findViewById(
                 R.id.switchSafetyAlertDwell
         );
+        MaterialSwitch noUpdate = findViewById(
+                R.id.switchSafetyAlertNoUpdate
+        );
+        MaterialSwitch lowBattery = findViewById(
+                R.id.switchSafetyAlertLowBattery
+        );
+        MaterialSwitch offline = findViewById(
+                R.id.switchSafetyAlertOffline
+        );
         MaterialSwitch quiet = findViewById(
                 R.id.switchSafetyAlertQuiet
         );
@@ -115,6 +127,9 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
         arrived.setChecked(preferences.arrivedEnabled());
         left.setChecked(preferences.leftEnabled());
         dwell.setChecked(preferences.dwellEnabled());
+        noUpdate.setChecked(preferences.noUpdateEnabled());
+        lowBattery.setChecked(preferences.lowBatteryEnabled());
+        offline.setChecked(preferences.deviceOfflineEnabled());
         quiet.setChecked(preferences.quietHoursEnabled());
 
         notifications.setOnCheckedChangeListener((button, checked) ->
@@ -125,15 +140,24 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
                 preferences.setLeftEnabled(checked));
         dwell.setOnCheckedChangeListener((button, checked) ->
                 preferences.setDwellEnabled(checked));
+        noUpdate.setOnCheckedChangeListener((button, checked) -> {
+            preferences.setNoUpdateEnabled(checked);
+            FamilyDeviceSafetyMonitorScheduler.scheduleNow(this);
+        });
+        lowBattery.setOnCheckedChangeListener((button, checked) -> {
+            preferences.setLowBatteryEnabled(checked);
+            FamilyDeviceSafetyMonitorScheduler.scheduleNow(this);
+        });
+        offline.setOnCheckedChangeListener((button, checked) -> {
+            preferences.setDeviceOfflineEnabled(checked);
+            FamilyDeviceSafetyMonitorScheduler.scheduleNow(this);
+        });
         quiet.setOnCheckedChangeListener((button, checked) ->
                 preferences.setQuietHoursEnabled(checked));
     }
 
     private void bindFilters() {
-        filterChip(
-                R.id.chipSafetyAll,
-                FamilySafetyAlertPolicy.FILTER_ALL
-        );
+        filterChip(R.id.chipSafetyAll, FamilySafetyAlertPolicy.FILTER_ALL);
         filterChip(
                 R.id.chipSafetyUnread,
                 FamilySafetyAlertPolicy.FILTER_UNREAD
@@ -149,6 +173,18 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
         filterChip(
                 R.id.chipSafetyDwell,
                 FamilySafetyAlertPolicy.FILTER_DWELL
+        );
+        filterChip(
+                R.id.chipSafetyNoUpdate,
+                FamilySafetyAlertPolicy.FILTER_NO_UPDATE
+        );
+        filterChip(
+                R.id.chipSafetyLowBattery,
+                FamilySafetyAlertPolicy.FILTER_LOW_BATTERY
+        );
+        filterChip(
+                R.id.chipSafetyOffline,
+                FamilySafetyAlertPolicy.FILTER_OFFLINE
         );
     }
 
@@ -295,7 +331,25 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
         int backgroundColor;
         int labelRes;
 
-        if (FamilySafetyAlertPolicy.isArrived(alert.transitionType)) {
+        if (FamilyDeviceSafetyAlertPolicy.ALERT_NO_UPDATE.equals(
+                alert.transitionType
+        )) {
+            strokeColor = R.color.fh_warning;
+            backgroundColor = R.color.fh_warning_container;
+            labelRes = R.string.family_device_alert_no_update_badge;
+        } else if (FamilyDeviceSafetyAlertPolicy.ALERT_LOW_BATTERY.equals(
+                alert.transitionType
+        )) {
+            strokeColor = R.color.fh_error;
+            backgroundColor = R.color.fh_error_container;
+            labelRes = R.string.family_device_alert_low_battery_badge;
+        } else if (FamilyDeviceSafetyAlertPolicy.ALERT_DEVICE_OFFLINE.equals(
+                alert.transitionType
+        )) {
+            strokeColor = R.color.fh_module_documents;
+            backgroundColor = R.color.fh_module_documents_container;
+            labelRes = R.string.family_device_alert_offline_badge;
+        } else if (FamilySafetyAlertPolicy.isArrived(alert.transitionType)) {
             strokeColor = R.color.fh_success;
             backgroundColor = R.color.fh_success_container;
             labelRes = R.string.safe_place_alert_arrived;
@@ -358,7 +412,11 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
 
         String placeName = placeNames.get(alert.placeId);
         if (placeName == null || placeName.trim().isEmpty()) {
-            placeName = getString(R.string.safe_place_unknown_name);
+            placeName = FamilyDeviceSafetyAlertPolicy.isMemberPlaceId(
+                    alert.placeId
+            )
+                    ? getString(R.string.family_device_alert_unknown_member)
+                    : getString(R.string.safe_place_unknown_name);
         }
 
         TextView title = new TextView(this);
