@@ -41,6 +41,7 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
     private View visibilityAnchor;
 
     private boolean expanded;
+    private int lastAnchorVisibility = Integer.MIN_VALUE;
 
     private final ViewTreeObserver.OnGlobalLayoutListener
             anchorVisibilityListener = this::syncAnchorVisibility;
@@ -104,13 +105,14 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
                     .removeOnGlobalLayoutListener(anchorVisibilityListener);
         }
         visibilityAnchor = null;
+        lastAnchorVisibility = Integer.MIN_VALUE;
         super.onDetachedFromWindow();
     }
 
     @Override
     public void onVisibilityAggregated(boolean isVisible) {
         super.onVisibilityAggregated(isVisible);
-        if (isVisible) {
+        if (isVisible && lastAnchorVisibility == VISIBLE) {
             post(() -> collapse(false));
         }
     }
@@ -134,6 +136,7 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
 
         visibilityAnchor = anchor;
+        lastAnchorVisibility = Integer.MIN_VALUE;
         anchor.getViewTreeObserver()
                 .addOnGlobalLayoutListener(anchorVisibilityListener);
         syncAnchorVisibility();
@@ -143,11 +146,17 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         if (visibilityAnchor == null) {
             return;
         }
+
         int desiredVisibility = visibilityAnchor.getVisibility();
+        boolean becameVisible = lastAnchorVisibility != VISIBLE
+                && desiredVisibility == VISIBLE;
+
         if (getVisibility() != desiredVisibility) {
             setVisibility(desiredVisibility);
         }
-        if (desiredVisibility == VISIBLE) {
+
+        lastAnchorVisibility = desiredVisibility;
+        if (becameVisible) {
             collapse(false);
         }
     }
