@@ -44,6 +44,7 @@
     <string name="family_journey_delete_day_confirm">Delete your Journey History for this selected date?</string>
     <string name="family_journey_delete_all_confirm">Permanently delete every saved Journey History day for your account?</string>
     <string name="family_journey_delete_confirm_action">Delete</string>
+    <string name="action_delete">Delete</string>
     <string name="family_journey_deleted">Journey History deleted.</string>
     <string name="family_journey_own_only_delete">Only your own Journey History can be deleted.</string>
     <string name="family_journey_error">Journey History could not be loaded. Check internet and access permissions.</string>
