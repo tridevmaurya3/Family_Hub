@@ -4,12 +4,12 @@
     <dimen name="family_map_advanced_control_button_height">62dp</dimen>
 
     <dimen name="family_map_controls_collapsed_width">60dp</dimen>
-    <dimen name="family_map_controls_expanded_width">292dp</dimen>
-    <dimen name="family_map_controls_height">56dp</dimen>
-    <dimen name="family_map_bottom_action_width">52dp</dimen>
+    <dimen name="family_map_controls_expanded_width">328dp</dimen>
+    <dimen name="family_map_controls_height">62dp</dimen>
+    <dimen name="family_map_bottom_action_width">64dp</dimen>
 
-    <dimen name="family_map_info_width">196dp</dimen>
-    <dimen name="family_map_info_padding">10dp</dimen>
+    <dimen name="family_map_info_width">244dp</dimen>
+    <dimen name="family_map_info_padding">11dp</dimen>
     <dimen name="family_map_info_row_spacing">4dp</dimen>
     <dimen name="family_map_legend_height">36dp</dimen>
 </resources>
