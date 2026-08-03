@@ -16,6 +16,9 @@ public interface SafePlaceDao {
     @Query("SELECT * FROM safe_places ORDER BY name COLLATE NOCASE")
     List<SafePlace> getAll();
 
+    @Query("SELECT * FROM safe_places WHERE id = :id LIMIT 1")
+    SafePlace getById(long id);
+
     @Query("SELECT * FROM safe_places WHERE alertsEnabled = 1 LIMIT 100")
     List<SafePlace> getEnabled();
 
