@@ -115,6 +115,31 @@
         android:textSize="12sp" />
 
     <TextView
+        android:id="@+id/textMapInfoNearest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@color/fh_secondary_container"
+        android:maxLines="2"
+        android:padding="8dp"
+        android:textColor="@color/fh_secondary"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/textMapInfoDistance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@color/fh_primary_container"
+        android:maxLines="2"
+        android:padding="8dp"
+        android:textColor="@color/fh_primary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
