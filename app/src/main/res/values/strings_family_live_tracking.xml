@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="family_live_tracking_normal">Smart tracking • Balanced updates</string>
+    <string name="family_live_tracking_active">Walking detected • Faster updates</string>
+    <string name="family_live_tracking_travelling">Travelling detected • Live updates</string>
+    <string name="family_live_tracking_stationary">Stationary • Battery-saving updates</string>
+    <string name="family_live_tracking_power_saver">Power saver • Reduced updates</string>
+    <string name="family_live_tracking_low_battery">Low battery • Essential updates only</string>
+    <string name="family_live_tracking_retrying">Location service reconnecting…</string>
+
+</resources>
