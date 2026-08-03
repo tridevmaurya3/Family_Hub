@@ -36,6 +36,7 @@ import com.tridev.familyhub.feature.notes.NotesFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
 import com.tridev.familyhub.feature.planner.PlannerFragment;
 import com.tridev.familyhub.feature.property.PropertyFragment;
+import com.tridev.familyhub.feature.safety.FamilySafetyCenterActivity;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
@@ -65,6 +66,7 @@ public class MoreFragment extends Fragment {
         applyModuleCardPalette();
         promoteSafePlacesEntry();
         promoteFamilySosEntry();
+        promoteFamilySafetyCenterEntry();
 
         binding.cardDocuments.setOnClickListener(
                 clickedView -> openFeature(new DocumentsFragment())
@@ -136,7 +138,65 @@ public class MoreFragment extends Fragment {
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
     }
 
-    /** Keeps Emergency SOS visible as the first safety action on More. */
+    /** Keeps the unified Family Safety Centre first on the More page. */
+    private void promoteFamilySafetyCenterEntry() {
+        View rootChild = binding.getRoot().getChildAt(0);
+        if (!(rootChild instanceof LinearLayout)) {
+            return;
+        }
+
+        LinearLayout content = (LinearLayout) rootChild;
+        MaterialButton button = new MaterialButton(
+                requireContext(),
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+        );
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(76)
+        );
+        params.topMargin = dp(12);
+        params.bottomMargin = dp(4);
+        button.setLayoutParams(params);
+        button.setMinHeight(dp(76));
+        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        button.setPadding(dp(18), 0, dp(18), 0);
+        button.setText(getString(
+                R.string.family_safety_more_button
+        ) + "\n" + getString(R.string.family_safety_more_description));
+        button.setTextSize(14F);
+        button.setAllCaps(false);
+        button.setMaxLines(2);
+        button.setIconResource(R.drawable.ic_safe_place_shield);
+        button.setIconTintResource(R.color.fh_primary);
+        button.setIconSize(dp(26));
+        button.setIconPadding(dp(12));
+        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        button.setTextColor(ContextCompat.getColor(
+                requireContext(),
+                R.color.fh_primary
+        ));
+        button.setBackgroundTintList(ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.fh_primary_container
+        ));
+        button.setStrokeColor(ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.fh_primary
+        ));
+        button.setStrokeWidth(dp(1));
+        button.setCornerRadius(dp(20));
+        button.setOnClickListener(clicked -> startActivity(new Intent(
+                requireContext(),
+                FamilySafetyCenterActivity.class
+        )));
+
+        int insertionIndex = Math.min(2, content.getChildCount());
+        content.addView(button, insertionIndex);
+    }
+
+    /** Keeps Emergency SOS visible as a direct safety action on More. */
     private void promoteFamilySosEntry() {
         View rootChild = binding.getRoot().getChildAt(0);
         if (!(rootChild instanceof LinearLayout)) {
