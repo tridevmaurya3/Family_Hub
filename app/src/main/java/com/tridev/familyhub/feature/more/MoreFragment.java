@@ -31,6 +31,7 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
+import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.notes.NotesFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
@@ -66,6 +67,7 @@ public class MoreFragment extends Fragment {
         applyModuleCardPalette();
         promoteSafePlacesEntry();
         promoteFamilySosEntry();
+        promoteJourneyHistoryEntry();
         promoteFamilySafetyCenterEntry();
 
         binding.cardDocuments.setOnClickListener(
@@ -140,64 +142,52 @@ public class MoreFragment extends Fragment {
 
     /** Keeps the unified Family Safety Centre first on the More page. */
     private void promoteFamilySafetyCenterEntry() {
-        View rootChild = binding.getRoot().getChildAt(0);
-        if (!(rootChild instanceof LinearLayout)) {
-            return;
-        }
-
-        LinearLayout content = (LinearLayout) rootChild;
-        MaterialButton button = new MaterialButton(
-                requireContext(),
-                null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
-        );
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(76)
-        );
-        params.topMargin = dp(12);
-        params.bottomMargin = dp(4);
-        button.setLayoutParams(params);
-        button.setMinHeight(dp(76));
-        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-        button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-        button.setPadding(dp(18), 0, dp(18), 0);
-        button.setText(getString(
-                R.string.family_safety_more_button
-        ) + "\n" + getString(R.string.family_safety_more_description));
-        button.setTextSize(14F);
-        button.setAllCaps(false);
-        button.setMaxLines(2);
-        button.setIconResource(R.drawable.ic_safe_place_shield);
-        button.setIconTintResource(R.color.fh_primary);
-        button.setIconSize(dp(26));
-        button.setIconPadding(dp(12));
-        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-        button.setTextColor(ContextCompat.getColor(
-                requireContext(),
-                R.color.fh_primary
-        ));
-        button.setBackgroundTintList(ContextCompat.getColorStateList(
-                requireContext(),
-                R.color.fh_primary_container
-        ));
-        button.setStrokeColor(ContextCompat.getColorStateList(
-                requireContext(),
-                R.color.fh_primary
-        ));
-        button.setStrokeWidth(dp(1));
-        button.setCornerRadius(dp(20));
-        button.setOnClickListener(clicked -> startActivity(new Intent(
-                requireContext(),
+        addPromotedButton(
+                76,
+                R.string.family_safety_more_button,
+                R.string.family_safety_more_description,
+                R.drawable.ic_safe_place_shield,
+                R.color.fh_primary,
+                R.color.fh_primary_container,
                 FamilySafetyCenterActivity.class
-        )));
+        );
+    }
 
-        int insertionIndex = Math.min(2, content.getChildCount());
-        content.addView(button, insertionIndex);
+    /** Keeps Journey History close to the core family-safety tools. */
+    private void promoteJourneyHistoryEntry() {
+        addPromotedButton(
+                72,
+                R.string.family_journey_more_button,
+                R.string.family_journey_more_description,
+                R.drawable.ic_family_map_route,
+                R.color.fh_secondary,
+                R.color.fh_secondary_container,
+                FamilyJourneyActivity.class
+        );
     }
 
     /** Keeps Emergency SOS visible as a direct safety action on More. */
     private void promoteFamilySosEntry() {
+        addPromotedButton(
+                72,
+                R.string.family_sos_more_button,
+                R.string.family_sos_more_description,
+                R.drawable.ic_family_sos,
+                R.color.fh_error,
+                R.color.fh_error_container,
+                FamilySosActivity.class
+        );
+    }
+
+    private void addPromotedButton(
+            int heightDp,
+            int titleRes,
+            int detailRes,
+            int iconRes,
+            int accentColorRes,
+            int containerColorRes,
+            @NonNull Class<?> activityClass
+    ) {
         View rootChild = binding.getRoot().getChildAt(0);
         if (!(rootChild instanceof LinearLayout)) {
             return;
@@ -211,43 +201,41 @@ public class MoreFragment extends Fragment {
         );
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(72)
+                dp(heightDp)
         );
         params.topMargin = dp(12);
         params.bottomMargin = dp(4);
         button.setLayoutParams(params);
-        button.setMinHeight(dp(72));
+        button.setMinHeight(dp(heightDp));
         button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
         button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
         button.setPadding(dp(18), 0, dp(18), 0);
-        button.setText(getString(
-                R.string.family_sos_more_button
-        ) + "\n" + getString(R.string.family_sos_more_description));
+        button.setText(getString(titleRes) + "\n" + getString(detailRes));
         button.setTextSize(14F);
         button.setAllCaps(false);
         button.setMaxLines(2);
-        button.setIconResource(R.drawable.ic_family_sos);
-        button.setIconTintResource(R.color.fh_error);
+        button.setIconResource(iconRes);
+        button.setIconTintResource(accentColorRes);
         button.setIconSize(dp(24));
         button.setIconPadding(dp(12));
         button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         button.setTextColor(ContextCompat.getColor(
                 requireContext(),
-                R.color.fh_error
+                accentColorRes
         ));
         button.setBackgroundTintList(ContextCompat.getColorStateList(
                 requireContext(),
-                R.color.fh_error_container
+                containerColorRes
         ));
         button.setStrokeColor(ContextCompat.getColorStateList(
                 requireContext(),
-                R.color.fh_error
+                accentColorRes
         ));
         button.setStrokeWidth(dp(1));
         button.setCornerRadius(dp(20));
         button.setOnClickListener(clicked -> startActivity(new Intent(
                 requireContext(),
-                FamilySosActivity.class
+                activityClass
         )));
 
         int insertionIndex = Math.min(2, content.getChildCount());
@@ -256,9 +244,7 @@ public class MoreFragment extends Fragment {
 
     /**
      * Keeps Safe Places visible without requiring the user to discover a small
-     * button buried below the Family Live card. The existing bound button is
-     * moved directly below the More page introduction and styled as a clear
-     * primary family-safety action.
+     * button buried below the Family Live card.
      */
     private void promoteSafePlacesEntry() {
         MaterialButton button = binding.buttonSafePlaces;
@@ -309,61 +295,39 @@ public class MoreFragment extends Fragment {
     }
 
     private void applyModuleCardPalette() {
-        styleCard(
-                binding.cardVehicle,
+        styleCard(binding.cardVehicle,
                 R.color.fh_module_vehicle_container,
-                R.color.fh_module_vehicle
-        );
-        styleCard(
-                binding.cardProperty,
+                R.color.fh_module_vehicle);
+        styleCard(binding.cardProperty,
                 R.color.fh_module_property_container,
-                R.color.fh_module_property
-        );
-        styleCard(
-                binding.cardPlanner,
+                R.color.fh_module_property);
+        styleCard(binding.cardPlanner,
                 R.color.fh_module_planner_container,
-                R.color.fh_module_planner
-        );
-        styleCard(
-                binding.cardNotes,
+                R.color.fh_module_planner);
+        styleCard(binding.cardNotes,
                 R.color.fh_module_notes_container,
-                R.color.fh_module_notes
-        );
-        styleCard(
-                binding.cardDocuments,
+                R.color.fh_module_notes);
+        styleCard(binding.cardDocuments,
                 R.color.fh_module_documents_container,
-                R.color.fh_module_documents
-        );
-        styleCard(
-                binding.cardPasswordVault,
+                R.color.fh_module_documents);
+        styleCard(binding.cardPasswordVault,
                 R.color.fh_module_vault_container,
-                R.color.fh_module_vault
-        );
-        styleCard(
-                binding.cardFamilyLive,
+                R.color.fh_module_vault);
+        styleCard(binding.cardFamilyLive,
                 R.color.fh_module_family_container,
-                R.color.fh_module_family
-        );
-        styleCard(
-                binding.cardHealth,
+                R.color.fh_module_family);
+        styleCard(binding.cardHealth,
                 R.color.fh_module_health_container,
-                R.color.fh_module_health
-        );
-        styleCard(
-                binding.cardGrocery,
+                R.color.fh_module_health);
+        styleCard(binding.cardGrocery,
                 R.color.fh_module_grocery_container,
-                R.color.fh_module_grocery
-        );
-        styleCard(
-                binding.cardBackupRestore,
+                R.color.fh_module_grocery);
+        styleCard(binding.cardBackupRestore,
                 R.color.fh_primary_container,
-                R.color.fh_primary
-        );
-        styleCard(
-                binding.cardPrivacyAbout,
+                R.color.fh_primary);
+        styleCard(binding.cardPrivacyAbout,
                 R.color.fh_secondary_container,
-                R.color.fh_secondary
-        );
+                R.color.fh_secondary);
     }
 
     private void styleCard(
