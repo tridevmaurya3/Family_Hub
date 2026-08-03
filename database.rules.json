@@ -93,6 +93,35 @@
         }
       }
     },
+    "journeyPrivacy": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        "$ownerUid": {
+          ".write": "auth != null && auth.uid === $ownerUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+          ".validate": "!newData.exists() || (newData.child('ownerUid').val() === $ownerUid && newData.child('historyEnabled').isBoolean() && newData.child('retentionDays').isNumber() && newData.child('retentionDays').val().matches(/^(7|30|90)$/) && newData.child('updatedAt').isNumber())",
+          "viewers": {
+            "$viewerUid": {
+              ".validate": "!newData.exists() || (newData.val() === true && $viewerUid !== $ownerUid && root.child('memberships').child($familyId).child($viewerUid).child('status').val() === 'ACTIVE')"
+            }
+          }
+        }
+      }
+    },
+    "locationHistory": {
+      "$familyId": {
+        "$ownerUid": {
+          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $ownerUid || root.child('journeyPrivacy').child($familyId).child($ownerUid).child('viewers').child(auth.uid).val() === true)",
+          ".write": "auth != null && auth.uid === $ownerUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+          "$dayKey": {
+            ".validate": "!newData.exists() || $dayKey.matches(/^[0-9]{8}$/)",
+            ".indexOn": ["capturedAt"],
+            "$pointId": {
+              ".validate": "!newData.exists() || (newData.child('pointId').val() === $pointId && newData.child('familyId').val() === $familyId && newData.child('uid').val() === $ownerUid && newData.child('dayKey').val() === $dayKey && newData.child('clientUpdateId').isString() && newData.child('clientUpdateId').val().length <= 64 && newData.child('latitude').isNumber() && newData.child('latitude').val() >= -90 && newData.child('latitude').val() <= 90 && newData.child('longitude').isNumber() && newData.child('longitude').val() >= -180 && newData.child('longitude').val() <= 180 && !(newData.child('latitude').val() === 0 && newData.child('longitude').val() === 0) && newData.child('accuracy').isNumber() && newData.child('accuracy').val() > 0 && newData.child('accuracy').val() <= 100 && newData.child('capturedAt').isNumber() && newData.child('recordedAt').isNumber() && newData.child('speedMetersPerSecond').isNumber() && newData.child('speedMetersPerSecond').val() >= 0 && newData.child('speedMetersPerSecond').val() <= 200 && newData.child('movementType').val().matches(/^(STATIONARY|WALKING|CYCLING|TRAVELLING|UNKNOWN)$/) && newData.child('placeLabel').isString() && newData.child('placeLabel').val().length <= 160 && newData.child('safePlaceId').isString() && newData.child('safePlaceId').val().length <= 40 && newData.child('safePlaceName').isString() && newData.child('safePlaceName').val().length <= 100 && newData.child('batteryPercentage').isNumber() && newData.child('batteryPercentage').val() >= -1 && newData.child('batteryPercentage').val() <= 100 && newData.child('charging').isBoolean())"
+            }
+          }
+        }
+      }
+    },
     "locations": {
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
