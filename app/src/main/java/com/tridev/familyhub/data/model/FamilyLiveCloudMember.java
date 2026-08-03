@@ -21,6 +21,10 @@ public final class FamilyLiveCloudMember {
     public final boolean online;
     @NonNull public final String availabilityReason;
     public final long updatedAt;
+    @NonNull public final String serviceState;
+    public final long serviceHeartbeatAt;
+    public final int serviceRecoveryCount;
+    public final int serviceConsecutiveMisses;
 
     public FamilyLiveCloudMember(
             @NonNull String uid,
@@ -38,7 +42,11 @@ public final class FamilyLiveCloudMember {
             boolean sharingEnabled,
             boolean online,
             @NonNull String availabilityReason,
-            long updatedAt
+            long updatedAt,
+            @NonNull String serviceState,
+            long serviceHeartbeatAt,
+            int serviceRecoveryCount,
+            int serviceConsecutiveMisses
     ) {
         this.uid = uid;
         this.displayName = displayName;
@@ -56,5 +64,9 @@ public final class FamilyLiveCloudMember {
         this.online = online;
         this.availabilityReason = availabilityReason;
         this.updatedAt = updatedAt;
+        this.serviceState = serviceState;
+        this.serviceHeartbeatAt = serviceHeartbeatAt;
+        this.serviceRecoveryCount = serviceRecoveryCount;
+        this.serviceConsecutiveMisses = serviceConsecutiveMisses;
     }
 }
