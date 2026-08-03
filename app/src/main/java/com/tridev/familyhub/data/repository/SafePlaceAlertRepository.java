@@ -11,6 +11,7 @@ import com.tridev.familyhub.data.local.dao.SafePlaceAlertDao;
 import com.tridev.familyhub.data.local.dao.SafePlaceDao;
 import com.tridev.familyhub.data.local.entity.SafePlace;
 import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
+import com.tridev.familyhub.location.FamilyDeviceSafetyAlertStateStore;
 
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Background-only access layer for local Safe Place alert history. */
+/** Background-only access layer for local Family Safety alert history. */
 public final class SafePlaceAlertRepository {
 
     public interface HistoryCallback {
@@ -41,6 +42,7 @@ public final class SafePlaceAlertRepository {
 
     private final SafePlaceAlertDao alertDao;
     private final SafePlaceDao safePlaceDao;
+    private final FamilyDeviceSafetyAlertStateStore deviceAlertStateStore;
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -50,6 +52,7 @@ public final class SafePlaceAlertRepository {
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         alertDao = database.safePlaceAlertDao();
         safePlaceDao = database.safePlaceDao();
+        deviceAlertStateStore = new FamilyDeviceSafetyAlertStateStore(context);
     }
 
     public void loadHistory(@NonNull HistoryCallback callback) {
@@ -60,6 +63,7 @@ public final class SafePlaceAlertRepository {
             for (SafePlace place : safePlaceDao.getAll()) {
                 placeNames.put(String.valueOf(place.id), place.name);
             }
+            placeNames.putAll(deviceAlertStateStore.knownMemberNames());
             main.post(() -> {
                 if (!closed.get()) {
                     callback.onLoaded(alerts, unread, placeNames);
