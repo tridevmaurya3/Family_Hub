@@ -18,7 +18,7 @@ public final class SafePlaceGeofencePolicy {
     public static final int MAX_GEOFENCES = 100;
     public static final float MIN_RADIUS_METERS = 100F;
     public static final float MAX_RADIUS_METERS = 5000F;
-    public static final int LOITERING_DELAY_MS = 2 * 60 * 1000;
+    public static final int LOITERING_DELAY_MS = 5 * 60 * 1000;
     public static final int NOTIFICATION_RESPONSIVENESS_MS = 30 * 1000;
 
     private static final String REQUEST_PREFIX = "safe_place:";
