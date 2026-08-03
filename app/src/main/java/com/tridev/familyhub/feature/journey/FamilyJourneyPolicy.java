@@ -25,7 +25,25 @@ public final class FamilyJourneyPolicy {
     private FamilyJourneyPolicy() {
     }
 
+    /** Validates a fresh location before it is recorded. */
     public static boolean validPoint(
+            double latitude,
+            double longitude,
+            double accuracy,
+            long capturedAt,
+            long now
+    ) {
+        return validStoredPoint(
+                latitude,
+                longitude,
+                accuracy,
+                capturedAt,
+                now
+        ) && now - capturedAt <= MAX_LOCATION_AGE_MS;
+    }
+
+    /** Validates a previously stored point without applying live freshness. */
+    public static boolean validStoredPoint(
             double latitude,
             double longitude,
             double accuracy,
@@ -41,8 +59,7 @@ public final class FamilyJourneyPolicy {
                 && accuracy > 0D
                 && accuracy <= MAX_ACCURACY_METERS
                 && capturedAt > 0L
-                && capturedAt <= now + 15_000L
-                && now - capturedAt <= MAX_LOCATION_AGE_MS;
+                && capturedAt <= now + 15_000L;
     }
 
     public static boolean shouldRecord(
