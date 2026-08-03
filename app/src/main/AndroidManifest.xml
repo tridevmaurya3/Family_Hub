@@ -36,6 +36,12 @@
             android:stopWithTask="false" />
 
         <activity
+            android:name=".feature.journey.FamilyJourneyMapActivity"
+            android:exported="false" />
+        <activity
+            android:name=".feature.journey.FamilyJourneyActivity"
+            android:exported="false" />
+        <activity
             android:name=".feature.safety.FamilySafetyCenterActivity"
             android:exported="false" />
         <activity
