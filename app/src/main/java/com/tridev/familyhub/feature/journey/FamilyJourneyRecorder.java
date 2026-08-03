@@ -92,9 +92,8 @@ public final class FamilyJourneyRecorder {
                     if (requestGeneration != generation || uid == null) {
                         return;
                     }
-                    String resolvedFamilyId = stringValue(
-                            snapshot.child("familyId")
-                    );
+                    String resolvedFamilyId =
+                            stringValue(snapshot.child("familyId"));
                     String status = stringValue(snapshot.child("status"));
                     if (resolvedFamilyId.isEmpty() || !"ACTIVE".equals(status)) {
                         return;
@@ -122,8 +121,10 @@ public final class FamilyJourneyRecorder {
                         false
                 );
                 retentionDays = FamilyJourneyPolicy.normalizeRetentionDays(
-                        intValue(snapshot.child("retentionDays"),
-                                FamilyJourneyPolicy.DEFAULT_RETENTION_DAYS)
+                        intValue(
+                                snapshot.child("retentionDays"),
+                                FamilyJourneyPolicy.DEFAULT_RETENTION_DAYS
+                        )
                 );
                 if (historyEnabled) {
                     attachOwnLocation(requestGeneration);
@@ -160,7 +161,7 @@ public final class FamilyJourneyRecorder {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // The foreground location service continues independently.
+                // Family Live continues independently if history is unavailable.
             }
         };
         locationReference.addValueEventListener(locationListener);
@@ -171,9 +172,9 @@ public final class FamilyJourneyRecorder {
             int requestGeneration
     ) {
         if (!booleanValue(snapshot.child("sharingEnabled"), false)
-                || !"RELIABLE".equals(stringValue(
-                snapshot.child("locationQuality")
-        ))) {
+                || !"RELIABLE".equals(
+                stringValue(snapshot.child("locationQuality"))
+        )) {
             return;
         }
 
@@ -231,10 +232,7 @@ public final class FamilyJourneyRecorder {
         point.charging = booleanValue(snapshot.child("charging"), false);
         point.pointId = createPointId(point);
 
-        executor.execute(() -> completeAndRecord(
-                point,
-                requestGeneration
-        ));
+        executor.execute(() -> completeAndRecord(point, requestGeneration));
     }
 
     private void completeAndRecord(
@@ -385,7 +383,10 @@ public final class FamilyJourneyRecorder {
         if (context == null) {
             return null;
         }
-        SharedPreferences p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        SharedPreferences p = context.getSharedPreferences(
+                PREFS,
+                Context.MODE_PRIVATE
+        );
         String prefix = "last_" + activeUid + "_";
         long capturedAt = p.getLong(prefix + "capturedAt", 0L);
         if (capturedAt <= 0L) {
@@ -394,8 +395,12 @@ public final class FamilyJourneyRecorder {
         FamilyJourneyPoint point = new FamilyJourneyPoint();
         point.uid = activeUid;
         point.capturedAt = capturedAt;
-        point.latitude = Double.longBitsToDouble(p.getLong(prefix + "lat", 0L));
-        point.longitude = Double.longBitsToDouble(p.getLong(prefix + "lon", 0L));
+        point.latitude = Double.longBitsToDouble(
+                p.getLong(prefix + "lat", 0L)
+        );
+        point.longitude = Double.longBitsToDouble(
+                p.getLong(prefix + "lon", 0L)
+        );
         point.movementType = p.getString(prefix + "movement", "UNKNOWN");
         point.safePlaceId = p.getString(prefix + "safePlaceId", "");
         point.clientUpdateId = p.getString(prefix + "updateId", "");
@@ -411,8 +416,14 @@ public final class FamilyJourneyRecorder {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putLong(prefix + "capturedAt", point.capturedAt)
-                .putLong(prefix + "lat", Double.doubleToLongBits(point.latitude))
-                .putLong(prefix + "lon", Double.doubleToLongBits(point.longitude))
+                .putLong(
+                        prefix + "lat",
+                        Double.doubleToLongBits(point.latitude)
+                )
+                .putLong(
+                        prefix + "lon",
+                        Double.doubleToLongBits(point.longitude)
+                )
                 .putString(prefix + "movement", point.movementType)
                 .putString(prefix + "safePlaceId", point.safePlaceId)
                 .putString(prefix + "updateId", point.clientUpdateId)
@@ -448,18 +459,30 @@ public final class FamilyJourneyRecorder {
 
     private static long longValue(@NonNull DataSnapshot snapshot) {
         Long value = snapshot.getValue(Long.class);
-        return value == null ? 0L : Math.max(0L, value);
+        if (value != null) {
+            return Math.max(0L, value);
+        }
+        Double decimal = snapshot.getValue(Double.class);
+        return decimal == null ? 0L : Math.max(0L, decimal.longValue());
     }
 
     private static int intValue(@NonNull DataSnapshot snapshot, int fallback) {
         Long value = snapshot.getValue(Long.class);
-        return value == null ? fallback : value.intValue();
+        if (value != null) {
+            return value.intValue();
+        }
+        Double decimal = snapshot.getValue(Double.class);
+        return decimal == null ? fallback : decimal.intValue();
     }
 
     @Nullable
     private static Double doubleValue(@NonNull DataSnapshot snapshot) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? null : value.doubleValue();
+        Double decimal = snapshot.getValue(Double.class);
+        if (decimal != null) {
+            return decimal;
+        }
+        Long whole = snapshot.getValue(Long.class);
+        return whole == null ? null : whole.doubleValue();
     }
 
     private static double nullableDouble(
