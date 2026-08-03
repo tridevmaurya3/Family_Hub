@@ -39,7 +39,20 @@
     <string name="family_map_info_live_hint">Tap this card for directions, Maps and Street View</string>
 
     <string name="family_map_member_actions_title">Open %1$s</string>
-    <string name="family_map_member_actions_message">Choose how you want to view or reach this family member’s latest shared location.</string>
+    <string name="family_map_member_actions_message">Choose a safe way to view or reach this member’s latest shared location.</string>
+    <string name="family_map_member_actions_close_description">Close member actions</string>
+    <string name="family_map_member_actions_location_label">LATEST SHARED PLACE</string>
+    <string name="family_map_member_actions_privacy_note">Family Hub shares only the selected current location with your chosen Maps app.</string>
+
+    <string name="family_map_action_drive_title">Navigate by car</string>
+    <string name="family_map_action_drive_subtitle">Open turn-by-turn driving directions</string>
+    <string name="family_map_action_walk_title">Walking directions</string>
+    <string name="family_map_action_walk_subtitle">Open a walking route to this member</string>
+    <string name="family_map_action_maps_title">Open location in Maps</string>
+    <string name="family_map_action_maps_subtitle">View the exact pin in Google Maps or another map app</string>
+    <string name="family_map_action_street_title">Open Street View</string>
+    <string name="family_map_action_street_subtitle">Explore nearby street imagery when available</string>
+
     <string-array name="family_map_member_actions">
         <item>Navigate by car</item>
         <item>Walking directions</item>
