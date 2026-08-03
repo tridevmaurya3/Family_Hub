@@ -30,6 +30,7 @@ public final class FamilyAutomationEvent {
     @NonNull public String placeName = "";
     @NonNull public String detail = "";
     @NonNull public String deduplicationKey = "";
+    public boolean notifyTrustedViewers = true;
     public long occurredAt;
     public long createdAt;
 
