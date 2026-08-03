@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="family_safety_alert_centre_title">Family Safety alerts</string>
-    <string name="family_safety_alert_centre_subtitle">Review confirmed Safe Place activity and control alerts for this family member.</string>
+    <string name="family_safety_alert_centre_subtitle">Review confirmed Safe Place activity and important family device-health changes.</string>
     <string name="family_safety_alert_member_scope">Alert controls for %1$s on this device</string>
     <string name="family_safety_alert_member_fallback">this family member</string>
 
@@ -21,20 +21,45 @@
     <string name="family_safety_alert_left_detail">Alert after the device remains outside the Safe Place boundary.</string>
     <string name="family_safety_alert_dwell_control">Stay alerts</string>
     <string name="family_safety_alert_dwell_detail">Alert after a confirmed dwell inside a Safe Place.</string>
+
+    <string name="family_safety_alert_device_section">Family device health</string>
+    <string name="family_safety_alert_no_update_control">No location update alerts</string>
+    <string name="family_safety_alert_no_update_detail">Alert when a sharing member has not published a fresh location for about 20 minutes.</string>
+    <string name="family_safety_alert_low_battery_control">Low battery alerts</string>
+    <string name="family_safety_alert_low_battery_detail">Alert when a member device reaches 15%% or lower and is not charging.</string>
+    <string name="family_safety_alert_offline_control">Device offline alerts</string>
+    <string name="family_safety_alert_offline_detail">Alert after a sharing member remains offline for at least five minutes.</string>
+
     <string name="family_safety_alert_quiet_hours">Quiet hours</string>
     <string name="family_safety_alert_quiet_hours_detail">Silence notifications from 10:00 PM to 7:00 AM; history continues to update.</string>
 
     <string name="family_safety_alert_history_section">Alert activity</string>
-    <string name="family_safety_alert_history_helper">Use filters to focus on unread, arrival, exit or stay events.</string>
+    <string name="family_safety_alert_history_helper">Use filters to focus on Safe Place or member device-health events.</string>
     <string name="family_safety_alert_filter_all">All</string>
     <string name="family_safety_alert_filter_unread">Unread</string>
     <string name="family_safety_alert_filter_arrived">Arrived</string>
     <string name="family_safety_alert_filter_left">Left</string>
     <string name="family_safety_alert_filter_dwell">Stayed</string>
+    <string name="family_safety_alert_filter_no_update">No update</string>
+    <string name="family_safety_alert_filter_low_battery">Low battery</string>
+    <string name="family_safety_alert_filter_offline">Offline</string>
     <string name="family_safety_alert_filtered_empty">No alerts match this filter.</string>
     <string name="family_safety_alert_count_value">%1$d</string>
     <string name="family_safety_alert_item_time">%1$s</string>
     <string name="family_safety_alert_item_unread">Unread</string>
     <string name="family_safety_alert_item_read">Read</string>
     <string name="family_safety_alert_mark_all_read_short">Mark all read</string>
+
+    <string name="family_device_alert_channel_name">Family device safety</string>
+    <string name="family_device_alert_channel_description">Important no-update, offline and low-battery alerts for approved family members.</string>
+    <string name="family_device_alert_no_update_title">No fresh update from %1$s</string>
+    <string name="family_device_alert_no_update_detail">%1$s has not shared a fresh location for about 20 minutes. Check the member device, GPS, internet and battery settings.</string>
+    <string name="family_device_alert_low_battery_title">%1$s has low battery</string>
+    <string name="family_device_alert_low_battery_detail">%1$s’s device is at 15%% or lower and is not charging. Location updates may stop soon.</string>
+    <string name="family_device_alert_offline_title">%1$s’s device is offline</string>
+    <string name="family_device_alert_offline_detail">%1$s’s sharing device has remained offline for at least five minutes.</string>
+    <string name="family_device_alert_no_update_badge">No update</string>
+    <string name="family_device_alert_low_battery_badge">Low battery</string>
+    <string name="family_device_alert_offline_badge">Offline</string>
+    <string name="family_device_alert_unknown_member">Family member</string>
 </resources>
