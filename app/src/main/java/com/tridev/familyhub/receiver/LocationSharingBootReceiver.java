@@ -11,6 +11,7 @@ import android.os.Build;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import com.tridev.familyhub.feature.automation.FamilyAutomationScheduler;
 import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
 import com.tridev.familyhub.location.FamilyLocationService;
 import com.tridev.familyhub.location.LocationRecoveryNotifier;
@@ -20,8 +21,8 @@ import com.tridev.familyhub.location.PendingLocationSyncScheduler;
 
 /**
  * Restores user-enabled Family Live work after reboot, device unlock and app
- * replacement. Restoration never enables sharing or Safe Place alerts by
- * itself; it only restores choices already stored by the user.
+ * replacement. Restoration never enables sharing by itself; Smart Routines
+ * evaluate only rules previously configured by an authorised family member.
  */
 public class LocationSharingBootReceiver extends BroadcastReceiver {
 
@@ -34,6 +35,8 @@ public class LocationSharingBootReceiver extends BroadcastReceiver {
 
         Context appContext = context.getApplicationContext();
         SafePlaceGeofenceSyncScheduler.scheduleNow(appContext);
+        FamilyAutomationScheduler.enable(appContext);
+        FamilyAutomationScheduler.scheduleNow(appContext);
 
         if (!LocationSharingStore.isSharingEnabled(appContext)) {
             LocationRecoveryNotifier.cancelAll(appContext);
