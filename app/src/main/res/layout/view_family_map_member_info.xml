@@ -5,61 +5,47 @@
     android:background="@drawable/bg_family_map_info_window"
     android:orientation="vertical">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/textMapInfoName"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/family_map_info_value"
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+    <TextView
+        android:id="@+id/textMapInfoRole"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/family_map_info_label"
+        android:textSize="10sp" />
 
-            <TextView
-                android:id="@+id/textMapInfoName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/family_map_info_value"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/textMapInfoRole"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/family_map_info_label"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/textMapInfoStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/bg_family_map_status_chip"
-            android:gravity="center"
-            android:maxLines="1"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:textColor="@color/family_map_live"
-            android:textSize="10sp"
-            android:textStyle="bold" />
-    </LinearLayout>
+    <TextView
+        android:id="@+id/textMapInfoStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_family_map_status_chip"
+        android:gravity="center"
+        android:maxLines="1"
+        android:paddingStart="8dp"
+        android:paddingTop="3dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="3dp"
+        android:textColor="@color/family_map_live"
+        android:textSize="9sp"
+        android:textStyle="bold" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="7dp"
+        android:layout_marginTop="7dp"
+        android:layout_marginBottom="6dp"
         android:background="@color/family_map_info_border" />
 
     <TextView
@@ -67,9 +53,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
-        android:maxLines="2"
+        android:maxLines="3"
         android:textColor="@color/family_map_info_value"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textStyle="bold" />
 
     <TextView
@@ -80,7 +66,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/family_map_info_label"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
 
     <TextView
         android:id="@+id/textMapInfoAccuracy"
@@ -90,7 +76,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/family_map_info_label"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
 
     <TextView
         android:id="@+id/textMapInfoBattery"
@@ -100,7 +86,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/family_map_info_label"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
 
     <TextView
         android:id="@+id/textMapInfoNetwork"
@@ -110,7 +96,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/family_map_info_label"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
 
     <TextView
         android:id="@+id/textMapInfoMovement"
@@ -120,16 +106,16 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/family_map_info_label"
-        android:textSize="11sp" />
+        android:textSize="10sp" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="7dp"
         android:gravity="center"
         android:text="@string/family_map_info_live_hint"
         android:textColor="@color/fh_primary"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold" />
 
 </LinearLayout>
