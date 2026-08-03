@@ -6,12 +6,14 @@
     <string name="family_map_recenter_description">Focus my live location</string>
     <string name="family_map_type_description">Change map type</string>
     <string name="family_map_traffic_description">Show or hide traffic</string>
+    <string name="family_map_street_view_description">Open Street View for the selected member</string>
     <string name="family_map_menu_expand_description">Open map tools</string>
     <string name="family_map_menu_collapse_description">Close map tools</string>
 
     <string name="family_map_control_all_short">All members</string>
     <string name="family_map_control_me_short">My location</string>
     <string name="family_map_control_traffic_short">Traffic</string>
+    <string name="family_map_control_street_view_short">Street View</string>
     <string name="family_map_control_normal_short">Normal</string>
     <string name="family_map_control_satellite_short">Satellite</string>
     <string name="family_map_control_hybrid_short">Hybrid</string>
@@ -29,7 +31,15 @@
     <string name="family_map_info_battery">Battery • %1$s</string>
     <string name="family_map_info_network">Device • %1$s</string>
     <string name="family_map_info_movement">Movement • %1$s</string>
+    <string name="family_map_info_nearest">Nearest • %1$s • %2$s</string>
+    <string name="family_map_info_distance_from">Distance from %1$s • %2$s</string>
+    <string name="family_map_info_compare_hint">Tap another member pin to compare distance</string>
     <string name="family_map_info_battery_charging">%1$d%% • Charging</string>
     <string name="family_map_info_battery_not_charging">%1$d%% • Not charging</string>
-    <string name="family_map_info_live_hint">Tap the map to close this card</string>
+    <string name="family_map_info_live_hint">Tap this card for Street View</string>
+
+    <string name="family_map_select_member_for_street_view">Select a member pin before opening Street View.</string>
+    <string name="family_street_view_title">Street View</string>
+    <string name="family_street_view_subtitle">Explore the selected member’s nearby street imagery</string>
+    <string name="family_street_view_unavailable">Street View imagery is not available near this location.</string>
 </resources>
