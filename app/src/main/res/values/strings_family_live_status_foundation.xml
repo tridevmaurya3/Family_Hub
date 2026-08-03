@@ -9,6 +9,7 @@
     <string name="family_live_state_internet_off">Internet off</string>
     <string name="family_live_state_battery_saver">Battery saver</string>
     <string name="family_live_state_device_offline">Device offline</string>
+    <string name="family_live_state_tracking_stalled">Tracking stalled</string>
     <string name="family_live_state_update_stale">Update stale</string>
     <string name="family_live_state_location_unavailable">Location unavailable</string>
 
@@ -20,6 +21,7 @@
     <string name="family_live_state_detail_internet_off">The phone cannot send a fresh update without internet.</string>
     <string name="family_live_state_detail_battery_saver">Battery restrictions may delay location updates.</string>
     <string name="family_live_state_detail_device_offline">The member’s phone is currently unreachable.</string>
+    <string name="family_live_state_detail_tracking_stalled">The background tracking service missed its heartbeat. Automatic recovery is being attempted.</string>
     <string name="family_live_state_detail_update_stale">The last update is old and may not show the current position.</string>
     <string name="family_live_state_detail_location_unavailable">The device is online, but a usable location is not available yet.</string>
 
