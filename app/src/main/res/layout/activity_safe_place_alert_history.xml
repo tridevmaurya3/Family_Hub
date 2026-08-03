@@ -1,41 +1,371 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/fh_background"
+    android:clipToPadding="false"
     android:fillViewport="true">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/screen_padding_horizontal">
+        android:paddingStart="@dimen/screen_padding_horizontal"
+        android:paddingTop="@dimen/compact_page_top_padding"
+        android:paddingEnd="@dimen/screen_padding_horizontal"
+        android:paddingBottom="@dimen/space_24">
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:cardCornerRadius="@dimen/radius_20"
+            app:strokeColor="@color/fh_outline_variant"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_12">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonSafePlaceAlertBack"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:contentDescription="@string/action_back"
+                    android:minWidth="0dp"
+                    android:text=""
+                    app:icon="@drawable/ic_arrow_back"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="@color/fh_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Heading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_safety_alert_centre_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/family_safety_alert_centre_subtitle" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:cardCornerRadius="@dimen/radius_18"
+            app:strokeColor="@color/fh_primary"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_12">
+
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_safe_place_shield"
+                    app:tint="@color/fh_primary" />
+
+                <TextView
+                    android:id="@+id/textSafetyAlertMember"
+                    style="@style/TextAppearance.FamilyHub.BodyStrong"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_10"
+                    android:layout_weight="1"
+                    android:textColor="@color/fh_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <include
+                android:id="@+id/summaryTotal"
+                layout="@layout/view_family_safety_alert_summary" />
+
+            <include
+                android:id="@+id/summaryUnread"
+                layout="@layout/view_family_safety_alert_summary" />
+
+            <include
+                android:id="@+id/summaryArrived"
+                layout="@layout/view_family_safety_alert_summary" />
+
+            <include
+                android:id="@+id/summaryLeft"
+                layout="@layout/view_family_safety_alert_summary" />
+
+            <include
+                android:id="@+id/summaryDwell"
+                layout="@layout/view_family_safety_alert_summary" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/compact_section_spacing"
+            android:text="@string/family_safety_alert_controls_title"
+            android:textColor="@color/fh_primary" />
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/family_safety_alert_controls_helper" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:cardCornerRadius="@dimen/radius_18"
+            app:strokeColor="@color/fh_outline_variant"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_12">
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertNotifications"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="56dp"
+                    android:text="@string/family_safety_alert_notifications"
+                    app:switchPadding="@dimen/space_12" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginTop="-6dp"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_notifications_detail" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="@dimen/space_10"
+                    android:background="@color/fh_outline_variant" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertArrived"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="52dp"
+                    android:text="@string/family_safety_alert_arrived_control" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginTop="-6dp"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_arrived_detail" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertLeft"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:minHeight="52dp"
+                    android:text="@string/family_safety_alert_left_control" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginTop="-6dp"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_left_detail" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertDwell"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:minHeight="52dp"
+                    android:text="@string/family_safety_alert_dwell_control" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginTop="-6dp"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_dwell_detail" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="@dimen/space_12"
+                    android:background="@color/fh_outline_variant" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertQuiet"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="56dp"
+                    android:text="@string/family_safety_alert_quiet_hours" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginTop="-6dp"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_quiet_hours_detail" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/compact_section_spacing"
+            android:text="@string/family_safety_alert_history_section"
+            android:textColor="@color/fh_primary" />
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/family_safety_alert_history_helper" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/groupSafetyAlertFilters"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            app:chipSpacingHorizontal="6dp"
+            app:chipSpacingVertical="4dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyAll"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/family_safety_alert_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyUnread"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_unread" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyArrived"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_arrived" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyLeft"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_left" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyDwell"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_dwell" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/buttonSafePlaceAlertBack"
-                style="@style/Widget.FamilyHub.Button.Tonal"
-                android:layout_width="@dimen/touch_target_min"
-                android:layout_height="@dimen/touch_target_min"
-                android:contentDescription="@string/family_map_back_description"
-                android:minWidth="0dp"
-                android:text=""
-                app:icon="@drawable/ic_arrow_back" />
+
             <TextView
-                style="@style/TextAppearance.FamilyHub.Heading"
+                android:id="@+id/safePlaceAlertUnread"
+                style="@style/TextAppearance.FamilyHub.BodyStrong"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_12"
-                android:layout_weight="1"
-                android:text="@string/safe_place_alert_history_title" />
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonSafePlaceMarkAllRead"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="@string/family_safety_alert_mark_all_read_short" />
         </LinearLayout>
-        <TextView android:id="@+id/safePlaceAlertUnread" style="@style/TextAppearance.FamilyHub.BodyStrong" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" />
-        <com.google.android.material.button.MaterialButton android:id="@+id/buttonSafePlaceMarkAllRead" style="@style/Widget.FamilyHub.Button.Tonal" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/safe_place_alert_mark_all_read" />
-        <ProgressBar android:id="@+id/safePlaceAlertLoading" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center_horizontal" android:layout_marginTop="@dimen/space_24" />
-        <TextView android:id="@+id/safePlaceAlertEmpty" style="@style/TextAppearance.FamilyHub.Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_24" android:gravity="center" android:text="@string/safe_place_alert_history_empty" android:visibility="gone" />
-        <LinearLayout android:id="@+id/safePlaceAlertList" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_12" android:orientation="vertical" />
+
+        <ProgressBar
+            android:id="@+id/safePlaceAlertLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/space_24" />
+
+        <TextView
+            android:id="@+id/safePlaceAlertEmpty"
+            style="@style/TextAppearance.FamilyHub.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_24"
+            android:gravity="center"
+            android:text="@string/safe_place_alert_history_empty"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/safePlaceAlertList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="vertical" />
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
