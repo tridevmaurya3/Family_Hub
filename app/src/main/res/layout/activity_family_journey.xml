@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fh_background"
+    android:clipToPadding="false"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/screen_padding_horizontal"
+        android:paddingTop="@dimen/compact_page_top_padding"
+        android:paddingEnd="@dimen/screen_padding_horizontal"
+        android:paddingBottom="@dimen/space_24">
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:cardCornerRadius="@dimen/radius_20"
+            app:strokeColor="@color/fh_outline_variant"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_12">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonJourneyBack"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:contentDescription="@string/action_back"
+                    android:minWidth="0dp"
+                    android:text=""
+                    app:icon="@drawable/ic_arrow_back"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="@color/fh_primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Heading"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_journey_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/family_journey_subtitle" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonJourneyRefresh"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="@dimen/touch_target_min"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:contentDescription="@string/family_journey_refresh"
+                    android:minWidth="0dp"
+                    android:text=""
+                    app:icon="@drawable/ic_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="@color/fh_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardJourneyRecording"
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="@color/fh_warning_container"
+            app:cardCornerRadius="@dimen/radius_18"
+            app:strokeColor="@color/fh_warning"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="@dimen/space_14">
+
+                <ImageView
+                    android:id="@+id/imageJourneyRecording"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_placeholder_icon"
+                    android:contentDescription="@null"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_family_map_route"
+                    app:tint="@color/fh_warning" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textJourneyRecordingTitle"
+                        style="@style/TextAppearance.FamilyHub.CardTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_journey_recording_off"
+                        android:textColor="@color/fh_warning" />
+
+                    <TextView
+                        android:id="@+id/textJourneyRecordingDetail"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/family_journey_recording_off_detail" />
+                </LinearLayout>
+
+                <ImageView
+                    android:layout_width="@dimen/icon_size_small"
+                    android:layout_height="@dimen/icon_size_small"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/fh_warning" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            android:hint="@string/family_journey_member_hint"
+            app:endIconMode="dropdown_menu"
+            app:startIconDrawable="@drawable/ic_family"
+            app:startIconTint="@color/fh_primary">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/inputJourneyMember"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:maxLines="1"
+                android:minHeight="56dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonJourneyToday"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="@string/family_journey_today" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonJourneyYesterday"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="@dimen/space_8"
+                android:layout_weight="1"
+                android:text="@string/family_journey_yesterday" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonJourneyCustomDate"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="@dimen/space_8"
+                android:layout_weight="1"
+                android:text="@string/family_journey_choose_date" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textJourneySelectedDate"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:gravity="center"
+            android:textColor="@color/fh_primary" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_primary_container"
+                app:cardCornerRadius="@dimen/radius_16"
+                app:strokeColor="@color/fh_primary"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_10">
+
+                    <TextView
+                        android:id="@+id/textJourneyDistance"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 km"
+                        android:textColor="@color/fh_primary" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_journey_summary_distance" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_secondary_container"
+                app:cardCornerRadius="@dimen/radius_16"
+                app:strokeColor="@color/fh_secondary"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_10">
+
+                    <TextView
+                        android:id="@+id/textJourneyDuration"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 min"
+                        android:textColor="@color/fh_secondary" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_journey_summary_duration" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_info_container"
+                app:cardCornerRadius="@dimen/radius_16"
+                app:strokeColor="@color/fh_info"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_10">
+
+                    <TextView
+                        android:id="@+id/textJourneyPoints"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/fh_info" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_journey_summary_points" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_success_container"
+                app:cardCornerRadius="@dimen/radius_16"
+                app:strokeColor="@color/fh_success"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_10">
+
+                    <TextView
+                        android:id="@+id/textJourneyVisits"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/fh_success" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/family_journey_summary_visits" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textJourneyStartEnd"
+            style="@style/TextAppearance.FamilyHub.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="@color/fh_text_primary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonJourneyOpenMap"
+            style="@style/Widget.FamilyHub.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="@dimen/space_10"
+            android:text="@string/family_journey_open_map"
+            app:icon="@drawable/ic_family_map_route"
+            app:iconGravity="textStart"
+            app:iconPadding="@dimen/space_10" />
+
+        <ProgressBar
+            android:id="@+id/progressJourney"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/space_16" />
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/compact_section_spacing"
+            android:text="@string/family_journey_timeline_title"
+            android:textColor="@color/fh_primary" />
+
+        <TextView
+            android:id="@+id/textJourneyEmpty"
+            style="@style/TextAppearance.FamilyHub.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:gravity="center"
+            android:text="@string/family_journey_empty"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/listJourneyTimeline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="vertical" />
+
+        <LinearLayout
+            android:id="@+id/layoutJourneyDeleteActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonJourneyDeleteDay"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="@string/family_journey_delete_day"
+                android:textColor="@color/fh_error"
+                app:strokeColor="@color/fh_error" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonJourneyDeleteAll"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_marginStart="@dimen/space_8"
+                android:layout_weight="1"
+                android:text="@string/family_journey_delete_all"
+                android:textColor="@color/fh_error"
+                app:strokeColor="@color/fh_error" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:cardCornerRadius="@dimen/radius_16"
+            app:strokeColor="@color/fh_outline_variant"
+            app:strokeWidth="1dp">
+
+            <TextView
+                style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="@dimen/space_12"
+                android:text="@string/family_journey_privacy_note" />
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
