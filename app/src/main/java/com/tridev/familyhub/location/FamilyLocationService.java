@@ -17,6 +17,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
@@ -53,7 +54,6 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.receiver.MovementTransitionReceiver;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -69,8 +69,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Visible, consent-based Family Live sharing.
  *
- * The service adapts location frequency to movement, battery and power-saving
- * state while keeping an encrypted offline queue for failed Firebase uploads.
+ * The service adapts location frequency to movement and battery state, keeps
+ * the newest failed location encrypted, and continuously monitors permission,
+ * GPS and validated internet health while sharing remains enabled.
  */
 public class FamilyLocationService extends Service {
 
@@ -85,9 +86,7 @@ public class FamilyLocationService extends Service {
     private static final long GEOCODE_INTERVAL_MS = 15L * 60L * 1000L;
     private static final float GEOCODE_DISTANCE_METERS = 500F;
     private static final int ACTIVITY_PENDING_INTENT_REQUEST = 4203;
-    private static final int MAX_QUEUED_LOCATIONS = 100;
-    private static final long RETRY_BASE_DELAY_MS = 30_000L;
-    private static final long RETRY_MAX_DELAY_MS = 15L * 60L * 1000L;
+    private static final int MAX_QUEUED_LOCATIONS = 1;
 
     private static final long PROFILE_EVALUATION_INTERVAL_MS = 45_000L;
     private static final long PROFILE_SWITCH_MIN_DWELL_MS = 45_000L;
@@ -95,6 +94,8 @@ public class FamilyLocationService extends Service {
     private static final long LOCATION_REQUEST_RETRY_BASE_MS = 15_000L;
     private static final long LOCATION_REQUEST_RETRY_MAX_MS =
             5L * 60L * 1000L;
+    private static final long DEVICE_HEALTH_CHECK_INTERVAL_MS = 20_000L;
+    private static final long NETWORK_RECHECK_DELAY_MS = 1_200L;
 
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityRecognitionClient activityRecognitionClient;
@@ -109,12 +110,21 @@ public class FamilyLocationService extends Service {
 
     private boolean requestingUpdates;
     private boolean trackingProfileChangeInProgress;
+    private boolean familySessionReady;
+    private boolean networkAvailable;
+    private boolean waitingForFreshLocation;
+
     @NonNull
     private String currentTrackingProfile =
             AdaptiveLocationPolicy.PROFILE_NORMAL;
     @NonNull
     private String candidateTrackingProfile =
             AdaptiveLocationPolicy.PROFILE_NORMAL;
+    @NonNull
+    private String currentDeviceHealth = LocationDeviceHealth.READY;
+    @NonNull
+    private String lastPublishedHealthReason = "";
+
     private int candidateTrackingSamples;
     private long currentProfileAppliedAt;
     private int locationRequestRetryAttempt;
@@ -132,8 +142,6 @@ public class FamilyLocationService extends Service {
     private final ExecutorService uploadQueueExecutor =
             Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private final AtomicBoolean queueFlushInProgress =
-            new AtomicBoolean(false);
     private final AtomicBoolean serviceDestroyed =
             new AtomicBoolean(false);
 
@@ -153,7 +161,13 @@ public class FamilyLocationService extends Service {
             )) {
                 return;
             }
-            evaluateTrackingProfileFromDeviceState();
+
+            if (!LocationDeviceHealth.blocksLocationUpdates(
+                    currentDeviceHealth
+            )) {
+                evaluateTrackingProfileFromDeviceState();
+            }
+
             mainHandler.postDelayed(
                     this,
                     PROFILE_EVALUATION_INTERVAL_MS
@@ -161,12 +175,32 @@ public class FamilyLocationService extends Service {
         }
     };
 
+    private final Runnable deviceHealthRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (serviceDestroyed.get()
+                    || !LocationSharingStore.isSharingEnabled(
+                    FamilyLocationService.this
+            )) {
+                return;
+            }
+
+            evaluateDeviceHealth(false);
+            mainHandler.postDelayed(
+                    this,
+                    DEVICE_HEALTH_CHECK_INTERVAL_MS
+            );
+        }
+    };
+
     private final Runnable locationRequestRetryRunnable = () -> {
         if (serviceDestroyed.get()
                 || requestingUpdates
+                || !familySessionReady
                 || !LocationSharingStore.isSharingEnabled(this)
-                || !hasLocationPermission()
-                || !isDeviceLocationEnabled()) {
+                || LocationDeviceHealth.blocksLocationUpdates(
+                currentDeviceHealth
+        )) {
             return;
         }
         requestLocationUpdates(resolveCurrentDeviceConfig());
@@ -187,6 +221,7 @@ public class FamilyLocationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
         fusedLocationClient =
                 LocationServices.getFusedLocationProviderClient(this);
         activityRecognitionClient = ActivityRecognition.getClient(this);
@@ -195,6 +230,16 @@ public class FamilyLocationService extends Service {
         pendingLocationUploadDao = FamilyHubDatabase
                 .getInstance(this)
                 .pendingLocationUploadDao();
+
+        connectivityManager = (ConnectivityManager) getSystemService(
+                Context.CONNECTIVITY_SERVICE
+        );
+        networkAvailable = isValidatedInternetAvailable();
+        currentDeviceHealth = LocationDeviceHealth.resolve(
+                hasLocationPermission(),
+                isDeviceLocationEnabled(),
+                networkAvailable
+        );
 
         locationCallback = new LocationCallback() {
             @Override
@@ -253,29 +298,14 @@ public class FamilyLocationService extends Service {
                             .child("locations")
                             .child(familyId)
                             .child(userId);
+                    familySessionReady = true;
                     registerDisconnectState();
-
-                    if (!hasLocationPermission()) {
-                        publishUnavailableState(
-                                FamilyLiveAvailability.PERMISSION_OFF
-                        );
-                        stopWithoutRestart();
-                        return;
-                    }
-
-                    if (!isDeviceLocationEnabled()) {
-                        publishUnavailableState(
-                                FamilyLiveAvailability.GPS_OFF
-                        );
-                        stopWithoutRestart();
-                        return;
-                    }
 
                     LocationSharingStore.setSharingEnabled(this, true);
                     registerMovementTransitions();
-                    requestLocationUpdates(resolveCurrentDeviceConfig());
                     scheduleProfileEvaluation();
-                    flushQueuedLocations();
+                    scheduleDeviceHealthMonitor();
+                    evaluateDeviceHealth(true);
                 })
                 .addOnFailureListener(error -> stopSharing());
 
@@ -299,7 +329,10 @@ public class FamilyLocationService extends Service {
     ) {
         if (requestingUpdates
                 || trackingProfileChangeInProgress
-                || !hasLocationPermission()) {
+                || !familySessionReady
+                || LocationDeviceHealth.blocksLocationUpdates(
+                currentDeviceHealth
+        )) {
             return;
         }
 
@@ -400,8 +433,9 @@ public class FamilyLocationService extends Service {
                     requestingUpdates = false;
                     trackingProfileChangeInProgress = false;
                     if (LocationSharingStore.isSharingEnabled(this)
-                            && hasLocationPermission()
-                            && isDeviceLocationEnabled()) {
+                            && !LocationDeviceHealth.blocksLocationUpdates(
+                            currentDeviceHealth
+                    )) {
                         requestLocationUpdates(desired);
                     }
                 });
@@ -415,9 +449,20 @@ public class FamilyLocationService extends Service {
         );
     }
 
+    private void scheduleDeviceHealthMonitor() {
+        mainHandler.removeCallbacks(deviceHealthRunnable);
+        mainHandler.postDelayed(
+                deviceHealthRunnable,
+                DEVICE_HEALTH_CHECK_INTERVAL_MS
+        );
+    }
+
     private void scheduleLocationRequestRetry() {
         if (!LocationSharingStore.isSharingEnabled(this)
-                || serviceDestroyed.get()) {
+                || serviceDestroyed.get()
+                || LocationDeviceHealth.blocksLocationUpdates(
+                currentDeviceHealth
+        )) {
             return;
         }
 
@@ -430,6 +475,87 @@ public class FamilyLocationService extends Service {
         updateForegroundNotification(true);
         mainHandler.removeCallbacks(locationRequestRetryRunnable);
         mainHandler.postDelayed(locationRequestRetryRunnable, delay);
+    }
+
+    private void evaluateDeviceHealth(boolean forcePublish) {
+        if (!LocationSharingStore.isSharingEnabled(this)) {
+            return;
+        }
+
+        networkAvailable = isValidatedInternetAvailable();
+        String previousState = currentDeviceHealth;
+        String resolvedState = LocationDeviceHealth.resolve(
+                hasLocationPermission(),
+                isDeviceLocationEnabled(),
+                networkAvailable
+        );
+        boolean changed = !resolvedState.equals(previousState);
+        currentDeviceHealth = resolvedState;
+
+        if (LocationDeviceHealth.blocksLocationUpdates(resolvedState)) {
+            removeUpdates();
+            mainHandler.removeCallbacks(locationRequestRetryRunnable);
+            waitingForFreshLocation = false;
+
+            if (networkAvailable
+                    && familySessionReady
+                    && (forcePublish
+                    || changed
+                    || !LocationDeviceHealth.availabilityReason(
+                    resolvedState
+            ).equals(lastPublishedHealthReason))) {
+                publishUnavailableState(
+                        LocationDeviceHealth.availabilityReason(
+                                resolvedState
+                        )
+                );
+            }
+
+            if (forcePublish || changed) {
+                LocationRecoveryNotifier.showResumeRequired(this);
+            }
+        } else {
+            LocationRecoveryNotifier.cancelResumeRequired(this);
+
+            if (familySessionReady && !requestingUpdates) {
+                waitingForFreshLocation = true;
+                requestLocationUpdates(resolveCurrentDeviceConfig());
+                publishLastKnownLocationIfAvailable();
+            }
+
+            if (LocationDeviceHealth.isReady(resolvedState)) {
+                flushQueuedLocations();
+                if (changed && !LocationDeviceHealth.isReady(previousState)) {
+                    waitingForFreshLocation = true;
+                    publishLastKnownLocationIfAvailable();
+                }
+            }
+        }
+
+        if (forcePublish || changed) {
+            updateForegroundNotification(false);
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void publishLastKnownLocationIfAvailable() {
+        if (!familySessionReady
+                || LocationDeviceHealth.blocksLocationUpdates(
+                currentDeviceHealth
+        )) {
+            return;
+        }
+
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(location -> {
+                    if (location != null) {
+                        publishLocation(location);
+                    }
+                })
+                .addOnFailureListener(ignored -> {
+                    // Continuous updates remain active and will provide a fresh
+                    // point when Android has one available.
+                });
     }
 
     private void registerDisconnectState() {
@@ -448,7 +574,12 @@ public class FamilyLocationService extends Service {
     }
 
     private void publishLocation(@NonNull Location location) {
-        if (locationReference == null || familyId == null || userId == null) {
+        if (locationReference == null
+                || familyId == null
+                || userId == null
+                || LocationDeviceHealth.blocksLocationUpdates(
+                currentDeviceHealth
+        )) {
             return;
         }
 
@@ -465,6 +596,7 @@ public class FamilyLocationService extends Service {
 
         AdaptiveLocationPolicy.Config applied =
                 AdaptiveLocationPolicy.configFor(currentTrackingProfile);
+        long capturedAt = System.currentTimeMillis();
 
         Map<String, Object> values = new HashMap<>();
         values.put("uid", userId);
@@ -482,6 +614,7 @@ public class FamilyLocationService extends Service {
                 "trackingIntervalSeconds",
                 applied.intervalMs / 1000L
         );
+        values.put("deviceHealth", currentDeviceHealth);
 
         if (!cachedPlaceLabel.isEmpty()) {
             values.put("placeLabel", cachedPlaceLabel);
@@ -491,19 +624,44 @@ public class FamilyLocationService extends Service {
         values.put("charging", battery.charging);
         values.put("online", true);
         values.put("sharingEnabled", true);
+
+        String availabilityReason = isPowerSaveMode()
+                ? FamilyLiveAvailability.BATTERY_SAVER
+                : FamilyLiveAvailability.AVAILABLE;
+        values.put("availabilityReason", availabilityReason);
+        values.put("clientTimestamp", capturedAt);
         values.put(
-                "availabilityReason",
-                isPowerSaveMode()
-                        ? FamilyLiveAvailability.BATTERY_SAVER
-                        : FamilyLiveAvailability.AVAILABLE
+                "clientUpdateId",
+                LocationSyncPolicy.createUpdateId(
+                        familyId,
+                        userId,
+                        capturedAt,
+                        location.getLatitude(),
+                        location.getLongitude()
+                )
         );
-        values.put("clientTimestamp", System.currentTimeMillis());
         values.put("updatedAt", ServerValue.TIMESTAMP);
 
+        if (LocationDeviceHealth.shouldQueueOffline(currentDeviceHealth)
+                || !networkAvailable) {
+            enqueueLocationForRetry(values);
+            updateForegroundNotification(false);
+            resolvePlaceLabelIfNeeded(location);
+            return;
+        }
+
         locationReference.updateChildren(values)
-                .addOnSuccessListener(ignored -> flushQueuedLocations())
-                .addOnFailureListener(error ->
-                        enqueueLocationForRetry(values));
+                .addOnSuccessListener(ignored -> {
+                    waitingForFreshLocation = false;
+                    lastPublishedHealthReason = availabilityReason;
+                    LocationRecoveryNotifier.cancelResumeRequired(this);
+                    flushQueuedLocations();
+                    updateForegroundNotification(false);
+                })
+                .addOnFailureListener(error -> {
+                    enqueueLocationForRetry(values);
+                    updateForegroundNotification(true);
+                });
 
         resolvePlaceLabelIfNeeded(location);
     }
@@ -528,105 +686,13 @@ public class FamilyLocationService extends Service {
     }
 
     private void flushQueuedLocations() {
-        if (locationReference == null
-                || familyId == null
-                || userId == null
-                || serviceDestroyed.get()
-                || !queueFlushInProgress.compareAndSet(false, true)) {
+        if (!networkAvailable
+                || !familySessionReady
+                || !LocationSharingStore.isSharingEnabled(this)
+                || serviceDestroyed.get()) {
             return;
         }
-        drainNextQueuedLocation();
-    }
-
-    private void drainNextQueuedLocation() {
-        executeQueueTask(() -> {
-            PendingLocationUpload pending =
-                    pendingLocationUploadDao.getNextReady(
-                            System.currentTimeMillis()
-                    );
-
-            if (pending == null) {
-                queueFlushInProgress.set(false);
-                return;
-            }
-
-            Map<String, Object> values;
-            try {
-                JSONObject payload = new JSONObject(VaultCipher.decrypt(
-                        pending.encryptedPayload
-                ));
-
-                if (!userId.equals(payload.optString("uid"))
-                        || !familyId.equals(
-                        payload.optString("familyId")
-                )) {
-                    pendingLocationUploadDao.deleteById(pending.id);
-                    drainNextQueuedLocation();
-                    return;
-                }
-
-                values = jsonToMap(payload);
-                values.put("updatedAt", ServerValue.TIMESTAMP);
-            } catch (JSONException error) {
-                pendingLocationUploadDao.deleteById(pending.id);
-                drainNextQueuedLocation();
-                return;
-            }
-
-            mainHandler.post(() -> uploadQueuedLocation(pending, values));
-        });
-    }
-
-    private void uploadQueuedLocation(
-            @NonNull PendingLocationUpload pending,
-            @NonNull Map<String, Object> values
-    ) {
-        if (locationReference == null || serviceDestroyed.get()) {
-            queueFlushInProgress.set(false);
-            return;
-        }
-
-        locationReference.updateChildren(values)
-                .addOnSuccessListener(ignored -> executeQueueTask(() -> {
-                    pendingLocationUploadDao.deleteById(pending.id);
-                    drainNextQueuedLocation();
-                }))
-                .addOnFailureListener(error -> executeQueueTask(() -> {
-                    long delay = retryDelay(pending.attemptCount);
-                    pendingLocationUploadDao.markRetry(
-                            pending.id,
-                            System.currentTimeMillis() + delay
-                    );
-                    queueFlushInProgress.set(false);
-                    mainHandler.postDelayed(
-                            this::flushQueuedLocations,
-                            delay
-                    );
-                }));
-    }
-
-    @NonNull
-    private Map<String, Object> jsonToMap(
-            @NonNull JSONObject object
-    ) throws JSONException {
-        Map<String, Object> values = new HashMap<>();
-        java.util.Iterator<String> keys = object.keys();
-        while (keys.hasNext()) {
-            String key = keys.next();
-            Object value = object.get(key);
-            if (value != JSONObject.NULL) {
-                values.put(key, value);
-            }
-        }
-        return values;
-    }
-
-    private long retryDelay(int attemptCount) {
-        int exponent = Math.min(Math.max(0, attemptCount), 5);
-        return Math.min(
-                RETRY_MAX_DELAY_MS,
-                RETRY_BASE_DELAY_MS * (1L << exponent)
-        );
+        PendingLocationSyncScheduler.schedule(this);
     }
 
     private void executeQueueTask(@NonNull Runnable task) {
@@ -637,15 +703,11 @@ public class FamilyLocationService extends Service {
         try {
             uploadQueueExecutor.execute(task);
         } catch (RejectedExecutionException ignored) {
-            queueFlushInProgress.set(false);
+            // The service is already shutting down.
         }
     }
 
     private void registerNetworkCallback() {
-        connectivityManager = (ConnectivityManager) getSystemService(
-                Context.CONNECTIVITY_SERVICE
-        );
-
         if (connectivityManager == null) {
             return;
         }
@@ -653,15 +715,20 @@ public class FamilyLocationService extends Service {
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
-                mainHandler.post(() -> {
-                    flushQueuedLocations();
-                    if (!requestingUpdates
-                            && LocationSharingStore.isSharingEnabled(
-                            FamilyLocationService.this
-                    )) {
-                        scheduleLocationRequestRetry();
-                    }
-                });
+                scheduleNetworkHealthRefresh(0L);
+            }
+
+            @Override
+            public void onCapabilitiesChanged(
+                    @NonNull Network network,
+                    @NonNull NetworkCapabilities capabilities
+            ) {
+                scheduleNetworkHealthRefresh(0L);
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                scheduleNetworkHealthRefresh(NETWORK_RECHECK_DELAY_MS);
             }
         };
 
@@ -671,6 +738,38 @@ public class FamilyLocationService extends Service {
             );
         } catch (RuntimeException ignored) {
             networkCallback = null;
+        }
+    }
+
+    private void scheduleNetworkHealthRefresh(long delayMs) {
+        mainHandler.postDelayed(
+                () -> evaluateDeviceHealth(false),
+                Math.max(0L, delayMs)
+        );
+    }
+
+    private boolean isValidatedInternetAvailable() {
+        if (connectivityManager == null) {
+            return false;
+        }
+
+        try {
+            Network activeNetwork = connectivityManager.getActiveNetwork();
+            if (activeNetwork == null) {
+                return false;
+            }
+
+            NetworkCapabilities capabilities =
+                    connectivityManager.getNetworkCapabilities(activeNetwork);
+            return capabilities != null
+                    && capabilities.hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_INTERNET
+            )
+                    && capabilities.hasCapability(
+                    NetworkCapabilities.NET_CAPABILITY_VALIDATED
+            );
+        } catch (RuntimeException ignored) {
+            return false;
         }
     }
 
@@ -734,13 +833,15 @@ public class FamilyLocationService extends Service {
                 lastGeocodedAt = System.currentTimeMillis();
                 lastGeocodedLocation = requestedLocation;
 
-                if (resolvedLabel.isEmpty() || locationReference == null) {
+                if (resolvedLabel.isEmpty()) {
                     return;
                 }
 
                 cachedPlaceLabel = resolvedLabel;
-                locationReference.child("placeLabel")
-                        .setValue(resolvedLabel);
+                if (locationReference != null && networkAvailable) {
+                    locationReference.child("placeLabel")
+                            .setValue(resolvedLabel);
+                }
             });
         });
     }
@@ -778,10 +879,12 @@ public class FamilyLocationService extends Service {
 
     private void stopSharing() {
         LocationSharingStore.setSharingEnabled(this, false);
+        familySessionReady = false;
         removeScheduledWork();
         removeUpdates();
         removeMovementTransitions();
         MovementActivityStore.clear(this);
+        LocationRecoveryNotifier.cancelAll(this);
 
         if (locationReference != null) {
             Map<String, Object> stopped = new HashMap<>();
@@ -802,29 +905,41 @@ public class FamilyLocationService extends Service {
 
     private void stopWithoutRestart() {
         LocationSharingStore.setSharingEnabled(this, false);
+        familySessionReady = false;
         removeScheduledWork();
         removeUpdates();
         removeMovementTransitions();
         MovementActivityStore.clear(this);
+        LocationRecoveryNotifier.cancelAll(this);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
     }
 
     private void removeScheduledWork() {
         mainHandler.removeCallbacks(profileEvaluationRunnable);
+        mainHandler.removeCallbacks(deviceHealthRunnable);
         mainHandler.removeCallbacks(locationRequestRetryRunnable);
     }
 
     private void publishUnavailableState(@NonNull String reason) {
-        if (locationReference == null) {
+        if (locationReference == null || !networkAvailable) {
             return;
         }
 
         Map<String, Object> unavailable = new HashMap<>();
         unavailable.put("availabilityReason", reason);
-        unavailable.put("online", false);
+        unavailable.put("deviceHealth", currentDeviceHealth);
+        unavailable.put("sharingEnabled", true);
+        unavailable.put(
+                "online",
+                !FamilyLiveAvailability.INTERNET_UNAVAILABLE.equals(reason)
+        );
+        unavailable.put("healthUpdatedAt", ServerValue.TIMESTAMP);
         unavailable.put("updatedAt", ServerValue.TIMESTAMP);
-        locationReference.updateChildren(unavailable);
+
+        locationReference.updateChildren(unavailable)
+                .addOnSuccessListener(ignored ->
+                        lastPublishedHealthReason = reason);
     }
 
     private void removeUpdates() {
@@ -1239,6 +1354,20 @@ public class FamilyLocationService extends Service {
 
     @NonNull
     private String trackingNotificationText(boolean retrying) {
+        if (LocationDeviceHealth.PERMISSION_OFF.equals(currentDeviceHealth)) {
+            return getString(
+                    R.string.family_live_tracking_permission_off
+            );
+        }
+        if (LocationDeviceHealth.GPS_OFF.equals(currentDeviceHealth)) {
+            return getString(R.string.family_live_tracking_gps_off);
+        }
+        if (LocationDeviceHealth.INTERNET_OFF.equals(currentDeviceHealth)) {
+            return getString(R.string.family_live_tracking_internet_off);
+        }
+        if (waitingForFreshLocation) {
+            return getString(R.string.family_live_tracking_restoring);
+        }
         if (retrying) {
             return getString(R.string.family_live_tracking_retrying);
         }
@@ -1276,6 +1405,11 @@ public class FamilyLocationService extends Service {
         removeMovementTransitions();
         geocodeExecutor.shutdownNow();
         uploadQueueExecutor.shutdownNow();
+
+        if (LocationSharingStore.isSharingEnabled(this)) {
+            LocationServiceRecoveryScheduler.scheduleNow(this);
+        }
+
         super.onDestroy();
     }
 
