@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/familyStreetViewRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fh_background">
+
+    <FrameLayout
+        android:id="@+id/familyStreetViewHost"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/familyStreetViewTopPanel"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_marginTop="@dimen/space_8"
+        android:layout_marginEnd="@dimen/space_12"
+        android:elevation="@dimen/family_map_panel_elevation"
+        app:cardBackgroundColor="@color/family_map_panel_surface"
+        app:cardCornerRadius="@dimen/radius_20"
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/space_10">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonFamilyStreetViewBack"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:contentDescription="@string/family_map_back_description"
+                android:minWidth="0dp"
+                android:text=""
+                app:icon="@drawable/ic_arrow_back"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textFamilyStreetViewTitle"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/family_street_view_title" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/family_street_view_subtitle"
+                    android:textColor="@color/fh_text_secondary" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <ProgressBar
+        android:id="@+id/familyStreetViewLoading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/familyStreetViewStateCard"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_margin="@dimen/space_24"
+        android:visibility="gone"
+        app:cardBackgroundColor="@color/family_map_panel_surface"
+        app:cardCornerRadius="@dimen/radius_16"
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
+
+        <TextView
+            android:id="@+id/textFamilyStreetViewState"
+            style="@style/TextAppearance.FamilyHub.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:padding="@dimen/card_padding"
+            android:textAlignment="center" />
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
