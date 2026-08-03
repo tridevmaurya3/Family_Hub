@@ -111,8 +111,6 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Activity visibility/padding anchor. It stays one dp wide so the native
-         Google Maps location control is not pushed into the middle. -->
     <View
         android:id="@+id/familyMapControlRail"
         android:layout_width="1dp"
@@ -155,9 +153,10 @@
                     android:layout_width="@dimen/family_map_bottom_action_width"
                     android:layout_height="match_parent"
                     android:contentDescription="@string/family_map_all_members_description"
+                    android:gravity="center"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:maxLines="1"
+                    android:maxLines="2"
                     android:minWidth="0dp"
                     android:text="@string/family_map_control_all_short"
                     android:textColor="@color/fh_module_family"
@@ -176,9 +175,10 @@
                     android:layout_height="match_parent"
                     android:layout_marginStart="4dp"
                     android:contentDescription="@string/family_map_recenter_description"
+                    android:gravity="center"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:maxLines="1"
+                    android:maxLines="2"
                     android:minWidth="0dp"
                     android:text="@string/family_map_control_me_short"
                     android:textColor="@color/fh_secondary"
@@ -197,9 +197,10 @@
                     android:layout_height="match_parent"
                     android:layout_marginStart="4dp"
                     android:contentDescription="@string/family_map_type_description"
+                    android:gravity="center"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:maxLines="1"
+                    android:maxLines="2"
                     android:minWidth="0dp"
                     android:text="@string/family_map_control_normal_short"
                     android:textColor="@color/fh_module_documents"
@@ -219,9 +220,10 @@
                     android:layout_marginStart="4dp"
                     android:checkable="true"
                     android:contentDescription="@string/family_map_traffic_description"
+                    android:gravity="center"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:maxLines="1"
+                    android:maxLines="2"
                     android:minWidth="0dp"
                     android:text="@string/family_map_control_traffic_short"
                     android:textColor="@color/fh_module_planner"
