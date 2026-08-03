@@ -71,6 +71,8 @@
         <item name="iconTint">@color/fh_primary</item>
     </style>
 
+    <style name="Widget.FamilyHub.Button.Text" parent="Widget.FamilyHub.Button.Action" />
+
     <style name="Widget.FamilyHub.Button.Danger" parent="Widget.FamilyHub.Button.Action">
         <item name="android:textColor">@color/fh_error</item>
         <item name="iconTint">@color/fh_error</item>
