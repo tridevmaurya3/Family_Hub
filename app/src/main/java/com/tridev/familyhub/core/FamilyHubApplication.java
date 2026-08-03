@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.FirebaseDatabase;
+import com.tridev.familyhub.feature.sos.FamilySosLiveMonitor;
 import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
 import com.tridev.familyhub.location.FamilyDeviceSafetyMonitorScheduler;
 import com.tridev.familyhub.location.FamilyLivePrecisionActivityCallbacks;
@@ -30,6 +31,7 @@ public class FamilyHubApplication extends Application {
         registerActivityLifecycleCallbacks(
                 new FamilyLivePrecisionActivityCallbacks()
         );
+        FamilySosLiveMonitor.start(this);
         SafePlaceGeofenceSyncScheduler.scheduleNow(this);
         FamilyDeviceSafetyMonitorScheduler.enable(this);
         restoreFamilyLiveSafetyNets();
