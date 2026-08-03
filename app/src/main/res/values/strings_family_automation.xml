@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_automation_title">Smart Routines</string>
+    <string name="family_automation_subtitle">Scheduled sharing, expected arrivals, late-return alerts and automatic trip events.</string>
+    <string name="family_automation_refresh">Refresh Smart Routines</string>
+    <string name="family_automation_active_rules">Active rules</string>
+    <string name="family_automation_schedules">Sharing schedules</string>
+    <string name="family_automation_recent_events">Recent events</string>
+    <string name="family_automation_add_routine">Add routine</string>
+    <string name="family_automation_add_schedule">Add sharing schedule</string>
+    <string name="family_automation_rules_title">Family rules</string>
+    <string name="family_automation_rules_detail">Owner and Guardian accounts can manage rules for active family members. Other members manage their own rules.</string>
+    <string name="family_automation_events_title">Automation activity</string>
+    <string name="family_automation_empty_rules">No automation rules are configured yet.</string>
+    <string name="family_automation_empty_events">No automation events are available yet.</string>
+    <string name="family_automation_loading">Loading Smart Routines…</string>
+    <string name="family_automation_error">Smart Routines could not be loaded. Check internet access and Firebase rules.</string>
+    <string name="family_automation_privacy_note">Routine rules and event history follow family membership and Journey trusted-viewer access. Exact coordinates are not stored in automation events.</string>
+    <string name="family_automation_timing_note">Android may delay background work during Doze or strong OEM battery restrictions. The app keeps a 15-minute fallback check and schedules the next known sharing boundary.</string>
+
+    <string name="family_automation_rule_editor_title">Routine rule</string>
+    <string name="family_automation_schedule_editor_title">Sharing schedule</string>
+    <string name="family_automation_member">Family member</string>
+    <string name="family_automation_rule_type">Rule type</string>
+    <string name="family_automation_rule_name">Rule name</string>
+    <string name="family_automation_place">Safe Place</string>
+    <string name="family_automation_expected_time">Expected time</string>
+    <string name="family_automation_start_time">Start time</string>
+    <string name="family_automation_end_time">End time</string>
+    <string name="family_automation_grace">Grace period</string>
+    <string name="family_automation_days">Active days</string>
+    <string name="family_automation_notify_trusted">Notify Journey trusted viewers</string>
+    <string name="family_automation_enabled">Rule enabled</string>
+    <string name="family_automation_save">Save rule</string>
+    <string name="family_automation_delete">Delete rule</string>
+    <string name="family_automation_saved">Automation rule saved.</string>
+    <string name="family_automation_deleted">Automation rule deleted.</string>
+    <string name="family_automation_invalid">Complete all required fields and select at least one day.</string>
+    <string name="family_automation_delete_confirm">Delete “%1$s” permanently?</string>
+    <string name="family_automation_no_safe_places">Create a Safe Place before adding an arrival, departure or late-return rule.</string>
+
+    <string name="family_automation_type_arrival">Expected arrival</string>
+    <string name="family_automation_type_departure">Expected departure</string>
+    <string name="family_automation_type_late_return">Late return home</string>
+    <string name="family_automation_type_schedule">Scheduled sharing</string>
+    <string name="family_automation_grace_15">15 minutes</string>
+    <string name="family_automation_grace_30">30 minutes</string>
+    <string name="family_automation_grace_45">45 minutes</string>
+    <string name="family_automation_grace_60">60 minutes</string>
+    <string name="family_automation_grace_90">90 minutes</string>
+    <string name="family_automation_day_mon">Mon</string>
+    <string name="family_automation_day_tue">Tue</string>
+    <string name="family_automation_day_wed">Wed</string>
+    <string name="family_automation_day_thu">Thu</string>
+    <string name="family_automation_day_fri">Fri</string>
+    <string name="family_automation_day_sat">Sat</string>
+    <string name="family_automation_day_sun">Sun</string>
+
+    <string name="family_automation_rule_time">%1$s • %2$s</string>
+    <string name="family_automation_schedule_time">%1$s–%2$s • %3$s</string>
+    <string name="family_automation_rule_member">%1$s • %2$s</string>
+    <string name="family_automation_rule_disabled">Disabled</string>
+    <string name="family_automation_event_fallback">A Family Live automation event was recorded.</string>
+    <string name="family_automation_member_fallback">Family member</string>
+
+    <string name="family_automation_channel_name">Family automation alerts</string>
+    <string name="family_automation_channel_description">Expected-arrival, late-return, trip and scheduled-sharing updates.</string>
+    <string name="family_automation_notification_attention">%1$s needs attention</string>
+    <string name="family_automation_notification_trip">%1$s trip update</string>
+    <string name="family_automation_notification_sharing">%1$s sharing automation</string>
+    <string name="family_automation_notification_routine">%1$s routine update</string>
+
+    <string name="family_automation_more_button">Smart Routines</string>
+    <string name="family_automation_more_description">Scheduled sharing, arrival rules and trip events</string>
+    <string name="family_automation_safety_title">Smart Routines</string>
+    <string name="family_automation_safety_detail">Expected arrivals, late-return alerts and automated sharing</string>
+</resources>
