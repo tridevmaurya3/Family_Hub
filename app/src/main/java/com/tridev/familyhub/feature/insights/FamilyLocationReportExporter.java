@@ -35,8 +35,8 @@ public final class FamilyLocationReportExporter {
             @NonNull Uri destination,
             @NonNull FamilyLocationReport report
     ) throws IOException {
-        try (OutputStream output = requireOutput(context, destination);
-             PdfDocument document = new PdfDocument()) {
+        PdfDocument document = new PdfDocument();
+        try (OutputStream output = requireOutput(context, destination)) {
             PdfWriter writer = new PdfWriter(document);
             writer.title("Family Hub — Location Insights & Reports");
             writer.body("Period: " + report.range.displayLabel());
@@ -116,6 +116,8 @@ public final class FamilyLocationReportExporter {
                     + "Store and share the exported file carefully.");
             writer.finish();
             document.writeTo(output);
+        } finally {
+            document.close();
         }
     }
 
@@ -132,6 +134,7 @@ public final class FamilyLocationReportExporter {
             put(zip, "xl/_rels/workbook.xml.rels", workbookRelationships());
             put(zip, "xl/styles.xml", styles());
             put(zip, "xl/worksheets/sheet1.xml", worksheet(report));
+            zip.finish();
         }
     }
 
@@ -183,6 +186,7 @@ public final class FamilyLocationReportExporter {
         return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
                 + "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
                 + "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">"
+                + "<bookViews><workbookView/></bookViews>"
                 + "<sheets><sheet name=\"Location Report\" sheetId=\"1\" r:id=\"rId1\"/></sheets>"
                 + "</workbook>";
     }
@@ -211,11 +215,49 @@ public final class FamilyLocationReportExporter {
                 + "<cellXfs count=\"3\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>"
                 + "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/>"
                 + "<xf numFmtId=\"0\" fontId=\"2\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/></cellXfs>"
+                + "<cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles>"
                 + "</styleSheet>";
     }
 
     @NonNull
     private static String worksheet(@NonNull FamilyLocationReport report) {
+        List<Row> rows = reportRows(report);
+        StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
+                .append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">")
+                .append("<sheetViews><sheetView workbookViewId=\"0\">")
+                .append("<pane ySplit=\"1\" topLeftCell=\"A2\" activePane=\"bottomLeft\" state=\"frozen\"/>")
+                .append("</sheetView></sheetViews>")
+                .append("<sheetFormatPr defaultRowHeight=\"15\"/>")
+                .append("<cols><col min=\"1\" max=\"1\" width=\"28\" customWidth=\"1\"/>")
+                .append("<col min=\"2\" max=\"7\" width=\"22\" customWidth=\"1\"/></cols>")
+                .append("<sheetData>");
+        for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+            Row row = rows.get(rowIndex);
+            xml.append("<row r=\"").append(rowIndex + 1).append("\">");
+            for (int column = 0; column < row.cells.length; column++) {
+                Cell cell = row.cells[column];
+                String reference = columnName(column + 1) + (rowIndex + 1);
+                if (cell.numeric) {
+                    xml.append("<c r=\"").append(reference).append("\" s=\"")
+                            .append(row.style).append("\"><v>")
+                            .append(cell.value).append("</v></c>");
+                } else {
+                    xml.append("<c r=\"").append(reference)
+                            .append("\" t=\"inlineStr\" s=\"").append(row.style)
+                            .append("\"><is><t xml:space=\"preserve\">")
+                            .append(escapeXml(cell.value))
+                            .append("</t></is></c>");
+                }
+            }
+            xml.append("</row>");
+        }
+        xml.append("</sheetData></worksheet>");
+        return xml.toString();
+    }
+
+    @NonNull
+    private static List<Row> reportRows(@NonNull FamilyLocationReport report) {
         List<Row> rows = new ArrayList<>();
         rows.add(Row.title("Family Hub — Location Insights & Reports"));
         rows.add(Row.of("Period", report.range.displayLabel()));
@@ -278,38 +320,7 @@ public final class FamilyLocationReportExporter {
                 }));
             }
         }
-
-        StringBuilder xml = new StringBuilder();
-        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>")
-                .append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">")
-                .append("<cols><col min=\"1\" max=\"1\" width=\"28\" customWidth=\"1\"/>")
-                .append("<col min=\"2\" max=\"7\" width=\"22\" customWidth=\"1\"/></cols>")
-                .append("<sheetData>");
-        for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
-            Row row = rows.get(rowIndex);
-            xml.append("<row r=\"").append(rowIndex + 1).append("\">");
-            for (int column = 0; column < row.cells.length; column++) {
-                Cell cell = row.cells[column];
-                String reference = columnName(column + 1) + (rowIndex + 1);
-                int style = row.style;
-                if (cell.numeric) {
-                    xml.append("<c r=\"").append(reference).append("\" s=\"")
-                            .append(style).append("\"><v>")
-                            .append(cell.value).append("</v></c>");
-                } else {
-                    xml.append("<c r=\"").append(reference)
-                            .append("\" t=\"inlineStr\" s=\"").append(style)
-                            .append("\"><is><t xml:space=\"preserve\">")
-                            .append(escapeXml(cell.value))
-                            .append("</t></is></c>");
-                }
-            }
-            xml.append("</row>");
-        }
-        xml.append("</sheetData><sheetViews><sheetView workbookViewId=\"0\">")
-                .append("<pane ySplit=\"1\" topLeftCell=\"A2\" activePane=\"bottomLeft\" state=\"frozen\"/>")
-                .append("</sheetView></sheetViews></worksheet>");
-        return xml.toString();
+        return rows;
     }
 
     @NonNull
