@@ -14,7 +14,6 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -232,6 +231,7 @@ public final class FamilyJourneyRepository {
                             ) {
                                 List<FamilyJourneyPoint> points =
                                         new ArrayList<>();
+                                long now = System.currentTimeMillis();
                                 for (DataSnapshot child
                                         : snapshot.getChildren()) {
                                     FamilyJourneyPoint point = child.getValue(
@@ -244,13 +244,12 @@ public final class FamilyJourneyRepository {
                                             && child.getKey() != null) {
                                         point.pointId = child.getKey();
                                     }
-                                    if (FamilyJourneyPolicy.validPoint(
+                                    if (FamilyJourneyPolicy.validStoredPoint(
                                             point.latitude,
                                             point.longitude,
                                             point.accuracy,
                                             point.capturedAt,
-                                            System.currentTimeMillis()
-                                                    + 24L * 60L * 60L * 1000L
+                                            now
                                     )) {
                                         points.add(point);
                                     }
