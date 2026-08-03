@@ -48,8 +48,9 @@ public class FamilyGeofenceReceiver extends BroadcastReceiver {
                 long now = System.currentTimeMillis();
                 String transitionType = entered ? "ENTER" : "EXIT";
                 for (Geofence geofence : geofences) {
-                    String placeId = geofence.getRequestId();
-                    if (placeId == null || placeId.trim().isEmpty()) {
+                    String placeId = SafePlaceGeofencePolicy
+                            .placeIdFromRequestId(geofence.getRequestId());
+                    if (placeId == null) {
                         continue;
                     }
                     SafePlaceAlert alert = new SafePlaceAlert();
