@@ -36,6 +36,7 @@ import com.tridev.familyhub.feature.notes.NotesFragment;
 import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
 import com.tridev.familyhub.feature.planner.PlannerFragment;
 import com.tridev.familyhub.feature.property.PropertyFragment;
+import com.tridev.familyhub.feature.sos.FamilySosActivity;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
 /** Fluent module hub for secondary features and essential settings. */
@@ -63,6 +64,7 @@ public class MoreFragment extends Fragment {
 
         applyModuleCardPalette();
         promoteSafePlacesEntry();
+        promoteFamilySosEntry();
 
         binding.cardDocuments.setOnClickListener(
                 clickedView -> openFeature(new DocumentsFragment())
@@ -132,6 +134,64 @@ public class MoreFragment extends Fragment {
                         FamilyManagementActivity.class
                 )));
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
+    }
+
+    /** Keeps Emergency SOS visible as the first safety action on More. */
+    private void promoteFamilySosEntry() {
+        View rootChild = binding.getRoot().getChildAt(0);
+        if (!(rootChild instanceof LinearLayout)) {
+            return;
+        }
+
+        LinearLayout content = (LinearLayout) rootChild;
+        MaterialButton button = new MaterialButton(
+                requireContext(),
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+        );
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(72)
+        );
+        params.topMargin = dp(12);
+        params.bottomMargin = dp(4);
+        button.setLayoutParams(params);
+        button.setMinHeight(dp(72));
+        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        button.setPadding(dp(18), 0, dp(18), 0);
+        button.setText(getString(
+                R.string.family_sos_more_button
+        ) + "\n" + getString(R.string.family_sos_more_description));
+        button.setTextSize(14F);
+        button.setAllCaps(false);
+        button.setMaxLines(2);
+        button.setIconResource(R.drawable.ic_family_sos);
+        button.setIconTintResource(R.color.fh_error);
+        button.setIconSize(dp(24));
+        button.setIconPadding(dp(12));
+        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        button.setTextColor(ContextCompat.getColor(
+                requireContext(),
+                R.color.fh_error
+        ));
+        button.setBackgroundTintList(ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.fh_error_container
+        ));
+        button.setStrokeColor(ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.fh_error
+        ));
+        button.setStrokeWidth(dp(1));
+        button.setCornerRadius(dp(20));
+        button.setOnClickListener(clicked -> startActivity(new Intent(
+                requireContext(),
+                FamilySosActivity.class
+        )));
+
+        int insertionIndex = Math.min(2, content.getChildCount());
+        content.addView(button, insertionIndex);
     }
 
     /**
