@@ -22,15 +22,16 @@
         android:layout_marginTop="@dimen/space_8"
         android:layout_marginEnd="@dimen/space_12"
         android:elevation="@dimen/family_map_panel_elevation"
-        app:cardBackgroundColor="@color/fh_surface"
+        app:cardBackgroundColor="@color/family_map_panel_surface"
         app:cardCornerRadius="@dimen/radius_20"
-        app:strokeColor="@color/fh_outline_variant">
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="@dimen/space_8">
+            android:padding="@dimen/space_10">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -50,30 +51,51 @@
                     app:iconGravity="textStart"
                     app:iconPadding="0dp" />
 
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_12"
                     android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/family_map_title" />
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/family_map_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/family_map_advanced_subtitle"
+                        android:textColor="@color/fh_text_secondary" />
+                </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonFamilyMapRetry"
                     style="@style/Widget.FamilyHub.Button.Tonal"
-                    android:layout_width="wrap_content"
+                    android:layout_width="@dimen/touch_target_min"
                     android:layout_height="@dimen/touch_target_min"
+                    android:contentDescription="@string/family_map_refresh_description"
                     android:minWidth="0dp"
-                    android:text="@string/family_map_retry" />
+                    android:text=""
+                    app:icon="@drawable/ic_family_map_refresh"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    app:iconTint="@color/fh_primary" />
             </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.FamilyHub.TextInputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_6"
+                android:layout_marginTop="@dimen/space_8"
                 android:hint="@string/family_live_search_hint"
                 app:endIconMode="clear_text"
                 app:startIconDrawable="@drawable/ic_search">
@@ -90,16 +112,17 @@
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/familyMapBottomPanel"
+        android:id="@+id/familyMapControlRail"
         style="@style/Widget.FamilyHub.Card.Flat"
-        android:layout_width="match_parent"
+        android:layout_width="@dimen/family_map_advanced_control_width"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_margin="@dimen/space_12"
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="@dimen/space_12"
         android:elevation="@dimen/family_map_panel_elevation"
-        app:cardBackgroundColor="@color/fh_surface"
-        app:cardCornerRadius="@dimen/radius_20"
-        app:strokeColor="@color/fh_outline_variant">
+        app:cardBackgroundColor="@color/family_map_panel_surface"
+        app:cardCornerRadius="@dimen/radius_18"
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -107,68 +130,142 @@
             android:orientation="vertical"
             android:padding="@dimen/space_6">
 
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonFamilyMapFit"
+                style="@style/Widget.FamilyHub.Button.Tonal"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:layout_height="@dimen/touch_target_min"
+                android:contentDescription="@string/family_map_all_members_description"
+                android:minWidth="0dp"
+                android:text="@string/family_map_all_members"
+                android:textColor="@color/fh_module_family"
+                android:textSize="11sp"
+                app:backgroundTint="@color/fh_module_family_container"
+                app:icon="@drawable/ic_family_map_group"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
+                app:iconSize="20dp"
+                app:iconTint="@color/fh_module_family" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonFamilyMapFit"
-                    style="@style/Widget.FamilyHub.Button.Tonal"
-                    android:layout_width="0dp"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:layout_weight="1"
-                    android:minWidth="0dp"
-                    android:text="@string/family_map_all_members"
-                    android:textColor="@color/fh_module_family"
-                    android:textSize="@dimen/family_map_control_text_size"
-                    app:backgroundTint="@color/fh_module_family_container" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonFamilyMapRecenter"
-                    style="@style/Widget.FamilyHub.Button.Tonal"
-                    android:layout_width="0dp"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:layout_marginStart="@dimen/space_6"
-                    android:layout_weight="1"
-                    android:minWidth="0dp"
-                    android:text="@string/family_live_map_recenter"
-                    android:textColor="@color/fh_secondary"
-                    android:textSize="@dimen/family_map_control_text_size"
-                    app:backgroundTint="@color/fh_secondary_container" />
-            </LinearLayout>
-
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonFamilyMapRecenter"
+                style="@style/Widget.FamilyHub.Button.Tonal"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
                 android:layout_marginTop="@dimen/space_6"
-                android:orientation="horizontal">
+                android:contentDescription="@string/family_map_recenter_description"
+                android:minWidth="0dp"
+                android:text="@string/family_live_map_recenter"
+                android:textColor="@color/fh_secondary"
+                android:textSize="11sp"
+                app:backgroundTint="@color/fh_secondary_container"
+                app:icon="@drawable/ic_family_map_recenter"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
+                app:iconSize="20dp"
+                app:iconTint="@color/fh_secondary" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonFamilyMapType"
-                    style="@style/Widget.FamilyHub.Button.Tonal"
-                    android:layout_width="0dp"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:layout_weight="1"
-                    android:minWidth="0dp"
-                    android:text="@string/family_map_normal"
-                    android:textColor="@color/fh_module_documents"
-                    android:textSize="@dimen/family_map_control_text_size"
-                    app:backgroundTint="@color/fh_module_documents_container" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonFamilyMapType"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginTop="@dimen/space_6"
+                android:contentDescription="@string/family_map_type_description"
+                android:minWidth="0dp"
+                android:text="@string/family_map_normal"
+                android:textColor="@color/fh_module_documents"
+                android:textSize="11sp"
+                app:backgroundTint="@color/fh_module_documents_container"
+                app:icon="@drawable/ic_family_map_layers"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
+                app:iconSize="20dp"
+                app:iconTint="@color/fh_module_documents" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonFamilyMapTraffic"
-                    style="@style/Widget.FamilyHub.Button.Tonal"
-                    android:layout_width="0dp"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:layout_marginStart="@dimen/space_6"
-                    android:layout_weight="1"
-                    android:minWidth="0dp"
-                    android:text="@string/family_map_traffic_off"
-                    android:textColor="@color/fh_module_planner"
-                    android:textSize="@dimen/family_map_control_text_size"
-                    app:backgroundTint="@color/fh_module_planner_container" />
-            </LinearLayout>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonFamilyMapTraffic"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginTop="@dimen/space_6"
+                android:checkable="true"
+                android:contentDescription="@string/family_map_traffic_description"
+                android:minWidth="0dp"
+                android:text="@string/family_map_traffic_off"
+                android:textColor="@color/fh_module_planner"
+                android:textSize="11sp"
+                app:backgroundTint="@color/fh_module_planner_container"
+                app:icon="@drawable/ic_family_map_traffic"
+                app:iconGravity="textStart"
+                app:iconPadding="6dp"
+                app:iconSize="20dp"
+                app:iconTint="@color/fh_module_planner" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/familyMapBottomPanel"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/family_map_legend_height"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_marginBottom="@dimen/space_12"
+        android:elevation="@dimen/family_map_panel_elevation"
+        app:cardBackgroundColor="@color/family_map_panel_surface"
+        app:cardCornerRadius="@dimen/radius_18"
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_12"
+            android:paddingEnd="@dimen/space_12">
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:background="@drawable/bg_family_map_dot_live" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="@string/family_map_legend_live"
+                android:textColor="@color/fh_text_secondary"
+                android:textSize="11sp" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginStart="@dimen/space_12"
+                android:background="@drawable/bg_family_map_dot_stale" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="@string/family_map_legend_stale"
+                android:textColor="@color/fh_text_secondary"
+                android:textSize="11sp" />
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginStart="@dimen/space_12"
+                android:background="@drawable/bg_family_map_dot_safe" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:text="@string/family_map_legend_safe_place"
+                android:textColor="@color/fh_text_secondary"
+                android:textSize="11sp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -187,8 +284,10 @@
         android:layout_gravity="center"
         android:layout_margin="@dimen/space_24"
         android:visibility="gone"
-        app:cardBackgroundColor="@color/fh_surface"
-        app:cardCornerRadius="@dimen/radius_16">
+        app:cardBackgroundColor="@color/family_map_panel_surface"
+        app:cardCornerRadius="@dimen/radius_16"
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
 
         <TextView
             android:id="@+id/textFamilyMapState"
@@ -199,4 +298,5 @@
             android:padding="@dimen/card_padding"
             android:textAlignment="center" />
     </com.google.android.material.card.MaterialCardView>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
