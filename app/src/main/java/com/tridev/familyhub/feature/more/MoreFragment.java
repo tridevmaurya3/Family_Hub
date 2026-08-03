@@ -3,9 +3,12 @@ package com.tridev.familyhub.feature.more;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,6 +16,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
@@ -22,9 +26,9 @@ import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
+import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
-import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
 import com.tridev.familyhub.feature.main.MainActivity;
@@ -58,6 +62,7 @@ public class MoreFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         applyModuleCardPalette();
+        promoteSafePlacesEntry();
 
         binding.cardDocuments.setOnClickListener(
                 clickedView -> openFeature(new DocumentsFragment())
@@ -68,9 +73,12 @@ public class MoreFragment extends Fragment {
         binding.cardFamilyLive.setOnClickListener(
                 clickedView -> openFeature(new FamilyLiveFragment())
         );
-        binding.buttonSafePlaces.setOnClickListener(clickedView -> {
-            startActivity(new Intent(requireContext(), SafePlacesActivity.class));
-        });
+        binding.buttonSafePlaces.setOnClickListener(clickedView ->
+                startActivity(new Intent(
+                        requireContext(),
+                        SafePlacesActivity.class
+                ))
+        );
         binding.cardHealth.setOnClickListener(
                 clickedView -> openFeature(new HealthFragment())
         );
@@ -124,6 +132,60 @@ public class MoreFragment extends Fragment {
                         FamilyManagementActivity.class
                 )));
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
+    }
+
+    /**
+     * Keeps Safe Places visible without requiring the user to discover a small
+     * button buried below the Family Live card. The existing bound button is
+     * moved directly below the More page introduction and styled as a clear
+     * primary family-safety action.
+     */
+    private void promoteSafePlacesEntry() {
+        MaterialButton button = binding.buttonSafePlaces;
+        ViewParent currentParent = button.getParent();
+        if (currentParent instanceof ViewGroup) {
+            ((ViewGroup) currentParent).removeView(button);
+        }
+
+        View rootChild = binding.getRoot().getChildAt(0);
+        if (!(rootChild instanceof LinearLayout)) {
+            return;
+        }
+
+        LinearLayout content = (LinearLayout) rootChild;
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(60)
+        );
+        params.topMargin = dp(12);
+        params.bottomMargin = dp(4);
+        button.setLayoutParams(params);
+        button.setMinHeight(dp(60));
+        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        button.setPadding(dp(18), 0, dp(18), 0);
+        button.setIconResource(R.drawable.ic_family_map_recenter);
+        button.setIconTintResource(R.color.fh_module_family);
+        button.setIconSize(dp(22));
+        button.setIconPadding(dp(12));
+        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        button.setTextColor(ContextCompat.getColor(
+                requireContext(),
+                R.color.fh_module_family
+        ));
+        button.setBackgroundTintList(ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.fh_module_family_container
+        ));
+        button.setStrokeColor(ContextCompat.getColorStateList(
+                requireContext(),
+                R.color.fh_module_family
+        ));
+        button.setStrokeWidth(dp(1));
+        button.setVisibility(View.VISIBLE);
+
+        int insertionIndex = Math.min(2, content.getChildCount());
+        content.addView(button, insertionIndex);
     }
 
     private void applyModuleCardPalette() {
@@ -232,7 +294,10 @@ public class MoreFragment extends Fragment {
                 .setTitle(R.string.auth_logout)
                 .setMessage(R.string.auth_logout_confirm)
                 .setNegativeButton(R.string.action_cancel, null)
-                .setPositiveButton(R.string.auth_logout, (dialog, which) -> logout())
+                .setPositiveButton(
+                        R.string.auth_logout,
+                        (dialog, which) -> logout()
+                )
                 .show();
     }
 
@@ -240,9 +305,17 @@ public class MoreFragment extends Fragment {
         FirebaseAuth.getInstance().signOut();
 
         Intent intent = new Intent(requireContext(), AuthActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TASK
+        );
         startActivity(intent);
         requireActivity().finish();
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources()
+                .getDisplayMetrics().density);
     }
 
     @Override
