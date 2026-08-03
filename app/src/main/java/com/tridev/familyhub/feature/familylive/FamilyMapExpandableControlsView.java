@@ -14,22 +14,13 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.WeakHashMap;
-
 /**
  * Compact bottom map menu that expands horizontally on demand.
  *
- * The view collapses when the menu button is tapped again, when any action is
- * used, or when the map surface is touched. Returning false from the map touch
- * listeners keeps every Google Maps gesture working normally.
+ * The menu collapses when its main button is tapped again, when an action is
+ * used, or when the activity restores the map legend after an empty-map tap.
  */
 public final class FamilyMapExpandableControlsView extends MaterialCardView {
-
-    private final Set<View> mapTouchTargets = Collections.newSetFromMap(
-            new WeakHashMap<>()
-    );
 
     @Nullable
     private View actionsContainer;
@@ -42,9 +33,12 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
 
     private boolean expanded;
     private int lastAnchorVisibility = Integer.MIN_VALUE;
+    private int lastLegendVisibility = Integer.MIN_VALUE;
 
     private final ViewTreeObserver.OnGlobalLayoutListener
             anchorVisibilityListener = this::syncAnchorVisibility;
+    private final ViewTreeObserver.OnGlobalLayoutListener
+            legendVisibilityListener = this::syncLegendVisibility;
 
     public FamilyMapExpandableControlsView(@NonNull Context context) {
         this(context, null);
@@ -65,8 +59,6 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         super(context, attrs, defStyleAttr);
         setClickable(false);
         setFocusable(false);
-        setClipChildren(false);
-        setClipToPadding(false);
     }
 
     @Override
@@ -91,21 +83,16 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        post(() -> {
-            installAnchorVisibilitySync();
-            installMapTouchCollapse();
-        });
+        post(this::installVisibilitySync);
     }
 
     @Override
     protected void onDetachedFromWindow() {
-        if (visibilityAnchor != null
-                && visibilityAnchor.getViewTreeObserver().isAlive()) {
-            visibilityAnchor.getViewTreeObserver()
-                    .removeOnGlobalLayoutListener(anchorVisibilityListener);
-        }
+        removeVisibilityListeners();
         visibilityAnchor = null;
+        legendPanel = null;
         lastAnchorVisibility = Integer.MIN_VALUE;
+        lastLegendVisibility = Integer.MIN_VALUE;
         super.onDetachedFromWindow();
     }
 
@@ -117,29 +104,51 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
     }
 
-    private void installAnchorVisibilitySync() {
+    private void installVisibilitySync() {
         View root = getRootView();
         if (root == null) {
             return;
         }
 
         View anchor = root.findViewById(R.id.familyMapControlRail);
-        if (anchor == null || anchor == visibilityAnchor) {
-            syncAnchorVisibility();
-            return;
+        View legend = root.findViewById(R.id.familyMapBottomPanel);
+
+        if (anchor != visibilityAnchor || legend != legendPanel) {
+            removeVisibilityListeners();
+            visibilityAnchor = anchor;
+            legendPanel = legend;
+            lastAnchorVisibility = Integer.MIN_VALUE;
+            lastLegendVisibility = Integer.MIN_VALUE;
+
+            if (visibilityAnchor != null) {
+                visibilityAnchor.getViewTreeObserver()
+                        .addOnGlobalLayoutListener(
+                                anchorVisibilityListener
+                        );
+            }
+            if (legendPanel != null) {
+                legendPanel.getViewTreeObserver()
+                        .addOnGlobalLayoutListener(
+                                legendVisibilityListener
+                        );
+            }
         }
 
+        syncAnchorVisibility();
+        syncLegendVisibility();
+    }
+
+    private void removeVisibilityListeners() {
         if (visibilityAnchor != null
                 && visibilityAnchor.getViewTreeObserver().isAlive()) {
             visibilityAnchor.getViewTreeObserver()
                     .removeOnGlobalLayoutListener(anchorVisibilityListener);
         }
-
-        visibilityAnchor = anchor;
-        lastAnchorVisibility = Integer.MIN_VALUE;
-        anchor.getViewTreeObserver()
-                .addOnGlobalLayoutListener(anchorVisibilityListener);
-        syncAnchorVisibility();
+        if (legendPanel != null
+                && legendPanel.getViewTreeObserver().isAlive()) {
+            legendPanel.getViewTreeObserver()
+                    .removeOnGlobalLayoutListener(legendVisibilityListener);
+        }
     }
 
     private void syncAnchorVisibility() {
@@ -158,6 +167,21 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         lastAnchorVisibility = desiredVisibility;
         if (becameVisible) {
             collapse(false);
+        }
+    }
+
+    private void syncLegendVisibility() {
+        if (legendPanel == null) {
+            return;
+        }
+
+        int currentVisibility = legendPanel.getVisibility();
+        boolean becameVisible = lastLegendVisibility != VISIBLE
+                && currentVisibility == VISIBLE;
+        lastLegendVisibility = currentVisibility;
+
+        if (expanded && becameVisible) {
+            collapse(true);
         }
     }
 
@@ -278,60 +302,5 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
             );
         }
         return legendPanel;
-    }
-
-    private void installMapTouchCollapse() {
-        View root = getRootView();
-        if (root == null) {
-            return;
-        }
-
-        View mapHost = root.findViewById(R.id.familyMapHost);
-        if (mapHost == null) {
-            postDelayed(this::installMapTouchCollapse, 250L);
-            return;
-        }
-
-        attachCollapseTouchRecursively(mapHost);
-        if (mapHost instanceof ViewGroup) {
-            ((ViewGroup) mapHost).setOnHierarchyChangeListener(
-                    new ViewGroup.OnHierarchyChangeListener() {
-                        @Override
-                        public void onChildViewAdded(
-                                View parent,
-                                View child
-                        ) {
-                            attachCollapseTouchRecursively(child);
-                        }
-
-                        @Override
-                        public void onChildViewRemoved(
-                                View parent,
-                                View child
-                        ) {
-                            mapTouchTargets.remove(child);
-                        }
-                    }
-            );
-        }
-    }
-
-    private void attachCollapseTouchRecursively(@NonNull View view) {
-        if (mapTouchTargets.add(view)) {
-            view.setOnTouchListener((target, event) -> {
-                if (expanded
-                        && event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    collapse(true);
-                }
-                return false;
-            });
-        }
-
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            for (int index = 0; index < group.getChildCount(); index++) {
-                attachCollapseTouchRecursively(group.getChildAt(index));
-            }
-        }
     }
 }
