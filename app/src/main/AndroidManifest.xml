@@ -36,6 +36,9 @@
             android:stopWithTask="false" />
 
         <activity
+            android:name=".feature.safety.FamilySafetyCenterActivity"
+            android:exported="false" />
+        <activity
             android:name=".feature.sos.FamilySosActivity"
             android:exported="false" />
         <activity
