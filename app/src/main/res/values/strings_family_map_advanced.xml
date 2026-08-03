@@ -9,11 +9,11 @@
     <string name="family_map_menu_expand_description">Open map tools</string>
     <string name="family_map_menu_collapse_description">Close map tools</string>
 
-    <string name="family_map_control_all_short">All</string>
-    <string name="family_map_control_me_short">Me</string>
+    <string name="family_map_control_all_short">All members</string>
+    <string name="family_map_control_me_short">My location</string>
     <string name="family_map_control_traffic_short">Traffic</string>
     <string name="family_map_control_normal_short">Normal</string>
-    <string name="family_map_control_satellite_short">Sat</string>
+    <string name="family_map_control_satellite_short">Satellite</string>
     <string name="family_map_control_hybrid_short">Hybrid</string>
     <string name="family_map_control_terrain_short">Terrain</string>
 
