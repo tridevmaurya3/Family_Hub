@@ -98,7 +98,7 @@
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
         "$ownerUid": {
           ".write": "auth != null && auth.uid === $ownerUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
-          ".validate": "!newData.exists() || (newData.child('ownerUid').val() === $ownerUid && newData.child('historyEnabled').isBoolean() && newData.child('retentionDays').isNumber() && newData.child('retentionDays').val().matches(/^(7|30|90)$/) && newData.child('updatedAt').isNumber())",
+          ".validate": "!newData.exists() || (newData.child('ownerUid').val() === $ownerUid && newData.child('historyEnabled').isBoolean() && newData.child('retentionDays').isNumber() && (newData.child('retentionDays').val() === 7 || newData.child('retentionDays').val() === 30 || newData.child('retentionDays').val() === 90) && newData.child('updatedAt').isNumber())",
           "viewers": {
             "$viewerUid": {
               ".validate": "!newData.exists() || (newData.val() === true && $viewerUid !== $ownerUid && root.child('memberships').child($familyId).child($viewerUid).child('status').val() === 'ACTIVE')"
