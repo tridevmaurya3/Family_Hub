@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/compact_section_spacing"
+    android:orientation="vertical">
+
+    <TextView
+        style="@style/TextAppearance.FamilyHub.Overline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/family_reports_member_chart_title"
+        android:textColor="@color/fh_primary" />
+
+    <TextView
+        style="@style/TextAppearance.FamilyHub.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/family_reports_member_chart_detail" />
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        app:cardBackgroundColor="@color/fh_surface"
+        app:cardCornerRadius="@dimen/radius_18"
+        app:strokeColor="@color/fh_outline_variant"
+        app:strokeWidth="1dp">
+
+        <com.tridev.familyhub.feature.insights.FamilyInsightsBarChartView
+            android:id="@+id/chartReportsMembers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/space_8" />
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>
