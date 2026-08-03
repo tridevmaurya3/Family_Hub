@@ -157,7 +157,7 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
             boolean noUpdate = FamilyDeviceSafetyAlertPolicy
                     .shouldFlagNoUpdate(
                             true,
-                            offline,
+                            !online,
                             updatedAt,
                             now
                     );
