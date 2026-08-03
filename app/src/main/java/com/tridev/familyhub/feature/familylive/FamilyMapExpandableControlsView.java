@@ -69,7 +69,9 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         menuButton = findViewById(R.id.buttonFamilyMapMenu);
 
         if (menuButton != null) {
-            menuButton.setOnClickListener(ignored -> toggle());
+            menuButton.setOnClickListener(
+                    ignored -> toggleExpandedMenu()
+            );
         }
 
         bindCollapseAfterAction(R.id.buttonFamilyMapFit);
@@ -198,7 +200,7 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         });
     }
 
-    private void toggle() {
+    private void toggleExpandedMenu() {
         if (expanded) {
             collapse(true);
         } else {
