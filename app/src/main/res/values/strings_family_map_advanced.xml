@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_map_advanced_subtitle">Live family location and safety</string>
+    <string name="family_map_refresh_description">Refresh family locations</string>
+    <string name="family_map_all_members_description">Show all family members</string>
+    <string name="family_map_recenter_description">Focus my live location</string>
+    <string name="family_map_type_description">Change map type</string>
+    <string name="family_map_traffic_description">Show or hide traffic</string>
+    <string name="family_map_hybrid">Hybrid</string>
+    <string name="family_map_legend_live">Live</string>
+    <string name="family_map_legend_stale">Stale</string>
+    <string name="family_map_legend_safe_place">Safe place</string>
+    <string name="family_map_info_role">Role • %1$s</string>
+    <string name="family_map_info_place">Place • %1$s</string>
+    <string name="family_map_info_updated">Updated • %1$s</string>
+    <string name="family_map_info_accuracy">Accuracy • about %1$d m</string>
+    <string name="family_map_info_battery">Battery • %1$s</string>
+    <string name="family_map_info_network">Device • %1$s</string>
+    <string name="family_map_info_movement">Movement • %1$s</string>
+    <string name="family_map_info_battery_charging">%1$d%% • Charging</string>
+    <string name="family_map_info_battery_not_charging">%1$d%% • Not charging</string>
+    <string name="family_map_info_live_hint">Tap another pin to compare family locations</string>
+</resources>
