@@ -7,6 +7,7 @@
     <string name="family_live_tracking_stationary">Stationary • Battery-saving updates</string>
     <string name="family_live_tracking_power_saver">Power saver • Reduced updates</string>
     <string name="family_live_tracking_low_battery">Low battery • Essential updates only</string>
+    <string name="family_live_tracking_precision">Precision live view • Updating every few seconds</string>
     <string name="family_live_tracking_retrying">Location service reconnecting…</string>
 
     <string name="family_live_tracking_permission_off">Location permission off • Open Family Live to restore</string>
