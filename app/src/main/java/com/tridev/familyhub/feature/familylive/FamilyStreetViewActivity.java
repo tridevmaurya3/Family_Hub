@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,7 +18,12 @@ import com.google.android.gms.maps.SupportStreetViewPanoramaFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.tridev.familyhub.R;
 
-/** Full-screen Street View for a selected Family Live member position. */
+/**
+ * Full-screen Street View for a selected Family Live member position.
+ *
+ * The external Maps and Navigate actions remain available even when embedded
+ * Street View is blocked by quota, billing or missing nearby imagery.
+ */
 public final class FamilyStreetViewActivity extends AppCompatActivity {
 
     private static final String EXTRA_LATITUDE =
@@ -54,6 +60,9 @@ public final class FamilyStreetViewActivity extends AppCompatActivity {
                 Double.NaN
         );
         String title = getIntent().getStringExtra(EXTRA_TITLE);
+        String displayTitle = title == null || title.trim().isEmpty()
+                ? getString(R.string.family_street_view_title)
+                : title.trim();
 
         View root = findViewById(R.id.familyStreetViewRoot);
         View topPanel = findViewById(R.id.familyStreetViewTopPanel);
@@ -62,13 +71,33 @@ public final class FamilyStreetViewActivity extends AppCompatActivity {
         TextView stateText = findViewById(R.id.textFamilyStreetViewState);
         TextView titleText = findViewById(R.id.textFamilyStreetViewTitle);
 
-        titleText.setText(title == null || title.trim().isEmpty()
-                ? getString(R.string.family_street_view_title)
-                : title.trim());
+        titleText.setText(displayTitle);
 
         findViewById(R.id.buttonFamilyStreetViewBack).setOnClickListener(
                 ignored -> getOnBackPressedDispatcher().onBackPressed()
         );
+        findViewById(R.id.buttonFamilyStreetViewOpenMaps)
+                .setOnClickListener(ignored -> {
+                    if (!FamilyMapExternalLauncher.openLocation(
+                            this,
+                            latitude,
+                            longitude,
+                            displayTitle
+                    )) {
+                        showExternalUnavailable();
+                    }
+                });
+        findViewById(R.id.buttonFamilyStreetViewNavigate)
+                .setOnClickListener(ignored -> {
+                    if (!FamilyMapExternalLauncher.openNavigation(
+                            this,
+                            latitude,
+                            longitude,
+                            FamilyMapNavigationUri.MODE_DRIVING
+                    )) {
+                        showExternalUnavailable();
+                    }
+                });
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
             androidx.core.graphics.Insets bars = insets.getInsets(
@@ -87,6 +116,10 @@ public final class FamilyStreetViewActivity extends AppCompatActivity {
             loading.setVisibility(View.GONE);
             stateText.setText(R.string.family_street_view_unavailable);
             stateCard.setVisibility(View.VISIBLE);
+            findViewById(R.id.buttonFamilyStreetViewOpenMaps)
+                    .setEnabled(false);
+            findViewById(R.id.buttonFamilyStreetViewNavigate)
+                    .setEnabled(false);
             return;
         }
 
@@ -123,16 +156,21 @@ public final class FamilyStreetViewActivity extends AppCompatActivity {
         });
     }
 
+    private void showExternalUnavailable() {
+        Toast.makeText(
+                this,
+                R.string.family_map_navigation_unavailable,
+                Toast.LENGTH_SHORT
+        ).show();
+    }
+
     private static boolean validCoordinates(
             double latitude,
             double longitude
     ) {
-        return Double.isFinite(latitude)
-                && Double.isFinite(longitude)
-                && latitude >= -90D
-                && latitude <= 90D
-                && longitude >= -180D
-                && longitude <= 180D
-                && !(latitude == 0D && longitude == 0D);
+        return FamilyMapNavigationUri.validCoordinates(
+                latitude,
+                longitude
+        );
     }
 }
