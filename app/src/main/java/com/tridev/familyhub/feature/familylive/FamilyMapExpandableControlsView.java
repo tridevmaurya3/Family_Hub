@@ -15,7 +15,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
 
 /**
- * Compact bottom map menu that expands horizontally on demand.
+ * Compact bottom-left map menu that expands across the available screen width.
  *
  * The menu collapses when its main button is tapped again, when an action is
  * used, or when the activity restores the map legend after an empty-map tap.
@@ -214,11 +214,11 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
 
         expanded = true;
-        updateOwnWidth(R.dimen.family_map_controls_expanded_width);
+        updateExpandedWidth();
 
         actionsContainer.setVisibility(VISIBLE);
         actionsContainer.setAlpha(0F);
-        actionsContainer.setTranslationX(18F);
+        actionsContainer.setTranslationX(-18F);
         actionsContainer.animate()
                 .alpha(1F)
                 .translationX(0F)
@@ -246,7 +246,7 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
             if (animate && actionsContainer.getVisibility() == VISIBLE) {
                 actionsContainer.animate()
                         .alpha(0F)
-                        .translationX(18F)
+                        .translationX(-18F)
                         .setDuration(120L)
                         .withEndAction(() -> {
                             actionsContainer.setVisibility(GONE);
@@ -284,16 +284,36 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
     }
 
+    private void updateExpandedWidth() {
+        View root = getRootView();
+        int fallback = getResources().getDimensionPixelSize(
+                R.dimen.family_map_controls_expanded_width
+        );
+        int edge = getResources().getDimensionPixelSize(R.dimen.space_12);
+        int available = root == null || root.getWidth() <= 0
+                ? fallback
+                : root.getWidth() - (edge * 2);
+        updateWidthPixels(Math.max(
+                getResources().getDimensionPixelSize(
+                        R.dimen.family_map_controls_collapsed_width
+                ),
+                available
+        ));
+    }
+
     private void updateOwnWidth(int dimensionResource) {
+        updateWidthPixels(getResources().getDimensionPixelSize(
+                dimensionResource
+        ));
+    }
+
+    private void updateWidthPixels(int width) {
         ViewGroup.LayoutParams params = getLayoutParams();
-        if (params == null) {
+        if (params == null || params.width == width) {
             return;
         }
-        int width = getResources().getDimensionPixelSize(dimensionResource);
-        if (params.width != width) {
-            params.width = width;
-            setLayoutParams(params);
-        }
+        params.width = width;
+        setLayoutParams(params);
     }
 
     @Nullable
