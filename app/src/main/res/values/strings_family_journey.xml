@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_journey_title">Journey History</string>
+    <string name="family_journey_subtitle">Private day-wise routes, movement timeline and Safe Place visits.</string>
+    <string name="family_journey_member_hint">Family member</string>
+    <string name="family_journey_today">Today</string>
+    <string name="family_journey_yesterday">Yesterday</string>
+    <string name="family_journey_choose_date">Choose date</string>
+    <string name="family_journey_selected_date">Selected: %1$s</string>
+    <string name="family_journey_refresh">Refresh journey</string>
+
+    <string name="family_journey_recording_on">Journey recording is enabled</string>
+    <string name="family_journey_recording_off">Journey recording is off</string>
+    <string name="family_journey_recording_on_detail">Battery-efficient samples are stored for %1$d days.</string>
+    <string name="family_journey_recording_off_detail">Enable recording to start building future journey history.</string>
+    <string name="family_journey_privacy">Privacy &amp; retention</string>
+    <string name="family_journey_privacy_title">Journey privacy</string>
+    <string name="family_journey_enable_recording">Record my Journey History</string>
+    <string name="family_journey_retention">Automatic deletion</string>
+    <string name="family_journey_retention_7">Keep 7 days</string>
+    <string name="family_journey_retention_30">Keep 30 days</string>
+    <string name="family_journey_retention_90">Keep 90 days</string>
+    <string name="family_journey_trusted_title">Trusted viewers</string>
+    <string name="family_journey_trusted_detail">Selected active family members can view your saved journey days. Live location permissions are unchanged.</string>
+    <string name="family_journey_save_privacy">Save privacy</string>
+    <string name="family_journey_privacy_saved">Journey privacy updated.</string>
+
+    <string name="family_journey_summary_distance">Distance</string>
+    <string name="family_journey_summary_duration">Duration</string>
+    <string name="family_journey_summary_points">Route points</string>
+    <string name="family_journey_summary_visits">Safe visits</string>
+    <string name="family_journey_start_end">%1$s → %2$s</string>
+    <string name="family_journey_no_place">Location</string>
+    <string name="family_journey_open_map">Open route map</string>
+    <string name="family_journey_timeline_title">Journey timeline</string>
+    <string name="family_journey_empty">No journey samples are available for this member and date.</string>
+    <string name="family_journey_access_denied">This member has not shared Journey History with you.</string>
+    <string name="family_journey_loading">Loading journey…</string>
+    <string name="family_journey_segment">%1$s • %2$s • %3$s</string>
+    <string name="family_journey_safe_visit">Visited %1$s</string>
+    <string name="family_journey_safe_visit_detail">%1$s–%2$s • %3$s</string>
+    <string name="family_journey_delete_day">Delete this day</string>
+    <string name="family_journey_delete_all">Delete all my history</string>
+    <string name="family_journey_delete_day_confirm">Delete your Journey History for this selected date?</string>
+    <string name="family_journey_delete_all_confirm">Permanently delete every saved Journey History day for your account?</string>
+    <string name="family_journey_deleted">Journey History deleted.</string>
+    <string name="family_journey_own_only_delete">Only your own Journey History can be deleted.</string>
+    <string name="family_journey_error">Journey History could not be loaded. Check internet and access permissions.</string>
+    <string name="family_journey_privacy_note">History recording works only while your existing Family Live sharing service is active. It does not start location sharing by itself.</string>
+
+    <string name="family_journey_map_title">Journey Route</string>
+    <string name="family_journey_map_subtitle">%1$s • %2$s</string>
+    <string name="family_journey_map_empty">No route points are available for this day.</string>
+    <string name="family_journey_map_start">Start</string>
+    <string name="family_journey_map_end">End</string>
+    <string name="family_journey_map_summary">%1$s • %2$s • %3$d points</string>
+
+    <string name="family_journey_more_button">Journey History</string>
+    <string name="family_journey_more_description">Day-wise route, distance and timeline</string>
+</resources>
