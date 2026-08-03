@@ -104,4 +104,67 @@
             android:textAlignment="center" />
     </com.google.android.material.card.MaterialCardView>
 
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/familyStreetViewFallbackCard"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_marginEnd="@dimen/space_12"
+        android:layout_marginBottom="@dimen/space_12"
+        android:elevation="@dimen/family_map_panel_elevation"
+        app:cardBackgroundColor="@color/family_map_panel_surface"
+        app:cardCornerRadius="@dimen/radius_18"
+        app:strokeColor="@color/family_map_panel_stroke"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/space_12">
+
+            <TextView
+                style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="3"
+                android:text="@string/family_street_view_blocked_help"
+                android:textColor="@color/fh_text_secondary" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonFamilyStreetViewOpenMaps"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:maxLines="1"
+                    android:text="@string/family_street_view_open_maps"
+                    app:icon="@drawable/ic_family_map_open_external"
+                    app:iconGravity="textStart"
+                    app:iconSize="18dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonFamilyStreetViewNavigate"
+                    style="@style/Widget.FamilyHub.Button.Primary"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8"
+                    android:layout_weight="1"
+                    android:maxLines="1"
+                    android:text="@string/family_street_view_navigate"
+                    app:icon="@drawable/ic_family_map_navigation"
+                    app:iconGravity="textStart"
+                    app:iconSize="18dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
