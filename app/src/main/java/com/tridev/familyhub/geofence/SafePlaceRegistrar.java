@@ -90,6 +90,10 @@ public final class SafePlaceRegistrar {
             return false;
         }
 
+        Context appContext = context.getApplicationContext();
+        SafePlaceTransitionConfirmationScheduler.cancel(appContext, placeId);
+        new SafePlaceAlertStateStore(appContext).remove(placeId);
+
         Geofence geofence = buildGeofence(
                 placeId,
                 latitude,
@@ -97,7 +101,7 @@ public final class SafePlaceRegistrar {
                 radius
         );
         GeofencingClient client = LocationServices.getGeofencingClient(
-                context.getApplicationContext()
+                appContext
         );
         List<String> legacyAndCurrentIds = Arrays.asList(
                 String.valueOf(placeId),
@@ -107,7 +111,7 @@ public final class SafePlaceRegistrar {
         client.removeGeofences(legacyAndCurrentIds)
                 .addOnCompleteListener(ignored -> client.addGeofences(
                                 buildRequest(Collections.singletonList(geofence)),
-                                pendingIntent(context)
+                                pendingIntent(appContext)
                         )
                         .addOnSuccessListener(result -> {
                             if (callback != null) {
@@ -187,7 +191,11 @@ public final class SafePlaceRegistrar {
         if (placeId <= 0L) {
             return;
         }
-        LocationServices.getGeofencingClient(context.getApplicationContext())
+
+        Context appContext = context.getApplicationContext();
+        SafePlaceTransitionConfirmationScheduler.cancel(appContext, placeId);
+        new SafePlaceAlertStateStore(appContext).remove(placeId);
+        LocationServices.getGeofencingClient(appContext)
                 .removeGeofences(Arrays.asList(
                         String.valueOf(placeId),
                         SafePlaceGeofencePolicy.requestId(placeId)
