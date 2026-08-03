@@ -6,6 +6,8 @@
     <string name="family_map_recenter_description">Focus my live location</string>
     <string name="family_map_type_description">Change map type</string>
     <string name="family_map_traffic_description">Show or hide traffic</string>
+    <string name="family_map_menu_expand_description">Open map tools</string>
+    <string name="family_map_menu_collapse_description">Close map tools</string>
 
     <string name="family_map_control_all_short">All</string>
     <string name="family_map_control_me_short">Me</string>
