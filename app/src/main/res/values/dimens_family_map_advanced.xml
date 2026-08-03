@@ -3,7 +3,7 @@
     <dimen name="family_map_advanced_control_width">76dp</dimen>
     <dimen name="family_map_advanced_control_button_height">62dp</dimen>
 
-    <dimen name="family_map_controls_collapsed_width">56dp</dimen>
+    <dimen name="family_map_controls_collapsed_width">60dp</dimen>
     <dimen name="family_map_controls_expanded_width">292dp</dimen>
     <dimen name="family_map_controls_height">56dp</dimen>
     <dimen name="family_map_bottom_action_width">52dp</dimen>
