@@ -19,6 +19,7 @@ public final class AdaptiveLocationPolicy {
     public static final String PROFILE_STATIONARY = "STATIONARY";
     public static final String PROFILE_POWER_SAVER = "POWER_SAVER";
     public static final String PROFILE_LOW_BATTERY = "LOW_BATTERY";
+    public static final String PROFILE_LIVE_VIEW = "LIVE_VIEW";
 
     public static final int LOW_BATTERY_THRESHOLD = 15;
     public static final int POWER_SAVER_BATTERY_THRESHOLD = 25;
@@ -64,6 +65,17 @@ public final class AdaptiveLocationPolicy {
     @NonNull
     public static Config configFor(@NonNull String profile) {
         switch (profile) {
+            case PROFILE_LIVE_VIEW:
+                return new Config(
+                        PROFILE_LIVE_VIEW,
+                        FamilyLivePrecisionPolicy.PRECISION_INTERVAL_MS,
+                        FamilyLivePrecisionPolicy.PRECISION_MIN_INTERVAL_MS,
+                        FamilyLivePrecisionPolicy.PRECISION_MIN_DISTANCE_METERS,
+                        Priority.PRIORITY_HIGH_ACCURACY,
+                        false,
+                        FamilyLivePrecisionPolicy.PRECISION_INTERVAL_MS
+                );
+
             case PROFILE_ACTIVE:
                 return new Config(
                         PROFILE_ACTIVE,
@@ -135,7 +147,8 @@ public final class AdaptiveLocationPolicy {
     public static boolean isImmediateSafetyProfile(@NonNull String profile) {
         return PROFILE_LOW_BATTERY.equals(profile)
                 || PROFILE_POWER_SAVER.equals(profile)
-                || PROFILE_TRAVELLING.equals(profile);
+                || PROFILE_TRAVELLING.equals(profile)
+                || PROFILE_LIVE_VIEW.equals(profile);
     }
 
     public static final class Config {
