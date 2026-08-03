@@ -21,6 +21,34 @@ public class LocationSyncPolicyTest {
     }
 
     @Test
+    public void previousSessionPointCannotUploadAfterRestart() {
+        assertFalse(LocationSyncPolicy.belongsToCurrentSharingSession(
+                1_000L,
+                2_000L
+        ));
+        assertTrue(LocationSyncPolicy.belongsToCurrentSharingSession(
+                2_000L,
+                2_000L
+        ));
+        assertTrue(LocationSyncPolicy.belongsToCurrentSharingSession(
+                3_000L,
+                2_000L
+        ));
+    }
+
+    @Test
+    public void legacySessionWithoutStartTimeStillAcceptsValidPoint() {
+        assertTrue(LocationSyncPolicy.belongsToCurrentSharingSession(
+                1_000L,
+                0L
+        ));
+        assertFalse(LocationSyncPolicy.belongsToCurrentSharingSession(
+                0L,
+                0L
+        ));
+    }
+
+    @Test
     public void updateIdIsStableForSamePoint() {
         String first = LocationSyncPolicy.createUpdateId(
                 "family",
