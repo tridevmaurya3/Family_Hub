@@ -31,6 +31,12 @@ public final class PendingLocationSyncScheduler {
 
     /** Runs as soon as a network is available. */
     public static void schedule(@NonNull Context context) {
+        Context appContext = context.getApplicationContext();
+        WorkManager manager = WorkManager.getInstance(appContext);
+
+        // A restarted sharing session must cancel a cleanup that has not begun.
+        manager.cancelUniqueWork(UNIQUE_CLEANUP_WORK);
+
         OneTimeWorkRequest request =
                 new OneTimeWorkRequest.Builder(
                         PendingLocationSyncWorker.class
@@ -44,12 +50,13 @@ public final class PendingLocationSyncScheduler {
                         .addTag(UNIQUE_ONE_TIME_WORK)
                         .build();
 
-        WorkManager.getInstance(context.getApplicationContext())
-                .enqueueUniqueWork(
-                        UNIQUE_ONE_TIME_WORK,
-                        ExistingWorkPolicy.APPEND_OR_REPLACE,
-                        request
-                );
+        // Only the newest point is retained, so queued duplicate workers add no
+        // value. REPLACE guarantees one current sync attempt.
+        manager.enqueueUniqueWork(
+                UNIQUE_ONE_TIME_WORK,
+                ExistingWorkPolicy.REPLACE,
+                request
+        );
     }
 
     /**
@@ -58,6 +65,10 @@ public final class PendingLocationSyncScheduler {
      * when connectivity and system scheduling allow it.
      */
     public static void enablePeriodicSync(@NonNull Context context) {
+        Context appContext = context.getApplicationContext();
+        WorkManager manager = WorkManager.getInstance(appContext);
+        manager.cancelUniqueWork(UNIQUE_CLEANUP_WORK);
+
         PeriodicWorkRequest request =
                 new PeriodicWorkRequest.Builder(
                         PendingLocationSyncWorker.class,
@@ -73,17 +84,15 @@ public final class PendingLocationSyncScheduler {
                         .addTag(UNIQUE_PERIODIC_WORK)
                         .build();
 
-        WorkManager.getInstance(context.getApplicationContext())
-                .enqueueUniquePeriodicWork(
-                        UNIQUE_PERIODIC_WORK,
-                        ExistingPeriodicWorkPolicy.KEEP,
-                        request
-                );
+        manager.enqueueUniquePeriodicWork(
+                UNIQUE_PERIODIC_WORK,
+                ExistingPeriodicWorkPolicy.KEEP,
+                request
+        );
     }
 
     /**
-     * Removes the encrypted pending point after the user explicitly stops
-     * sharing. Cleanup requires no network and cannot upload anything.
+     * Cancels every upload path and schedules a dedicated non-upload cleanup.
      */
     public static void disableAndClear(@NonNull Context context) {
         WorkManager manager = WorkManager.getInstance(
@@ -91,10 +100,11 @@ public final class PendingLocationSyncScheduler {
         );
         manager.cancelUniqueWork(UNIQUE_PERIODIC_WORK);
         manager.cancelUniqueWork(UNIQUE_ONE_TIME_WORK);
+        manager.cancelUniqueWork(UNIQUE_CLEANUP_WORK);
 
         OneTimeWorkRequest cleanup =
                 new OneTimeWorkRequest.Builder(
-                        PendingLocationSyncWorker.class
+                        PendingLocationCleanupWorker.class
                 )
                         .addTag(UNIQUE_CLEANUP_WORK)
                         .build();
