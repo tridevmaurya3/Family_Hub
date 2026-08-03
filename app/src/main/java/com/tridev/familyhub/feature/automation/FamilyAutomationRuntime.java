@@ -207,11 +207,21 @@ public final class FamilyAutomationRuntime {
             return;
         }
 
-        Double latitude = numberValue(snapshot.child("latitude"));
-        Double longitude = numberValue(snapshot.child("longitude"));
-        long capturedAt = longValue(snapshot.child("clientTimestamp"));
+        Double latitude = FirebaseNumericValueReader.doubleValue(
+                snapshot.child("latitude")
+        );
+        Double longitude = FirebaseNumericValueReader.doubleValue(
+                snapshot.child("longitude")
+        );
+        long capturedAt = FirebaseNumericValueReader.nonNegativeLong(
+                snapshot.child("clientTimestamp"),
+                0L
+        );
         if (capturedAt <= 0L) {
-            capturedAt = longValue(snapshot.child("updatedAt"));
+            capturedAt = FirebaseNumericValueReader.nonNegativeLong(
+                    snapshot.child("updatedAt"),
+                    0L
+            );
         }
         long now = System.currentTimeMillis();
         if (latitude == null
@@ -229,7 +239,10 @@ public final class FamilyAutomationRuntime {
 
         String movement = stringValue(snapshot.child("movementType"));
         String placeLabel = stringValue(snapshot.child("placeLabel"));
-        int battery = intValue(snapshot.child("batteryPercentage"), -1);
+        int battery = FirebaseNumericValueReader.intValue(
+                snapshot.child("batteryPercentage"),
+                -1
+        );
         boolean charging = booleanValue(snapshot.child("charging"), false);
         List<FamilyAutomationRule> currentRules = new ArrayList<>(rules);
         FamilyAutomationStateStore state =
@@ -519,25 +532,6 @@ public final class FamilyAutomationRuntime {
     private static String stringValue(@NonNull DataSnapshot snapshot) {
         String value = snapshot.getValue(String.class);
         return value == null ? "" : value.trim();
-    }
-
-    private static long longValue(@NonNull DataSnapshot snapshot) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? 0L : Math.max(0L, value.longValue());
-    }
-
-    private static int intValue(
-            @NonNull DataSnapshot snapshot,
-            int fallback
-    ) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? fallback : value.intValue();
-    }
-
-    @Nullable
-    private static Double numberValue(@NonNull DataSnapshot snapshot) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? null : value.doubleValue();
     }
 
     private static boolean booleanValue(
