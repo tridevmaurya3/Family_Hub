@@ -1,12 +1,16 @@
 package com.tridev.familyhub.data.local.dao;
 
+import android.content.Context;
+
 import androidx.room.Dao;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Transaction;
 
+import com.tridev.familyhub.core.FamilyHubApplication;
 import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
+import com.tridev.familyhub.location.PendingLocationSyncScheduler;
 
 /**
  * Stores only the newest encrypted Family Live update waiting for sync.
@@ -23,12 +27,19 @@ public interface PendingLocationUploadDao {
 
     /**
      * Existing callers use insert(); this transaction transparently compacts
-     * the queue to the newest point without exposing encrypted coordinates.
+     * the queue to the newest point and immediately schedules durable sync.
      */
     @Transaction
     default long insert(PendingLocationUpload upload) {
         deleteAll();
-        return insertInternal(upload);
+        long id = insertInternal(upload);
+
+        Context context = FamilyHubApplication.getAppContextOrNull();
+        if (context != null) {
+            PendingLocationSyncScheduler.schedule(context);
+            PendingLocationSyncScheduler.enablePeriodicSync(context);
+        }
+        return id;
     }
 
     /**
