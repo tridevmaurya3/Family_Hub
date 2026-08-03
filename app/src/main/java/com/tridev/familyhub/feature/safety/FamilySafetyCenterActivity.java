@@ -27,6 +27,7 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.familylive.FamilyMapActivity;
 import com.tridev.familyhub.feature.familylive.SafePlaceAlertHistoryActivity;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
+import com.tridev.familyhub.feature.insights.FamilyLocationReportsActivity;
 import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
 import com.tridev.familyhub.feature.sos.FamilySosAlert;
@@ -38,8 +39,8 @@ import java.util.Map;
 
 /**
  * Unified Office 365-style hub for Family Live safety, SOS, Safe Places,
- * Journey History and confirmed alert history. No exact location is copied or
- * stored by this overview screen.
+ * Journey History, Location Insights and confirmed alert history. No exact
+ * location is copied or stored by this overview screen.
  */
 public final class FamilySafetyCenterActivity extends AppCompatActivity {
 
@@ -105,18 +106,45 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         View alertCard = findViewById(R.id.cardFamilySafetyAlerts);
         alertCard.setOnClickListener(v ->
                 open(SafePlaceAlertHistoryActivity.class));
-        addJourneyHistoryCard(alertCard);
+
+        View journeyCard = addToolCard(
+                alertCard,
+                R.string.family_journey_more_button,
+                R.string.family_journey_more_description,
+                R.drawable.ic_family_map_route,
+                R.color.fh_secondary,
+                R.color.fh_secondary_container,
+                FamilyJourneyActivity.class
+        );
+        addToolCard(
+                journeyCard == null ? alertCard : journeyCard,
+                R.string.family_reports_safety_title,
+                R.string.family_reports_safety_detail,
+                R.drawable.ic_family_map_route,
+                R.color.fh_info,
+                R.color.fh_info_container,
+                FamilyLocationReportsActivity.class
+        );
 
         renderCounts();
         renderOverview();
     }
 
-    /** Adds Phase 4 without restructuring the existing verified safety layout. */
-    private void addJourneyHistoryCard(@NonNull View alertCard) {
-        if (!(alertCard.getParent() instanceof ViewGroup)) {
-            return;
+    /** Adds a compact safety tool card immediately after the supplied anchor. */
+    @Nullable
+    private View addToolCard(
+            @NonNull View anchor,
+            int titleRes,
+            int detailRes,
+            int iconRes,
+            int accentColorRes,
+            int containerColorRes,
+            @NonNull Class<?> activityClass
+    ) {
+        if (!(anchor.getParent() instanceof ViewGroup)) {
+            return null;
         }
-        ViewGroup parent = (ViewGroup) alertCard.getParent();
+        ViewGroup parent = (ViewGroup) anchor.getParent();
         MaterialCardView card = new MaterialCardView(this);
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -127,13 +155,10 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         card.setRadius(dp(18));
         card.setCardElevation(0F);
         card.setStrokeWidth(dp(1));
-        card.setStrokeColor(ContextCompat.getColor(
-                this,
-                R.color.fh_secondary
-        ));
+        card.setStrokeColor(ContextCompat.getColor(this, accentColorRes));
         card.setCardBackgroundColor(ContextCompat.getColor(
                 this,
-                R.color.fh_secondary_container
+                containerColorRes
         ));
         card.setClickable(true);
         card.setFocusable(true);
@@ -141,7 +166,7 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
                 this,
                 android.R.drawable.list_selector_background
         ));
-        card.setOnClickListener(v -> open(FamilyJourneyActivity.class));
+        card.setOnClickListener(v -> open(activityClass));
 
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -156,10 +181,10 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         icon.setLayoutParams(iconParams);
         icon.setBackgroundResource(R.drawable.bg_placeholder_icon);
         icon.setPadding(dp(10), dp(10), dp(10), dp(10));
-        icon.setImageResource(R.drawable.ic_family_map_route);
+        icon.setImageResource(iconRes);
         icon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(
                 this,
-                R.color.fh_secondary
+                accentColorRes
         )));
         row.addView(icon);
 
@@ -174,17 +199,14 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         row.addView(copy, copyParams);
 
         TextView title = new TextView(this);
-        title.setText(R.string.family_journey_more_button);
+        title.setText(titleRes);
         title.setTextSize(16F);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setTextColor(ContextCompat.getColor(
-                this,
-                R.color.fh_secondary
-        ));
+        title.setTextColor(ContextCompat.getColor(this, accentColorRes));
         copy.addView(title);
 
         TextView detail = new TextView(this);
-        detail.setText(R.string.family_journey_more_description);
+        detail.setText(detailRes);
         detail.setTextSize(13F);
         detail.setTextColor(ContextCompat.getColor(
                 this,
@@ -201,13 +223,14 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         arrow.setImageResource(R.drawable.ic_arrow_right);
         arrow.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(
                 this,
-                R.color.fh_secondary
+                accentColorRes
         )));
         row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(20)));
 
         card.addView(row);
-        int index = parent.indexOfChild(alertCard);
+        int index = parent.indexOfChild(anchor);
         parent.addView(card, Math.min(index + 1, parent.getChildCount()));
+        return card;
     }
 
     @Override
