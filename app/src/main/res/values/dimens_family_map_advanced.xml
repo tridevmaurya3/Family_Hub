@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="family_map_advanced_control_width">118dp</dimen>
+    <dimen name="family_map_info_width">304dp</dimen>
+    <dimen name="family_map_info_padding">14dp</dimen>
+    <dimen name="family_map_info_row_spacing">5dp</dimen>
+    <dimen name="family_map_legend_height">38dp</dimen>
+</resources>
