@@ -231,6 +231,62 @@
                     android:layout_marginEnd="56dp"
                     android:text="@string/family_safety_alert_dwell_detail" />
 
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Overline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_16"
+                    android:text="@string/family_safety_alert_device_section"
+                    android:textColor="@color/fh_secondary" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertNoUpdate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:minHeight="48dp"
+                    android:text="@string/family_safety_alert_no_update_control" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_no_update_detail" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertLowBattery"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:minHeight="48dp"
+                    android:text="@string/family_safety_alert_low_battery_control" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_low_battery_detail" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchSafetyAlertOffline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:minHeight="48dp"
+                    android:text="@string/family_safety_alert_offline_control" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_marginEnd="56dp"
+                    android:text="@string/family_safety_alert_offline_detail" />
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -314,6 +370,27 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/family_safety_alert_filter_dwell" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyNoUpdate"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_no_update" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyLowBattery"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_low_battery" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipSafetyOffline"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/family_safety_alert_filter_offline" />
         </com.google.android.material.chip.ChipGroup>
 
         <LinearLayout
