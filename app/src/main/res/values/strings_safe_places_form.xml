@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="safe_place_page_subtitle">Create trusted zones for family arrival, exit and stay alerts</string>
+    <string name="safe_place_saved_places_section">Saved places</string>
+    <string name="safe_place_saved_places_helper">Your active Safe Places and alert controls appear here.</string>
+    <string name="safe_place_create_section">Safe Place details</string>
+    <string name="safe_place_create_helper">Choose a clear name, place type and alert boundary.</string>
+    <string name="safe_place_radius_helper">Recommended: 150–250 m for a home or office</string>
+    <string name="safe_place_location_section">Choose location</string>
+    <string name="safe_place_location_helper">Use the phone’s current position or select the exact place on the map.</string>
+    <string name="safe_place_readiness_section">Alert readiness</string>
+    <string name="safe_place_readiness_helper">Background location and GPS must remain available for reliable alerts.</string>
+    <string name="safe_place_save_helper">Only confirmed arrival, exit and stay events create alerts.</string>
+    <string name="safe_place_history_description">Review confirmed arrival, exit and stay events</string>
+</resources>
