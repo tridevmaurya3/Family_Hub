@@ -22,6 +22,8 @@ public final class LocationHeartbeatPolicy {
             5L * 60L * 1000L;
     public static final long RECOVERY_RECHECK_DELAY_MS =
             2L * 60L * 1000L;
+    public static final long RECOVERY_ATTEMPT_COOLDOWN_MS =
+            90L * 1000L;
     public static final long CLOUD_HEARTBEAT_STALE_AFTER_MS =
             12L * 60L * 1000L;
 
@@ -33,6 +35,16 @@ public final class LocationHeartbeatPolicy {
             boolean serviceRunning
     ) {
         return sharingEnabled && !serviceRunning;
+    }
+
+    public static boolean canAttemptRecovery(
+            long lastRecoveryAt,
+            long now
+    ) {
+        if (lastRecoveryAt <= 0L || now < lastRecoveryAt) {
+            return true;
+        }
+        return now - lastRecoveryAt >= RECOVERY_ATTEMPT_COOLDOWN_MS;
     }
 
     public static long nextCheckDelay(boolean serviceRunning) {
