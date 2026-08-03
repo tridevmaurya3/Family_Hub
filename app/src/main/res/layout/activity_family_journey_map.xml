@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/fh_background">
+
+    <FrameLayout
+        android:id="@+id/journeyMapHost"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_marginTop="@dimen/space_8"
+        android:layout_marginEnd="@dimen/space_12"
+        android:elevation="6dp"
+        app:cardBackgroundColor="@color/fh_surface"
+        app:cardCornerRadius="@dimen/radius_20"
+        app:strokeColor="@color/fh_outline_variant"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/space_10">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonJourneyMapBack"
+                style="@style/Widget.FamilyHub.Button.Tonal"
+                android:layout_width="@dimen/touch_target_min"
+                android:layout_height="@dimen/touch_target_min"
+                android:contentDescription="@string/action_back"
+                android:minWidth="0dp"
+                android:text=""
+                app:icon="@drawable/ic_arrow_back"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconTint="@color/fh_primary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/family_journey_map_title" />
+
+                <TextView
+                    android:id="@+id/textJourneyMapSubtitle"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:maxLines="1" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_marginEnd="@dimen/space_12"
+        android:layout_marginBottom="@dimen/space_12"
+        android:elevation="6dp"
+        app:cardBackgroundColor="@color/fh_surface"
+        app:cardCornerRadius="@dimen/radius_18"
+        app:strokeColor="@color/fh_outline_variant"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/space_12">
+
+            <ImageView
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="@drawable/bg_placeholder_icon"
+                android:contentDescription="@null"
+                android:padding="9dp"
+                android:src="@drawable/ic_family_map_route"
+                app:tint="@color/fh_primary" />
+
+            <TextView
+                android:id="@+id/textJourneyMapSummary"
+                style="@style/TextAppearance.FamilyHub.Body"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_12"
+                android:layout_weight="1" />
+
+            <ProgressBar
+                android:id="@+id/progressJourneyMap"
+                android:layout_width="28dp"
+                android:layout_height="28dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/textJourneyMapEmpty"
+        style="@style/TextAppearance.FamilyHub.Body"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@color/fh_surface"
+        android:gravity="center"
+        android:padding="@dimen/space_16"
+        android:text="@string/family_journey_map_empty"
+        android:visibility="gone" />
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
