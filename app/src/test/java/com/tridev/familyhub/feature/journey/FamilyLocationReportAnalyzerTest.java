@@ -36,6 +36,8 @@ public class FamilyLocationReportAnalyzerTest {
                 "STATIONARY", "Home"));
         points.add(point(day + hours(9) + minutes(10), 25.0100, 83.0100,
                 "TRAVELLING", ""));
+        points.add(point(day + hours(9) + minutes(25), 25.0150, 83.0150,
+                "TRAVELLING", ""));
         points.add(point(day + hours(9) + minutes(40), 25.0200, 83.0200,
                 "STATIONARY", "Office"));
         points.add(point(day + hours(10) + minutes(40), 25.0200, 83.0200,
@@ -53,7 +55,7 @@ public class FamilyLocationReportAnalyzerTest {
         assertEquals(1, report.members.size());
         assertEquals(1, report.activeMemberDays);
         assertTrue(report.totalDistanceMeters > 1_000D);
-        assertTrue(report.totalMovingDurationMs > 0L);
+        assertTrue(report.totalMovingDurationMs >= minutes(15));
         assertTrue(report.totalSafePlaceDurationMs >= hours(2));
         assertFalse(report.familySafePlaces.isEmpty());
         assertEquals("Home", report.members.get(0).mostVisitedPlace);
