@@ -24,6 +24,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -70,8 +71,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Visible, consent-based Family Live sharing.
  *
  * The service adapts location frequency to movement and battery state, keeps
- * the newest failed location encrypted, and continuously monitors permission,
- * GPS and validated internet health while sharing remains enabled.
+ * the newest failed location encrypted, continuously monitors permission/GPS/
+ * internet health, and protects the last reliable position from invalid,
+ * stale, mock or physically implausible points.
  */
 public class FamilyLocationService extends Service {
 
@@ -113,6 +115,7 @@ public class FamilyLocationService extends Service {
     private boolean familySessionReady;
     private boolean networkAvailable;
     private boolean waitingForFreshLocation;
+    private boolean waitingForReliableLocation;
 
     @NonNull
     private String currentTrackingProfile =
@@ -131,6 +134,11 @@ public class FamilyLocationService extends Service {
 
     @Nullable
     private Location previousMovementLocation;
+    @Nullable
+    private Location lastAcceptedLocation;
+    @Nullable
+    private Location suspiciousJumpCandidate;
+
     @NonNull
     private String stableMovementType = "UNKNOWN";
     @NonNull
@@ -246,7 +254,7 @@ public class FamilyLocationService extends Service {
             public void onLocationResult(@NonNull LocationResult result) {
                 Location latest = result.getLastLocation();
                 if (latest != null) {
-                    publishLocation(latest);
+                    publishLocation(latest, false);
                 }
             }
         };
@@ -496,6 +504,7 @@ public class FamilyLocationService extends Service {
             removeUpdates();
             mainHandler.removeCallbacks(locationRequestRetryRunnable);
             waitingForFreshLocation = false;
+            waitingForReliableLocation = false;
 
             if (networkAvailable
                     && familySessionReady
@@ -549,12 +558,12 @@ public class FamilyLocationService extends Service {
         fusedLocationClient.getLastLocation()
                 .addOnSuccessListener(location -> {
                     if (location != null) {
-                        publishLocation(location);
+                        publishLocation(location, true);
                     }
                 })
                 .addOnFailureListener(ignored -> {
                     // Continuous updates remain active and will provide a fresh
-                    // point when Android has one available.
+                    // reliable point when Android has one available.
                 });
     }
 
@@ -573,7 +582,10 @@ public class FamilyLocationService extends Service {
         locationReference.onDisconnect().updateChildren(disconnected);
     }
 
-    private void publishLocation(@NonNull Location location) {
+    private void publishLocation(
+            @NonNull Location location,
+            boolean lastKnownSource
+    ) {
         if (locationReference == null
                 || familyId == null
                 || userId == null
@@ -583,6 +595,13 @@ public class FamilyLocationService extends Service {
             return;
         }
 
+        if (!acceptReliableLocation(location, lastKnownSource)) {
+            waitingForReliableLocation = true;
+            updateForegroundNotification(false);
+            return;
+        }
+
+        waitingForReliableLocation = false;
         BatterySnapshot battery = readBatterySnapshot();
         MovementSnapshot movement = resolveMovement(location);
         AdaptiveLocationPolicy.Config desired =
@@ -596,7 +615,19 @@ public class FamilyLocationService extends Service {
 
         AdaptiveLocationPolicy.Config applied =
                 AdaptiveLocationPolicy.configFor(currentTrackingProfile);
-        long capturedAt = System.currentTimeMillis();
+        LocationPointPolicy.Point point = toPoint(location);
+        long capturedAt = LocationPointPolicy.safeCaptureTimeMs(
+                point,
+                System.currentTimeMillis()
+        );
+        long locationAgeMs = Math.max(
+                0L,
+                LocationPointPolicy.pointAgeMs(
+                        point,
+                        System.currentTimeMillis(),
+                        SystemClock.elapsedRealtimeNanos()
+                )
+        );
 
         Map<String, Object> values = new HashMap<>();
         values.put("uid", userId);
@@ -615,6 +646,12 @@ public class FamilyLocationService extends Service {
                 applied.intervalMs / 1000L
         );
         values.put("deviceHealth", currentDeviceHealth);
+        values.put("locationQuality", "RELIABLE");
+        values.put(
+                "locationSource",
+                lastKnownSource ? "LAST_KNOWN" : "FUSED_LIVE"
+        );
+        values.put("locationAgeSeconds", locationAgeMs / 1000L);
 
         if (!cachedPlaceLabel.isEmpty()) {
             values.put("placeLabel", cachedPlaceLabel);
@@ -664,6 +701,66 @@ public class FamilyLocationService extends Service {
                 });
 
         resolvePlaceLabelIfNeeded(location);
+    }
+
+    private boolean acceptReliableLocation(
+            @NonNull Location location,
+            boolean lastKnownSource
+    ) {
+        LocationPointPolicy.Point current = toPoint(location);
+        LocationPointPolicy.Point previous = lastAcceptedLocation == null
+                ? null
+                : toPoint(lastAcceptedLocation);
+        String decision = LocationPointPolicy.evaluate(
+                current,
+                previous,
+                System.currentTimeMillis(),
+                SystemClock.elapsedRealtimeNanos(),
+                lastKnownSource,
+                isMockLocation(location)
+        );
+
+        if (LocationPointPolicy.ACCEPT.equals(decision)) {
+            lastAcceptedLocation = new Location(location);
+            suspiciousJumpCandidate = null;
+            return true;
+        }
+
+        if (!LocationPointPolicy.REQUIRE_JUMP_CONFIRMATION.equals(decision)) {
+            return false;
+        }
+
+        if (suspiciousJumpCandidate != null
+                && LocationPointPolicy.confirmsSuspiciousJump(
+                toPoint(suspiciousJumpCandidate),
+                current
+        )) {
+            lastAcceptedLocation = new Location(location);
+            suspiciousJumpCandidate = null;
+            return true;
+        }
+
+        suspiciousJumpCandidate = new Location(location);
+        return false;
+    }
+
+    @NonNull
+    private LocationPointPolicy.Point toPoint(@NonNull Location location) {
+        return new LocationPointPolicy.Point(
+                location.getLatitude(),
+                location.getLongitude(),
+                location.hasAccuracy() ? location.getAccuracy() : Float.NaN,
+                location.getTime(),
+                location.getElapsedRealtimeNanos()
+        );
+    }
+
+    @SuppressWarnings("deprecation")
+    private boolean isMockLocation(@NonNull Location location) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return location.isMock();
+        }
+        return location.isFromMockProvider();
     }
 
     private void enqueueLocationForRetry(
@@ -883,6 +980,7 @@ public class FamilyLocationService extends Service {
         removeScheduledWork();
         removeUpdates();
         removeMovementTransitions();
+        resetLocationQualityState();
         MovementActivityStore.clear(this);
         LocationRecoveryNotifier.cancelAll(this);
 
@@ -909,10 +1007,19 @@ public class FamilyLocationService extends Service {
         removeScheduledWork();
         removeUpdates();
         removeMovementTransitions();
+        resetLocationQualityState();
         MovementActivityStore.clear(this);
         LocationRecoveryNotifier.cancelAll(this);
         stopForeground(STOP_FOREGROUND_REMOVE);
         stopSelf();
+    }
+
+    private void resetLocationQualityState() {
+        previousMovementLocation = null;
+        lastAcceptedLocation = null;
+        suspiciousJumpCandidate = null;
+        waitingForFreshLocation = false;
+        waitingForReliableLocation = false;
     }
 
     private void removeScheduledWork() {
@@ -930,10 +1037,7 @@ public class FamilyLocationService extends Service {
         unavailable.put("availabilityReason", reason);
         unavailable.put("deviceHealth", currentDeviceHealth);
         unavailable.put("sharingEnabled", true);
-        unavailable.put(
-                "online",
-                !FamilyLiveAvailability.INTERNET_UNAVAILABLE.equals(reason)
-        );
+        unavailable.put("online", networkAvailable);
         unavailable.put("healthUpdatedAt", ServerValue.TIMESTAMP);
         unavailable.put("updatedAt", ServerValue.TIMESTAMP);
 
@@ -1364,6 +1468,11 @@ public class FamilyLocationService extends Service {
         }
         if (LocationDeviceHealth.INTERNET_OFF.equals(currentDeviceHealth)) {
             return getString(R.string.family_live_tracking_internet_off);
+        }
+        if (waitingForReliableLocation) {
+            return getString(
+                    R.string.family_live_tracking_quality_waiting
+            );
         }
         if (waitingForFreshLocation) {
             return getString(R.string.family_live_tracking_restoring);
