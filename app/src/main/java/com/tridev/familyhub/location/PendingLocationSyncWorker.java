@@ -72,9 +72,21 @@ public final class PendingLocationSyncWorker extends Worker {
             );
             String payloadUserId = payload.optString("uid");
             String payloadFamilyId = payload.optString("familyId");
+            long queuedTimestamp = payload.optLong(
+                    "clientTimestamp",
+                    pending.createdAt
+            );
 
             if (!user.getUid().equals(payloadUserId)
                     || payloadFamilyId.trim().isEmpty()) {
+                dao.deleteById(pending.id);
+                return Result.success();
+            }
+
+            if (!LocationSyncPolicy.belongsToCurrentSharingSession(
+                    queuedTimestamp,
+                    LocationSharingStore.sharingEnabledAt(context)
+            )) {
                 dao.deleteById(pending.id);
                 return Result.success();
             }
@@ -103,7 +115,11 @@ public final class PendingLocationSyncWorker extends Worker {
                 return Result.success();
             }
 
-            if (!LocationSharingStore.isSharingEnabled(context)) {
+            if (!LocationSharingStore.isSharingEnabled(context)
+                    || !LocationSyncPolicy.belongsToCurrentSharingSession(
+                    queuedTimestamp,
+                    LocationSharingStore.sharingEnabledAt(context)
+            )) {
                 dao.deleteAll();
                 return Result.success();
             }
@@ -113,10 +129,6 @@ public final class PendingLocationSyncWorker extends Worker {
                     .child(payloadFamilyId)
                     .child(payloadUserId);
 
-            long queuedTimestamp = payload.optLong(
-                    "clientTimestamp",
-                    pending.createdAt
-            );
             DataSnapshot remoteTimestampSnapshot = Tasks.await(
                     locationReference.child("clientTimestamp").get(),
                     READ_TIMEOUT_SECONDS,
@@ -158,7 +170,11 @@ public final class PendingLocationSyncWorker extends Worker {
             values.put("updatedAt", queuedTimestamp);
             values.put("syncedAt", ServerValue.TIMESTAMP);
 
-            if (!LocationSharingStore.isSharingEnabled(context)) {
+            if (!LocationSharingStore.isSharingEnabled(context)
+                    || !LocationSyncPolicy.belongsToCurrentSharingSession(
+                    queuedTimestamp,
+                    LocationSharingStore.sharingEnabledAt(context)
+            )) {
                 dao.deleteAll();
                 return Result.success();
             }
