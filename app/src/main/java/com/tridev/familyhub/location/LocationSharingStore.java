@@ -33,8 +33,13 @@ public final class LocationSharingStore {
         if (enabled) {
             PendingLocationSyncScheduler.enablePeriodicSync(appContext);
             PendingLocationSyncScheduler.schedule(appContext);
+            LocationRecoveryNotifier.showBatteryRestrictionIfNeeded(
+                    appContext
+            );
         } else {
             PendingLocationSyncScheduler.disableAndClear(appContext);
+            LocationServiceRecoveryScheduler.cancel(appContext);
+            LocationRecoveryNotifier.cancelAll(appContext);
         }
     }
 
