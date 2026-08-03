@@ -53,6 +53,15 @@ public final class FamilyLiveAvailability {
             return reported;
         }
 
+        String serviceState = LocationHeartbeatPolicy.normalizeState(
+                member.serviceState
+        );
+        if (LocationHeartbeatPolicy.STATE_RECOVERY_PENDING.equals(serviceState)
+                || LocationHeartbeatPolicy.STATE_STALLED.equals(serviceState)
+                || LocationHeartbeatPolicy.STATE_STOPPED.equals(serviceState)) {
+            return TRACKING_STALLED;
+        }
+
         if (!member.online) {
             return DEVICE_OFFLINE;
         }
