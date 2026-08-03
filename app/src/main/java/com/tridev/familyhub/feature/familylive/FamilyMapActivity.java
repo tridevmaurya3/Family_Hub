@@ -39,6 +39,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.tridev.familyhub.R;
@@ -59,8 +60,8 @@ import java.util.Map;
  * Dedicated lifecycle-safe map for authorised Family Live memberships.
  *
  * The map provides Office 365-inspired controls, structured member cards,
- * Street View launching, nearest-member intelligence and two-member distance
- * comparison without storing route history.
+ * Street View launching, nearest-member intelligence, two-member distance
+ * comparison and quota-safe external navigation without storing route history.
  */
 public final class FamilyMapActivity extends AppCompatActivity {
 
@@ -302,7 +303,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         googleMap.setOnInfoWindowClickListener(marker -> {
             FamilyLiveCloudMember member = markerMembers.get(marker);
             if (member != null) {
-                openStreetView(member);
+                showMemberActions(member);
             }
         });
 
@@ -406,7 +407,6 @@ public final class FamilyMapActivity extends AppCompatActivity {
 
         renderSafePlaces();
 
-        long now = System.currentTimeMillis();
         int authorised = members.size();
         int sharing = 0;
         int shown = 0;
@@ -841,6 +841,81 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
 
         return card;
+    }
+
+    private void showMemberActions(
+            @NonNull FamilyLiveCloudMember member
+    ) {
+        if (!validCoordinates(member.latitude, member.longitude)) {
+            Toast.makeText(
+                    this,
+                    R.string.family_map_location_invalid,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(getString(
+                        R.string.family_map_member_actions_title,
+                        displayName(member)
+                ))
+                .setMessage(R.string.family_map_member_actions_message)
+                .setItems(R.array.family_map_member_actions,
+                        (dialog, which) -> {
+                            if (which == 0) {
+                                openNavigation(
+                                        member,
+                                        FamilyMapNavigationUri.MODE_DRIVING
+                                );
+                            } else if (which == 1) {
+                                openNavigation(
+                                        member,
+                                        FamilyMapNavigationUri.MODE_WALKING
+                                );
+                            } else if (which == 2) {
+                                openExternalLocation(member);
+                            } else if (which == 3) {
+                                openStreetView(member);
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openNavigation(
+            @NonNull FamilyLiveCloudMember member,
+            @NonNull String travelMode
+    ) {
+        if (!FamilyMapExternalLauncher.openNavigation(
+                this,
+                member.latitude,
+                member.longitude,
+                travelMode
+        )) {
+            showNavigationUnavailable();
+        }
+    }
+
+    private void openExternalLocation(
+            @NonNull FamilyLiveCloudMember member
+    ) {
+        if (!FamilyMapExternalLauncher.openLocation(
+                this,
+                member.latitude,
+                member.longitude,
+                displayName(member)
+        )) {
+            showNavigationUnavailable();
+        }
+    }
+
+    private void showNavigationUnavailable() {
+        Toast.makeText(
+                this,
+                R.string.family_map_navigation_unavailable,
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
     private void styleStatusChip(
@@ -1292,13 +1367,10 @@ public final class FamilyMapActivity extends AppCompatActivity {
             double latitude,
             double longitude
     ) {
-        return Double.isFinite(latitude)
-                && Double.isFinite(longitude)
-                && latitude >= -90D
-                && latitude <= 90D
-                && longitude >= -180D
-                && longitude <= 180D
-                && !(latitude == 0D && longitude == 0D);
+        return FamilyMapNavigationUri.validCoordinates(
+                latitude,
+                longitude
+        );
     }
 
     @NonNull
