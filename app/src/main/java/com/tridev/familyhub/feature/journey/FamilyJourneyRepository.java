@@ -11,12 +11,18 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
+import com.tridev.familyhub.feature.insights.FamilyReportRange;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Authenticated Firebase access for Journey History and trusted viewers. */
 public final class FamilyJourneyRepository {
@@ -94,6 +100,16 @@ public final class FamilyJourneyRepository {
 
     public interface PointsCallback {
         void onLoaded(@NonNull List<FamilyJourneyPoint> points);
+
+        void onError(@NonNull String reason);
+    }
+
+    public interface RangeCallback {
+        void onLoaded(
+                @NonNull Session session,
+                @NonNull List<Member> members,
+                @NonNull Map<String, List<FamilyJourneyPoint>> pointsByMember
+        );
 
         void onError(@NonNull String reason);
     }
@@ -229,35 +245,7 @@ public final class FamilyJourneyRepository {
                             public void onDataChange(
                                     @NonNull DataSnapshot snapshot
                             ) {
-                                List<FamilyJourneyPoint> points =
-                                        new ArrayList<>();
-                                long now = System.currentTimeMillis();
-                                for (DataSnapshot child
-                                        : snapshot.getChildren()) {
-                                    FamilyJourneyPoint point = child.getValue(
-                                            FamilyJourneyPoint.class
-                                    );
-                                    if (point == null) {
-                                        continue;
-                                    }
-                                    if (point.pointId.trim().isEmpty()
-                                            && child.getKey() != null) {
-                                        point.pointId = child.getKey();
-                                    }
-                                    if (FamilyJourneyPolicy.validStoredPoint(
-                                            point.latitude,
-                                            point.longitude,
-                                            point.accuracy,
-                                            point.capturedAt,
-                                            now
-                                    )) {
-                                        points.add(point);
-                                    }
-                                }
-                                points.sort(Comparator.comparingLong(
-                                        point -> point.capturedAt
-                                ));
-                                callback.onLoaded(points);
+                                callback.onLoaded(parsePoints(snapshot));
                             }
 
                             @Override
@@ -274,6 +262,126 @@ public final class FamilyJourneyRepository {
                 callback.onError(reason);
             }
         });
+    }
+
+    /**
+     * Loads at most ninety selected day folders for currently accessible
+     * members. The access list is revalidated immediately before loading.
+     */
+    public void loadRange(
+            @NonNull List<Member> requestedMembers,
+            @NonNull FamilyReportRange range,
+            @NonNull RangeCallback callback
+    ) {
+        loadOverview(new OverviewCallback() {
+            @Override
+            public void onLoaded(
+                    @NonNull Session session,
+                    @NonNull List<Member> allMembers,
+                    @NonNull List<Member> accessibleMembers,
+                    @NonNull PrivacySettings ownSettings
+            ) {
+                Map<String, Member> allowed = new LinkedHashMap<>();
+                for (Member member : accessibleMembers) {
+                    allowed.put(member.uid, member);
+                }
+                List<Member> selected = new ArrayList<>();
+                Set<String> duplicateGuard = new HashSet<>();
+                for (Member requested : requestedMembers) {
+                    Member current = allowed.get(requested.uid);
+                    if (current != null && duplicateGuard.add(current.uid)) {
+                        selected.add(current);
+                    }
+                }
+                if (selected.isEmpty()) {
+                    callback.onLoaded(
+                            session,
+                            Collections.emptyList(),
+                            Collections.emptyMap()
+                    );
+                    return;
+                }
+                loadMemberRanges(session, selected, range, callback);
+            }
+
+            @Override
+            public void onError(@NonNull String reason) {
+                callback.onError(reason);
+            }
+        });
+    }
+
+    private void loadMemberRanges(
+            @NonNull Session session,
+            @NonNull List<Member> members,
+            @NonNull FamilyReportRange range,
+            @NonNull RangeCallback callback
+    ) {
+        Set<String> dayKeys = new HashSet<>(range.dayKeys());
+        Map<String, List<FamilyJourneyPoint>> result =
+                Collections.synchronizedMap(new LinkedHashMap<>());
+        AtomicInteger remaining = new AtomicInteger(members.size());
+        AtomicBoolean completed = new AtomicBoolean(false);
+
+        for (Member member : members) {
+            root.child("locationHistory")
+                    .child(session.familyId)
+                    .child(member.uid)
+                    .get()
+                    .addOnSuccessListener(snapshot -> {
+                        List<FamilyJourneyPoint> points = new ArrayList<>();
+                        for (DataSnapshot day : snapshot.getChildren()) {
+                            String key = day.getKey();
+                            if (key != null && dayKeys.contains(key)) {
+                                points.addAll(parsePoints(day));
+                            }
+                        }
+                        points.sort(Comparator.comparingLong(
+                                point -> point.capturedAt
+                        ));
+                        result.put(member.uid, points);
+                        if (remaining.decrementAndGet() == 0
+                                && completed.compareAndSet(false, true)) {
+                            callback.onLoaded(session, members,
+                                    new LinkedHashMap<>(result));
+                        }
+                    })
+                    .addOnFailureListener(error -> {
+                        if (completed.compareAndSet(false, true)) {
+                            callback.onError("REPORT_ACCESS_DENIED");
+                        }
+                    });
+        }
+    }
+
+    @NonNull
+    private List<FamilyJourneyPoint> parsePoints(
+            @NonNull DataSnapshot snapshot
+    ) {
+        List<FamilyJourneyPoint> points = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        for (DataSnapshot child : snapshot.getChildren()) {
+            FamilyJourneyPoint point = child.getValue(
+                    FamilyJourneyPoint.class
+            );
+            if (point == null) {
+                continue;
+            }
+            if (point.pointId.trim().isEmpty() && child.getKey() != null) {
+                point.pointId = child.getKey();
+            }
+            if (FamilyJourneyPolicy.validStoredPoint(
+                    point.latitude,
+                    point.longitude,
+                    point.accuracy,
+                    point.capturedAt,
+                    now
+            )) {
+                points.add(point);
+            }
+        }
+        points.sort(Comparator.comparingLong(point -> point.capturedAt));
+        return points;
     }
 
     public void saveOwnPrivacy(
@@ -413,7 +521,7 @@ public final class FamilyJourneyRepository {
     }
 
     private static int intValue(@NonNull DataSnapshot snapshot, int fallback) {
-        Long value = snapshot.getValue(Long.class);
+        Number value = snapshot.getValue(Number.class);
         return value == null ? fallback : value.intValue();
     }
 
