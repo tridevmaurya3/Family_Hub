@@ -213,6 +213,18 @@ public class FamilyLiveRepository {
                             .getValue(String.class);
                     Long updatedAt =
                             child.child("updatedAt").getValue(Long.class);
+                    String serviceState = child
+                            .child("serviceState")
+                            .getValue(String.class);
+                    Long serviceHeartbeatAt = child
+                            .child("serviceHeartbeatAt")
+                            .getValue(Long.class);
+                    Long serviceRecoveryCount = child
+                            .child("serviceRecoveryCount")
+                            .getValue(Long.class);
+                    Long serviceConsecutiveMisses = child
+                            .child("serviceConsecutiveMisses")
+                            .getValue(Long.class);
                     if (uid == null) {
                         continue;
                     }
@@ -237,7 +249,13 @@ public class FamilyLiveRepository {
                             availabilityReason == null
                                     ? ""
                                     : availabilityReason,
-                            updatedAt == null ? 0L : updatedAt
+                            updatedAt == null ? 0L : updatedAt,
+                            serviceState == null ? "" : serviceState,
+                            serviceHeartbeatAt == null
+                                    ? 0L
+                                    : serviceHeartbeatAt,
+                            safeNonNegativeInt(serviceRecoveryCount),
+                            safeNonNegativeInt(serviceConsecutiveMisses)
                     ));
                 }
                 initialLocationsLoaded = true;
@@ -292,7 +310,11 @@ public class FamilyLiveRepository {
                     location != null && location.sharingEnabled,
                     location != null && location.online,
                     location == null ? "" : location.availabilityReason,
-                    location == null ? 0L : location.updatedAt
+                    location == null ? 0L : location.updatedAt,
+                    location == null ? "" : location.serviceState,
+                    location == null ? 0L : location.serviceHeartbeatAt,
+                    location == null ? 0 : location.serviceRecoveryCount,
+                    location == null ? 0 : location.serviceConsecutiveMisses
             ));
         }
 
@@ -435,6 +457,15 @@ public class FamilyLiveRepository {
         return value == null ? "" : value.trim();
     }
 
+    private static int safeNonNegativeInt(@Nullable Long value) {
+        if (value == null || value <= 0L) {
+            return 0;
+        }
+        return value > Integer.MAX_VALUE
+                ? Integer.MAX_VALUE
+                : value.intValue();
+    }
+
     private static final class MemberProfile {
         @NonNull final String displayName;
         @NonNull final String role;
@@ -461,6 +492,10 @@ public class FamilyLiveRepository {
         final boolean online;
         @NonNull final String availabilityReason;
         final long updatedAt;
+        @NonNull final String serviceState;
+        final long serviceHeartbeatAt;
+        final int serviceRecoveryCount;
+        final int serviceConsecutiveMisses;
 
         CloudLocation(
                 @Nullable Double latitude,
@@ -474,7 +509,11 @@ public class FamilyLiveRepository {
                 boolean sharingEnabled,
                 boolean online,
                 @NonNull String availabilityReason,
-                long updatedAt
+                long updatedAt,
+                @NonNull String serviceState,
+                long serviceHeartbeatAt,
+                int serviceRecoveryCount,
+                int serviceConsecutiveMisses
         ) {
             this.latitude = latitude;
             this.longitude = longitude;
@@ -488,6 +527,10 @@ public class FamilyLiveRepository {
             this.online = online;
             this.availabilityReason = availabilityReason;
             this.updatedAt = updatedAt;
+            this.serviceState = serviceState;
+            this.serviceHeartbeatAt = serviceHeartbeatAt;
+            this.serviceRecoveryCount = serviceRecoveryCount;
+            this.serviceConsecutiveMisses = serviceConsecutiveMisses;
         }
     }
 }
