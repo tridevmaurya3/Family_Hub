@@ -39,7 +39,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.tridev.familyhub.R;
@@ -855,32 +854,38 @@ public final class FamilyMapActivity extends AppCompatActivity {
             return;
         }
 
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(getString(
-                        R.string.family_map_member_actions_title,
-                        displayName(member)
-                ))
-                .setMessage(R.string.family_map_member_actions_message)
-                .setItems(R.array.family_map_member_actions,
-                        (dialog, which) -> {
-                            if (which == 0) {
-                                openNavigation(
-                                        member,
-                                        FamilyMapNavigationUri.MODE_DRIVING
-                                );
-                            } else if (which == 1) {
-                                openNavigation(
-                                        member,
-                                        FamilyMapNavigationUri.MODE_WALKING
-                                );
-                            } else if (which == 2) {
-                                openExternalLocation(member);
-                            } else if (which == 3) {
-                                openStreetView(member);
-                            }
-                        })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+        FamilyMapMemberActionsDialog.show(
+                this,
+                displayName(member),
+                member.placeLabel,
+                new FamilyMapMemberActionsDialog.Listener() {
+                    @Override
+                    public void onDrive() {
+                        openNavigation(
+                                member,
+                                FamilyMapNavigationUri.MODE_DRIVING
+                        );
+                    }
+
+                    @Override
+                    public void onWalk() {
+                        openNavigation(
+                                member,
+                                FamilyMapNavigationUri.MODE_WALKING
+                        );
+                    }
+
+                    @Override
+                    public void onOpenMaps() {
+                        openExternalLocation(member);
+                    }
+
+                    @Override
+                    public void onStreetView() {
+                        openStreetView(member);
+                    }
+                }
+        );
     }
 
     private void openNavigation(
