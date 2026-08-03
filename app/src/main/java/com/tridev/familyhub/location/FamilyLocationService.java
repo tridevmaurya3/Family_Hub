@@ -35,17 +35,23 @@ import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.ActivityRecognitionClient;
 import com.google.android.gms.location.ActivityTransition;
 import com.google.android.gms.location.ActivityTransitionRequest;
+import com.google.android.gms.location.CurrentLocationRequest;
 import com.google.android.gms.location.DetectedActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.ValueEventListener;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.security.VaultCipher;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
@@ -73,7 +79,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * The service adapts location frequency to movement and battery state, keeps
  * the newest failed location encrypted, continuously monitors permission/GPS/
  * internet health, and protects the last reliable position from invalid,
- * stale, mock or physically implausible points.
+ * stale, mock or physically implausible points. While an authorised member is
+ * actively viewing Family Map, a short-lived Firebase session temporarily
+ * enables precision updates and automatically returns to adaptive tracking.
  */
 public class FamilyLocationService extends Service {
 
@@ -81,6 +89,8 @@ public class FamilyLocationService extends Service {
             "com.tridev.familyhub.action.START_LOCATION_SHARING";
     public static final String ACTION_STOP =
             "com.tridev.familyhub.action.STOP_LOCATION_SHARING";
+    public static final String ACTION_FORCE_REFRESH =
+            "com.tridev.familyhub.action.FORCE_FRESH_LOCATION";
 
     private static final String CHANNEL_ID = "family_live_location";
     private static final int NOTIFICATION_ID = 4102;
@@ -98,15 +108,19 @@ public class FamilyLocationService extends Service {
             5L * 60L * 1000L;
     private static final long DEVICE_HEALTH_CHECK_INTERVAL_MS = 20_000L;
     private static final long NETWORK_RECHECK_DELAY_MS = 1_200L;
+    private static final long IMMEDIATE_LOCATION_TIMEOUT_MS = 12_000L;
 
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityRecognitionClient activityRecognitionClient;
     private PendingIntent movementTransitionPendingIntent;
     private LocationCallback locationCallback;
     private DatabaseReference locationReference;
+    private DatabaseReference precisionSessionReference;
+    private ValueEventListener precisionSessionListener;
     private PendingLocationUploadDao pendingLocationUploadDao;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
+    private CancellationTokenSource immediateLocationCancellation;
     private String familyId;
     private String userId;
 
@@ -116,6 +130,10 @@ public class FamilyLocationService extends Service {
     private boolean networkAvailable;
     private boolean waitingForFreshLocation;
     private boolean waitingForReliableLocation;
+    private boolean precisionLiveMode;
+    private boolean immediateRefreshInProgress;
+    private boolean pendingImmediateRefresh;
+    private long precisionActiveUntil;
 
     @NonNull
     private String currentTrackingProfile =
@@ -214,6 +232,15 @@ public class FamilyLocationService extends Service {
         requestLocationUpdates(resolveCurrentDeviceConfig());
     };
 
+    private final Runnable precisionExpiryRunnable = () -> {
+        if (serviceDestroyed.get() || !precisionLiveMode) {
+            return;
+        }
+        if (System.currentTimeMillis() >= precisionActiveUntil) {
+            setPrecisionLiveMode(false, 0L);
+        }
+    };
+
     @NonNull
     public static Intent startIntent(@NonNull Context context) {
         return new Intent(context, FamilyLocationService.class)
@@ -224,6 +251,12 @@ public class FamilyLocationService extends Service {
     public static Intent stopIntent(@NonNull Context context) {
         return new Intent(context, FamilyLocationService.class)
                 .setAction(ACTION_STOP);
+    }
+
+    @NonNull
+    public static Intent forceRefreshIntent(@NonNull Context context) {
+        return new Intent(context, FamilyLocationService.class)
+                .setAction(ACTION_FORCE_REFRESH);
     }
 
     @Override
@@ -276,6 +309,23 @@ public class FamilyLocationService extends Service {
 
         startForeground(NOTIFICATION_ID, buildNotification(false));
 
+        boolean forceRefresh = intent != null
+                && ACTION_FORCE_REFRESH.equals(intent.getAction());
+        if (forceRefresh
+                && !LocationSharingStore.isSharingEnabled(this)) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf(startId);
+            return START_NOT_STICKY;
+        }
+
+        if (familySessionReady) {
+            if (forceRefresh) {
+                requestImmediateFreshLocation();
+            }
+            return START_STICKY;
+        }
+        pendingImmediateRefresh = pendingImmediateRefresh || forceRefresh;
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || !user.isEmailVerified()) {
             stopWithoutRestart();
@@ -300,7 +350,7 @@ public class FamilyLocationService extends Service {
                         return;
                     }
 
-                    familyId = resolvedFamilyId;
+                    familyId = resolvedFamilyId.trim();
                     locationReference = FirebaseDatabase.getInstance()
                             .getReference()
                             .child("locations")
@@ -308,12 +358,18 @@ public class FamilyLocationService extends Service {
                             .child(userId);
                     familySessionReady = true;
                     registerDisconnectState();
+                    attachPrecisionSessionListener();
 
                     LocationSharingStore.setSharingEnabled(this, true);
                     registerMovementTransitions();
                     scheduleProfileEvaluation();
                     scheduleDeviceHealthMonitor();
                     evaluateDeviceHealth(true);
+
+                    if (pendingImmediateRefresh) {
+                        pendingImmediateRefresh = false;
+                        requestImmediateFreshLocation();
+                    }
                 })
                 .addOnFailureListener(error -> stopSharing());
 
@@ -323,6 +379,15 @@ public class FamilyLocationService extends Service {
     @NonNull
     private AdaptiveLocationPolicy.Config resolveCurrentDeviceConfig() {
         BatterySnapshot battery = readBatterySnapshot();
+        if (precisionLiveMode
+                && FamilyLivePrecisionPolicy.canUsePrecisionTracking(
+                battery.percentage,
+                battery.charging
+        )) {
+            return AdaptiveLocationPolicy.configFor(
+                    AdaptiveLocationPolicy.PROFILE_LIVE_VIEW
+            );
+        }
         return AdaptiveLocationPolicy.resolve(
                 resolvePolicyMovementType(),
                 battery.percentage,
@@ -485,6 +550,147 @@ public class FamilyLocationService extends Service {
         mainHandler.postDelayed(locationRequestRetryRunnable, delay);
     }
 
+    private void attachPrecisionSessionListener() {
+        detachPrecisionSessionListener();
+        if (familyId == null || familyId.isEmpty()) {
+            return;
+        }
+
+        precisionSessionReference = FirebaseDatabase.getInstance()
+                .getReference()
+                .child("liveTrackingSessions")
+                .child(familyId);
+        precisionSessionListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                evaluatePrecisionSessions(snapshot);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                setPrecisionLiveMode(false, 0L);
+            }
+        };
+        precisionSessionReference.addValueEventListener(
+                precisionSessionListener
+        );
+    }
+
+    private void evaluatePrecisionSessions(@NonNull DataSnapshot snapshot) {
+        long now = System.currentTimeMillis();
+        long activeUntil = 0L;
+        for (DataSnapshot child : snapshot.getChildren()) {
+            Boolean active = child.child("active").getValue(Boolean.class);
+            Long requestedAt = child.child("requestedAt").getValue(Long.class);
+            Long ttlMs = child.child("ttlMs").getValue(Long.class);
+            if (!Boolean.TRUE.equals(active)
+                    || requestedAt == null
+                    || ttlMs == null) {
+                continue;
+            }
+            long expiry = FamilyLivePrecisionPolicy.safeExpiry(
+                    requestedAt,
+                    ttlMs
+            );
+            if (FamilyLivePrecisionPolicy.isSessionActive(
+                    true,
+                    requestedAt,
+                    expiry,
+                    now
+            )) {
+                activeUntil = Math.max(activeUntil, expiry);
+            }
+        }
+        setPrecisionLiveMode(activeUntil > now, activeUntil);
+    }
+
+    private void setPrecisionLiveMode(boolean requested, long activeUntil) {
+        BatterySnapshot battery = readBatterySnapshot();
+        boolean enabled = requested
+                && FamilyLivePrecisionPolicy.canUsePrecisionTracking(
+                battery.percentage,
+                battery.charging
+        );
+
+        precisionActiveUntil = enabled ? activeUntil : 0L;
+        mainHandler.removeCallbacks(precisionExpiryRunnable);
+        if (enabled) {
+            long delay = Math.max(
+                    1_000L,
+                    activeUntil - System.currentTimeMillis() + 250L
+            );
+            mainHandler.postDelayed(precisionExpiryRunnable, delay);
+        }
+
+        if (precisionLiveMode == enabled) {
+            return;
+        }
+
+        precisionLiveMode = enabled;
+        AdaptiveLocationPolicy.Config desired = resolveCurrentDeviceConfig();
+        switchTrackingProfile(desired);
+        if (enabled) {
+            waitingForFreshLocation = true;
+            requestImmediateFreshLocation();
+        }
+        updateForegroundNotification(false);
+    }
+
+    private void detachPrecisionSessionListener() {
+        mainHandler.removeCallbacks(precisionExpiryRunnable);
+        if (precisionSessionReference != null
+                && precisionSessionListener != null) {
+            precisionSessionReference.removeEventListener(
+                    precisionSessionListener
+            );
+        }
+        precisionSessionReference = null;
+        precisionSessionListener = null;
+        precisionLiveMode = false;
+        precisionActiveUntil = 0L;
+    }
+
+    @SuppressLint("MissingPermission")
+    private void requestImmediateFreshLocation() {
+        if (immediateRefreshInProgress
+                || !familySessionReady
+                || !hasLocationPermission()
+                || LocationDeviceHealth.blocksLocationUpdates(
+                currentDeviceHealth
+        )) {
+            return;
+        }
+
+        immediateRefreshInProgress = true;
+        waitingForFreshLocation = true;
+        if (immediateLocationCancellation != null) {
+            immediateLocationCancellation.cancel();
+        }
+        immediateLocationCancellation = new CancellationTokenSource();
+
+        CurrentLocationRequest request =
+                new CurrentLocationRequest.Builder()
+                        .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                        .setMaxUpdateAgeMillis(0L)
+                        .setDurationMillis(IMMEDIATE_LOCATION_TIMEOUT_MS)
+                        .build();
+
+        fusedLocationClient.getCurrentLocation(
+                request,
+                immediateLocationCancellation.getToken()
+        ).addOnSuccessListener(location -> {
+            if (location != null) {
+                publishLocation(location, false);
+            }
+        }).addOnCompleteListener(task -> {
+            immediateRefreshInProgress = false;
+            immediateLocationCancellation = null;
+            if (!task.isSuccessful()) {
+                updateForegroundNotification(true);
+            }
+        });
+    }
+
     private void evaluateDeviceHealth(boolean forcePublish) {
         if (!LocationSharingStore.isSharingEnabled(this)) {
             return;
@@ -604,13 +810,23 @@ public class FamilyLocationService extends Service {
         waitingForReliableLocation = false;
         BatterySnapshot battery = readBatterySnapshot();
         MovementSnapshot movement = resolveMovement(location);
-        AdaptiveLocationPolicy.Config desired =
-                AdaptiveLocationPolicy.resolve(
-                        movement.type,
-                        battery.percentage,
-                        battery.charging,
-                        isPowerSaveMode()
-                );
+        AdaptiveLocationPolicy.Config desired;
+        if (precisionLiveMode
+                && FamilyLivePrecisionPolicy.canUsePrecisionTracking(
+                battery.percentage,
+                battery.charging
+        )) {
+            desired = AdaptiveLocationPolicy.configFor(
+                    AdaptiveLocationPolicy.PROFILE_LIVE_VIEW
+            );
+        } else {
+            desired = AdaptiveLocationPolicy.resolve(
+                    movement.type,
+                    battery.percentage,
+                    battery.charging,
+                    isPowerSaveMode()
+            );
+        }
         applyDesiredTrackingConfig(desired);
 
         AdaptiveLocationPolicy.Config applied =
@@ -645,6 +861,7 @@ public class FamilyLocationService extends Service {
                 "trackingIntervalSeconds",
                 applied.intervalMs / 1000L
         );
+        values.put("precisionLive", precisionLiveMode);
         values.put("deviceHealth", currentDeviceHealth);
         values.put("locationQuality", "RELIABLE");
         values.put(
@@ -977,6 +1194,7 @@ public class FamilyLocationService extends Service {
     private void stopSharing() {
         LocationSharingStore.setSharingEnabled(this, false);
         familySessionReady = false;
+        detachPrecisionSessionListener();
         removeScheduledWork();
         removeUpdates();
         removeMovementTransitions();
@@ -988,6 +1206,7 @@ public class FamilyLocationService extends Service {
             Map<String, Object> stopped = new HashMap<>();
             stopped.put("sharingEnabled", false);
             stopped.put("online", false);
+            stopped.put("precisionLive", false);
             stopped.put(
                     "availabilityReason",
                     FamilyLiveAvailability.SHARING_PAUSED
@@ -1004,6 +1223,7 @@ public class FamilyLocationService extends Service {
     private void stopWithoutRestart() {
         LocationSharingStore.setSharingEnabled(this, false);
         familySessionReady = false;
+        detachPrecisionSessionListener();
         removeScheduledWork();
         removeUpdates();
         removeMovementTransitions();
@@ -1026,6 +1246,7 @@ public class FamilyLocationService extends Service {
         mainHandler.removeCallbacks(profileEvaluationRunnable);
         mainHandler.removeCallbacks(deviceHealthRunnable);
         mainHandler.removeCallbacks(locationRequestRetryRunnable);
+        mainHandler.removeCallbacks(precisionExpiryRunnable);
     }
 
     private void publishUnavailableState(@NonNull String reason) {
@@ -1038,6 +1259,7 @@ public class FamilyLocationService extends Service {
         unavailable.put("deviceHealth", currentDeviceHealth);
         unavailable.put("sharingEnabled", true);
         unavailable.put("online", networkAvailable);
+        unavailable.put("precisionLive", precisionLiveMode);
         unavailable.put("healthUpdatedAt", ServerValue.TIMESTAMP);
         unavailable.put("updatedAt", ServerValue.TIMESTAMP);
 
@@ -1050,6 +1272,11 @@ public class FamilyLocationService extends Service {
         if (requestingUpdates) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
         }
+        if (immediateLocationCancellation != null) {
+            immediateLocationCancellation.cancel();
+            immediateLocationCancellation = null;
+        }
+        immediateRefreshInProgress = false;
         requestingUpdates = false;
         trackingProfileChangeInProgress = false;
     }
@@ -1482,6 +1709,10 @@ public class FamilyLocationService extends Service {
         }
 
         switch (currentTrackingProfile) {
+            case AdaptiveLocationPolicy.PROFILE_LIVE_VIEW:
+                return getString(
+                        R.string.family_live_tracking_precision
+                );
             case AdaptiveLocationPolicy.PROFILE_ACTIVE:
                 return getString(R.string.family_live_tracking_active);
             case AdaptiveLocationPolicy.PROFILE_TRAVELLING:
@@ -1508,6 +1739,7 @@ public class FamilyLocationService extends Service {
     @Override
     public void onDestroy() {
         serviceDestroyed.set(true);
+        detachPrecisionSessionListener();
         removeScheduledWork();
         unregisterNetworkCallback();
         removeUpdates();
