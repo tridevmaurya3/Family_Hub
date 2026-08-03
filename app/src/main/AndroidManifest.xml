@@ -45,6 +45,9 @@
             android:name=".feature.familylive.SafePlaceAlertHistoryActivity"
             android:exported="false" />
         <activity
+            android:name=".feature.familylive.FamilyStreetViewActivity"
+            android:exported="false" />
+        <activity
             android:name=".feature.familylive.FamilyMapActivity"
             android:exported="false" />
         <activity
