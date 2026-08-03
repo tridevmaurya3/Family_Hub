@@ -40,11 +40,24 @@ public final class LocationServiceRecoveryWorker extends Worker {
             return Result.success();
         }
 
-        LocationServiceDiagnosticsStore.recordRecoveryAttempt(context);
         PendingLocationSyncScheduler.enablePeriodicSync(context);
         PendingLocationSyncScheduler.schedule(context);
         LocationServiceWatchdogScheduler.enable(context);
         LocationRecoveryNotifier.showBatteryRestrictionIfNeeded(context);
+
+        long now = System.currentTimeMillis();
+        LocationServiceDiagnosticsStore.Snapshot diagnostics =
+                LocationServiceDiagnosticsStore.read(context);
+        if (!LocationHeartbeatPolicy.canAttemptRecovery(
+                diagnostics.lastRecoveryAt,
+                now
+        )) {
+            LocationServiceWatchdogScheduler
+                    .scheduleRecoveryVerification(context);
+            return Result.success();
+        }
+
+        LocationServiceDiagnosticsStore.recordRecoveryAttempt(context);
 
         if (!hasRequiredPermissions(context)
                 || !isLocationEnabled(context)) {
