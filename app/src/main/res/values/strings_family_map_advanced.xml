@@ -36,10 +36,24 @@
     <string name="family_map_info_compare_hint">Tap another member pin to compare distance</string>
     <string name="family_map_info_battery_charging">%1$d%% • Charging</string>
     <string name="family_map_info_battery_not_charging">%1$d%% • Not charging</string>
-    <string name="family_map_info_live_hint">Tap this card for Street View</string>
+    <string name="family_map_info_live_hint">Tap this card for directions, Maps and Street View</string>
+
+    <string name="family_map_member_actions_title">Open %1$s</string>
+    <string name="family_map_member_actions_message">Choose how you want to view or reach this family member’s latest shared location.</string>
+    <string-array name="family_map_member_actions">
+        <item>Navigate by car</item>
+        <item>Walking directions</item>
+        <item>Open location in Maps</item>
+        <item>Open Street View</item>
+    </string-array>
+    <string name="family_map_navigation_unavailable">No compatible Maps or browser app could open this location.</string>
+    <string name="family_map_location_invalid">This member’s shared location is not valid yet.</string>
 
     <string name="family_map_select_member_for_street_view">Select a member pin before opening Street View.</string>
     <string name="family_street_view_title">Street View</string>
     <string name="family_street_view_subtitle">Explore the selected member’s nearby street imagery</string>
     <string name="family_street_view_unavailable">Street View imagery is not available near this location.</string>
+    <string name="family_street_view_blocked_help">Embedded Street View may be unavailable because of Maps quota, billing or nearby imagery. You can still open the location or navigate using the Google Maps app.</string>
+    <string name="family_street_view_open_maps">Open in Maps</string>
+    <string name="family_street_view_navigate">Navigate</string>
 </resources>
