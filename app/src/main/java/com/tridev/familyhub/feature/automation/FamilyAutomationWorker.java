@@ -281,11 +281,21 @@ public final class FamilyAutomationWorker extends Worker {
         ))) {
             return;
         }
-        Double latitude = numberValue(location.child("latitude"));
-        Double longitude = numberValue(location.child("longitude"));
-        long locationAt = longValue(location.child("clientTimestamp"));
+        Double latitude = FirebaseNumericValueReader.doubleValue(
+                location.child("latitude")
+        );
+        Double longitude = FirebaseNumericValueReader.doubleValue(
+                location.child("longitude")
+        );
+        long locationAt = FirebaseNumericValueReader.nonNegativeLong(
+                location.child("clientTimestamp"),
+                0L
+        );
         if (locationAt <= 0L) {
-            locationAt = longValue(location.child("updatedAt"));
+            locationAt = FirebaseNumericValueReader.nonNegativeLong(
+                    location.child("updatedAt"),
+                    0L
+            );
         }
         if (latitude == null
                 || longitude == null
@@ -490,17 +500,6 @@ public final class FamilyAutomationWorker extends Worker {
     private static String stringValue(@NonNull DataSnapshot snapshot) {
         String value = snapshot.getValue(String.class);
         return value == null ? "" : value.trim();
-    }
-
-    private static long longValue(@NonNull DataSnapshot snapshot) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? 0L : Math.max(0L, value.longValue());
-    }
-
-    @Nullable
-    private static Double numberValue(@NonNull DataSnapshot snapshot) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? null : value.doubleValue();
     }
 
     private static boolean booleanValue(
