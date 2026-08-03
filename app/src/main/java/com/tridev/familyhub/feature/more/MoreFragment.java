@@ -25,6 +25,7 @@ import com.tridev.familyhub.BuildConfig;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
+import com.tridev.familyhub.feature.automation.FamilyAutomationActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
@@ -70,6 +71,7 @@ public class MoreFragment extends Fragment {
         promoteFamilySosEntry();
         promoteJourneyHistoryEntry();
         promoteLocationReportsEntry();
+        promoteFamilyAutomationEntry();
         promoteFamilySafetyCenterEntry();
 
         binding.cardDocuments.setOnClickListener(
@@ -152,6 +154,19 @@ public class MoreFragment extends Fragment {
                 R.color.fh_primary,
                 R.color.fh_primary_container,
                 FamilySafetyCenterActivity.class
+        );
+    }
+
+    /** Adds Phase 6 configurable sharing and routine automation. */
+    private void promoteFamilyAutomationEntry() {
+        addPromotedButton(
+                72,
+                R.string.family_automation_more_button,
+                R.string.family_automation_more_description,
+                R.drawable.ic_family_automation,
+                R.color.fh_warning,
+                R.color.fh_warning_container,
+                FamilyAutomationActivity.class
         );
     }
 
