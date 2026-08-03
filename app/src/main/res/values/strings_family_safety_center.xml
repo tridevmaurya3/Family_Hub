@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_safety_center_title">Family Safety Centre</string>
+    <string name="family_safety_center_subtitle">Live safety status, emergency help and trusted family tools in one place.</string>
+    <string name="family_safety_center_refresh">Refresh safety overview</string>
+
+    <string name="family_safety_overview_all_clear_title">Family safety looks good</string>
+    <string name="family_safety_overview_all_clear_detail">No active SOS, device attention or unread safety alerts need action.</string>
+    <string name="family_safety_overview_attention_title">Safety attention needed</string>
+    <string name="family_safety_overview_attention_detail">Review member devices and unread alerts for important updates.</string>
+    <string name="family_safety_overview_emergency_title">Active emergency SOS</string>
+    <string name="family_safety_overview_emergency_detail">Open Emergency SOS now to view the request, location and family responses.</string>
+    <string name="family_safety_overview_loading">Checking family safety status…</string>
+
+    <string name="family_safety_summary_sos">Active SOS</string>
+    <string name="family_safety_summary_attention">Attention</string>
+    <string name="family_safety_summary_unread">Unread alerts</string>
+    <string name="family_safety_summary_members">Members</string>
+
+    <string name="family_safety_actions_title">Safety tools</string>
+    <string name="family_safety_actions_helper">Open the right tool without searching through separate pages.</string>
+
+    <string name="family_safety_action_sos_title">Emergency SOS</string>
+    <string name="family_safety_action_sos_detail">Send, respond to or cancel a family emergency request.</string>
+    <string name="family_safety_action_map_title">Family Map</string>
+    <string name="family_safety_action_map_detail">View live locations, distance, navigation and Street View tools.</string>
+    <string name="family_safety_action_places_title">Safe Places</string>
+    <string name="family_safety_action_places_detail">Create Home, School, Office and other arrival or exit zones.</string>
+    <string name="family_safety_action_alerts_title">Safety Alerts</string>
+    <string name="family_safety_action_alerts_detail">Review arrivals, exits, no-update, offline and low-battery alerts.</string>
+
+    <string name="family_safety_privacy_note">Only approved active family members can access shared safety information. Exact locations remain protected by Firebase family membership rules.</string>
+    <string name="family_safety_more_button">Family Safety Centre</string>
+    <string name="family_safety_more_description">SOS, live map, Safe Places and alerts</string>
+</resources>
