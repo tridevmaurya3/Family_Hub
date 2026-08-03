@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="family_map_panel_surface">#F8FBFF</color>
+    <color name="family_map_panel_stroke">#D7E3F4</color>
+    <color name="family_map_info_surface">#FFFFFFFF</color>
+    <color name="family_map_info_border">#D8E2F0</color>
+    <color name="family_map_info_label">#5B6472</color>
+    <color name="family_map_info_value">#1B1A19</color>
+    <color name="family_map_live">#107C10</color>
+    <color name="family_map_live_container">#E9F6EA</color>
+    <color name="family_map_warning">#9A6700</color>
+    <color name="family_map_warning_container">#FFF4CE</color>
+    <color name="family_map_critical">#C42B1C</color>
+    <color name="family_map_critical_container">#FDE7E9</color>
+    <color name="family_map_safe">#5C2D91</color>
+    <color name="family_map_safe_container">#F3E8FF</color>
+    <color name="family_map_dot_live">#16A34A</color>
+    <color name="family_map_dot_stale">#D97706</color>
+    <color name="family_map_dot_safe">#7C3AED</color>
+</resources>
