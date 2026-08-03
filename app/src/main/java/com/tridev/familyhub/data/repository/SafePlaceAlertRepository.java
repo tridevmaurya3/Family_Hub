@@ -8,9 +8,13 @@ import androidx.annotation.NonNull;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.SafePlaceAlertDao;
+import com.tridev.familyhub.data.local.dao.SafePlaceDao;
+import com.tridev.familyhub.data.local.entity.SafePlace;
 import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -22,43 +26,56 @@ public final class SafePlaceAlertRepository {
     public interface HistoryCallback {
         void onLoaded(
                 @NonNull List<SafePlaceAlert> alerts,
-                int unreadCount
+                int unreadCount,
+                @NonNull Map<String, String> placeNames
         );
+
         void onError();
     }
 
     public interface ActionCallback {
         void onComplete();
+
         void onError();
     }
 
-    private final SafePlaceAlertDao dao;
+    private final SafePlaceAlertDao alertDao;
+    private final SafePlaceDao safePlaceDao;
     private final ExecutorService executor =
             Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public SafePlaceAlertRepository(@NonNull Context context) {
-        dao = FamilyHubDatabase.getInstance(context)
-                .safePlaceAlertDao();
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
+        alertDao = database.safePlaceAlertDao();
+        safePlaceDao = database.safePlaceDao();
     }
 
     public void loadHistory(@NonNull HistoryCallback callback) {
         execute(() -> {
-            List<SafePlaceAlert> alerts = dao.getAll();
-            int unread = dao.unreadCount();
+            List<SafePlaceAlert> alerts = alertDao.getAll();
+            int unread = alertDao.unreadCount();
+            Map<String, String> placeNames = new HashMap<>();
+            for (SafePlace place : safePlaceDao.getAll()) {
+                placeNames.put(String.valueOf(place.id), place.name);
+            }
             main.post(() -> {
                 if (!closed.get()) {
-                    callback.onLoaded(alerts, unread);
+                    callback.onLoaded(alerts, unread, placeNames);
                 }
             });
         }, new ActionCallback() {
-            @Override public void onComplete() {
+            @Override
+            public void onComplete() {
                 // Loading dispatches through onLoaded.
             }
 
-            @Override public void onError() {
-                if (!closed.get()) callback.onError();
+            @Override
+            public void onError() {
+                if (!closed.get()) {
+                    callback.onError();
+                }
             }
         });
     }
@@ -68,14 +85,14 @@ public final class SafePlaceAlertRepository {
             @NonNull ActionCallback callback
     ) {
         execute(() -> dispatchResult(
-                dao.markRead(alertId) == 1,
+                alertDao.markRead(alertId) == 1,
                 callback
         ), callback);
     }
 
     public void markAllRead(@NonNull ActionCallback callback) {
         execute(() -> {
-            dao.markAllRead();
+            alertDao.markAllRead();
             dispatchResult(true, callback);
         }, callback);
     }
@@ -84,7 +101,9 @@ public final class SafePlaceAlertRepository {
             @NonNull Runnable task,
             ActionCallback errorCallback
     ) {
-        if (closed.get()) return;
+        if (closed.get()) {
+            return;
+        }
         try {
             executor.execute(() -> {
                 try {
@@ -109,14 +128,21 @@ public final class SafePlaceAlertRepository {
             @NonNull ActionCallback callback
     ) {
         main.post(() -> {
-            if (closed.get()) return;
-            if (success) callback.onComplete();
-            else callback.onError();
+            if (closed.get()) {
+                return;
+            }
+            if (success) {
+                callback.onComplete();
+            } else {
+                callback.onError();
+            }
         });
     }
 
     public void close() {
-        if (!closed.compareAndSet(false, true)) return;
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
         executor.shutdownNow();
         main.removeCallbacksAndMessages(null);
     }
