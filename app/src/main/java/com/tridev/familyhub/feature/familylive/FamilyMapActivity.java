@@ -16,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,6 +36,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
@@ -55,9 +58,9 @@ import java.util.Map;
 /**
  * Dedicated lifecycle-safe map for authorised Family Live memberships.
  *
- * The map uses a compact Office 365-inspired control surface and renders a
- * structured member card directly above the selected marker instead of a
- * plain paragraph at the bottom of the screen.
+ * The map provides Office 365-inspired controls, structured member cards,
+ * Street View launching, nearest-member intelligence and two-member distance
+ * comparison without storing route history.
  */
 public final class FamilyMapActivity extends AppCompatActivity {
 
@@ -88,11 +91,17 @@ public final class FamilyMapActivity extends AppCompatActivity {
     @Nullable
     private Circle accuracyCircle;
     @Nullable
+    private Polyline comparisonLine;
+    @Nullable
     private Marker selectedMarker;
+    @Nullable
+    private Marker comparisonMarker;
     @Nullable
     private CameraPosition restoredCamera;
     @Nullable
     private String selectedMemberUid;
+    @Nullable
+    private String comparisonTargetUid;
     @Nullable
     private FamilyLiveRepository familyRepository;
     @Nullable
@@ -209,6 +218,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
         findViewById(R.id.buttonFamilyMapRecenter).setOnClickListener(
                 ignored -> focusCurrentUser()
         );
+        findViewById(R.id.buttonFamilyMapStreetView).setOnClickListener(
+                ignored -> openStreetViewForSelectedMember()
+        );
         typeButton.setOnClickListener(ignored -> cycleMapType());
         trafficButton.setOnClickListener(ignored -> toggleTraffic());
     }
@@ -283,8 +295,15 @@ public final class FamilyMapActivity extends AppCompatActivity {
             if (member == null) {
                 return false;
             }
-            selectMember(marker, member);
+            selectOrCompareMember(marker, member);
             return true;
+        });
+
+        googleMap.setOnInfoWindowClickListener(marker -> {
+            FamilyLiveCloudMember member = markerMembers.get(marker);
+            if (member != null) {
+                openStreetView(member);
+            }
         });
 
         googleMap.setOnMapClickListener(ignored -> clearMemberSelection());
@@ -376,6 +395,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
         markerMembers.clear();
         memberMarkers.clear();
         accuracyCircle = null;
+        comparisonLine = null;
+        comparisonMarker = null;
+        comparisonTargetUid = null;
         selectedMarker = null;
 
         if (selectedMemberUid == null) {
@@ -414,8 +436,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 continue;
             }
 
-            boolean stale = member.updatedAt <= 0L
-                    || now - member.updatedAt > LIVE_FRESHNESS_MS;
+            boolean stale = isStale(member);
             boolean current = isCurrentUser(member.uid);
             LatLng position = new LatLng(
                     member.latitude,
@@ -429,11 +450,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
                             ? R.string.family_live_map_marker_stale
                             : R.string.family_live_map_marker_live))
                     .alpha(stale ? 0.68F : 1F)
-                    .icon(BitmapDescriptorFactory.defaultMarker(current
-                            ? BitmapDescriptorFactory.HUE_AZURE
-                            : stale
-                            ? BitmapDescriptorFactory.HUE_ORANGE
-                            : BitmapDescriptorFactory.HUE_GREEN)));
+                    .icon(BitmapDescriptorFactory.defaultMarker(
+                            normalMarkerHue(member, current, stale)
+                    )));
 
             if (marker == null) {
                 continue;
@@ -519,10 +538,16 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
     }
 
-    private void selectMember(
+    private void selectOrCompareMember(
             @NonNull Marker marker,
             @NonNull FamilyLiveCloudMember member
     ) {
+        if (selectedMarker != null
+                && selectedMemberUid != null
+                && !selectedMemberUid.equals(member.uid)) {
+            compareWithSelectedMember(marker, member);
+            return;
+        }
         focusMember(marker, member, true);
     }
 
@@ -535,6 +560,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
             return;
         }
 
+        clearComparisonOnly();
         restoreSelectedMarkerAppearance();
         selectedMemberUid = member.uid;
         selectedMarker = marker;
@@ -572,18 +598,80 @@ public final class FamilyMapActivity extends AppCompatActivity {
         marker.showInfoWindow();
     }
 
+    private void compareWithSelectedMember(
+            @NonNull Marker targetMarker,
+            @NonNull FamilyLiveCloudMember targetMember
+    ) {
+        if (map == null || selectedMarker == null) {
+            focusMember(targetMarker, targetMember, true);
+            return;
+        }
+
+        clearComparisonOnly();
+        comparisonMarker = targetMarker;
+        comparisonTargetUid = targetMember.uid;
+        targetMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
+                BitmapDescriptorFactory.HUE_MAGENTA
+        ));
+
+        comparisonLine = map.addPolyline(new PolylineOptions()
+                .add(selectedMarker.getPosition(), targetMarker.getPosition())
+                .color(ContextCompat.getColor(this, R.color.fh_primary))
+                .width(6F)
+                .geodesic(true));
+
+        setSelectionChromeVisible(false);
+        targetMarker.showInfoWindow();
+
+        LatLngBounds bounds = new LatLngBounds.Builder()
+                .include(selectedMarker.getPosition())
+                .include(targetMarker.getPosition())
+                .build();
+        findViewById(R.id.familyMapHost).post(() -> {
+            if (map != null) {
+                map.animateCamera(CameraUpdateFactory.newLatLngBounds(
+                        bounds,
+                        150
+                ));
+            }
+        });
+    }
+
     private void clearMemberSelection() {
+        restoreComparisonMarkerAppearance();
         restoreSelectedMarkerAppearance();
         if (selectedMarker != null) {
             selectedMarker.hideInfoWindow();
+        }
+        if (comparisonMarker != null) {
+            comparisonMarker.hideInfoWindow();
         }
         if (accuracyCircle != null) {
             accuracyCircle.remove();
             accuracyCircle = null;
         }
+        if (comparisonLine != null) {
+            comparisonLine.remove();
+            comparisonLine = null;
+        }
+        comparisonMarker = null;
+        comparisonTargetUid = null;
         selectedMarker = null;
         selectedMemberUid = null;
         setSelectionChromeVisible(true);
+    }
+
+    private void clearComparisonOnly() {
+        restoreComparisonMarkerAppearance();
+        if (comparisonMarker != null) {
+            comparisonMarker.hideInfoWindow();
+        }
+        if (comparisonLine != null) {
+            comparisonLine.remove();
+            comparisonLine = null;
+        }
+        comparisonMarker = null;
+        comparisonTargetUid = null;
     }
 
     private void setSelectionChromeVisible(boolean visible) {
@@ -646,6 +734,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
         TextView battery = card.findViewById(R.id.textMapInfoBattery);
         TextView network = card.findViewById(R.id.textMapInfoNetwork);
         TextView movement = card.findViewById(R.id.textMapInfoMovement);
+        TextView nearest = card.findViewById(R.id.textMapInfoNearest);
+        TextView distance = card.findViewById(R.id.textMapInfoDistance);
 
         name.setText(displayName(member));
         role.setText(getString(
@@ -712,6 +802,43 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 R.string.family_map_info_movement,
                 movementLabel(member)
         ));
+
+        FamilyLiveCloudMember nearestMember = nearestMemberTo(member);
+        if (nearestMember == null) {
+            nearest.setVisibility(View.GONE);
+        } else {
+            double nearestMeters = FamilyMapDistance.meters(
+                    member.latitude,
+                    member.longitude,
+                    nearestMember.latitude,
+                    nearestMember.longitude
+            );
+            nearest.setText(getString(
+                    R.string.family_map_info_nearest,
+                    displayName(nearestMember),
+                    FamilyMapDistance.format(nearestMeters)
+            ));
+            nearest.setVisibility(View.VISIBLE);
+        }
+
+        FamilyLiveCloudMember selected = findMember(selectedMemberUid);
+        if (comparisonTargetUid != null
+                && comparisonTargetUid.equals(member.uid)
+                && selected != null) {
+            double comparedMeters = FamilyMapDistance.meters(
+                    selected.latitude,
+                    selected.longitude,
+                    member.latitude,
+                    member.longitude
+            );
+            distance.setText(getString(
+                    R.string.family_map_info_distance_from,
+                    displayName(selected),
+                    FamilyMapDistance.format(comparedMeters)
+            ));
+        } else {
+            distance.setText(R.string.family_map_info_compare_hint);
+        }
 
         return card;
     }
@@ -824,7 +951,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
 
         FamilyLiveCloudMember member = markerMembers.get(marker);
         if (member != null) {
-            selectMember(marker, member);
+            focusMember(marker, member, true);
         }
     }
 
@@ -838,6 +965,42 @@ public final class FamilyMapActivity extends AppCompatActivity {
         if (member != null) {
             focusMember(marker, member, true);
         }
+    }
+
+    private void openStreetViewForSelectedMember() {
+        FamilyLiveCloudMember member = null;
+        if (comparisonMarker != null) {
+            member = markerMembers.get(comparisonMarker);
+        }
+        if (member == null && selectedMarker != null) {
+            member = markerMembers.get(selectedMarker);
+        }
+        if (member == null) {
+            Toast.makeText(
+                    this,
+                    R.string.family_map_select_member_for_street_view,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        openStreetView(member);
+    }
+
+    private void openStreetView(@NonNull FamilyLiveCloudMember member) {
+        if (!validCoordinates(member.latitude, member.longitude)) {
+            Toast.makeText(
+                    this,
+                    R.string.family_street_view_unavailable,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        startActivity(FamilyStreetViewActivity.createIntent(
+                this,
+                member.latitude,
+                member.longitude,
+                displayName(member)
+        ));
     }
 
     private void cycleMapType() {
@@ -927,25 +1090,99 @@ public final class FamilyMapActivity extends AppCompatActivity {
         if (selectedMarker == null) {
             return;
         }
-
         FamilyLiveCloudMember previous = markerMembers.get(selectedMarker);
         if (previous == null) {
             selectedMarker = null;
             return;
         }
-
-        boolean stale = previous.updatedAt <= 0L
-                || System.currentTimeMillis() - previous.updatedAt
-                > LIVE_FRESHNESS_MS;
-        boolean current = isCurrentUser(previous.uid);
-
         selectedMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
-                current
-                        ? BitmapDescriptorFactory.HUE_AZURE
-                        : stale
-                        ? BitmapDescriptorFactory.HUE_ORANGE
-                        : BitmapDescriptorFactory.HUE_GREEN
+                normalMarkerHue(
+                        previous,
+                        isCurrentUser(previous.uid),
+                        isStale(previous)
+                )
         ));
+    }
+
+    private void restoreComparisonMarkerAppearance() {
+        if (comparisonMarker == null) {
+            return;
+        }
+        FamilyLiveCloudMember previous = markerMembers.get(comparisonMarker);
+        if (previous == null) {
+            comparisonMarker = null;
+            return;
+        }
+        comparisonMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
+                normalMarkerHue(
+                        previous,
+                        isCurrentUser(previous.uid),
+                        isStale(previous)
+                )
+        ));
+    }
+
+    private boolean isStale(@NonNull FamilyLiveCloudMember member) {
+        return member.updatedAt <= 0L
+                || System.currentTimeMillis() - member.updatedAt
+                > LIVE_FRESHNESS_MS;
+    }
+
+    private float normalMarkerHue(
+            @NonNull FamilyLiveCloudMember member,
+            boolean current,
+            boolean stale
+    ) {
+        if (current) {
+            return BitmapDescriptorFactory.HUE_AZURE;
+        }
+        if (stale) {
+            return BitmapDescriptorFactory.HUE_ORANGE;
+        }
+        return BitmapDescriptorFactory.HUE_GREEN;
+    }
+
+    @Nullable
+    private FamilyLiveCloudMember findMember(@Nullable String uid) {
+        if (uid == null) {
+            return null;
+        }
+        for (FamilyLiveCloudMember member : members) {
+            if (uid.equals(member.uid)) {
+                return member;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private FamilyLiveCloudMember nearestMemberTo(
+            @NonNull FamilyLiveCloudMember source
+    ) {
+        FamilyLiveCloudMember nearest = null;
+        double nearestMeters = Double.POSITIVE_INFINITY;
+        for (FamilyLiveCloudMember candidate : members) {
+            if (candidate.uid.equals(source.uid)
+                    || !candidate.sharingEnabled
+                    || !candidate.hasLocation
+                    || !validCoordinates(
+                    candidate.latitude,
+                    candidate.longitude
+            )) {
+                continue;
+            }
+            double meters = FamilyMapDistance.meters(
+                    source.latitude,
+                    source.longitude,
+                    candidate.latitude,
+                    candidate.longitude
+            );
+            if (Double.isFinite(meters) && meters < nearestMeters) {
+                nearestMeters = meters;
+                nearest = candidate;
+            }
+        }
+        return nearest;
     }
 
     @NonNull
@@ -992,20 +1229,22 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
 
         int edge = getResources().getDimensionPixelSize(R.dimen.space_12);
-        int rightPadding = edge;
+        int bottomControlHeight = getResources().getDimensionPixelSize(
+                R.dimen.family_map_controls_height
+        );
         int bottomPadding = edge;
-
-        if (controlRail.getVisibility() == View.VISIBLE) {
-            rightPadding = controlRail.getWidth() + (edge * 2);
-        }
-        if (bottomPanel.getVisibility() == View.VISIBLE) {
-            bottomPadding = bottomPanel.getHeight() + (edge * 2);
+        if (controlRail.getVisibility() == View.VISIBLE
+                || bottomPanel.getVisibility() == View.VISIBLE) {
+            bottomPadding = Math.max(
+                    bottomControlHeight,
+                    bottomPanel.getHeight()
+            ) + (edge * 2);
         }
 
         map.setPadding(
                 edge,
                 topPanel.getBottom() + edge,
-                rightPadding,
+                edge,
                 bottomPadding
         );
     }
