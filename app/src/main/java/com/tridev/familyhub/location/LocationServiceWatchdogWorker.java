@@ -47,6 +47,10 @@ public final class LocationServiceWatchdogWorker extends Worker {
             return Result.success();
         }
 
+        boolean rollingChain = getInputData().getBoolean(
+                LocationServiceWatchdogScheduler.INPUT_ROLLING_CHAIN,
+                false
+        );
         boolean serviceRunning = isLocationServiceRunning(context);
         LocationServiceDiagnosticsStore.Snapshot snapshot =
                 LocationServiceDiagnosticsStore.recordCheck(
@@ -76,7 +80,8 @@ public final class LocationServiceWatchdogWorker extends Worker {
             LocationRecoveryNotifier.cancelResumeRequired(context);
         }
 
-        if (LocationSharingStore.isSharingEnabled(context)) {
+        if (rollingChain
+                && LocationSharingStore.isSharingEnabled(context)) {
             LocationServiceWatchdogScheduler.scheduleNext(
                     context,
                     LocationHeartbeatPolicy.nextCheckDelay(serviceRunning)
