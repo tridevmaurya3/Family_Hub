@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_sos_title">Family SOS</string>
+    <string name="family_sos_subtitle">Send a trusted family alert with your latest shared location.</string>
+    <string name="family_sos_option_a_note">Works instantly while approved family members’ app process is active. It does not contact police, ambulance or emergency services automatically.</string>
+    <string name="family_sos_hold_title">Press and hold for 3 seconds</string>
+    <string name="family_sos_hold_detail">Keep holding until the progress completes. Releasing early cancels the request.</string>
+    <string name="family_sos_hold_button">HOLD FOR SOS</string>
+    <string name="family_sos_holding_button">KEEP HOLDING…</string>
+    <string name="family_sos_sending">Sending SOS…</string>
+    <string name="family_sos_sent">SOS sent to approved family members.</string>
+    <string name="family_sos_active_section">Active family alerts</string>
+    <string name="family_sos_history_section">Recent SOS history</string>
+    <string name="family_sos_empty">No Family SOS alerts yet.</string>
+    <string name="family_sos_active_count">%1$d active alert(s)</string>
+    <string name="family_sos_status_active">ACTIVE</string>
+    <string name="family_sos_status_cancelled">CANCELLED</string>
+    <string name="family_sos_status_resolved">RESOLVED</string>
+    <string name="family_sos_created_time">Sent %1$s</string>
+    <string name="family_sos_latest_location">Latest shared location</string>
+    <string name="family_sos_location_unavailable">Location was unavailable; the family alert was still sent.</string>
+    <string name="family_sos_accuracy">Accuracy about %1$.0f m</string>
+    <string name="family_sos_responses">%1$d family response(s)</string>
+    <string name="family_sos_open_map">Open location</string>
+    <string name="family_sos_respond">I’m responding</string>
+    <string name="family_sos_responded">Response sent</string>
+    <string name="family_sos_cancel">Cancel SOS</string>
+    <string name="family_sos_cancel_confirm_title">Cancel this SOS?</string>
+    <string name="family_sos_cancel_confirm_detail">Approved family members will see that the alert was cancelled.</string>
+    <string name="family_sos_cancelled_message">SOS cancelled.</string>
+    <string name="family_sos_response_sent">Your response was shared with the sender.</string>
+    <string name="family_sos_error_auth">Sign in with a verified family account first.</string>
+    <string name="family_sos_error_family">An active family membership is required.</string>
+    <string name="family_sos_error_existing">You already have an active SOS. Cancel it before sending another.</string>
+    <string name="family_sos_error_wait">Please wait a few seconds before trying again.</string>
+    <string name="family_sos_error_generic">Family SOS could not be completed. Check internet and try again.</string>
+    <string name="family_sos_channel_name">Family SOS alerts</string>
+    <string name="family_sos_channel_description">Urgent alerts and family responses while Family Hub is active.</string>
+    <string name="family_sos_notification_title">Family SOS alert</string>
+    <string name="family_sos_notification_with_place">%1$s requested help near %2$s.</string>
+    <string name="family_sos_notification_without_place">%1$s requested help. Open Family Hub for details.</string>
+    <string name="family_sos_response_notification_title">A family member is responding</string>
+    <string name="family_sos_response_notification_detail">%1$s acknowledged your SOS.</string>
+    <string name="family_sos_member_fallback">A family member</string>
+    <string name="family_sos_more_button">Emergency SOS</string>
+    <string name="family_sos_more_description">Hold to alert approved family members</string>
+</resources>
