@@ -35,25 +35,28 @@ public final class FamilyAutomationEventWriter {
             long occurredAt
     ) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String safeFamilyId = bounded(familyId, 128);
+        String safeTargetUid = bounded(targetUid, 128);
+        String safeDeduplicationKey = bounded(deduplicationKey, 160);
         if (user == null
                 || !user.isEmailVerified()
-                || !user.getUid().equals(targetUid)
-                || familyId.trim().isEmpty()
-                || deduplicationKey.trim().isEmpty()) {
+                || !user.getUid().equals(safeTargetUid)
+                || safeFamilyId.isEmpty()
+                || safeDeduplicationKey.isEmpty()) {
             return;
         }
 
         FamilyAutomationStateStore state =
                 new FamilyAutomationStateStore(context);
-        if (!state.shouldDispatch(deduplicationKey, occurredAt)) {
+        if (!state.shouldDispatch(safeDeduplicationKey, occurredAt)) {
             return;
         }
 
         DatabaseReference branch = FirebaseDatabase.getInstance()
                 .getReference()
                 .child("familyAutomationEvents")
-                .child(familyId)
-                .child(targetUid);
+                .child(safeFamilyId)
+                .child(safeTargetUid);
         String eventId = branch.push().getKey();
         if (eventId == null) {
             return;
@@ -61,31 +64,41 @@ public final class FamilyAutomationEventWriter {
 
         Map<String, Object> values = new HashMap<>();
         values.put("eventId", eventId);
-        values.put("familyId", familyId);
-        values.put("targetUid", targetUid);
-        values.put("targetName", trim(targetName));
-        values.put("ruleId", rule == null ? "" : trim(rule.ruleId));
-        values.put("ruleTitle", rule == null ? "" : trim(rule.safeTitle()));
-        values.put("type", trim(eventType));
-        values.put("severity", trim(severity));
-        values.put("placeName", trim(placeName));
-        values.put("detail", trim(detail));
-        values.put("deduplicationKey", trim(deduplicationKey));
+        values.put("familyId", safeFamilyId);
+        values.put("targetUid", safeTargetUid);
+        values.put("targetName", bounded(targetName, 100));
+        values.put(
+                "ruleId",
+                rule == null ? "" : bounded(rule.ruleId, 128)
+        );
+        values.put(
+                "ruleTitle",
+                rule == null ? "" : bounded(rule.safeTitle(), 100)
+        );
+        values.put("type", bounded(eventType, 32));
+        values.put("severity", bounded(severity, 16));
+        values.put("placeName", bounded(placeName, 100));
+        values.put("detail", bounded(detail, 240));
+        values.put("deduplicationKey", safeDeduplicationKey);
         values.put("notifyTrustedViewers", notifyTrustedViewers);
-        values.put("occurredAt", occurredAt);
+        values.put("occurredAt", Math.max(1L, occurredAt));
         values.put("createdAt", ServerValue.TIMESTAMP);
 
         branch.child(eventId)
                 .setValue(values)
                 .addOnSuccessListener(unused ->
                         state.recordDispatched(
-                                deduplicationKey,
+                                safeDeduplicationKey,
                                 occurredAt
                         ));
     }
 
     @NonNull
-    private static String trim(@Nullable String value) {
-        return value == null ? "" : value.trim();
+    private static String bounded(@Nullable String value, int maxLength) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.length() <= maxLength) {
+            return trimmed;
+        }
+        return trimmed.substring(0, Math.max(0, maxLength));
     }
 }
