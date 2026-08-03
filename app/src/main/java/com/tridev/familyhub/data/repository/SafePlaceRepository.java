@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.SafePlaceDao;
 import com.tridev.familyhub.data.local.entity.SafePlace;
+import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -20,33 +21,45 @@ public final class SafePlaceRepository {
     public interface ListCallback {
         void onLoaded(@NonNull List<SafePlace> places);
     }
+
     public interface SaveCallback {
         void onSaved(long id);
+
         void onDuplicate();
+
         void onLimitReached();
-        void onError();
-    }
-    public interface ActionCallback {
-        void onComplete();
+
         void onError();
     }
 
+    public interface ActionCallback {
+        void onComplete();
+
+        void onError();
+    }
+
+    private final Context appContext;
     private final SafePlaceDao dao;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public SafePlaceRepository(@NonNull Context context) {
-        dao = FamilyHubDatabase.getInstance(context).safePlaceDao();
+        appContext = context.getApplicationContext();
+        dao = FamilyHubDatabase.getInstance(appContext).safePlaceDao();
     }
 
     public void loadAll(@NonNull ListCallback callback) {
-        if (closed.get()) return;
+        if (closed.get()) {
+            return;
+        }
         try {
             executor.execute(() -> {
                 List<SafePlace> places = dao.getAll();
                 main.post(() -> {
-                    if (!closed.get()) callback.onLoaded(places);
+                    if (!closed.get()) {
+                        callback.onLoaded(places);
+                    }
                 });
             });
         } catch (RejectedExecutionException ignored) {
@@ -55,43 +68,58 @@ public final class SafePlaceRepository {
     }
 
     public void save(@NonNull SafePlace place, @NonNull SaveCallback callback) {
-        if (closed.get()) return;
+        if (closed.get()) {
+            return;
+        }
         try {
             executor.execute(() -> {
-            if (dao.duplicateCount(place.name, place.latitude,
-                    place.longitude, place.id) > 0) {
-                main.post(() -> {
-                    if (!closed.get()) callback.onDuplicate();
-                });
-                return;
-            }
-            if (place.alertsEnabled
-                    && dao.enabledCountExcluding(place.id) >= 100) {
-                main.post(() -> {
-                    if (!closed.get()) callback.onLimitReached();
-                });
-                return;
-            }
-            try {
-                long now = System.currentTimeMillis();
-                place.updatedAt = now;
-                long id;
-                if (place.id == 0L) {
-                    place.createdAt = now;
-                    id = dao.insert(place);
-                } else {
-                    dao.update(place);
-                    id = place.id;
+                if (dao.duplicateCount(
+                        place.name,
+                        place.latitude,
+                        place.longitude,
+                        place.id
+                ) > 0) {
+                    main.post(() -> {
+                        if (!closed.get()) {
+                            callback.onDuplicate();
+                        }
+                    });
+                    return;
                 }
-                long result = id;
-                main.post(() -> {
-                    if (!closed.get()) callback.onSaved(result);
-                });
-            } catch (RuntimeException error) {
-                main.post(() -> {
-                    if (!closed.get()) callback.onError();
-                });
-            }
+                if (place.alertsEnabled
+                        && dao.enabledCountExcluding(place.id) >= 100) {
+                    main.post(() -> {
+                        if (!closed.get()) {
+                            callback.onLimitReached();
+                        }
+                    });
+                    return;
+                }
+                try {
+                    long now = System.currentTimeMillis();
+                    place.updatedAt = now;
+                    long id;
+                    if (place.id == 0L) {
+                        place.createdAt = now;
+                        id = dao.insert(place);
+                    } else {
+                        dao.update(place);
+                        id = place.id;
+                    }
+                    SafePlaceGeofenceSyncScheduler.schedule(appContext);
+                    long result = id;
+                    main.post(() -> {
+                        if (!closed.get()) {
+                            callback.onSaved(result);
+                        }
+                    });
+                } catch (RuntimeException error) {
+                    main.post(() -> {
+                        if (!closed.get()) {
+                            callback.onError();
+                        }
+                    });
+                }
             });
         } catch (RejectedExecutionException ignored) {
             // Repository was closed between the guard and task submission.
@@ -102,17 +130,24 @@ public final class SafePlaceRepository {
             @NonNull SafePlace place,
             @NonNull ActionCallback callback
     ) {
-        if (closed.get()) return;
+        if (closed.get()) {
+            return;
+        }
         try {
             executor.execute(() -> {
                 try {
                     dao.delete(place);
+                    SafePlaceGeofenceSyncScheduler.schedule(appContext);
                     main.post(() -> {
-                        if (!closed.get()) callback.onComplete();
+                        if (!closed.get()) {
+                            callback.onComplete();
+                        }
                     });
                 } catch (RuntimeException error) {
                     main.post(() -> {
-                        if (!closed.get()) callback.onError();
+                        if (!closed.get()) {
+                            callback.onError();
+                        }
                     });
                 }
             });
@@ -126,7 +161,9 @@ public final class SafePlaceRepository {
             boolean enabled,
             @NonNull ActionCallback callback
     ) {
-        if (closed.get()) return;
+        if (closed.get()) {
+            return;
+        }
         try {
             executor.execute(() -> {
                 try {
@@ -135,14 +172,24 @@ public final class SafePlaceRepository {
                             enabled,
                             System.currentTimeMillis()
                     );
+                    if (changed == 1) {
+                        SafePlaceGeofenceSyncScheduler.schedule(appContext);
+                    }
                     main.post(() -> {
-                        if (closed.get()) return;
-                        if (changed == 1) callback.onComplete();
-                        else callback.onError();
+                        if (closed.get()) {
+                            return;
+                        }
+                        if (changed == 1) {
+                            callback.onComplete();
+                        } else {
+                            callback.onError();
+                        }
                     });
                 } catch (RuntimeException error) {
                     main.post(() -> {
-                        if (!closed.get()) callback.onError();
+                        if (!closed.get()) {
+                            callback.onError();
+                        }
                     });
                 }
             });
