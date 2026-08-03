@@ -126,7 +126,7 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
         TextView text = new TextView(this);
         text.setPadding(dp(16), dp(14), dp(16), dp(14));
         text.setText(getString(
-                R.string.safe_place_alert_history_item,
+                R.string.safe_place_smart_alert_history_item,
                 getString(labelRes),
                 placeName,
                 DateFormat.getDateTimeInstance().format(
