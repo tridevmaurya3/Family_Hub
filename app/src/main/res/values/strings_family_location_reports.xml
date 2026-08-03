@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_reports_title">Location Insights &amp; Reports</string>
+    <string name="family_reports_subtitle">Private travel, movement, Safe Place and routine analysis from shared Journey History.</string>
+    <string name="family_reports_refresh">Refresh report</string>
+    <string name="family_reports_member_hint">Report members</string>
+    <string name="family_reports_all_accessible">All accessible members</string>
+    <string name="family_reports_daily">Daily</string>
+    <string name="family_reports_weekly">Weekly</string>
+    <string name="family_reports_monthly">Monthly</string>
+    <string name="family_reports_custom">Custom</string>
+    <string name="family_reports_range">Report period: %1$s</string>
+    <string name="family_reports_choose_start">Choose start date</string>
+    <string name="family_reports_choose_end">Choose end date</string>
+    <string name="family_reports_loading">Building privacy-controlled report…</string>
+    <string name="family_reports_empty">No Journey History samples are available for this selection.</string>
+    <string name="family_reports_error">Report could not be loaded. Check internet access and Journey History permissions.</string>
+
+    <string name="family_reports_total_distance">Total distance</string>
+    <string name="family_reports_moving_time">Moving time</string>
+    <string name="family_reports_safe_time">Safe Place time</string>
+    <string name="family_reports_active_days">Active member-days</string>
+
+    <string name="family_reports_movement_title">Movement comparison</string>
+    <string name="family_reports_movement_detail">Detected duration by movement type</string>
+    <string name="family_reports_member_chart_title">Member distance comparison</string>
+    <string name="family_reports_member_chart_detail">Distance from currently accessible Journey History</string>
+    <string name="family_reports_places_title">Safe Place time</string>
+    <string name="family_reports_places_detail">Most visited Home, Office, School and other saved places</string>
+    <string name="family_reports_insights_title">Routine &amp; attention insights</string>
+    <string name="family_reports_insights_detail">Patterns are estimates from available samples, not guaranteed real-world events.</string>
+    <string name="family_reports_members_title">Member reports</string>
+    <string name="family_reports_members_detail">Distance, moving time, coverage and most visited place</string>
+
+    <string name="family_reports_place_row">%1$s • %2$d visits • %3$s</string>
+    <string name="family_reports_member_row">%1$s • %2$s moving • %3$d active days</string>
+    <string name="family_reports_most_visited">Most visited: %1$s</string>
+    <string name="family_reports_no_safe_place">No Safe Place visit detected</string>
+
+    <string name="family_reports_export_title">Export report</string>
+    <string name="family_reports_export_detail">Save a private copy through Android’s document picker.</string>
+    <string name="family_reports_export_pdf">Export PDF</string>
+    <string name="family_reports_export_excel">Export Excel (.xlsx)</string>
+    <string name="family_reports_export_pdf_name">Family_Location_Report.pdf</string>
+    <string name="family_reports_export_excel_name">Family_Location_Report.xlsx</string>
+    <string name="family_reports_export_success">Report exported successfully.</string>
+    <string name="family_reports_export_error">Report export could not be completed.</string>
+    <string name="family_reports_export_wait">Wait for the report to finish loading before exporting.</string>
+
+    <string name="family_reports_privacy_note">Reports include only your own Journey History and members who currently grant you trusted-viewer access. Exported files are outside Family Hub and should be stored or shared carefully.</string>
+    <string name="family_reports_more_button">Location Reports</string>
+    <string name="family_reports_more_description">Travel, Safe Places, charts and exports</string>
+    <string name="family_reports_safety_title">Location Insights</string>
+    <string name="family_reports_safety_detail">Open travel reports, routine patterns and private exports.</string>
+
+    <string name="family_reports_chart_no_data">No chart data</string>
+    <string name="family_reports_generated">Generated %1$s</string>
+    <string name="family_reports_custom_limit">Custom reports are limited to 90 days.</string>
+</resources>
