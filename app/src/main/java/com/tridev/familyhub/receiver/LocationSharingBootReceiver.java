@@ -11,23 +11,17 @@ import android.os.Build;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
-import com.tridev.familyhub.data.local.FamilyHubDatabase;
-import com.tridev.familyhub.data.local.entity.SafePlace;
-import com.tridev.familyhub.geofence.SafePlaceRegistrar;
+import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
 import com.tridev.familyhub.location.FamilyLocationService;
 import com.tridev.familyhub.location.LocationRecoveryNotifier;
 import com.tridev.familyhub.location.LocationServiceRecoveryScheduler;
 import com.tridev.familyhub.location.LocationSharingStore;
 import com.tridev.familyhub.location.PendingLocationSyncScheduler;
 
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 /**
  * Restores user-enabled Family Live work after reboot, device unlock and app
- * replacement. Restoration never enables sharing by itself; it honours only
- * the choice already stored by the user.
+ * replacement. Restoration never enables sharing or Safe Place alerts by
+ * itself; it only restores choices already stored by the user.
  */
 public class LocationSharingBootReceiver extends BroadcastReceiver {
 
@@ -39,7 +33,7 @@ public class LocationSharingBootReceiver extends BroadcastReceiver {
         }
 
         Context appContext = context.getApplicationContext();
-        restoreEnabledSafePlaces(appContext);
+        SafePlaceGeofenceSyncScheduler.scheduleNow(appContext);
 
         if (!LocationSharingStore.isSharingEnabled(appContext)) {
             LocationRecoveryNotifier.cancelAll(appContext);
@@ -120,61 +114,5 @@ public class LocationSharingBootReceiver extends BroadcastReceiver {
                 || manager.isProviderEnabled(
                 LocationManager.NETWORK_PROVIDER
         );
-    }
-
-    private void restoreEnabledSafePlaces(@NonNull Context context) {
-        if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED
-                || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                && ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED)) {
-            return;
-        }
-
-        PendingResult pendingResult = goAsync();
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
-            try {
-                List<SafePlace> enabled = FamilyHubDatabase
-                        .getInstance(context)
-                        .safePlaceDao()
-                        .getEnabled();
-                for (SafePlace place : enabled) {
-                    if (isValid(place)) {
-                        SafePlaceRegistrar.register(
-                                context,
-                                String.valueOf(place.id),
-                                place.latitude,
-                                place.longitude,
-                                place.radiusMeters
-                        );
-                    }
-                }
-            } catch (RuntimeException ignored) {
-                // Opening Safe Places will retry registration visibly.
-            } finally {
-                pendingResult.finish();
-                executor.shutdown();
-            }
-        });
-    }
-
-    private boolean isValid(@NonNull SafePlace place) {
-        return place.id > 0L
-                && place.alertsEnabled
-                && Double.isFinite(place.latitude)
-                && Double.isFinite(place.longitude)
-                && place.latitude >= -90D
-                && place.latitude <= 90D
-                && place.longitude >= -180D
-                && place.longitude <= 180D
-                && !(place.latitude == 0D && place.longitude == 0D)
-                && Float.isFinite(place.radiusMeters)
-                && place.radiusMeters >= 100F
-                && place.radiusMeters <= 5000F;
     }
 }
