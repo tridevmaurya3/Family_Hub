@@ -15,11 +15,35 @@ public final class SafePlaceGeofenceSyncScheduler {
 
     private static final String UNIQUE_WORK_NAME =
             "family_hub_safe_place_geofence_sync";
+    private static final long EDIT_SETTLE_DELAY_SECONDS = 10L;
 
     private SafePlaceGeofenceSyncScheduler() {
     }
 
     public static void schedule(@NonNull Context context) {
+        OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(
+                SafePlaceGeofenceSyncWorker.class
+        )
+                .setInitialDelay(
+                        EDIT_SETTLE_DELAY_SECONDS,
+                        TimeUnit.SECONDS
+                )
+                .setBackoffCriteria(
+                        BackoffPolicy.EXPONENTIAL,
+                        30,
+                        TimeUnit.SECONDS
+                )
+                .build();
+
+        WorkManager.getInstance(context.getApplicationContext())
+                .enqueueUniqueWork(
+                        UNIQUE_WORK_NAME,
+                        ExistingWorkPolicy.REPLACE,
+                        request
+                );
+    }
+
+    public static void scheduleNow(@NonNull Context context) {
         OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(
                 SafePlaceGeofenceSyncWorker.class
         )
@@ -29,7 +53,6 @@ public final class SafePlaceGeofenceSyncScheduler {
                         TimeUnit.SECONDS
                 )
                 .build();
-
         WorkManager.getInstance(context.getApplicationContext())
                 .enqueueUniqueWork(
                         UNIQUE_WORK_NAME,
