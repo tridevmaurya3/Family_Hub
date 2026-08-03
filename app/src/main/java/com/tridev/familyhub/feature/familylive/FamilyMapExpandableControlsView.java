@@ -5,6 +5,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -36,8 +37,13 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
     private MaterialButton menuButton;
     @Nullable
     private View legendPanel;
+    @Nullable
+    private View visibilityAnchor;
 
     private boolean expanded;
+
+    private final ViewTreeObserver.OnGlobalLayoutListener
+            anchorVisibilityListener = this::syncAnchorVisibility;
 
     public FamilyMapExpandableControlsView(@NonNull Context context) {
         this(context, null);
@@ -84,7 +90,21 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        post(this::installMapTouchCollapse);
+        post(() -> {
+            installAnchorVisibilitySync();
+            installMapTouchCollapse();
+        });
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (visibilityAnchor != null
+                && visibilityAnchor.getViewTreeObserver().isAlive()) {
+            visibilityAnchor.getViewTreeObserver()
+                    .removeOnGlobalLayoutListener(anchorVisibilityListener);
+        }
+        visibilityAnchor = null;
+        super.onDetachedFromWindow();
     }
 
     @Override
@@ -92,6 +112,43 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         super.onVisibilityAggregated(isVisible);
         if (isVisible) {
             post(() -> collapse(false));
+        }
+    }
+
+    private void installAnchorVisibilitySync() {
+        View root = getRootView();
+        if (root == null) {
+            return;
+        }
+
+        View anchor = root.findViewById(R.id.familyMapControlRail);
+        if (anchor == null || anchor == visibilityAnchor) {
+            syncAnchorVisibility();
+            return;
+        }
+
+        if (visibilityAnchor != null
+                && visibilityAnchor.getViewTreeObserver().isAlive()) {
+            visibilityAnchor.getViewTreeObserver()
+                    .removeOnGlobalLayoutListener(anchorVisibilityListener);
+        }
+
+        visibilityAnchor = anchor;
+        anchor.getViewTreeObserver()
+                .addOnGlobalLayoutListener(anchorVisibilityListener);
+        syncAnchorVisibility();
+    }
+
+    private void syncAnchorVisibility() {
+        if (visibilityAnchor == null) {
+            return;
+        }
+        int desiredVisibility = visibilityAnchor.getVisibility();
+        if (getVisibility() != desiredVisibility) {
+            setVisibility(desiredVisibility);
+        }
+        if (desiredVisibility == VISIBLE) {
+            collapse(false);
         }
     }
 
