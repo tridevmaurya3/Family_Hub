@@ -3,6 +3,8 @@ package com.tridev.familyhub.geofence;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.tridev.familyhub.location.FamilyDeviceSafetyAlertPolicy;
+
 /** Pure filter and quiet-hours rules for the Family Safety Alert Centre. */
 public final class FamilySafetyAlertPolicy {
 
@@ -11,6 +13,9 @@ public final class FamilySafetyAlertPolicy {
     public static final String FILTER_ARRIVED = "ARRIVED";
     public static final String FILTER_LEFT = "LEFT";
     public static final String FILTER_DWELL = "DWELL";
+    public static final String FILTER_NO_UPDATE = "NO_UPDATE";
+    public static final String FILTER_LOW_BATTERY = "LOW_BATTERY";
+    public static final String FILTER_OFFLINE = "OFFLINE";
 
     public static final int DEFAULT_QUIET_START_MINUTE = 22 * 60;
     public static final int DEFAULT_QUIET_END_MINUTE = 7 * 60;
@@ -38,6 +43,21 @@ public final class FamilySafetyAlertPolicy {
         }
         if (FILTER_DWELL.equals(safeFilter)) {
             return SafePlaceSmartAlertPolicy.ALERT_DWELL.equals(
+                    transitionType
+            );
+        }
+        if (FILTER_NO_UPDATE.equals(safeFilter)) {
+            return FamilyDeviceSafetyAlertPolicy.ALERT_NO_UPDATE.equals(
+                    transitionType
+            );
+        }
+        if (FILTER_LOW_BATTERY.equals(safeFilter)) {
+            return FamilyDeviceSafetyAlertPolicy.ALERT_LOW_BATTERY.equals(
+                    transitionType
+            );
+        }
+        if (FILTER_OFFLINE.equals(safeFilter)) {
+            return FamilyDeviceSafetyAlertPolicy.ALERT_DEVICE_OFFLINE.equals(
                     transitionType
             );
         }
@@ -91,12 +111,21 @@ public final class FamilySafetyAlertPolicy {
                 || "EXIT".equals(transitionType);
     }
 
+    public static boolean isDeviceHealthAlert(
+            @Nullable String transitionType
+    ) {
+        return FamilyDeviceSafetyAlertPolicy.isSupported(transitionType);
+    }
+
     @NonNull
     public static String normalizeFilter(@Nullable String filter) {
         if (FILTER_UNREAD.equals(filter)
                 || FILTER_ARRIVED.equals(filter)
                 || FILTER_LEFT.equals(filter)
-                || FILTER_DWELL.equals(filter)) {
+                || FILTER_DWELL.equals(filter)
+                || FILTER_NO_UPDATE.equals(filter)
+                || FILTER_LOW_BATTERY.equals(filter)
+                || FILTER_OFFLINE.equals(filter)) {
             return filter;
         }
         return FILTER_ALL;
