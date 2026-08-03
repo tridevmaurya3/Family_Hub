@@ -30,6 +30,28 @@ public class LocationHeartbeatPolicyTest {
     }
 
     @Test
+    public void duplicateRecoveryIsBlockedDuringCooldown() {
+        long recentAttempt = NOW
+                - LocationHeartbeatPolicy.RECOVERY_ATTEMPT_COOLDOWN_MS
+                + 1L;
+        assertFalse(LocationHeartbeatPolicy.canAttemptRecovery(
+                recentAttempt,
+                NOW
+        ));
+    }
+
+    @Test
+    public void recoveryIsAllowedAfterCooldown() {
+        long oldAttempt = NOW
+                - LocationHeartbeatPolicy.RECOVERY_ATTEMPT_COOLDOWN_MS;
+        assertTrue(LocationHeartbeatPolicy.canAttemptRecovery(
+                oldAttempt,
+                NOW
+        ));
+        assertTrue(LocationHeartbeatPolicy.canAttemptRecovery(0L, NOW));
+    }
+
+    @Test
     public void recoveryPendingIsImmediatelyStale() {
         assertTrue(LocationHeartbeatPolicy.isCloudHeartbeatStale(
                 LocationHeartbeatPolicy.STATE_RECOVERY_PENDING,
