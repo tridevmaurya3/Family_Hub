@@ -30,6 +30,20 @@ public final class LocationSyncPolicy {
     }
 
     /**
+     * Prevents a point captured before the current explicit sharing session
+     * from being uploaded after a rapid stop/start sequence.
+     */
+    public static boolean belongsToCurrentSharingSession(
+            long capturedAt,
+            long sharingEnabledAt
+    ) {
+        if (sharingEnabledAt <= 0L) {
+            return capturedAt > 0L;
+        }
+        return capturedAt >= sharingEnabledAt;
+    }
+
+    /**
      * Exponential retry delay capped at fifteen minutes.
      */
     public static long retryDelay(int attemptCount) {
