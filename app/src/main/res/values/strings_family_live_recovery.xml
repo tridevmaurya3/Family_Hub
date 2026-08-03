@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="family_live_recovery_channel">Family Live reliability</string>
+    <string name="family_live_recovery_channel_detail">Reboot recovery and background tracking status for Family Live.</string>
+
+    <string name="family_live_recovery_title">Resume Family Live sharing</string>
+    <string name="family_live_recovery_detail">Android paused background tracking after a restart. Tap Resume sharing to restore it.</string>
+    <string name="family_live_recovery_resume_action">Resume sharing</string>
+
+    <string name="family_live_battery_restriction_title">Improve Family Live reliability</string>
+    <string name="family_live_battery_restriction_detail">Battery optimization may delay location updates. Review Android battery settings for this app.</string>
+    <string name="family_live_battery_settings_action">Battery settings</string>
+
+</resources>
