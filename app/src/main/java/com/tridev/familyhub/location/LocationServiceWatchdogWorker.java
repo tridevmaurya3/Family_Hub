@@ -78,14 +78,14 @@ public final class LocationServiceWatchdogWorker extends Worker {
                     snapshot
             );
             LocationRecoveryNotifier.cancelResumeRequired(context);
-        }
 
-        if (rollingChain
-                && LocationSharingStore.isSharingEnabled(context)) {
-            LocationServiceWatchdogScheduler.scheduleNext(
-                    context,
-                    LocationHeartbeatPolicy.nextCheckDelay(serviceRunning)
-            );
+            if (rollingChain
+                    && LocationSharingStore.isSharingEnabled(context)) {
+                LocationServiceWatchdogScheduler.scheduleNext(
+                        context,
+                        LocationHeartbeatPolicy.REGULAR_CHECK_DELAY_MS
+                );
+            }
         }
         return Result.success();
     }
