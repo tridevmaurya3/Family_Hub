@@ -31,6 +31,7 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
+import com.tridev.familyhub.feature.insights.FamilyLocationReportsActivity;
 import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.notes.NotesFragment;
@@ -68,6 +69,7 @@ public class MoreFragment extends Fragment {
         promoteSafePlacesEntry();
         promoteFamilySosEntry();
         promoteJourneyHistoryEntry();
+        promoteLocationReportsEntry();
         promoteFamilySafetyCenterEntry();
 
         binding.cardDocuments.setOnClickListener(
@@ -150,6 +152,19 @@ public class MoreFragment extends Fragment {
                 R.color.fh_primary,
                 R.color.fh_primary_container,
                 FamilySafetyCenterActivity.class
+        );
+    }
+
+    /** Adds charts and private exports directly below the Safety Centre. */
+    private void promoteLocationReportsEntry() {
+        addPromotedButton(
+                72,
+                R.string.family_reports_more_button,
+                R.string.family_reports_more_description,
+                R.drawable.ic_family_map_route,
+                R.color.fh_info,
+                R.color.fh_info_container,
+                FamilyLocationReportsActivity.class
         );
     }
 
