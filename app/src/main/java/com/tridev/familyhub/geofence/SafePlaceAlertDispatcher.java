@@ -40,6 +40,8 @@ public final class SafePlaceAlertDispatcher {
         Context appContext = context.getApplicationContext();
         SafePlaceAlertStateStore stateStore =
                 new SafePlaceAlertStateStore(appContext);
+        FamilySafetyAlertPreferences preferences =
+                new FamilySafetyAlertPreferences(appContext);
 
         String currentState = stateStore.state(place.id);
         if (SafePlaceSmartAlertPolicy.ALERT_ARRIVED.equals(alertType)
@@ -70,6 +72,11 @@ public final class SafePlaceAlertDispatcher {
             return false;
         }
 
+        if (!preferences.isAlertTypeEnabled(alertType)) {
+            rememberConfirmedState(stateStore, place.id, alertType);
+            return false;
+        }
+
         SafePlaceAlert alert = new SafePlaceAlert();
         alert.placeId = String.valueOf(place.id);
         alert.transitionType = alertType;
@@ -92,8 +99,25 @@ public final class SafePlaceAlertDispatcher {
             return false;
         }
 
-        showNotification(appContext, place, alertType);
+        if (preferences.shouldShowNotification(alertType, occurredAt)) {
+            showNotification(appContext, place, alertType);
+        }
         return true;
+    }
+
+    private static void rememberConfirmedState(
+            @NonNull SafePlaceAlertStateStore stateStore,
+            long placeId,
+            @NonNull String alertType
+    ) {
+        if (SafePlaceSmartAlertPolicy.ALERT_LEFT.equals(alertType)) {
+            stateStore.markConfirmedState(placeId, false);
+            return;
+        }
+        stateStore.markConfirmedState(placeId, true);
+        if (SafePlaceSmartAlertPolicy.ALERT_ARRIVED.equals(alertType)) {
+            stateStore.clearPendingEnter(placeId);
+        }
     }
 
     private static void showNotification(
