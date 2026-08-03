@@ -257,7 +257,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         googleMap.setMapType(mapType);
         googleMap.setTrafficEnabled(trafficEnabled);
         googleMap.getUiSettings().setCompassEnabled(true);
-        googleMap.getUiSettings().setZoomControlsEnabled(true);
+        googleMap.getUiSettings().setZoomControlsEnabled(false);
         googleMap.getUiSettings().setMapToolbarEnabled(true);
         googleMap.getUiSettings().setIndoorLevelPickerEnabled(true);
 
@@ -288,6 +288,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
         });
 
         googleMap.setOnMapClickListener(ignored -> clearMemberSelection());
+        googleMap.setOnInfoWindowCloseListener(
+                ignored -> setSelectionChromeVisible(true)
+        );
 
         updateMapControlLabels();
         enableMyLocationIfAllowed();
@@ -374,6 +377,10 @@ public final class FamilyMapActivity extends AppCompatActivity {
         memberMarkers.clear();
         accuracyCircle = null;
         selectedMarker = null;
+
+        if (selectedMemberUid == null) {
+            setSelectionChromeVisible(true);
+        }
 
         renderSafePlaces();
 
@@ -539,6 +546,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
             accuracyCircle.remove();
         }
 
+        setSelectionChromeVisible(false);
+
         if (moveCamera) {
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(
                     marker.getPosition(),
@@ -574,6 +583,18 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
         selectedMarker = null;
         selectedMemberUid = null;
+        setSelectionChromeVisible(true);
+    }
+
+    private void setSelectionChromeVisible(boolean visible) {
+        int visibility = visible ? View.VISIBLE : View.GONE;
+        if (controlRail.getVisibility() != visibility) {
+            controlRail.setVisibility(visibility);
+        }
+        if (bottomPanel.getVisibility() != visibility) {
+            bottomPanel.setVisibility(visibility);
+        }
+        findViewById(R.id.familyMapHost).post(this::applyMapPadding);
     }
 
     private void restoreSelectedMemberFocus() {
@@ -587,6 +608,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 : markerMembers.get(marker);
 
         if (marker == null || member == null) {
+            setSelectionChromeVisible(true);
             if (pendingIntentFocus && dataReady) {
                 pendingIntentFocus = false;
                 showState(R.string.family_map_selected_unavailable);
@@ -658,15 +680,10 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 && Double.isFinite(member.accuracy)
                 ? Math.round(member.accuracy)
                 : 0L;
-        accuracy.setText(roundedAccuracy > 0L
-                ? getString(
-                        R.string.family_map_info_accuracy,
-                        roundedAccuracy
-                )
-                : getString(
-                        R.string.family_map_info_accuracy,
-                        0L
-                ));
+        accuracy.setText(getString(
+                R.string.family_map_info_accuracy,
+                roundedAccuracy
+        ));
 
         String batteryValue;
         if (member.batteryPercentage < 0) {
@@ -879,19 +896,30 @@ public final class FamilyMapActivity extends AppCompatActivity {
             return;
         }
 
+        int fullMapTypeLabel;
         if (mapType == GoogleMap.MAP_TYPE_SATELLITE) {
-            typeButton.setText(R.string.family_map_satellite);
+            typeButton.setText(R.string.family_map_control_satellite_short);
+            fullMapTypeLabel = R.string.family_map_satellite;
         } else if (mapType == GoogleMap.MAP_TYPE_HYBRID) {
-            typeButton.setText(R.string.family_map_hybrid);
+            typeButton.setText(R.string.family_map_control_hybrid_short);
+            fullMapTypeLabel = R.string.family_map_hybrid;
         } else if (mapType == GoogleMap.MAP_TYPE_TERRAIN) {
-            typeButton.setText(R.string.family_map_terrain);
+            typeButton.setText(R.string.family_map_control_terrain_short);
+            fullMapTypeLabel = R.string.family_map_terrain;
         } else {
-            typeButton.setText(R.string.family_map_normal);
+            typeButton.setText(R.string.family_map_control_normal_short);
+            fullMapTypeLabel = R.string.family_map_normal;
         }
 
-        trafficButton.setText(trafficEnabled
+        typeButton.setContentDescription(
+                getString(R.string.family_map_type_description)
+                        + " • "
+                        + getString(fullMapTypeLabel)
+        );
+        trafficButton.setText(R.string.family_map_control_traffic_short);
+        trafficButton.setContentDescription(getString(trafficEnabled
                 ? R.string.family_map_traffic_on
-                : R.string.family_map_traffic_off);
+                : R.string.family_map_traffic_off));
         trafficButton.setChecked(trafficEnabled);
     }
 
@@ -964,8 +992,15 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
 
         int edge = getResources().getDimensionPixelSize(R.dimen.space_12);
-        int rightPadding = controlRail.getWidth() + (edge * 2);
-        int bottomPadding = bottomPanel.getHeight() + (edge * 2);
+        int rightPadding = edge;
+        int bottomPadding = edge;
+
+        if (controlRail.getVisibility() == View.VISIBLE) {
+            rightPadding = controlRail.getWidth() + (edge * 2);
+        }
+        if (bottomPanel.getVisibility() == View.VISIBLE) {
+            bottomPadding = bottomPanel.getHeight() + (edge * 2);
+        }
 
         map.setPadding(
                 edge,
