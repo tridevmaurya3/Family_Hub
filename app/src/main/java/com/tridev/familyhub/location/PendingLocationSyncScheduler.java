@@ -47,7 +47,7 @@ public final class PendingLocationSyncScheduler {
         WorkManager.getInstance(context.getApplicationContext())
                 .enqueueUniqueWork(
                         UNIQUE_ONE_TIME_WORK,
-                        ExistingWorkPolicy.KEEP,
+                        ExistingWorkPolicy.APPEND_OR_REPLACE,
                         request
                 );
     }
