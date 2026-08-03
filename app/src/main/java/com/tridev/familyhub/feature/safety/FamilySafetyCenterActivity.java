@@ -23,6 +23,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.repository.FamilyLiveRepository;
 import com.tridev.familyhub.data.repository.SafePlaceAlertRepository;
+import com.tridev.familyhub.feature.automation.FamilyAutomationActivity;
 import com.tridev.familyhub.feature.familylive.FamilyLiveAvailability;
 import com.tridev.familyhub.feature.familylive.FamilyMapActivity;
 import com.tridev.familyhub.feature.familylive.SafePlaceAlertHistoryActivity;
@@ -39,8 +40,8 @@ import java.util.Map;
 
 /**
  * Unified Office 365-style hub for Family Live safety, SOS, Safe Places,
- * Journey History, Location Insights and confirmed alert history. No exact
- * location is copied or stored by this overview screen.
+ * Journey History, Location Insights, Smart Routines and confirmed alerts.
+ * No exact location is copied or stored by this overview screen.
  */
 public final class FamilySafetyCenterActivity extends AppCompatActivity {
 
@@ -116,7 +117,7 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
                 R.color.fh_secondary_container,
                 FamilyJourneyActivity.class
         );
-        addToolCard(
+        View reportsCard = addToolCard(
                 journeyCard == null ? alertCard : journeyCard,
                 R.string.family_reports_safety_title,
                 R.string.family_reports_safety_detail,
@@ -124,6 +125,17 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
                 R.color.fh_info,
                 R.color.fh_info_container,
                 FamilyLocationReportsActivity.class
+        );
+        addToolCard(
+                reportsCard == null
+                        ? (journeyCard == null ? alertCard : journeyCard)
+                        : reportsCard,
+                R.string.family_automation_safety_title,
+                R.string.family_automation_safety_detail,
+                R.drawable.ic_family_automation,
+                R.color.fh_warning,
+                R.color.fh_warning_container,
+                FamilyAutomationActivity.class
         );
 
         renderCounts();
