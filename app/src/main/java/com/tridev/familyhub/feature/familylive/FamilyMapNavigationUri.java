@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.familylive;
 
 import androidx.annotation.NonNull;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
@@ -106,8 +107,14 @@ public final class FamilyMapNavigationUri {
 
     @NonNull
     private static String encode(@NonNull String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8)
-                .replace("+", "%20");
+        try {
+            return URLEncoder.encode(
+                    value,
+                    StandardCharsets.UTF_8.name()
+            ).replace("+", "%20");
+        } catch (UnsupportedEncodingException impossible) {
+            throw new IllegalStateException("UTF-8 is unavailable", impossible);
+        }
     }
 
     private static void requireValid(double latitude, double longitude) {
