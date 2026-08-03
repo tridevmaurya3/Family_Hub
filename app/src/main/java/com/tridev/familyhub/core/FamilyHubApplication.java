@@ -3,11 +3,12 @@ package com.tridev.familyhub.core;
 import android.app.Application;
 import android.content.Context;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.FirebaseDatabase;
+import com.tridev.familyhub.location.LocationRecoveryNotifier;
+import com.tridev.familyhub.location.LocationServiceRecoveryScheduler;
 import com.tridev.familyhub.location.LocationSharingStore;
 import com.tridev.familyhub.location.PendingLocationSyncScheduler;
 
@@ -22,7 +23,7 @@ public class FamilyHubApplication extends Application {
         super.onCreate();
         applicationContext = getApplicationContext();
         enableFirebaseOfflinePersistence();
-        restoreFamilyLiveSyncSafetyNet();
+        restoreFamilyLiveSafetyNets();
     }
 
     @Nullable
@@ -39,13 +40,18 @@ public class FamilyHubApplication extends Application {
     }
 
     /**
-     * Re-registers durable sync after Android recreates the app process.
+     * Re-registers durable sync and service recovery after Android recreates
+     * the app process. Sharing is never enabled here unless the user had
+     * already enabled it earlier.
      */
-    private void restoreFamilyLiveSyncSafetyNet() {
+    private void restoreFamilyLiveSafetyNets() {
         if (!LocationSharingStore.isSharingEnabled(this)) {
             return;
         }
+
         PendingLocationSyncScheduler.enablePeriodicSync(this);
         PendingLocationSyncScheduler.schedule(this);
+        LocationServiceRecoveryScheduler.scheduleNow(this);
+        LocationRecoveryNotifier.showBatteryRestrictionIfNeeded(this);
     }
 }
