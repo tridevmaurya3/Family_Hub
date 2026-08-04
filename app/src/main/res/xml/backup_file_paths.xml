@@ -3,4 +3,7 @@
     <files-path
         name="restored_backup_files"
         path="restored_backup_files/" />
+    <files-path
+        name="document_captures"
+        path="document_captures/" />
 </paths>
