@@ -25,6 +25,7 @@ import com.tridev.familyhub.databinding.FragmentPropertyBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 
 import java.text.SimpleDateFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -46,8 +47,13 @@ public class PropertyFragment extends Fragment implements AddActionHost {
     private FragmentPropertyBinding binding;
     private PropertyRepository repository;
     private PropertyAdapter adapter;
+    private final List<PropertyWithOwner> loadedProperties = new ArrayList<>();
+    @NonNull
+    private String selectedFilter = "ALL";
     private final SimpleDateFormat dateFormat =
             new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+    private final NumberFormat currencyFormat =
+            NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
     @Nullable
     @Override
@@ -86,6 +92,24 @@ public class PropertyFragment extends Fragment implements AddActionHost {
         binding.propertyRecyclerView.setAdapter(adapter);
         binding.emptyAddPropertyButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
+        );
+        binding.propertyFilterGroup.setOnCheckedStateChangeListener(
+                (group, checkedIds) -> {
+                    int checkedId = checkedIds.isEmpty()
+                            ? R.id.property_filter_all
+                            : checkedIds.get(0);
+                    if (checkedId == R.id.property_filter_homes) {
+                        selectedFilter = "HOMES";
+                    } else if (checkedId == R.id.property_filter_land) {
+                        selectedFilter = "LAND";
+                    } else if (checkedId
+                            == R.id.property_filter_commercial) {
+                        selectedFilter = "COMMERCIAL";
+                    } else {
+                        selectedFilter = "ALL";
+                    }
+                    applyPropertyFilter();
+                }
         );
         binding.propertySearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
@@ -384,15 +408,101 @@ public class PropertyFragment extends Fragment implements AddActionHost {
             if (binding == null) {
                 return;
             }
-            adapter.submitList(properties);
-            boolean isEmpty = properties.isEmpty();
-            binding.propertyRecyclerView.setVisibility(
-                    isEmpty ? View.GONE : View.VISIBLE
-            );
-            binding.propertyEmptyState.setVisibility(
-                    isEmpty ? View.VISIBLE : View.GONE
-            );
+            loadedProperties.clear();
+            loadedProperties.addAll(properties);
+            updateSummary(properties);
+            applyPropertyFilter();
         });
+    }
+
+    private void updateSummary(@NonNull List<PropertyWithOwner> properties) {
+        int residentialCount = 0;
+        int landCount = 0;
+        double estimatedValue = 0;
+        for (PropertyWithOwner item : properties) {
+            String type = item.property.propertyType;
+            if (PropertyEntry.TYPE_HOUSE.equals(type)
+                    || PropertyEntry.TYPE_FLAT.equals(type)) {
+                residentialCount++;
+            }
+            if (PropertyEntry.TYPE_LAND.equals(type)
+                    || PropertyEntry.TYPE_AGRICULTURAL.equals(type)) {
+                landCount++;
+            }
+            estimatedValue += Math.max(0, item.property.estimatedValue);
+        }
+        binding.propertyTotalValue.setText(String.valueOf(properties.size()));
+        binding.propertyResidentialValue.setText(
+                String.valueOf(residentialCount)
+        );
+        binding.propertyLandValue.setText(String.valueOf(landCount));
+        binding.propertyTotalEstimateValue.setText(
+                formatCompactCurrency(estimatedValue)
+        );
+    }
+
+    private void applyPropertyFilter() {
+        if (binding == null) {
+            return;
+        }
+        List<PropertyWithOwner> filtered = new ArrayList<>();
+        for (PropertyWithOwner item : loadedProperties) {
+            String type = item.property.propertyType;
+            boolean include;
+            switch (selectedFilter) {
+                case "HOMES":
+                    include = PropertyEntry.TYPE_HOUSE.equals(type)
+                            || PropertyEntry.TYPE_FLAT.equals(type);
+                    break;
+                case "LAND":
+                    include = PropertyEntry.TYPE_LAND.equals(type)
+                            || PropertyEntry.TYPE_AGRICULTURAL.equals(type);
+                    break;
+                case "COMMERCIAL":
+                    include = PropertyEntry.TYPE_SHOP.equals(type)
+                            || PropertyEntry.TYPE_OFFICE.equals(type);
+                    break;
+                default:
+                    include = true;
+            }
+            if (include) {
+                filtered.add(item);
+            }
+        }
+        adapter.submitList(filtered);
+        boolean isEmpty = filtered.isEmpty();
+        binding.propertyRecyclerView.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.propertyEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
+    }
+
+    @NonNull
+    private String formatCompactCurrency(double value) {
+        if (value >= 10_000_000) {
+            return String.format(
+                    Locale.getDefault(),
+                    "₹%.1fCr",
+                    value / 10_000_000
+            );
+        }
+        if (value >= 100_000) {
+            return String.format(
+                    Locale.getDefault(),
+                    "₹%.1fL",
+                    value / 100_000
+            );
+        }
+        if (value >= 1_000) {
+            return String.format(
+                    Locale.getDefault(),
+                    "₹%.1fK",
+                    value / 1_000
+            );
+        }
+        return currencyFormat.format(value);
     }
 
     @NonNull
