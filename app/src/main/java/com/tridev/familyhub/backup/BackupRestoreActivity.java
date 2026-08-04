@@ -32,9 +32,7 @@ import com.tridev.familyhub.feature.main.MainActivity;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DateFormat;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -176,7 +174,8 @@ public final class BackupRestoreActivity extends AppCompatActivity {
     }
 
     private void renderReadiness() {
-        boolean hasFolder = preferences.destinationTreeUri() != null;
+        Uri destinationUri = preferences.destinationTreeUri();
+        boolean hasFolder = destinationUri != null;
         boolean hasPassword = preferences.hasPassword();
         if (hasFolder && hasPassword) {
             readinessText.setText(R.string.backup_status_ready);
@@ -192,9 +191,7 @@ public final class BackupRestoreActivity extends AppCompatActivity {
         destinationText.setText(hasFolder
                 ? getString(
                 R.string.backup_status_destination,
-                label.isEmpty()
-                        ? preferences.destinationTreeUri().toString()
-                        : label
+                label.isEmpty() ? destinationUri.toString() : label
         )
                 : getString(R.string.backup_destination_not_selected));
         backupNowButton.setEnabled(hasFolder && hasPassword);
@@ -487,7 +484,7 @@ public final class BackupRestoreActivity extends AppCompatActivity {
                 .setTitle(R.string.backup_restore_password_title)
                 .setView(content)
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.continue_text, null)
+                .setPositiveButton(R.string.backup_continue, null)
                 .create();
         dialog.setOnShowListener(ignored -> dialog.getButton(
                 AlertDialog.BUTTON_POSITIVE
@@ -558,7 +555,9 @@ public final class BackupRestoreActivity extends AppCompatActivity {
                 .setMessage(getString(
                         R.string.backup_restore_preview_message,
                         created,
-                        preview.appVersion.isEmpty() ? "Unknown" : preview.appVersion,
+                        preview.appVersion.isEmpty()
+                                ? "Unknown"
+                                : preview.appVersion,
                         preview.databaseVersion,
                         preview.totalRecords,
                         preview.attachmentCount,
@@ -687,7 +686,7 @@ public final class BackupRestoreActivity extends AppCompatActivity {
                 && message.contains("BACKUP_FROM_NEWER_APP")) {
             messageRes = R.string.backup_error_newer_app;
         } else if (message != null
-                && message.contains("vault")) {
+                && message.toLowerCase().contains("vault")) {
             messageRes = R.string.backup_error_vault;
         } else if (message != null
                 && message.contains("FOLDER")) {
