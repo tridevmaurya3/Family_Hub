@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
@@ -98,6 +99,12 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         refreshButton.setOnClickListener(v -> refreshOverview());
         overviewCard.setOnClickListener(v -> openMostRelevantTool());
 
+        bindSummaryCard(sosCountView, FamilySosActivity.class);
+        bindSummaryCard(attentionCountView, FamilyMapActivity.class);
+        bindSummaryCard(unreadCountView,
+                SafePlaceAlertHistoryActivity.class);
+        bindSummaryCard(memberCountView, FamilyMapActivity.class);
+
         findViewById(R.id.cardFamilySafetySos).setOnClickListener(v ->
                 open(FamilySosActivity.class));
         findViewById(R.id.cardFamilySafetyMap).setOnClickListener(v ->
@@ -140,6 +147,36 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
 
         renderCounts();
         renderOverview();
+    }
+
+    private void bindSummaryCard(
+            @NonNull TextView countView,
+            @NonNull Class<?> activityClass
+    ) {
+        MaterialCardView card = findParentCard(countView);
+        if (card == null) {
+            countView.setOnClickListener(v -> open(activityClass));
+            return;
+        }
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setForeground(ContextCompat.getDrawable(
+                this,
+                android.R.drawable.list_selector_background
+        ));
+        card.setOnClickListener(v -> open(activityClass));
+    }
+
+    @Nullable
+    private MaterialCardView findParentCard(@NonNull View child) {
+        ViewParent parent = child.getParent();
+        while (parent instanceof View) {
+            if (parent instanceof MaterialCardView) {
+                return (MaterialCardView) parent;
+            }
+            parent = parent.getParent();
+        }
+        return null;
     }
 
     /** Adds a compact safety tool card immediately after the supplied anchor. */
@@ -435,7 +472,9 @@ public final class FamilySafetyCenterActivity extends AppCompatActivity {
         }
         if (unreadAlertCount > 0) {
             open(SafePlaceAlertHistoryActivity.class);
+            return;
         }
+        open(FamilyMapActivity.class);
     }
 
     private void open(@NonNull Class<?> activityClass) {
