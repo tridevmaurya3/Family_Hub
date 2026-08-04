@@ -11,7 +11,9 @@ import androidx.room.PrimaryKey;
         indices = {
                 @Index("category"),
                 @Index("isPurchased"),
-                @Index("priority")
+                @Index("priority"),
+                @Index("cloudId"),
+                @Index("familyId")
         }
 )
 public class GroceryItem {
@@ -47,4 +49,20 @@ public class GroceryItem {
 
     /** Zero while the item is not purchased. */
     public long purchasedAt;
+
+    /** Stable Firebase key used by every device in the family. */
+    @NonNull
+    public String cloudId = "";
+
+    /** Family that owns the shared item; empty means local-only until linked. */
+    @NonNull
+    public String familyId = "";
+
+    public long updatedAt;
+
+    @NonNull
+    public String updatedByUid = "";
+
+    @NonNull
+    public String updatedByName = "";
 }

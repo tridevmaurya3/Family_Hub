@@ -33,22 +33,16 @@
                 android:orientation="horizontal"
                 android:padding="@dimen/space_10">
 
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                <ImageButton
+                    android:id="@+id/dashboard_menu_button"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
                     android:layout_marginEnd="@dimen/space_8"
-                    app:cardBackgroundColor="@color/fh_primary_container"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardElevation="0dp">
-
-                    <ImageView
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="@string/app_name"
-                        android:src="@drawable/ic_family_hub_mark"
-                        app:tint="@color/fh_primary" />
-                </com.google.android.material.card.MaterialCardView>
+                    android:background="@drawable/bg_icon_button"
+                    android:contentDescription="@string/dashboard_feature_menu_content_description"
+                    android:padding="11dp"
+                    android:src="@drawable/ic_menu_hamburger"
+                    app:tint="@color/fh_primary" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -85,6 +79,32 @@
                     android:padding="@dimen/space_12"
                     android:src="@drawable/ic_bell"
                     app:tint="@color/fh_on_surface" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/dashboard_profile_card"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="4dp"
+                    android:clickable="true"
+                    android:contentDescription="@string/dashboard_profile_content_description"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
+                    app:cardBackgroundColor="@color/fh_primary_container"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/fh_outline"
+                    app:strokeWidth="1dp">
+
+                    <ImageView
+                        android:id="@+id/dashboard_profile_avatar"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@string/dashboard_profile_content_description"
+                        android:padding="9dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_profile_person"
+                        app:tint="@color/fh_primary" />
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
