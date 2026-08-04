@@ -72,23 +72,18 @@ public class FamilyMemberAdapter extends RecyclerView.Adapter<FamilyMemberAdapte
             binding.memberContact.setText(contactSummary(member));
             binding.memberProfileSummary.setText(profileSummary(member));
             showPhoto(member);
-            boolean editable = !member.cloudManaged;
-            binding.editMemberButton.setVisibility(
-                    editable ? View.VISIBLE : View.GONE
+            binding.editMemberButton.setVisibility(View.VISIBLE);
+            binding.deleteMemberButton.setVisibility(View.VISIBLE);
+            binding.getRoot().setClickable(true);
+            binding.getRoot().setOnClickListener(
+                    v -> listener.onEdit(member)
             );
-            binding.deleteMemberButton.setVisibility(
-                    editable ? View.VISIBLE : View.GONE
+            binding.editMemberButton.setOnClickListener(
+                    v -> listener.onEdit(member)
             );
-            binding.getRoot().setClickable(editable);
-            binding.getRoot().setOnClickListener(editable
-                    ? v -> listener.onEdit(member)
-                    : null);
-            binding.editMemberButton.setOnClickListener(editable
-                    ? v -> listener.onEdit(member)
-                    : null);
-            binding.deleteMemberButton.setOnClickListener(editable
-                    ? v -> listener.onDelete(member)
-                    : null);
+            binding.deleteMemberButton.setOnClickListener(
+                    v -> listener.onDelete(member)
+            );
         }
 
         private void showPhoto(@NonNull FamilyMember member) {
