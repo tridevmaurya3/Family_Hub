@@ -1,6 +1,7 @@
 package com.tridev.familyhub.feature.passwordvault;
 
 import android.os.Bundle;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,7 +9,12 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -23,12 +29,34 @@ import com.tridev.familyhub.databinding.DialogPasswordViewBinding;
 import com.tridev.familyhub.databinding.FragmentPasswordVaultBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 /** Private AES-GCM encrypted credential vault backed by Android Keystore. */
 public class PasswordVaultFragment extends Fragment implements AddActionHost {
 
     private FragmentPasswordVaultBinding binding;
     private PasswordVaultRepository repository;
     private PasswordVaultAdapter adapter;
+    private final ExecutorService transferExecutor =
+            Executors.newSingleThreadExecutor();
+    private final ActivityResultLauncher<String[]> importCsvLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.OpenDocument(),
+                    this::handleImportFile
+            );
+    private final ActivityResultLauncher<String> exportCsvLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument("text/csv"),
+                    this::handleExportFile
+            );
 
     @Nullable
     @Override
@@ -73,6 +101,17 @@ public class PasswordVaultFragment extends Fragment implements AddActionHost {
         binding.passwordVaultRecyclerView.setAdapter(adapter);
         binding.emptyAddPasswordButton.setOnClickListener(
                 clickedView -> showEditor(null)
+        );
+        binding.importPasswordsButton.setOnClickListener(
+                clickedView -> importCsvLauncher.launch(new String[]{
+                        "text/csv",
+                        "text/comma-separated-values",
+                        "text/plain",
+                        "application/vnd.ms-excel"
+                })
+        );
+        binding.exportPasswordsButton.setOnClickListener(
+                clickedView -> confirmCsvExport()
         );
         binding.passwordVaultSearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
@@ -292,6 +331,239 @@ public class PasswordVaultFragment extends Fragment implements AddActionHost {
         });
     }
 
+    private void handleImportFile(@Nullable Uri uri) {
+        if (uri == null) {
+            return;
+        }
+        transferExecutor.execute(() -> {
+            try {
+                List<PasswordCsvTransfer.PlainCredential> imported =
+                        PasswordCsvTransfer.read(requireContext(), uri);
+                requireActivity().runOnUiThread(
+                        () -> previewImport(imported)
+                );
+            } catch (Exception error) {
+                showTransferError(R.string.vault_import_error, error);
+            }
+        });
+    }
+
+    private void previewImport(
+            @NonNull List<PasswordCsvTransfer.PlainCredential> imported
+    ) {
+        if (binding == null) {
+            return;
+        }
+        if (imported.isEmpty()) {
+            Snackbar.make(
+                    binding.getRoot(),
+                    R.string.vault_import_empty,
+                    Snackbar.LENGTH_LONG
+            ).show();
+            return;
+        }
+        repository.loadEntries("", existing -> {
+            if (binding == null) {
+                return;
+            }
+            Set<String> knownKeys = new HashSet<>();
+            for (PasswordEntry entry : existing) {
+                knownKeys.add(PasswordCsvTransfer.duplicateKey(
+                        entry.title,
+                        entry.website,
+                        VaultCipher.decrypt(entry.usernameEncrypted)
+                ));
+            }
+            List<PasswordCsvTransfer.PlainCredential> newCredentials =
+                    new ArrayList<>();
+            int duplicateCount = 0;
+            for (PasswordCsvTransfer.PlainCredential credential : imported) {
+                String key = PasswordCsvTransfer.duplicateKey(
+                        credential.title,
+                        credential.website,
+                        credential.username
+                );
+                if (knownKeys.add(key)) {
+                    newCredentials.add(credential);
+                } else {
+                    duplicateCount++;
+                }
+            }
+            showImportConfirmation(newCredentials, duplicateCount);
+        });
+    }
+
+    private void showImportConfirmation(
+            @NonNull List<PasswordCsvTransfer.PlainCredential> credentials,
+            int duplicateCount
+    ) {
+        if (credentials.isEmpty()) {
+            Snackbar.make(
+                    binding.getRoot(),
+                    getString(
+                            R.string.vault_import_success,
+                            0,
+                            duplicateCount
+                    ),
+                    Snackbar.LENGTH_LONG
+            ).show();
+            return;
+        }
+        int finalDuplicateCount = duplicateCount;
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.vault_import_preview_title)
+                .setMessage(getString(
+                        R.string.vault_import_preview_message,
+                        credentials.size(),
+                        duplicateCount
+                ))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(
+                        R.string.vault_import_confirm,
+                        (dialog, which) -> importCredentials(
+                                credentials,
+                                finalDuplicateCount
+                        )
+                )
+                .show();
+    }
+
+    private void importCredentials(
+            @NonNull List<PasswordCsvTransfer.PlainCredential> credentials,
+            int duplicateCount
+    ) {
+        transferExecutor.execute(() -> {
+            try {
+                List<PasswordEntry> encrypted = new ArrayList<>();
+                for (PasswordCsvTransfer.PlainCredential credential
+                        : credentials) {
+                    encrypted.add(PasswordCsvTransfer.encryptedEntry(
+                            credential
+                    ));
+                }
+                repository.importEntries(encrypted, () -> {
+                    if (binding == null) {
+                        return;
+                    }
+                    loadEntries(currentQuery());
+                    Snackbar.make(
+                            binding.getRoot(),
+                            getString(
+                                    R.string.vault_import_success,
+                                    encrypted.size(),
+                                    duplicateCount
+                            ),
+                            Snackbar.LENGTH_LONG
+                    ).show();
+                });
+            } catch (Exception error) {
+                showTransferError(R.string.vault_import_error, error);
+            }
+        });
+    }
+
+    private void confirmCsvExport() {
+        repository.loadEntries("", entries -> {
+            if (binding == null) {
+                return;
+            }
+            if (entries.isEmpty()) {
+                Snackbar.make(
+                        binding.getRoot(),
+                        R.string.vault_export_empty,
+                        Snackbar.LENGTH_LONG
+                ).show();
+                return;
+            }
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.vault_export_warning_title)
+                    .setMessage(R.string.vault_export_warning_message)
+                    .setNegativeButton(R.string.cancel, null)
+                    .setPositiveButton(
+                            R.string.vault_export_continue,
+                            (dialog, which) -> authenticateForExport()
+                    )
+                    .show();
+        });
+    }
+
+    private void authenticateForExport() {
+        int authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
+                | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+        BiometricPrompt.PromptInfo promptInfo =
+                new BiometricPrompt.PromptInfo.Builder()
+                        .setTitle(getString(
+                                R.string.vault_export_warning_title
+                        ))
+                        .setSubtitle(getString(
+                                R.string.vault_export_warning_message
+                        ))
+                        .setAllowedAuthenticators(authenticators)
+                        .build();
+        BiometricPrompt prompt = new BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(requireContext()),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            @NonNull BiometricPrompt.AuthenticationResult result
+                    ) {
+                        String date = new SimpleDateFormat(
+                                "yyyy-MM-dd",
+                                Locale.ROOT
+                        ).format(new Date());
+                        exportCsvLauncher.launch(
+                                "family-hub-passwords-" + date + ".csv"
+                        );
+                    }
+                }
+        );
+        prompt.authenticate(promptInfo);
+    }
+
+    private void handleExportFile(@Nullable Uri uri) {
+        if (uri == null) {
+            return;
+        }
+        repository.loadEntries("", entries -> transferExecutor.execute(() -> {
+            try {
+                PasswordCsvTransfer.write(requireContext(), uri, entries);
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> {
+                        if (binding != null) {
+                            Snackbar.make(
+                                    binding.getRoot(),
+                                    R.string.vault_export_success,
+                                    Snackbar.LENGTH_LONG
+                            ).show();
+                        }
+                    });
+                }
+            } catch (Exception error) {
+                showTransferError(R.string.vault_export_error, error);
+            }
+        }));
+    }
+
+    private void showTransferError(int messageResource, @NonNull Exception error) {
+        if (!isAdded()) {
+            return;
+        }
+        requireActivity().runOnUiThread(() -> {
+            if (binding == null) {
+                return;
+            }
+            String reason = error.getMessage() == null
+                    ? error.getClass().getSimpleName()
+                    : error.getMessage();
+            Snackbar.make(
+                    binding.getRoot(),
+                    getString(messageResource, reason),
+                    Snackbar.LENGTH_LONG
+            ).show();
+        });
+    }
+
     @NonNull
     private String currentQuery() {
         return textOf(binding.passwordVaultSearchInput);
@@ -309,5 +581,11 @@ public class PasswordVaultFragment extends Fragment implements AddActionHost {
         binding.passwordVaultRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();
+    }
+
+    @Override
+    public void onDestroy() {
+        transferExecutor.shutdownNow();
+        super.onDestroy();
     }
 }
