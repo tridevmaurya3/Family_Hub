@@ -24,6 +24,7 @@ import com.tridev.familyhub.feature.dashboard.DashboardFragment;
 import com.tridev.familyhub.feature.family.FamilyFragment;
 import com.tridev.familyhub.feature.finance.FinanceFragment;
 import com.tridev.familyhub.feature.more.MoreFragment;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
 
 /** Hosts the primary bottom navigation and feature screens. */
@@ -46,7 +47,8 @@ public class MainActivity extends AppCompatActivity {
         applySystemBarInsets();
 
         binding.fabAdd.setOnClickListener(v -> {
-            Fragment active = getSupportFragmentManager().findFragmentById(R.id.main_content);
+            Fragment active = getSupportFragmentManager()
+                    .findFragmentById(R.id.main_content);
             if (active instanceof AddActionHost) {
                 ((AddActionHost) active).onAddRequested();
             }
@@ -117,7 +119,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openTab(@IdRes int destinationId) {
-        binding.bottomNavigation.setSelectedItemId(destinationId);
+        if (binding != null) {
+            binding.bottomNavigation.setSelectedItemId(destinationId);
+        }
     }
 
     public void openFeature(@NonNull Fragment fragment) {
@@ -132,6 +136,16 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.main_content, fragment)
                 .addToBackStack(fragment.getClass().getSimpleName())
                 .commit();
+    }
+
+    /** Opens the categorized hamburger menu from the dashboard. */
+    public void showFeatureMenu() {
+        FamilyFeatureMenu.show(this);
+    }
+
+    /** Opens the account profile from the dashboard avatar or feature menu. */
+    public void openProfile() {
+        startActivity(new Intent(this, ProfileSettingsActivity.class));
     }
 
     private void showDestination(@IdRes int destinationId) {
@@ -180,7 +194,8 @@ public class MainActivity extends AppCompatActivity {
         redirectingToAuth = true;
 
         Intent intent = new Intent(this, AuthActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }
