@@ -7,7 +7,6 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewParent;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
@@ -25,25 +24,10 @@ import com.tridev.familyhub.BuildConfig;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
-import com.tridev.familyhub.feature.automation.FamilyAutomationActivity;
-import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
-import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
-import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
-import com.tridev.familyhub.feature.grocery.GroceryFragment;
-import com.tridev.familyhub.feature.health.HealthFragment;
-import com.tridev.familyhub.feature.insights.FamilyLocationReportsActivity;
-import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
-import com.tridev.familyhub.feature.main.MainActivity;
-import com.tridev.familyhub.feature.notes.NotesFragment;
-import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
-import com.tridev.familyhub.feature.planner.PlannerFragment;
-import com.tridev.familyhub.feature.property.PropertyFragment;
-import com.tridev.familyhub.feature.safety.FamilySafetyCenterActivity;
-import com.tridev.familyhub.feature.sos.FamilySosActivity;
-import com.tridev.familyhub.feature.vehicle.VehicleFragment;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
-/** Fluent module hub for secondary features and essential settings. */
+/** Compact account, settings, backup and privacy page. */
 public class MoreFragment extends Fragment {
 
     private FragmentMoreBinding binding;
@@ -66,53 +50,14 @@ public class MoreFragment extends Fragment {
     ) {
         super.onViewCreated(view, savedInstanceState);
 
-        applyModuleCardPalette();
-        promoteSafePlacesEntry();
-        promoteFamilySosEntry();
-        promoteJourneyHistoryEntry();
-        promoteLocationReportsEntry();
-        promoteFamilyAutomationEntry();
-        promoteFamilySafetyCenterEntry();
-
-        binding.cardDocuments.setOnClickListener(
-                clickedView -> openFeature(new DocumentsFragment())
-        );
-        binding.cardPasswordVault.setOnClickListener(
-                clickedView -> openFeature(new PasswordVaultFragment())
-        );
-        binding.cardFamilyLive.setOnClickListener(
-                clickedView -> openFeature(new FamilyLiveFragment())
-        );
-        binding.buttonSafePlaces.setOnClickListener(clickedView ->
-                startActivity(new Intent(
-                        requireContext(),
-                        SafePlacesActivity.class
-                ))
-        );
-        binding.cardHealth.setOnClickListener(
-                clickedView -> openFeature(new HealthFragment())
-        );
-        binding.cardVehicle.setOnClickListener(
-                clickedView -> openFeature(new VehicleFragment())
-        );
-        binding.cardProperty.setOnClickListener(
-                clickedView -> openFeature(new PropertyFragment())
-        );
-        binding.cardGrocery.setOnClickListener(
-                clickedView -> openFeature(new GroceryFragment())
-        );
-        binding.cardNotes.setOnClickListener(
-                clickedView -> openFeature(new NotesFragment())
-        );
-        binding.cardPlanner.setOnClickListener(
-                clickedView -> openFeature(new PlannerFragment())
-        );
+        hideModuleCards();
+        addProfileEntry();
+        styleSettingsCards();
 
         boolean darkThemeEnabled =
                 (getResources().getConfiguration().uiMode
                         & Configuration.UI_MODE_NIGHT_MASK)
                         == Configuration.UI_MODE_NIGHT_YES;
-
         binding.switchDarkTheme.setChecked(darkThemeEnabled);
         binding.switchDarkTheme.setOnCheckedChangeListener(
                 (button, enabled) -> AppCompatDelegate.setDefaultNightMode(
@@ -144,214 +89,74 @@ public class MoreFragment extends Fragment {
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
     }
 
-    /** Keeps the unified Family Safety Centre first on the More page. */
-    private void promoteFamilySafetyCenterEntry() {
-        addPromotedButton(
-                76,
-                R.string.family_safety_more_button,
-                R.string.family_safety_more_description,
-                R.drawable.ic_safe_place_shield,
-                R.color.fh_primary,
-                R.color.fh_primary_container,
-                FamilySafetyCenterActivity.class
-        );
+    /** Removes feature duplicates; modules are available from the hamburger. */
+    private void hideModuleCards() {
+        binding.cardVehicle.setVisibility(View.GONE);
+        binding.cardProperty.setVisibility(View.GONE);
+        binding.cardPlanner.setVisibility(View.GONE);
+        binding.cardNotes.setVisibility(View.GONE);
+        binding.cardDocuments.setVisibility(View.GONE);
+        binding.cardPasswordVault.setVisibility(View.GONE);
+        binding.cardFamilyLive.setVisibility(View.GONE);
+        binding.cardHealth.setVisibility(View.GONE);
+        binding.cardGrocery.setVisibility(View.GONE);
+        binding.buttonSafePlaces.setVisibility(View.GONE);
     }
 
-    /** Adds Phase 6 configurable sharing and routine automation. */
-    private void promoteFamilyAutomationEntry() {
-        addPromotedButton(
-                72,
-                R.string.family_automation_more_button,
-                R.string.family_automation_more_description,
-                R.drawable.ic_family_automation,
-                R.color.fh_warning,
-                R.color.fh_warning_container,
-                FamilyAutomationActivity.class
-        );
-    }
-
-    /** Adds charts and private exports directly below the Safety Centre. */
-    private void promoteLocationReportsEntry() {
-        addPromotedButton(
-                72,
-                R.string.family_reports_more_button,
-                R.string.family_reports_more_description,
-                R.drawable.ic_family_map_route,
-                R.color.fh_info,
-                R.color.fh_info_container,
-                FamilyLocationReportsActivity.class
-        );
-    }
-
-    /** Keeps Journey History close to the core family-safety tools. */
-    private void promoteJourneyHistoryEntry() {
-        addPromotedButton(
-                72,
-                R.string.family_journey_more_button,
-                R.string.family_journey_more_description,
-                R.drawable.ic_family_map_route,
-                R.color.fh_secondary,
-                R.color.fh_secondary_container,
-                FamilyJourneyActivity.class
-        );
-    }
-
-    /** Keeps Emergency SOS visible as a direct safety action on More. */
-    private void promoteFamilySosEntry() {
-        addPromotedButton(
-                72,
-                R.string.family_sos_more_button,
-                R.string.family_sos_more_description,
-                R.drawable.ic_family_sos,
-                R.color.fh_error,
-                R.color.fh_error_container,
-                FamilySosActivity.class
-        );
-    }
-
-    private void addPromotedButton(
-            int heightDp,
-            int titleRes,
-            int detailRes,
-            int iconRes,
-            int accentColorRes,
-            int containerColorRes,
-            @NonNull Class<?> activityClass
-    ) {
+    /** Adds a clear account entry directly below the More page description. */
+    private void addProfileEntry() {
         View rootChild = binding.getRoot().getChildAt(0);
         if (!(rootChild instanceof LinearLayout)) {
             return;
         }
-
         LinearLayout content = (LinearLayout) rootChild;
-        MaterialButton button = new MaterialButton(
+        MaterialButton profile = new MaterialButton(
                 requireContext(),
                 null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
         );
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(heightDp)
+                dp(68)
         );
-        params.topMargin = dp(12);
+        params.topMargin = dp(14);
         params.bottomMargin = dp(4);
-        button.setLayoutParams(params);
-        button.setMinHeight(dp(heightDp));
-        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-        button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-        button.setPadding(dp(18), 0, dp(18), 0);
-        button.setText(getString(titleRes) + "\n" + getString(detailRes));
-        button.setTextSize(14F);
-        button.setAllCaps(false);
-        button.setMaxLines(2);
-        button.setIconResource(iconRes);
-        button.setIconTintResource(accentColorRes);
-        button.setIconSize(dp(24));
-        button.setIconPadding(dp(12));
-        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-        button.setTextColor(ContextCompat.getColor(
+        profile.setLayoutParams(params);
+        profile.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        profile.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        profile.setPadding(dp(18), 0, dp(18), 0);
+        profile.setText(getString(R.string.more_profile_title)
+                + "\n" + getString(R.string.more_profile_detail));
+        profile.setTextSize(14F);
+        profile.setAllCaps(false);
+        profile.setMaxLines(2);
+        profile.setIconResource(R.drawable.ic_profile_person);
+        profile.setIconTintResource(R.color.fh_primary);
+        profile.setIconSize(dp(24));
+        profile.setIconPadding(dp(12));
+        profile.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        profile.setTextColor(ContextCompat.getColor(
                 requireContext(),
-                accentColorRes
+                R.color.fh_primary
         ));
-        button.setBackgroundTintList(ContextCompat.getColorStateList(
+        profile.setBackgroundTintList(ContextCompat.getColorStateList(
                 requireContext(),
-                containerColorRes
+                R.color.fh_primary_container
         ));
-        button.setStrokeColor(ContextCompat.getColorStateList(
+        profile.setStrokeColor(ContextCompat.getColorStateList(
                 requireContext(),
-                accentColorRes
+                R.color.fh_primary
         ));
-        button.setStrokeWidth(dp(1));
-        button.setCornerRadius(dp(20));
-        button.setOnClickListener(clicked -> startActivity(new Intent(
+        profile.setStrokeWidth(dp(1));
+        profile.setCornerRadius(dp(20));
+        profile.setOnClickListener(v -> startActivity(new Intent(
                 requireContext(),
-                activityClass
+                ProfileSettingsActivity.class
         )));
-
-        int insertionIndex = Math.min(2, content.getChildCount());
-        content.addView(button, insertionIndex);
+        content.addView(profile, Math.min(2, content.getChildCount()));
     }
 
-    /**
-     * Keeps Safe Places visible without requiring the user to discover a small
-     * button buried below the Family Live card.
-     */
-    private void promoteSafePlacesEntry() {
-        MaterialButton button = binding.buttonSafePlaces;
-        ViewParent currentParent = button.getParent();
-        if (currentParent instanceof ViewGroup) {
-            ((ViewGroup) currentParent).removeView(button);
-        }
-
-        View rootChild = binding.getRoot().getChildAt(0);
-        if (!(rootChild instanceof LinearLayout)) {
-            return;
-        }
-
-        LinearLayout content = (LinearLayout) rootChild;
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(60)
-        );
-        params.topMargin = dp(12);
-        params.bottomMargin = dp(4);
-        button.setLayoutParams(params);
-        button.setMinHeight(dp(60));
-        button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-        button.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-        button.setPadding(dp(18), 0, dp(18), 0);
-        button.setIconResource(R.drawable.ic_family_map_recenter);
-        button.setIconTintResource(R.color.fh_module_family);
-        button.setIconSize(dp(22));
-        button.setIconPadding(dp(12));
-        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
-        button.setTextColor(ContextCompat.getColor(
-                requireContext(),
-                R.color.fh_module_family
-        ));
-        button.setBackgroundTintList(ContextCompat.getColorStateList(
-                requireContext(),
-                R.color.fh_module_family_container
-        ));
-        button.setStrokeColor(ContextCompat.getColorStateList(
-                requireContext(),
-                R.color.fh_module_family
-        ));
-        button.setStrokeWidth(dp(1));
-        button.setVisibility(View.VISIBLE);
-
-        int insertionIndex = Math.min(2, content.getChildCount());
-        content.addView(button, insertionIndex);
-    }
-
-    private void applyModuleCardPalette() {
-        styleCard(binding.cardVehicle,
-                R.color.fh_module_vehicle_container,
-                R.color.fh_module_vehicle);
-        styleCard(binding.cardProperty,
-                R.color.fh_module_property_container,
-                R.color.fh_module_property);
-        styleCard(binding.cardPlanner,
-                R.color.fh_module_planner_container,
-                R.color.fh_module_planner);
-        styleCard(binding.cardNotes,
-                R.color.fh_module_notes_container,
-                R.color.fh_module_notes);
-        styleCard(binding.cardDocuments,
-                R.color.fh_module_documents_container,
-                R.color.fh_module_documents);
-        styleCard(binding.cardPasswordVault,
-                R.color.fh_module_vault_container,
-                R.color.fh_module_vault);
-        styleCard(binding.cardFamilyLive,
-                R.color.fh_module_family_container,
-                R.color.fh_module_family);
-        styleCard(binding.cardHealth,
-                R.color.fh_module_health_container,
-                R.color.fh_module_health);
-        styleCard(binding.cardGrocery,
-                R.color.fh_module_grocery_container,
-                R.color.fh_module_grocery);
+    private void styleSettingsCards() {
         styleCard(binding.cardBackupRestore,
                 R.color.fh_primary_container,
                 R.color.fh_primary);
@@ -376,12 +181,6 @@ public class MoreFragment extends Fragment {
         card.setStrokeWidth(getResources().getDimensionPixelSize(
                 R.dimen.border_width
         ));
-    }
-
-    private void openFeature(@NonNull Fragment fragment) {
-        if (requireActivity() instanceof MainActivity) {
-            ((MainActivity) requireActivity()).openFeature(fragment);
-        }
     }
 
     private void showBackupInformation() {
@@ -417,7 +216,6 @@ public class MoreFragment extends Fragment {
 
     private void logout() {
         FirebaseAuth.getInstance().signOut();
-
         Intent intent = new Intent(requireContext(), AuthActivity.class);
         intent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
