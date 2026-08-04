@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="documents_vault_title">Documents Vault</string>
+    <string name="documents_vault_subtitle">Private family documents, expiry tracking and secure sharing</string>
+    <string name="documents_vault_lock">Protect with device lock</string>
+    <string name="documents_vault_lock_detail">Require fingerprint, face or screen lock before document details and files are shown.</string>
+    <string name="documents_vault_locked_title">Documents Vault is locked</string>
+    <string name="documents_vault_locked_detail">Unlock to view, search, open or share private family documents.</string>
+    <string name="documents_vault_unlock">Unlock vault</string>
+    <string name="documents_vault_lock_now">Lock now</string>
+    <string name="documents_vault_auth_title">Unlock Documents Vault</string>
+    <string name="documents_vault_auth_subtitle">Confirm your identity to access private documents</string>
+    <string name="documents_vault_auth_failed">Vault could not be unlocked.</string>
+    <string name="documents_vault_auth_unavailable">Set a screen lock or biometric authentication on this device first.</string>
+
+    <string name="documents_vault_total">Total</string>
+    <string name="documents_vault_expiring">Expiring</string>
+    <string name="documents_vault_expired">Expired</string>
+    <string name="documents_vault_favorites">Favorites</string>
+    <string name="documents_vault_filter_all">All</string>
+    <string name="documents_vault_filter_expiring">Expiring</string>
+    <string name="documents_vault_filter_expired">Expired</string>
+    <string name="documents_vault_filter_favorites">Favorites</string>
+    <string name="documents_vault_all_categories">All categories</string>
+    <string name="documents_vault_category_filter">Category</string>
+    <string name="documents_vault_no_results_title">No matching documents</string>
+    <string name="documents_vault_no_results_detail">Try another search, category or status filter.</string>
+
+    <string name="documents_vault_expiry_alerts">Expiry alerts</string>
+    <string name="documents_vault_expiry_alerts_detail">Notify before important documents expire.</string>
+    <string name="documents_vault_remind_before">Remind before</string>
+    <string name="documents_vault_days_7">7 days</string>
+    <string name="documents_vault_days_15">15 days</string>
+    <string name="documents_vault_days_30">30 days</string>
+    <string name="documents_vault_days_60">60 days</string>
+    <string name="documents_vault_settings_saved">Documents Vault settings saved</string>
+
+    <string name="documents_vault_edit">Edit</string>
+    <string name="documents_vault_share">Share</string>
+    <string name="documents_vault_favorite">Favorite</string>
+    <string name="documents_vault_unfavorite">Remove favorite</string>
+    <string name="documents_vault_replace_file">Replace file</string>
+    <string name="documents_vault_save_changes">Save changes</string>
+    <string name="documents_vault_add_file">Choose file &amp; save</string>
+    <string name="documents_vault_file_selected">File selected</string>
+    <string name="documents_vault_file_required">Choose a PDF or image.</string>
+    <string name="documents_vault_duplicate_file">This file is already saved in Documents Vault.</string>
+    <string name="documents_vault_updated">Document updated</string>
+    <string name="documents_vault_replaced">Document file replaced</string>
+    <string name="documents_vault_shared">Document ready to share</string>
+    <string name="documents_vault_share_title">Share document</string>
+    <string name="documents_vault_missing_file">The saved file is unavailable. Edit the document and replace its file.</string>
+
+    <string name="documents_vault_issue_date">Issue date</string>
+    <string name="documents_vault_expiry_date">Expiry date</string>
+    <string name="documents_vault_no_expiry">No expiry</string>
+    <string name="documents_vault_clear_expiry">Clear expiry</string>
+    <string name="documents_vault_optional">Optional</string>
+    <string name="documents_vault_expiry_required_future">Expiry date cannot be earlier than the issue date.</string>
+    <string name="documents_vault_created_on">Added %1$s</string>
+    <string name="documents_vault_valid_until">Valid until %1$s</string>
+    <string name="documents_vault_expires_today">Expires today</string>
+    <string name="documents_vault_expires_in">Expires in %1$d days</string>
+    <string name="documents_vault_expired_on">Expired %1$s</string>
+    <string name="documents_vault_status_valid">Valid</string>
+    <string name="documents_vault_status_expiring">Expiring soon</string>
+    <string name="documents_vault_status_expired">Expired</string>
+    <string name="documents_vault_status_no_expiry">No expiry</string>
+
+    <string name="documents_vault_editor_add_title">Add secure document</string>
+    <string name="documents_vault_editor_edit_title">Edit document</string>
+    <string name="documents_vault_editor_detail">Save a PDF or image with category and expiry information.</string>
+    <string name="documents_vault_picker_note">PDF and image files are supported. Android keeps access private to Family Hub, and encrypted backup includes the selected file.</string>
+
+    <string name="documents_vault_notification_channel">Document expiry alerts</string>
+    <string name="documents_vault_notification_channel_detail">Alerts for family documents that are expiring or have expired</string>
+    <string name="documents_vault_notification_expiring_title">Document expiring soon</string>
+    <string name="documents_vault_notification_expiring_message">%1$s expires in %2$d days</string>
+    <string name="documents_vault_notification_today_message">%1$s expires today</string>
+    <string name="documents_vault_notification_expired_title">Document expired</string>
+    <string name="documents_vault_notification_expired_message">%1$s has expired</string>
+
+    <string-array name="documents_vault_category_labels">
+        <item>Identity</item>
+        <item>Bank &amp; Finance</item>
+        <item>Insurance</item>
+        <item>Health</item>
+        <item>Education</item>
+        <item>Vehicle</item>
+        <item>Property</item>
+        <item>Employment</item>
+        <item>Travel</item>
+        <item>Other</item>
+    </string-array>
+
+    <string-array name="documents_vault_reminder_labels">
+        <item>@string/documents_vault_days_7</item>
+        <item>@string/documents_vault_days_15</item>
+        <item>@string/documents_vault_days_30</item>
+        <item>@string/documents_vault_days_60</item>
+    </string-array>
+
+</resources>
