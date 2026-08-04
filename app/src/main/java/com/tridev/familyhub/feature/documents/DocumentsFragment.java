@@ -877,11 +877,12 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
 
             @Override
             public void onError(@NonNull Exception error) {
-                if (isNew) {
+                if (isNew || fileReplaced) {
                     DocumentCaptureStorage.deleteIfOwned(
                             requireContext(),
                             document.contentUri
                     );
+                    releasePermission(document.contentUri);
                 }
                 showMessage(R.string.backup_error_generic);
             }
@@ -898,12 +899,12 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                                     ? "*/*"
                                     : document.mimeType
                     )
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    .setClipData(ClipData.newUri(
-                            requireContext().getContentResolver(),
-                            document.title,
-                            uri
-                    ));
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setClipData(ClipData.newUri(
+                    requireContext().getContentResolver(),
+                    document.title,
+                    uri
+            ));
             startActivity(intent);
         } catch (Exception exception) {
             showMessage(R.string.documents_vault_missing_file);
@@ -919,12 +920,12 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                             : document.mimeType)
                     .putExtra(Intent.EXTRA_STREAM, uri)
                     .putExtra(Intent.EXTRA_SUBJECT, document.title)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    .setClipData(ClipData.newUri(
-                            requireContext().getContentResolver(),
-                            document.title,
-                            uri
-                    ));
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            share.setClipData(ClipData.newUri(
+                    requireContext().getContentResolver(),
+                    document.title,
+                    uri
+            ));
             startActivity(Intent.createChooser(
                     share,
                     getString(R.string.documents_vault_share_title)
@@ -1061,6 +1062,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     public void onDestroyView() {
         dismissEditor();
         authenticationSuccessAction = null;
+        DocumentCaptureStorage.delete(captureTarget);
+        captureTarget = null;
+        pendingDocument = null;
         if (binding != null) {
             binding.documentRecyclerView.setAdapter(null);
         }
