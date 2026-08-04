@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -773,7 +774,9 @@ public final class BackupArchiveManager {
                 SAFETY_PREFERENCES,
                 Context.MODE_PRIVATE
         ).edit().clear();
-        for (String key : source.keySet()) {
+        Iterator<String> sourceKeys = source.keys();
+        while (sourceKeys.hasNext()) {
+            String key = sourceKeys.next();
             Object value = source.get(key);
             if (value instanceof Boolean) {
                 editor.putBoolean(key, (Boolean) value);
@@ -1195,7 +1198,9 @@ public final class BackupArchiveManager {
             Map<String, Integer> counts = new LinkedHashMap<>();
             JSONObject countObject = manifest.optJSONObject("tableCounts");
             if (countObject != null) {
-                for (String key : countObject.keySet()) {
+                Iterator<String> countKeys = countObject.keys();
+                while (countKeys.hasNext()) {
+                    String key = countKeys.next();
                     if (TABLES.contains(key)) {
                         counts.put(
                                 key,
