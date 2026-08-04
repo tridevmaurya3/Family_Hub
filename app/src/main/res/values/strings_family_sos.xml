@@ -33,7 +33,11 @@
     <string name="family_sos_error_family">An active family membership is required.</string>
     <string name="family_sos_error_existing">You already have an active SOS. Cancel it before sending another.</string>
     <string name="family_sos_error_wait">Please wait a few seconds before trying again.</string>
-    <string name="family_sos_error_generic">Family SOS could not be completed. Check internet and try again.</string>
+    <string name="family_sos_error_permission">Firebase denied the SOS request. Deploy the latest database rules and confirm this account is an active family member.</string>
+    <string name="family_sos_error_connection">Family SOS could not reach Firebase. Mobile data or Wi-Fi may be connected without internet access. Try Refresh and send again.</string>
+    <string name="family_sos_error_membership">Your family membership record could not be verified. Open Family settings and confirm the account is Active.</string>
+    <string name="family_sos_error_data">The SOS alert data was rejected. Update the app on all phones and try again.</string>
+    <string name="family_sos_error_generic">Family SOS could not be completed. Refresh this page and try again.</string>
     <string name="family_sos_channel_name">Family SOS alerts</string>
     <string name="family_sos_channel_description">Urgent alerts and family responses while Family Hub is active.</string>
     <string name="family_sos_notification_title">Family SOS alert</string>
