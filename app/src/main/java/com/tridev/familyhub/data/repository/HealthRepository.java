@@ -12,7 +12,9 @@ import com.tridev.familyhub.data.local.dao.HealthRecordDao;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.HealthRecordWithMember;
+import com.tridev.familyhub.data.model.FamilyRoles;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,6 +39,8 @@ public class HealthRepository {
 
     private final HealthRecordDao healthRecordDao;
     private final FamilyMemberDao familyMemberDao;
+    private final FamilyAccountRepository familyAccountRepository =
+            new FamilyAccountRepository();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public HealthRepository(@NonNull Context context) {
@@ -59,10 +63,151 @@ public class HealthRepository {
     }
 
     public void loadMembers(@NonNull MembersCallback callback) {
+        familyAccountRepository.loadSession(
+                new FamilyAccountRepository.ResultCallback<
+                        FamilyAccountRepository.SessionState>() {
+                    @Override
+                    public void onSuccess(
+                            FamilyAccountRepository.SessionState session
+                    ) {
+                        if (session == null
+                                || !session.isActive()
+                                || session.familyId == null) {
+                            loadLocalMembers(callback);
+                            return;
+                        }
+                        familyAccountRepository.loadAuthorisedMembers(
+                                new FamilyAccountRepository.ResultCallback<
+                                        List<FamilyAccountRepository.Member>>() {
+                                    @Override
+                                    public void onSuccess(
+                                            List<FamilyAccountRepository.Member>
+                                                    cloudMembers
+                                    ) {
+                                        syncAuthorisedMembers(
+                                                session.familyId,
+                                                cloudMembers == null
+                                                        ? new ArrayList<>()
+                                                        : cloudMembers,
+                                                callback
+                                        );
+                                    }
+
+                                    @Override
+                                    public void onError(
+                                            @NonNull Exception error
+                                    ) {
+                                        loadLocalMembers(callback);
+                                    }
+                                }
+                        );
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception error) {
+                        loadLocalMembers(callback);
+                    }
+                }
+        );
+    }
+
+    private void syncAuthorisedMembers(
+            @NonNull String familyId,
+            @NonNull List<FamilyAccountRepository.Member> cloudMembers,
+            @NonNull MembersCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<FamilyMember> localMembers = familyMemberDao.getAll();
+            long now = System.currentTimeMillis();
+
+            for (FamilyAccountRepository.Member cloud : cloudMembers) {
+                FamilyMember matched = null;
+                String cloudEmail = cloud.email.trim();
+
+                for (FamilyMember local : localMembers) {
+                    if ((!cloudEmail.isEmpty()
+                            && cloudEmail.equalsIgnoreCase(
+                                    local.email.trim()
+                            ))
+                            || ("account_" + cloud.uid).equals(
+                                    local.cloudProfileId
+                            )) {
+                        matched = local;
+                        break;
+                    }
+                }
+
+                if (matched != null) {
+                    continue;
+                }
+
+                FamilyMember linked = new FamilyMember();
+                linked.name = cloud.displayName.trim().isEmpty()
+                        ? cloud.email
+                        : cloud.displayName;
+                if (linked.name.trim().isEmpty()) {
+                    linked.name = "Family member";
+                }
+                linked.email = cloud.email;
+                linked.relation = roleLabel(cloud.role);
+                linked.familyRole = familyRole(cloud.role);
+                linked.isGuardian =
+                        FamilyRoles.OWNER_ADMIN.equals(cloud.role)
+                                || FamilyRoles.GUARDIAN.equals(cloud.role);
+                linked.cloudProfileId = "account_" + cloud.uid;
+                linked.ownerFamilyId = familyId;
+                linked.createdAt = now;
+                linked.updatedAt = now;
+                linked.syncPending = false;
+                linked.id = familyMemberDao.insert(linked);
+                localMembers.add(linked);
+            }
+
+            List<FamilyMember> available =
+                    familyMemberDao.getForFamily(familyId);
+            mainHandler.post(() ->
+                    callback.onMembersLoaded(available));
+        });
+    }
+
+    private void loadLocalMembers(@NonNull MembersCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             List<FamilyMember> members = familyMemberDao.getAll();
-            mainHandler.post(() -> callback.onMembersLoaded(members));
+            mainHandler.post(() ->
+                    callback.onMembersLoaded(members));
         });
+    }
+
+    @NonNull
+    private String roleLabel(@NonNull String role) {
+        if (FamilyRoles.OWNER_ADMIN.equals(role)) {
+            return "Owner/Admin";
+        }
+        if (FamilyRoles.GUARDIAN.equals(role)) {
+            return "Guardian";
+        }
+        if (FamilyRoles.CHILD.equals(role)) {
+            return "Child";
+        }
+        if (FamilyRoles.SENIOR_CITIZEN.equals(role)) {
+            return "Senior citizen";
+        }
+        if (FamilyRoles.GUEST.equals(role)) {
+            return "Guest";
+        }
+        return "Adult member";
+    }
+
+    @NonNull
+    private String familyRole(@NonNull String role) {
+        if (FamilyRoles.OWNER_ADMIN.equals(role)
+                || FamilyRoles.GUARDIAN.equals(role)) {
+            return FamilyMember.ROLE_GUARDIAN;
+        }
+        if (FamilyRoles.CHILD.equals(role)) {
+            return FamilyMember.ROLE_CHILD;
+        }
+        return FamilyMember.ROLE_ADULT;
     }
 
     public void save(
