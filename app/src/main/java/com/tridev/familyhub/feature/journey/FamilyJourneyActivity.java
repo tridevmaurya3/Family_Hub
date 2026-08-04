@@ -2,10 +2,8 @@ package com.tridev.familyhub.feature.journey;
 
 import android.app.DatePickerDialog;
 import android.content.Intent;
-import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -26,7 +24,6 @@ import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.tridev.familyhub.R;
 
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -68,6 +65,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
     private long selectedDateStart = FamilyJourneyPolicy.startOfDay(
             System.currentTimeMillis()
     );
+    private boolean overviewLoading;
 
     @Override
     protected void onCreate(@Nullable Bundle state) {
@@ -90,6 +88,15 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
         timeline = findViewById(R.id.listJourneyTimeline);
         deleteActions = findViewById(R.id.layoutJourneyDeleteActions);
 
+        memberInput.setThreshold(0);
+        memberInput.setInputType(0);
+        memberInput.setOnClickListener(v -> showMemberDropdown());
+        memberInput.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                showMemberDropdown();
+            }
+        });
+
         findViewById(R.id.buttonJourneyBack).setOnClickListener(v -> finish());
         findViewById(R.id.buttonJourneyRefresh).setOnClickListener(v ->
                 loadOverview(true));
@@ -102,7 +109,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
         });
         findViewById(R.id.buttonJourneyCustomDate).setOnClickListener(v ->
                 showDatePicker());
-        recordingCard.setOnClickListener(v -> showPrivacyDialog());
+        recordingCard.setOnClickListener(v -> openJourneySettings());
         openMapButton.setOnClickListener(v -> openRouteMap());
         findViewById(R.id.buttonJourneyDeleteDay).setOnClickListener(v ->
                 confirmDeleteDay());
@@ -117,13 +124,41 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        if (session != null) {
-            loadOverview(false);
+        if (session != null && !overviewLoading) {
+            loadOverview(true);
         }
     }
 
+    private void openJourneySettings() {
+        if (ownSettings == null || session == null) {
+            Toast.makeText(
+                    this,
+                    R.string.family_journey_settings_loading,
+                    Toast.LENGTH_LONG
+            ).show();
+            loadOverview(true);
+            return;
+        }
+        showPrivacyDialog();
+    }
+
+    private void showMemberDropdown() {
+        if (accessibleMembers.isEmpty()) {
+            if (!overviewLoading) {
+                loadOverview(true);
+            }
+            return;
+        }
+        memberInput.showDropDown();
+    }
+
     private void loadOverview(boolean preserveSelection) {
+        if (overviewLoading) {
+            return;
+        }
+        overviewLoading = true;
         progress.setVisibility(View.VISIBLE);
+        emptyView.setVisibility(View.GONE);
         repository.loadOverview(new FamilyJourneyRepository.OverviewCallback() {
             @Override
             public void onLoaded(
@@ -132,19 +167,27 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
                     @NonNull List<FamilyJourneyRepository.Member> loadedAccessible,
                     @NonNull FamilyJourneyRepository.PrivacySettings settings
             ) {
+                overviewLoading = false;
                 session = loadedSession;
                 allMembers = new ArrayList<>(loadedAll);
                 accessibleMembers = new ArrayList<>(loadedAccessible);
                 ownSettings = settings;
+                memberInput.setEnabled(true);
+                recordingCard.setEnabled(true);
                 renderRecordingState();
                 bindMemberDropdown(preserveSelection);
             }
 
             @Override
             public void onError(@NonNull String reason) {
+                overviewLoading = false;
                 progress.setVisibility(View.GONE);
+                currentSummary = null;
+                accessibleMembers.clear();
+                memberInput.setText("");
                 emptyView.setVisibility(View.VISIBLE);
                 emptyView.setText(R.string.family_journey_error);
+                resetSummary();
             }
         });
     }
@@ -157,11 +200,15 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
                 new ArrayAdapter<>(
                         this,
                         android.R.layout.simple_dropdown_item_1line,
-                        accessibleMembers
+                        new ArrayList<>(accessibleMembers)
                 );
         memberInput.setAdapter(adapter);
         memberInput.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= accessibleMembers.size()) {
+                return;
+            }
             selectedMember = accessibleMembers.get(position);
+            memberInput.setText(selectedMember.displayName, false);
             loadSelectedDay();
         });
 
@@ -186,6 +233,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
             return;
         }
         memberInput.setText(selectedMember.displayName, false);
+        openMapButton.setEnabled(true);
         loadSelectedDay();
     }
 
@@ -230,7 +278,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
         progress.setVisibility(View.VISIBLE);
         emptyView.setVisibility(View.GONE);
         timeline.removeAllViews();
-        openMapButton.setEnabled(false);
+        openMapButton.setEnabled(true);
         repository.loadDay(
                 member.uid,
                 FamilyJourneyPolicy.dayKey(selectedDateStart),
@@ -251,6 +299,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
                         progress.setVisibility(View.GONE);
                         currentSummary = null;
                         resetSummary();
+                        openMapButton.setEnabled(true);
                         emptyView.setVisibility(View.VISIBLE);
                         emptyView.setText(
                                 "HISTORY_ACCESS_DENIED".equals(reason)
@@ -306,8 +355,8 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
                 start,
                 end
         ));
+        openMapButton.setEnabled(selectedMember != null);
         boolean hasPoints = !summary.points.isEmpty();
-        openMapButton.setEnabled(hasPoints);
         emptyView.setVisibility(hasPoints ? View.GONE : View.VISIBLE);
         emptyView.setText(R.string.family_journey_empty);
     }
@@ -536,7 +585,20 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
     private void openRouteMap() {
         FamilyJourneyRepository.Member member = selectedMember;
         FamilyJourneySummary summary = currentSummary;
-        if (member == null || summary == null || summary.points.isEmpty()) {
+        if (member == null) {
+            Toast.makeText(
+                    this,
+                    R.string.family_journey_access_denied,
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+        if (summary == null || summary.points.isEmpty()) {
+            Toast.makeText(
+                    this,
+                    R.string.family_journey_map_no_points_action,
+                    Toast.LENGTH_LONG
+            ).show();
             return;
         }
         Intent intent = new Intent(this, FamilyJourneyMapActivity.class);
@@ -618,7 +680,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
         pointsView.setText("0");
         visitsView.setText("0");
         startEndView.setText("");
-        openMapButton.setEnabled(false);
+        openMapButton.setEnabled(selectedMember != null);
         timeline.removeAllViews();
     }
 
