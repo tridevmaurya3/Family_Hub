@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -29,11 +30,13 @@ public class GroceryRepository {
             Executors.newSingleThreadExecutor();
 
     private final GroceryItemDao groceryItemDao;
+    private final Context appContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public GroceryRepository(@NonNull Context context) {
+        appContext = context.getApplicationContext();
         groceryItemDao = FamilyHubDatabase
-                .getInstance(context)
+                .getInstance(appContext)
                 .groceryItemDao();
     }
 
@@ -63,6 +66,7 @@ public class GroceryRepository {
             } else {
                 groceryItemDao.update(item);
             }
+            GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(callback::onComplete);
         });
     }
@@ -83,6 +87,7 @@ public class GroceryRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             groceryItemDao.delete(item);
+            GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(callback::onComplete);
         });
     }
@@ -90,6 +95,7 @@ public class GroceryRepository {
     public void clearPurchased(@NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             groceryItemDao.deletePurchased();
+            GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(callback::onComplete);
         });
     }
