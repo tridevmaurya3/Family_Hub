@@ -23,12 +23,13 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.BuildConfig;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.backup.BackupRestoreActivity;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
-/** Compact account, settings, backup and privacy page. */
+/** Compact account, settings, encrypted backup and privacy page. */
 public class MoreFragment extends Fragment {
 
     private FragmentMoreBinding binding;
@@ -70,7 +71,10 @@ public class MoreFragment extends Fragment {
         );
 
         binding.cardBackupRestore.setOnClickListener(
-                clickedView -> showBackupInformation()
+                clickedView -> startActivity(new Intent(
+                        requireContext(),
+                        BackupRestoreActivity.class
+                ))
         );
         binding.cardPrivacyAbout.setOnClickListener(
                 clickedView -> showPrivacyInformation()
@@ -215,14 +219,6 @@ public class MoreFragment extends Fragment {
         card.setStrokeWidth(getResources().getDimensionPixelSize(
                 R.dimen.border_width
         ));
-    }
-
-    private void showBackupInformation() {
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.more_backup_title)
-                .setMessage(R.string.more_backup_message)
-                .setPositiveButton(R.string.ok, null)
-                .show();
     }
 
     private void showPrivacyInformation() {
