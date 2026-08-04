@@ -1,10 +1,10 @@
 package com.tridev.familyhub.backup;
 
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.util.Base64;
 import android.webkit.MimeTypeMap;
@@ -32,13 +32,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -95,11 +95,12 @@ public final class BackupArchiveManager {
             )
     );
 
-    private static final Set<String> PORTABLE_VAULT_COLUMNS = Set.of(
-            "usernameEncrypted",
-            "passwordEncrypted",
-            "notesEncrypted"
-    );
+    private static final Set<String> PORTABLE_VAULT_COLUMNS =
+            Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+                    "usernameEncrypted",
+                    "passwordEncrypted",
+                    "notesEncrypted"
+            )));
 
     private BackupArchiveManager() {
     }
@@ -220,7 +221,12 @@ public final class BackupArchiveManager {
                     progressListener
             );
 
-            restoreSafetyPreferences(appContext, data);
+            try {
+                restoreSafetyPreferences(appContext, data);
+            } catch (JSONException ignored) {
+                // Database restore remains valid even if a non-critical UI
+                // preference cannot be restored on this Android version.
+            }
             cleanupOtherRestoredDirectories(finalAttachmentRoot);
             notifyProgress(progressListener, 100, "Restore complete");
             return new RestoreResult(
@@ -330,7 +336,11 @@ public final class BackupArchiveManager {
         )) {
             while (cursor.moveToNext()) {
                 JSONObject row = new JSONObject();
-                long rowId = valueAsLong(cursor, "id", cursor.getPosition() + 1L);
+                long rowId = valueAsLong(
+                        cursor,
+                        "id",
+                        cursor.getPosition() + 1L
+                );
                 for (int index = 0; index < cursor.getColumnCount(); index++) {
                     String column = cursor.getColumnName(index);
                     Object value = cursorValue(cursor, index);
@@ -347,7 +357,6 @@ public final class BackupArchiveManager {
                         String mimeType = resolveAttachmentMimeType(
                                 context,
                                 table,
-                                row,
                                 cursor,
                                 (String) value
                         );
@@ -574,7 +583,7 @@ public final class BackupArchiveManager {
             }
             long inserted = database.insert(
                     table,
-                    SupportSQLiteDatabase.CONFLICT_REPLACE,
+                    SQLiteDatabase.CONFLICT_REPLACE,
                     values
             );
             if (inserted == -1L) {
@@ -588,7 +597,9 @@ public final class BackupArchiveManager {
             @NonNull Map<String, Integer> expectedCounts
     ) throws Exception {
         for (String table : TABLES) {
-            int expected = expectedCounts.getOrDefault(table, 0);
+            int expected = expectedCounts.containsKey(table)
+                    ? expectedCounts.get(table)
+                    : 0;
             int actual = 0;
             try (Cursor cursor = database.query(
                     "SELECT COUNT(*) FROM " + quoteIdentifier(table)
@@ -701,7 +712,8 @@ public final class BackupArchiveManager {
         if (data.optInt("archiveVersion", -1) != ARCHIVE_VERSION) {
             throw new BackupException("UNSUPPORTED_BACKUP_VERSION");
         }
-        if (!data.has("tables") || !(data.get("tables") instanceof JSONArray)) {
+        if (!data.has("tables")
+                || !(data.get("tables") instanceof JSONArray)) {
             throw new BackupException("INVALID_BACKUP_DATA");
         }
         Map<String, JSONObject> tables = tableMap(data);
@@ -796,7 +808,9 @@ public final class BackupArchiveManager {
                 String type = cursor.getString(typeIndex);
                 result.put(
                         name,
-                        type == null ? "TEXT" : type.toUpperCase(Locale.ROOT)
+                        type == null
+                                ? "TEXT"
+                                : type.toUpperCase(Locale.ROOT)
                 );
             }
         }
@@ -885,7 +899,6 @@ public final class BackupArchiveManager {
     private static String resolveAttachmentMimeType(
             @NonNull Context context,
             @NonNull String table,
-            @NonNull JSONObject partialRow,
             @NonNull Cursor cursor,
             @NonNull String uriValue
     ) {
@@ -902,7 +915,9 @@ public final class BackupArchiveManager {
             String resolved = context.getContentResolver().getType(
                     Uri.parse(uriValue)
             );
-            return resolved == null ? "application/octet-stream" : resolved;
+            return resolved == null
+                    ? "application/octet-stream"
+                    : resolved;
         } catch (RuntimeException ignored) {
             return "application/octet-stream";
         }
@@ -924,7 +939,8 @@ public final class BackupArchiveManager {
                 }
             }
         }
-        if (extension == null || !extension.matches("[A-Za-z0-9]{1,10}")) {
+        if (extension == null
+                || !extension.matches("[A-Za-z0-9]{1,10}")) {
             return ".bin";
         }
         return "." + extension.toLowerCase(Locale.ROOT);
@@ -984,7 +1000,10 @@ public final class BackupArchiveManager {
             @NonNull String stage
     ) {
         if (listener != null) {
-            listener.onProgress(Math.max(0, Math.min(100, percent)), stage);
+            listener.onProgress(
+                    Math.max(0, Math.min(100, percent)),
+                    stage
+            );
         }
     }
 
@@ -1178,12 +1197,17 @@ public final class BackupArchiveManager {
             if (countObject != null) {
                 for (String key : countObject.keySet()) {
                     if (TABLES.contains(key)) {
-                        counts.put(key, Math.max(0, countObject.optInt(key, 0)));
+                        counts.put(
+                                key,
+                                Math.max(0, countObject.optInt(key, 0))
+                        );
                     }
                 }
             }
             for (String table : TABLES) {
-                counts.putIfAbsent(table, 0);
+                if (!counts.containsKey(table)) {
+                    counts.put(table, 0);
+                }
             }
             return new BackupPreview(
                     manifest.getInt("archiveVersion"),
