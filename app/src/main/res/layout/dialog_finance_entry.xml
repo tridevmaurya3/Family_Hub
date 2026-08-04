@@ -98,7 +98,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/finance_amount"
-            app:prefixText="â‚¹ ">
+            app:prefixText="&#8377; ">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/finance_amount_input"
