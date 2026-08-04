@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -101,6 +102,20 @@ public class MoreFragment extends Fragment {
         binding.cardHealth.setVisibility(View.GONE);
         binding.cardGrocery.setVisibility(View.GONE);
         binding.buttonSafePlaces.setVisibility(View.GONE);
+
+        View rootChild = binding.getRoot().getChildAt(0);
+        if (!(rootChild instanceof LinearLayout)) {
+            return;
+        }
+        LinearLayout content = (LinearLayout) rootChild;
+        String modulesTitle = getString(R.string.more_modules_title);
+        for (int index = 0; index < content.getChildCount(); index++) {
+            View child = content.getChildAt(index);
+            if (child instanceof TextView
+                    && modulesTitle.contentEquals(((TextView) child).getText())) {
+                child.setVisibility(View.GONE);
+            }
+        }
     }
 
     /** Adds a clear account entry directly below the More page description. */
