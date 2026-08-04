@@ -7,10 +7,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
+import com.tridev.familyhub.feature.automation.FirebaseNumericValueReader;
 import com.tridev.familyhub.feature.insights.FamilyReportRange;
 
 import java.util.ArrayList;
@@ -135,13 +137,24 @@ public final class FamilyJourneyRepository {
                                 root.child("journeyPrivacy")
                                         .child(session.familyId)
                                         .get()
-                                        .addOnSuccessListener(privacy ->
+                                        .addOnSuccessListener(privacy -> {
+                                            try {
                                                 buildOverview(
                                                         session,
                                                         memberships,
                                                         privacy,
                                                         callback
-                                                ))
+                                                );
+                                            } catch (DatabaseException error) {
+                                                callback.onError(
+                                                        "PRIVACY_DATA_INVALID"
+                                                );
+                                            } catch (RuntimeException error) {
+                                                callback.onError(
+                                                        "OVERVIEW_DATA_INVALID"
+                                                );
+                                            }
+                                        })
                                         .addOnFailureListener(error ->
                                                 callback.onError(
                                                         "PRIVACY_LOAD_FAILED"
@@ -167,6 +180,9 @@ public final class FamilyJourneyRepository {
         List<Member> accessible = new ArrayList<>();
         for (DataSnapshot child : memberships.getChildren()) {
             String memberUid = stringValue(child.child("uid"));
+            if (memberUid.isEmpty() && child.getKey() != null) {
+                memberUid = child.getKey();
+            }
             String status = stringValue(child.child("status"));
             if (memberUid.isEmpty() || !"ACTIVE".equals(status)) {
                 continue;
@@ -218,7 +234,7 @@ public final class FamilyJourneyRepository {
         PrivacySettings settings = new PrivacySettings(
                 booleanValue(own.child("historyEnabled"), false),
                 FamilyJourneyPolicy.normalizeRetentionDays(
-                        intValue(
+                        FirebaseNumericValueReader.intValue(
                                 own.child("retentionDays"),
                                 FamilyJourneyPolicy.DEFAULT_RETENTION_DAYS
                         )
@@ -252,7 +268,12 @@ public final class FamilyJourneyRepository {
                             public void onCancelled(
                                     @NonNull DatabaseError error
                             ) {
-                                callback.onError("HISTORY_ACCESS_DENIED");
+                                callback.onError(
+                                        error.getCode()
+                                                == DatabaseError.PERMISSION_DENIED
+                                                ? "HISTORY_ACCESS_DENIED"
+                                                : "HISTORY_LOAD_FAILED"
+                                );
                             }
                         });
             }
@@ -361,23 +382,33 @@ public final class FamilyJourneyRepository {
         List<FamilyJourneyPoint> points = new ArrayList<>();
         long now = System.currentTimeMillis();
         for (DataSnapshot child : snapshot.getChildren()) {
-            FamilyJourneyPoint point = child.getValue(
-                    FamilyJourneyPoint.class
-            );
-            if (point == null) {
-                continue;
-            }
-            if (point.pointId.trim().isEmpty() && child.getKey() != null) {
-                point.pointId = child.getKey();
-            }
-            if (FamilyJourneyPolicy.validStoredPoint(
-                    point.latitude,
-                    point.longitude,
-                    point.accuracy,
-                    point.capturedAt,
-                    now
-            )) {
-                points.add(point);
+            try {
+                FamilyJourneyPoint point = child.getValue(
+                        FamilyJourneyPoint.class
+                );
+                if (point == null) {
+                    continue;
+                }
+                if (point.pointId == null) {
+                    point.pointId = "";
+                }
+                if (point.pointId.trim().isEmpty()
+                        && child.getKey() != null) {
+                    point.pointId = child.getKey();
+                }
+                if (FamilyJourneyPolicy.validStoredPoint(
+                        point.latitude,
+                        point.longitude,
+                        point.accuracy,
+                        point.capturedAt,
+                        now
+                )) {
+                    points.add(point);
+                }
+            } catch (DatabaseException ignored) {
+                // A single legacy/corrupt point must not block the whole day.
+            } catch (RuntimeException ignored) {
+                // Continue rendering other valid points.
             }
         }
         points.sort(Comparator.comparingLong(point -> point.capturedAt));
@@ -490,19 +521,42 @@ public final class FamilyJourneyRepository {
                         callback.onError("ACTIVE_FAMILY_REQUIRED");
                         return;
                     }
-                    String name = user.getDisplayName();
-                    if (name == null || name.trim().isEmpty()) {
-                        name = user.getEmail();
-                    }
-                    if (name == null || name.trim().isEmpty()) {
-                        name = user.getUid();
-                    }
-                    cachedSession = new Session(
-                            user.getUid(),
-                            familyId,
-                            name.trim()
-                    );
-                    callback.onReady(cachedSession);
+                    root.child("memberships")
+                            .child(familyId)
+                            .child(user.getUid())
+                            .get()
+                            .addOnSuccessListener(membership -> {
+                                if (!"ACTIVE".equals(stringValue(
+                                        membership.child("status")
+                                ))) {
+                                    callback.onError(
+                                            "ACTIVE_FAMILY_REQUIRED"
+                                    );
+                                    return;
+                                }
+                                String name = stringValue(
+                                        membership.child("displayName")
+                                );
+                                if (name.isEmpty()) {
+                                    name = user.getDisplayName();
+                                }
+                                if (name == null || name.trim().isEmpty()) {
+                                    name = user.getEmail();
+                                }
+                                if (name == null || name.trim().isEmpty()) {
+                                    name = user.getUid();
+                                }
+                                cachedSession = new Session(
+                                        user.getUid(),
+                                        familyId,
+                                        name.trim()
+                                );
+                                callback.onReady(cachedSession);
+                            })
+                            .addOnFailureListener(error ->
+                                    callback.onError(
+                                            "MEMBERSHIP_LOAD_FAILED"
+                                    ));
                 })
                 .addOnFailureListener(error ->
                         callback.onError("SESSION_LOAD_FAILED"));
@@ -518,11 +572,6 @@ public final class FamilyJourneyRepository {
     private static String stringValue(@NonNull DataSnapshot snapshot) {
         String value = snapshot.getValue(String.class);
         return value == null ? "" : value.trim();
-    }
-
-    private static int intValue(@NonNull DataSnapshot snapshot, int fallback) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? fallback : value.intValue();
     }
 
     private static boolean booleanValue(
