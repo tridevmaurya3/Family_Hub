@@ -276,7 +276,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:paddingStart="@dimen/space_12"
                 android:paddingTop="6dp"
                 android:paddingEnd="@dimen/space_8"
@@ -284,16 +285,18 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_document_expiry_alerts"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="@dimen/space_8"
                     android:text="@string/documents_vault_expiry_alerts" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.FamilyHub.Form.Dropdown"
-                    android:layout_width="match_parent"
+                    android:layout_width="110dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_4"
-                    android:hint="@string/documents_vault_remind_before">
+                    android:contentDescription="@string/documents_vault_remind_before"
+                    android:hint="@null">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/document_reminder_days_input"
@@ -321,12 +324,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_10"
-            android:orientation="vertical">
+            android:orientation="horizontal">
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.FamilyHub.TextInputLayout"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1.55"
                 android:hint="@string/documents_search_hint"
                 app:endIconMode="clear_text"
                 app:startIconDrawable="@drawable/ic_search"
@@ -344,9 +349,10 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.FamilyHub.Form.Dropdown"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_6"
+                android:layout_marginStart="4dp"
+                android:layout_weight="0.85"
                 android:hint="@string/documents_vault_category_filter">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -366,7 +372,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             app:selectionRequired="true"
-            app:singleLine="false"
+            app:singleLine="true"
             app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
@@ -434,7 +440,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="@dimen/compact_empty_state_padding">
 
                     <ImageView
                         android:layout_width="@dimen/compact_empty_state_icon_size"
