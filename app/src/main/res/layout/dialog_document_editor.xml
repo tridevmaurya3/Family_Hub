@@ -182,6 +182,16 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/scan_document_button"
+            style="@style/Widget.FamilyHub.Button.Tonal"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginTop="@dimen/space_10"
+            android:text="@string/documents_vault_scan_document"
+            app:icon="@drawable/ic_document_camera"
+            app:iconGravity="textStart" />
+
         <TextView
             style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="match_parent"
