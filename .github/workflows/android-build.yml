@@ -35,10 +35,41 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Configure local Android properties
+      - name: Configure safe CI-only Android properties
         shell: bash
         run: |
           printf 'sdk.dir=%s\nMAPS_API_KEY=CI_DUMMY_KEY\n' "$ANDROID_HOME" > local.properties
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "123456789012",
+              "project_id": "family-hub-ci",
+              "storage_bucket": "family-hub-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789012:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.tridev.familyhub"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "CI_DUMMY_FIREBASE_API_KEY"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
 
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
@@ -52,7 +83,7 @@ jobs:
           ./gradlew testDebugUnitTest assembleDebug --stacktrace --no-daemon 2>&1 | tee android-build.log
           build_exit=${PIPESTATUS[0]}
           echo "exit_code=${build_exit}" >> "$GITHUB_OUTPUT"
-          tail -n 140 android-build.log > android-build-tail.log
+          tail -n 180 android-build.log > android-build-tail.log
           exit 0
 
       - name: Publish build result to verification issue
