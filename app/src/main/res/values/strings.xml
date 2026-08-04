@@ -461,6 +461,7 @@
 
     <!-- Property -->
     <string name="property_title">Properties</string>
+    <string name="property_dashboard_title">Property Records</string>
     <string name="property_subtitle">Ownership, location, registry, and value information</string>
     <string name="property_search_hint">Search property, type, city, or owner</string>
     <string name="property_empty_title">No properties yet</string>
@@ -500,6 +501,14 @@
     <string name="property_type_office">Office</string>
     <string name="property_type_agricultural">Agricultural</string>
     <string name="property_type_other">Other</string>
+    <string name="property_stat_total">Properties</string>
+    <string name="property_stat_homes">Homes</string>
+    <string name="property_stat_land">Land</string>
+    <string name="property_stat_value">Est. value</string>
+    <string name="property_filter_homes">Homes</string>
+    <string name="property_filter_all">All</string>
+    <string name="property_filter_land">Land</string>
+    <string name="property_filter_commercial">Commercial</string>
     <string name="more_property_title">Property Management</string>
     <string name="more_property_detail">House, land, registry, location, and values</string>
     <string-array name="property_type_labels">
