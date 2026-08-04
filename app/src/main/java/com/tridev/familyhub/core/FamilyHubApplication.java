@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.FirebaseDatabase;
+import com.tridev.familyhub.backup.BackupScheduler;
 import com.tridev.familyhub.feature.automation.FamilyAutomationLiveMonitor;
 import com.tridev.familyhub.feature.automation.FamilyAutomationRuntime;
 import com.tridev.familyhub.feature.automation.FamilyAutomationScheduler;
@@ -32,6 +33,7 @@ public class FamilyHubApplication extends Application {
         super.onCreate();
         applicationContext = getApplicationContext();
         enableFirebaseOfflinePersistence();
+        BackupScheduler.sync(this);
         registerActivityLifecycleCallbacks(
                 new FamilyLivePrecisionActivityCallbacks()
         );
