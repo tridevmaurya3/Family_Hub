@@ -43,7 +43,8 @@ import java.util.List;
 
 /**
  * Private offline Documents Vault with device authentication, secure Android
- * document permissions, expiry reminders, filters and encrypted-backup support.
+ * document permissions, camera scans, expiry reminders, filters and encrypted
+ * backup support.
  */
 public class DocumentsFragment extends Fragment implements AddActionHost {
 
@@ -67,6 +68,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     @Nullable
     private PendingDocument pendingDocument;
     @Nullable
+    private DocumentCaptureStorage.CaptureTarget captureTarget;
+    @Nullable
     private androidx.appcompat.app.AlertDialog editorDialog;
     @Nullable
     private DialogDocumentEditorBinding editorBinding;
@@ -79,6 +82,12 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             registerForActivityResult(
                     new ActivityResultContracts.OpenDocument(),
                     this::onDocumentPicked
+            );
+
+    private final ActivityResultLauncher<Uri> cameraCapture =
+            registerForActivityResult(
+                    new ActivityResultContracts.TakePicture(),
+                    this::onCameraCaptured
             );
 
     private final ActivityResultLauncher<String> notificationPermission =
@@ -631,7 +640,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         dialogBinding.saveDocumentChangesButton.setOnClickListener(clicked -> {
             DocumentEntry draft = buildDraft(existing);
             if (draft != null) {
-                saveDocument(draft, false);
+                saveDocument(draft, false, null, false);
             }
         });
         dialogBinding.replaceDocumentButton.setOnClickListener(clicked -> {
@@ -642,6 +651,15 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             pendingDocument = new PendingDocument(draft, true);
             dismissEditor();
             launchDocumentPicker();
+        });
+        dialogBinding.scanDocumentButton.setOnClickListener(clicked -> {
+            DocumentEntry draft = buildDraft(existing);
+            if (draft == null) {
+                return;
+            }
+            pendingDocument = new PendingDocument(draft, editing);
+            dismissEditor();
+            launchCameraCapture();
         });
 
         editorDialog.setOnDismissListener(dialog -> {
@@ -735,6 +753,46 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         });
     }
 
+    private void launchCameraCapture() {
+        try {
+            captureTarget = DocumentCaptureStorage.create(requireContext());
+            cameraCapture.launch(captureTarget.uri);
+        } catch (Exception error) {
+            DocumentCaptureStorage.delete(captureTarget);
+            captureTarget = null;
+            pendingDocument = null;
+            showMessage(R.string.documents_vault_scan_failed);
+        }
+    }
+
+    private void onCameraCaptured(Boolean captured) {
+        PendingDocument pending = pendingDocument;
+        DocumentCaptureStorage.CaptureTarget target = captureTarget;
+        captureTarget = null;
+        pendingDocument = null;
+        if (!Boolean.TRUE.equals(captured)
+                || pending == null
+                || target == null
+                || !target.file.exists()
+                || target.file.length() <= 0L) {
+            DocumentCaptureStorage.delete(target);
+            if (Boolean.TRUE.equals(captured)) {
+                showMessage(R.string.documents_vault_scan_failed);
+            }
+            return;
+        }
+
+        String oldContentUri = pending.document.contentUri;
+        pending.document.contentUri = target.uri.toString();
+        pending.document.mimeType = "image/jpeg";
+        saveDocument(
+                pending.document,
+                pending.replacingFile,
+                oldContentUri,
+                pending.document.id == 0L
+        );
+    }
+
     private void onDocumentPicked(@Nullable Uri uri) {
         PendingDocument pending = pendingDocument;
         if (uri == null || pending == null) {
@@ -757,11 +815,18 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                         return;
                     }
                     persistPermission(uri);
+                    String oldContentUri = pending.document.contentUri;
+                    boolean isNew = pending.document.id == 0L;
                     pending.document.contentUri = uriValue;
                     String mime = requireContext().getContentResolver()
                             .getType(uri);
                     pending.document.mimeType = mime == null ? "" : mime;
-                    saveDocument(pending.document, pending.replacingFile);
+                    saveDocument(
+                            pending.document,
+                            pending.replacingFile,
+                            oldContentUri,
+                            isNew
+                    );
                     pendingDocument = null;
                 }
         );
@@ -781,7 +846,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
 
     private void saveDocument(
             @NonNull DocumentEntry document,
-            boolean fileReplaced
+            boolean fileReplaced,
+            @Nullable String replacedContentUri,
+            boolean isNew
     ) {
         repository.save(document, new DocumentRepository.SaveCallback() {
             @Override
@@ -789,17 +856,33 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 if (binding == null) {
                     return;
                 }
+                if (fileReplaced
+                        && replacedContentUri != null
+                        && !replacedContentUri.isEmpty()
+                        && !replacedContentUri.equals(document.contentUri)) {
+                    DocumentCaptureStorage.deleteIfOwned(
+                            requireContext(),
+                            replacedContentUri
+                    );
+                    releasePermission(replacedContentUri);
+                }
                 dismissEditor();
                 loadDocuments();
                 showMessage(fileReplaced
                         ? R.string.documents_vault_replaced
-                        : document.id == documentId && document.createdAt > 0L
-                        ? R.string.documents_vault_updated
-                        : R.string.document_added);
+                        : isNew
+                        ? R.string.documents_vault_added
+                        : R.string.documents_vault_updated);
             }
 
             @Override
             public void onError(@NonNull Exception error) {
+                if (isNew) {
+                    DocumentCaptureStorage.deleteIfOwned(
+                            requireContext(),
+                            document.contentUri
+                    );
+                }
                 showMessage(R.string.backup_error_generic);
             }
         });
@@ -863,6 +946,10 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                                     @Override
                                     public void onComplete() {
                                         preferences.removeFavorite(document.id);
+                                        DocumentCaptureStorage.deleteIfOwned(
+                                                requireContext(),
+                                                document.contentUri
+                                        );
                                         releasePermission(document.contentUri);
                                         loadDocuments();
                                         showMessage(R.string.document_removed);
@@ -886,7 +973,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                             Intent.FLAG_GRANT_READ_URI_PERMISSION
                     );
         } catch (Exception ignored) {
-            // Restored FileProvider URIs do not use persistable permissions.
+            // Restored and camera FileProvider URIs are app-owned.
         }
     }
 
