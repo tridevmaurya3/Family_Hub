@@ -77,4 +77,16 @@ public class PasswordVaultRepository {
             mainHandler.post(callback::onComplete);
         });
     }
+
+    public void importEntries(
+            @NonNull List<PasswordEntry> entries,
+            @NonNull ActionCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            if (!entries.isEmpty()) {
+                passwordEntryDao.insertAll(entries);
+            }
+            mainHandler.post(callback::onComplete);
+        });
+    }
 }
