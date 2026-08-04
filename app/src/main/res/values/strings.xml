@@ -356,6 +356,21 @@
     <string name="vault_credential_removed">Credential removed</string>
     <string name="vault_no_website">No website provided</string>
     <string name="vault_not_provided">Not provided</string>
+    <string name="vault_import">Import CSV</string>
+    <string name="vault_export">Export CSV</string>
+    <string name="vault_import_picker_title">Select Chrome, Edge, or password CSV</string>
+    <string name="vault_import_preview_title">Import password file?</string>
+    <string name="vault_import_preview_message">%1$d new credentials will be encrypted and saved. %2$d duplicates will be skipped.</string>
+    <string name="vault_import_confirm">Import securely</string>
+    <string name="vault_import_success">%1$d credentials imported; %2$d duplicates skipped</string>
+    <string name="vault_import_empty">No usable credentials were found in this CSV file.</string>
+    <string name="vault_import_error">Unable to import this password file: %1$s</string>
+    <string name="vault_export_warning_title">Export unencrypted CSV?</string>
+    <string name="vault_export_warning_message">Browser-compatible CSV files contain readable passwords. Save it only in a trusted location and delete it after importing.</string>
+    <string name="vault_export_continue">Choose location</string>
+    <string name="vault_export_empty">There are no credentials to export.</string>
+    <string name="vault_export_success">Browser-compatible CSV exported</string>
+    <string name="vault_export_error">Unable to export passwords: %1$s</string>
     <string name="close">Close</string>
 
     <!-- Health -->
