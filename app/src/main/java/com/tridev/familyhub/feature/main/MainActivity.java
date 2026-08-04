@@ -3,6 +3,7 @@ package com.tridev.familyhub.feature.main;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
@@ -108,8 +109,25 @@ public class MainActivity extends AppCompatActivity {
                             safeInsets.left,
                             0,
                             safeInsets.right,
-                            safeInsets.bottom
+                            0
                     );
+
+                    ViewGroup.MarginLayoutParams navigationParams =
+                            (ViewGroup.MarginLayoutParams)
+                                    binding.bottomNavigation.getLayoutParams();
+                    int navigationMargin = Math.round(
+                            6f * getResources()
+                                    .getDisplayMetrics()
+                                    .density
+                    );
+                    navigationParams.leftMargin = navigationMargin;
+                    navigationParams.rightMargin = navigationMargin;
+                    navigationParams.bottomMargin =
+                            safeInsets.bottom + navigationMargin;
+                    binding.bottomNavigation.setLayoutParams(
+                            navigationParams
+                    );
+
                     return windowInsets;
                 }
         );
