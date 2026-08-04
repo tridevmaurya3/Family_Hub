@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="member_account_delete_title">Manage authorised member</string>
+    <string name="member_account_delete_message">This card represents an authorised Family Hub account. For safety, account access must be removed from Family settings. A separately saved local profile can be deleted directly from this page.</string>
+    <string name="member_open_family_settings">Open Family settings</string>
+</resources>
