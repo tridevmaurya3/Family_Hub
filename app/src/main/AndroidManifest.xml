@@ -97,6 +97,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".feature.profile.ProfileSettingsActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".feature.main.MainActivity"
             android:exported="false" />
 
