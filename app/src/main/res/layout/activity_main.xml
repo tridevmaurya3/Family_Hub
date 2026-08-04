@@ -3,7 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/fh_background">
+    android:background="@color/fh_background"
+    android:fitsSystemWindows="true">
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/main_content"
@@ -17,10 +18,10 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="0dp"
-        android:layout_height="68dp"
+        android:layout_height="72dp"
         android:layout_marginStart="6dp"
         android:layout_marginEnd="6dp"
-        android:layout_marginBottom="6dp"
+        android:layout_marginBottom="8dp"
         android:background="@drawable/bg_bottom_navigation_professional"
         android:elevation="6dp"
         app:itemActiveIndicatorStyle="@style/Widget.FamilyHub.BottomNavigation.ActiveIndicator"
