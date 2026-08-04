@@ -32,6 +32,7 @@ import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.databinding.DialogMemberEditorBinding;
 import com.tridev.familyhub.databinding.FragmentFamilyBinding;
 import com.tridev.familyhub.feature.family.adapter.FamilyMemberAdapter;
+import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -267,9 +268,13 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     private void showMemberEditor(@Nullable FamilyMember existingMember) {
         DialogMemberEditorBinding dialogBinding = DialogMemberEditorBinding.inflate(getLayoutInflater());
         activeEditor = dialogBinding;
-        boolean isNewMember = existingMember == null;
-        selectedPhotoUri = isNewMember ? "" : existingMember.profilePhotoUri;
-        dialogBinding.editorTitle.setText(isNewMember
+        boolean isCloudAccount = existingMember != null
+                && existingMember.cloudManaged;
+        boolean isNewMember = existingMember == null || isCloudAccount;
+        selectedPhotoUri = existingMember == null
+                ? ""
+                : existingMember.profilePhotoUri;
+        dialogBinding.editorTitle.setText(existingMember == null
                 ? R.string.add_family_member
                 : R.string.edit_family_member);
 
@@ -286,7 +291,7 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
         dialogBinding.memberRoleInput.setAdapter(dropdown(roleLabels));
         dialogBinding.memberRelationInput.setAdapter(dropdown(relationLabels));
 
-        if (!isNewMember) {
+        if (existingMember != null) {
             dialogBinding.memberNameInput.setText(existingMember.name);
             dialogBinding.memberRelationInput.setText(existingMember.relation, false);
             dialogBinding.memberPhoneInput.setText(existingMember.phone);
@@ -569,6 +574,24 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     }
 
     private void confirmDelete(FamilyMember member) {
+        if (member.cloudManaged) {
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.member_account_delete_title)
+                    .setMessage(R.string.member_account_delete_message)
+                    .setNegativeButton(R.string.cancel, null)
+                    .setPositiveButton(
+                            R.string.member_open_family_settings,
+                            (dialog, which) -> startActivity(
+                                    new Intent(
+                                            requireContext(),
+                                            FamilyManagementActivity.class
+                                    )
+                            )
+                    )
+                    .show();
+            return;
+        }
+
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.delete_member_title)
                 .setMessage(getString(R.string.delete_member_message, member.name))
