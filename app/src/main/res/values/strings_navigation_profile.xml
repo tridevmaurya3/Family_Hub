@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="nav_menu_title">Menu</string>
+    <string name="nav_menu_title">Settings</string>
     <string name="dashboard_profile_content_description">Open profile and settings</string>
     <string name="dashboard_feature_menu_content_description">Open all features menu</string>
     <string name="feature_menu_title">All features</string>
