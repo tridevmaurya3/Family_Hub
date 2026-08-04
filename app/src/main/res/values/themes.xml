@@ -69,7 +69,7 @@
         <item name="endIconTint">@color/fh_form_accent</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.FamilyHub.FormDialog">
+    <style name="ShapeAppearanceOverlayFamilyHubFormDialog">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/radius_24</item>
     </style>
@@ -80,7 +80,7 @@
         <item name="colorSurface">@color/fh_form_background</item>
         <item name="colorSurfaceVariant">@color/fh_form_surface_tint</item>
         <item name="colorOutline">@color/fh_form_outline</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.FamilyHub.FormDialog</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlayFamilyHubFormDialog</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.FamilyHub.Button.FormPrimary</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.FamilyHub.Button.FormSecondary</item>
     </style>
