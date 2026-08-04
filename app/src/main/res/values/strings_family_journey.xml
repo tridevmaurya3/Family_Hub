@@ -24,6 +24,7 @@
     <string name="family_journey_trusted_detail">Selected active family members can view your saved journey days. Live location permissions are unchanged.</string>
     <string name="family_journey_save_privacy">Save privacy</string>
     <string name="family_journey_privacy_saved">Journey privacy updated.</string>
+    <string name="family_journey_settings_loading">Journey settings are still loading. Tap Refresh and try again.</string>
 
     <string name="family_journey_summary_distance">Distance</string>
     <string name="family_journey_summary_duration">Duration</string>
@@ -53,6 +54,7 @@
     <string name="family_journey_map_title">Journey Route</string>
     <string name="family_journey_map_subtitle">%1$s • %2$s</string>
     <string name="family_journey_map_empty">No route points are available for this day.</string>
+    <string name="family_journey_map_no_points_action">No route points exist for this date. Enable Journey recording, keep Family Live sharing on, then move outside to create route samples.</string>
     <string name="family_journey_map_start">Start</string>
     <string name="family_journey_map_end">End</string>
     <string name="family_journey_map_summary">%1$s • %2$s • %3$d points</string>
