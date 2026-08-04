@@ -36,13 +36,13 @@ public class VehicleRepository {
             Executors.newSingleThreadExecutor();
 
     private final VehicleDao vehicleDao;
-    private final FamilyMemberDao familyMemberDao;
+    private final HealthRepository authorisedMemberSource;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public VehicleRepository(@NonNull Context context) {
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         vehicleDao = database.vehicleDao();
-        familyMemberDao = database.familyMemberDao();
+        authorisedMemberSource = new HealthRepository(context);
     }
 
     public void loadVehicles(
@@ -59,10 +59,7 @@ public class VehicleRepository {
     }
 
     public void loadMembers(@NonNull MembersCallback callback) {
-        DATABASE_EXECUTOR.execute(() -> {
-            List<FamilyMember> members = familyMemberDao.getAll();
-            mainHandler.post(() -> callback.onMembersLoaded(members));
-        });
+        authorisedMemberSource.loadMembers(callback::onMembersLoaded);
     }
 
     public void save(

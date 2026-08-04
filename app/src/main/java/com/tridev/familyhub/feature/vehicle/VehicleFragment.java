@@ -45,6 +45,10 @@ public class VehicleFragment extends Fragment implements AddActionHost {
     private FragmentVehicleBinding binding;
     private VehicleRepository repository;
     private VehicleAdapter adapter;
+    private final List<VehicleWithOwner> loadedVehicles =
+            new ArrayList<>();
+    @NonNull
+    private String selectedFilter = "ALL";
     private final SimpleDateFormat dateFormat =
             new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
 
@@ -88,6 +92,25 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         binding.emptyAddVehicleButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );
+        binding.vehicleFilterGroup.setOnCheckedStateChangeListener(
+                (group, checkedIds) -> {
+                    int checkedId = checkedIds.isEmpty()
+                            ? R.id.vehicle_filter_all
+                            : checkedIds.get(0);
+                    if (checkedId == R.id.vehicle_filter_cars) {
+                        selectedFilter = "CARS";
+                    } else if (checkedId
+                            == R.id.vehicle_filter_two_wheelers) {
+                        selectedFilter = "TWO_WHEELERS";
+                    } else if (checkedId == R.id.vehicle_filter_due) {
+                        selectedFilter = "DUE";
+                    } else {
+                        selectedFilter = "ALL";
+                    }
+                    applyVehicleFilter();
+                }
+        );
+
         binding.vehicleSearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -416,15 +439,117 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             if (binding == null) {
                 return;
             }
-            adapter.submitList(vehicles);
-            boolean isEmpty = vehicles.isEmpty();
-            binding.vehicleRecyclerView.setVisibility(
-                    isEmpty ? View.GONE : View.VISIBLE
-            );
-            binding.vehicleEmptyState.setVisibility(
-                    isEmpty ? View.VISIBLE : View.GONE
-            );
+            loadedVehicles.clear();
+            loadedVehicles.addAll(vehicles);
+            applyVehicleFilter();
         });
+    }
+
+    private void applyVehicleFilter() {
+        if (binding == null) {
+            return;
+        }
+
+        List<VehicleWithOwner> visible = new ArrayList<>();
+        int overdueCount = 0;
+        int dueSoonCount = 0;
+        int serviceCount = 0;
+        long now = System.currentTimeMillis();
+        long dueLimit = now + 30L * 24L * 60L * 60L * 1000L;
+
+        for (VehicleWithOwner item : loadedVehicles) {
+            Vehicle vehicle = item.vehicle;
+            boolean overdue = hasDateBefore(vehicle, now);
+            boolean dueSoon = hasDateBetween(vehicle, now, dueLimit);
+            boolean serviceDue = vehicle.serviceDueAt > 0L
+                    && vehicle.serviceDueAt <= dueLimit;
+
+            if (overdue) {
+                overdueCount++;
+            }
+            if (dueSoon) {
+                dueSoonCount++;
+            }
+            if (serviceDue) {
+                serviceCount++;
+            }
+
+            boolean matches;
+            if ("CARS".equals(selectedFilter)) {
+                matches = Vehicle.TYPE_CAR.equals(vehicle.vehicleType);
+            } else if ("TWO_WHEELERS".equals(selectedFilter)) {
+                matches = Vehicle.TYPE_MOTORCYCLE.equals(
+                        vehicle.vehicleType
+                ) || Vehicle.TYPE_SCOOTER.equals(vehicle.vehicleType)
+                        || Vehicle.TYPE_BICYCLE.equals(
+                        vehicle.vehicleType
+                );
+            } else if ("DUE".equals(selectedFilter)) {
+                matches = overdue || dueSoon;
+            } else {
+                matches = true;
+            }
+            if (matches) {
+                visible.add(item);
+            }
+        }
+
+        binding.vehicleTotalValue.setText(
+                String.valueOf(loadedVehicles.size())
+        );
+        binding.vehicleDueSoonValue.setText(
+                String.valueOf(dueSoonCount)
+        );
+        binding.vehicleOverdueValue.setText(
+                String.valueOf(overdueCount)
+        );
+        binding.vehicleServiceValue.setText(
+                String.valueOf(serviceCount)
+        );
+
+        adapter.submitList(visible);
+        boolean isEmpty = visible.isEmpty();
+        binding.vehicleRecyclerView.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.vehicleEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
+    }
+
+    private boolean hasDateBefore(
+            @NonNull Vehicle vehicle,
+            long time
+    ) {
+        long[] dates = {
+                vehicle.insuranceExpiryAt,
+                vehicle.pollutionExpiryAt,
+                vehicle.serviceDueAt
+        };
+        for (long date : dates) {
+            if (date > 0L && date < time) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasDateBetween(
+            @NonNull Vehicle vehicle,
+            long start,
+            long end
+    ) {
+        long[] dates = {
+                vehicle.insuranceExpiryAt,
+                vehicle.pollutionExpiryAt,
+                vehicle.serviceDueAt
+        };
+        for (long date : dates) {
+            if (date >= start && date <= end) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @NonNull
