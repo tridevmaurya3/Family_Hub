@@ -543,6 +543,12 @@
     <string name="grocery_estimated_total">Estimated total</string>
     <string name="grocery_search_hint">Search item, category, or notes</string>
     <string name="grocery_clear_purchased">Clear purchased</string>
+    <string name="grocery_widget_title">Monthly Shopping</string>
+    <string name="grocery_widget_pending">%1$d items pending</string>
+    <string name="grocery_widget_empty">Everything is purchased</string>
+    <string name="grocery_widget_quick_add">＋ Quick add item</string>
+    <string name="grocery_widget_mark_purchased">Mark item as purchased</string>
+    <string name="grocery_widget_description">Pending household shopping items, estimated total, and quick purchase actions.</string>
     <string name="grocery_empty_title">Your shopping list is empty</string>
     <string name="grocery_empty_detail">Add groceries, household supplies, medicines, or anything else you need.</string>
     <string name="grocery_add_item">Add item</string>

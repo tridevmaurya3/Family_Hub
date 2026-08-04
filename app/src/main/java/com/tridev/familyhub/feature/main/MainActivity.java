@@ -25,6 +25,7 @@ import com.tridev.familyhub.feature.dashboard.DashboardFragment;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.family.FamilyFragment;
 import com.tridev.familyhub.feature.finance.FinanceFragment;
+import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.more.MoreFragment;
 import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
@@ -34,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String EXTRA_OPEN_DOCUMENTS_VAULT =
             "open_documents_vault";
+    public static final String EXTRA_OPEN_GROCERY = "open_grocery";
 
     private ActivityMainBinding binding;
     private boolean redirectingToAuth;
@@ -142,11 +144,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean handleLaunchIntent(@Nullable Intent intent) {
-        if (binding == null || intent == null
-                || !intent.getBooleanExtra(
-                EXTRA_OPEN_DOCUMENTS_VAULT,
-                false
-        )) {
+        if (binding == null || intent == null) {
+            return false;
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_GROCERY, false)) {
+            intent.removeExtra(EXTRA_OPEN_GROCERY);
+            clearSecondaryScreens();
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.main_content, new GroceryFragment())
+                    .commit();
+            return true;
+        }
+        if (!intent.getBooleanExtra(EXTRA_OPEN_DOCUMENTS_VAULT, false)) {
             return false;
         }
         intent.removeExtra(EXTRA_OPEN_DOCUMENTS_VAULT);

@@ -29,6 +29,14 @@ public interface GroceryItemDao {
             + "createdAt DESC")
     List<GroceryItem> search(String query);
 
+    @Query("SELECT * FROM grocery_items WHERE isPurchased = 0 "
+            + "ORDER BY CASE priority WHEN 'URGENT' THEN 0 "
+            + "WHEN 'HIGH' THEN 1 ELSE 2 END, createdAt DESC")
+    List<GroceryItem> getPendingForWidget();
+
+    @Query("SELECT * FROM grocery_items WHERE id = :itemId LIMIT 1")
+    GroceryItem getById(long itemId);
+
     @Query("SELECT COUNT(*) FROM grocery_items WHERE isPurchased = 0")
     int countPending();
 
