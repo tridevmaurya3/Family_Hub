@@ -26,7 +26,7 @@
         app:itemActiveIndicatorStyle="@style/Widget.FamilyHub.BottomNavigation.ActiveIndicator"
         app:itemHorizontalTranslationEnabled="false"
         app:itemIconSize="21dp"
-        app:itemIconTint="@color/bottom_navigation_item"
+        app:itemIconTint="@null"
         app:itemPaddingBottom="5dp"
         app:itemPaddingTop="5dp"
         app:itemRippleColor="@color/fh_primary_container"
