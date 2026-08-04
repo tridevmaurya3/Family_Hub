@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/fh_error" android:state_enabled="true" android:state_activated="true" />
+    <item android:color="@color/fh_form_outline_focused" android:state_enabled="true" android:state_focused="true" />
+    <item android:color="@color/fh_form_outline" android:state_enabled="true" />
+    <item android:alpha="0.45" android:color="@color/fh_form_outline" />
+</selector>

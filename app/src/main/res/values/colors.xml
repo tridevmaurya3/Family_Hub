@@ -27,6 +27,15 @@
     <color name="fh_surface_container_high">#EEF1F4</color>
     <color name="fh_surface_blue">#F4F9FD</color>
 
+    <!-- Shared form language: soft lavender layered surfaces -->
+    <color name="fh_form_background">#FBF9FE</color>
+    <color name="fh_form_surface">#FFFEFF</color>
+    <color name="fh_form_surface_tint">#F7F3FC</color>
+    <color name="fh_form_accent">#7656A8</color>
+    <color name="fh_form_accent_container">#F0E9FA</color>
+    <color name="fh_form_outline">#E4DEEA</color>
+    <color name="fh_form_outline_focused">#8A68BC</color>
+
     <!-- Fluent neutral text -->
     <color name="fh_text_primary">#242424</color>
     <color name="fh_text_secondary">#616161</color>
