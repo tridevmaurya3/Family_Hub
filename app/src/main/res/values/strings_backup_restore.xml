@@ -62,6 +62,7 @@
 
     <string name="backup_restore_password_title">Unlock encrypted backup</string>
     <string name="backup_restore_password_message">Enter the password used when this backup was created.</string>
+    <string name="backup_continue">Continue</string>
     <string name="backup_restore_preview_title">Review backup before restore</string>
     <string name="backup_restore_preview_message">Created • %1$s\nApp version • %2$s\nDatabase version • %3$d\nRecords • %4$d\nFiles • %5$d\nSkipped when created • %6$d\n\nRestoring replaces current local records. Firebase account, family membership and live cloud data are not deleted.</string>
     <string name="backup_restore_confirm">Replace local data</string>
