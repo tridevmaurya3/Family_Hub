@@ -12,8 +12,8 @@ android {
         applicationId 'com.tridev.familyhub'
         minSdk 26
         targetSdk 36
-        versionCode 6
-        versionName '0.3.1'
+        versionCode 7
+        versionName '0.4.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
@@ -33,6 +33,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
     implementation 'androidx.core:core-splashscreen:1.0.1'
+    implementation 'androidx.documentfile:documentfile:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'androidx.room:room-runtime:2.8.4'
