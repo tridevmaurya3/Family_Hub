@@ -38,6 +38,11 @@ public interface DocumentDao {
     @Query("SELECT COUNT(*) FROM documents")
     int count();
 
+    /** Compatibility query used by the Dashboard's upcoming-expiry summary. */
+    @Query("SELECT COUNT(*) FROM documents "
+            + "WHERE expiryAt > 0 AND expiryAt <= :deadline")
+    int countExpiringBy(long deadline);
+
     @Query("SELECT COUNT(*) FROM documents "
             + "WHERE expiryAt > 0 AND expiryAt < :startOfToday")
     int countExpired(long startOfToday);
