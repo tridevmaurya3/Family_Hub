@@ -14,7 +14,7 @@
         style="@style/TextAppearance.FamilyHub.Heading"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/documents_title"
+        android:text="@string/documents_vault_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -25,74 +25,87 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_4"
-        android:text="@string/documents_subtitle"
+        android:text="@string/documents_vault_subtitle"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/documents_title" />
 
-    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
-        android:id="@+id/documents_overview"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/documents_lock_card"
+        style="@style/Widget.FamilyHub.Card.Subtle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
+        android:layout_marginTop="@dimen/space_12"
+        app:cardBackgroundColor="@color/fh_module_documents_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/documents_subtitle"
-        app:overviewAccentColor="@color/fh_module_documents"
-        app:overviewContainerColor="@color/fh_module_documents_container"
-        app:overviewDetail="@string/documents_subtitle"
-        app:overviewIcon="@drawable/ic_document"
-        app:overviewTitle="@string/documents_title" />
+        app:strokeColor="@color/fh_module_documents">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/document_search_layout"
-        style="@style/Widget.FamilyHub.TextInputLayout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
-        android:hint="@string/documents_search_hint"
-        app:endIconMode="clear_text"
-        app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="@color/fh_module_documents"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/documents_overview">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/document_search_input"
-            style="@style/TextAppearance.FamilyHub.Body"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1"
-            android:textColor="@color/fh_on_surface" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="@dimen/space_14"
+            android:paddingTop="@dimen/space_10"
+            android:paddingEnd="@dimen/space_10"
+            android:paddingBottom="@dimen/space_10">
 
-    </com.google.android.material.textfield.TextInputLayout>
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_placeholder_icon"
+                android:contentDescription="@null"
+                android:padding="8dp"
+                android:src="@drawable/ic_safe_place_shield"
+                app:tint="@color/fh_module_documents" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/document_recycler_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingTop="@dimen/space_16"
-        android:paddingBottom="88dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/document_search_layout" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_10"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.CardTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/documents_vault_lock" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:maxLines="2"
+                    android:text="@string/documents_vault_lock_detail" />
+
+            </LinearLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_document_vault_lock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_8"
+                android:contentDescription="@string/documents_vault_lock" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/documents_empty_state"
+        android:id="@+id/documents_locked_state"
         style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
+        android:layout_marginTop="@dimen/space_16"
         android:visibility="gone"
         app:cardBackgroundColor="@color/fh_module_documents_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/document_search_layout"
+        app:layout_constraintTop_toBottomOf="@id/documents_lock_card"
         app:strokeColor="@color/fh_module_documents">
 
         <LinearLayout
@@ -100,47 +113,377 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="@dimen/compact_empty_state_padding">
+            android:padding="32dp">
 
             <ImageView
-                android:layout_width="@dimen/compact_empty_state_icon_size"
-                android:layout_height="@dimen/compact_empty_state_icon_size"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
                 android:background="@drawable/bg_placeholder_icon"
                 android:contentDescription="@null"
-                android:padding="@dimen/compact_empty_state_icon_padding"
-                android:src="@drawable/ic_document"
+                android:padding="15dp"
+                android:src="@drawable/ic_safe_place_shield"
                 app:tint="@color/fh_module_documents" />
 
             <TextView
                 style="@style/TextAppearance.FamilyHub.SectionTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/compact_section_spacing"
-                android:gravity="center"
-                android:text="@string/documents_empty_title" />
+                android:layout_marginTop="@dimen/space_16"
+                android:text="@string/documents_vault_locked_title" />
 
             <TextView
                 style="@style/TextAppearance.FamilyHub.Body"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
                 android:gravity="center"
-                android:text="@string/documents_empty_detail"
+                android:text="@string/documents_vault_locked_detail"
                 android:textAlignment="center" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/empty_add_document_button"
+                android:id="@+id/unlock_documents_button"
                 style="@style/Widget.FamilyHub.Button.Primary"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/button_height"
-                android:layout_marginTop="@dimen/compact_section_spacing"
-                android:text="@string/document_add"
-                app:icon="@drawable/ic_add"
-                app:iconGravity="textStart"
-                app:iconPadding="@dimen/space_6" />
+                android:layout_marginTop="@dimen/space_20"
+                android:text="@string/documents_vault_unlock"
+                app:icon="@drawable/ic_safe_place_shield"
+                app:iconGravity="textStart" />
 
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:id="@+id/documents_vault_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_12"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/documents_lock_card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="3">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/text_documents_total"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/fh_module_documents" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/documents_vault_total" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/text_documents_expiring"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/fh_warning" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/documents_vault_expiring" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/text_documents_expired"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/fh_error" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/documents_vault_expired" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_12"
+                android:paddingTop="6dp"
+                android:paddingEnd="@dimen/space_8"
+                android:paddingBottom="6dp">
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_document_expiry_alerts"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/documents_vault_expiry_alerts" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    android:layout_width="118dp"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/documents_vault_remind_before">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/document_reminder_days_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:maxLines="1" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_documents_lock_now"
+                    style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:minWidth="0dp"
+                    android:text="@string/documents_vault_lock_now"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.TextInputLayout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1.35"
+                android:hint="@string/documents_search_hint"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/fh_module_documents">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/document_search_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.Form.Dropdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:hint="@string/documents_vault_category_filter">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/document_category_filter_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:maxLines="1" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </LinearLayout>
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/document_filter_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            app:selectionRequired="true"
+            app:singleLine="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/filter_all_chip"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:checkable="true"
+                android:text="@string/documents_vault_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/filter_expiring_chip"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/documents_vault_filter_expiring" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/filter_expired_chip"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/documents_vault_filter_expired" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/filter_favorites_chip"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/documents_vault_filter_favorites" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/document_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="8dp"
+                android:paddingBottom="88dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/documents_empty_state"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/fh_module_documents_container"
+                app:strokeColor="@color/fh_module_documents">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/compact_empty_state_padding">
+
+                    <ImageView
+                        android:layout_width="@dimen/compact_empty_state_icon_size"
+                        android:layout_height="@dimen/compact_empty_state_icon_size"
+                        android:background="@drawable/bg_placeholder_icon"
+                        android:contentDescription="@null"
+                        android:padding="@dimen/compact_empty_state_icon_padding"
+                        android:src="@drawable/ic_document"
+                        app:tint="@color/fh_module_documents" />
+
+                    <TextView
+                        android:id="@+id/documents_empty_title"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:gravity="center"
+                        android:text="@string/documents_empty_title" />
+
+                    <TextView
+                        android:id="@+id/documents_empty_detail"
+                        style="@style/TextAppearance.FamilyHub.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_6"
+                        android:gravity="center"
+                        android:text="@string/documents_empty_detail"
+                        android:textAlignment="center" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/empty_add_document_button"
+                        style="@style/Widget.FamilyHub.Button.Primary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_height"
+                        android:layout_marginTop="@dimen/space_16"
+                        android:text="@string/document_add"
+                        app:icon="@drawable/ic_add"
+                        app:iconGravity="textStart" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </FrameLayout>
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
