@@ -43,10 +43,13 @@
     <string name="documents_vault_replace_file">Replace file</string>
     <string name="documents_vault_save_changes">Save changes</string>
     <string name="documents_vault_add_file">Choose file &amp; save</string>
+    <string name="documents_vault_scan_document">Scan with camera</string>
+    <string name="documents_vault_scan_failed">The camera scan could not be saved.</string>
     <string name="documents_vault_file_selected">File selected</string>
-    <string name="documents_vault_file_required">Choose a PDF or image.</string>
+    <string name="documents_vault_file_required">Choose a PDF or image, or scan with the camera.</string>
     <string name="documents_vault_duplicate_file">This file is already saved in Documents Vault.</string>
     <string name="documents_vault_updated">Document updated</string>
+    <string name="documents_vault_added">Document securely added</string>
     <string name="documents_vault_replaced">Document file replaced</string>
     <string name="documents_vault_shared">Document ready to share</string>
     <string name="documents_vault_share_title">Share document</string>
@@ -71,7 +74,7 @@
     <string name="documents_vault_editor_add_title">Add secure document</string>
     <string name="documents_vault_editor_edit_title">Edit document</string>
     <string name="documents_vault_editor_detail">Save a PDF or image with category and expiry information.</string>
-    <string name="documents_vault_picker_note">PDF and image files are supported. Android keeps access private to Family Hub, and encrypted backup includes the selected file.</string>
+    <string name="documents_vault_picker_note">PDF, image and camera scans are supported. Android keeps access private to Family Hub, and encrypted backup includes the selected file.</string>
 
     <string name="documents_vault_notification_channel">Document expiry alerts</string>
     <string name="documents_vault_notification_channel_detail">Alerts for family documents that are expiring or have expired</string>
