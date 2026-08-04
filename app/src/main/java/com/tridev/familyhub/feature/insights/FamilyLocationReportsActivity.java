@@ -1,11 +1,9 @@
 package com.tridev.familyhub.feature.insights;
 
 import android.app.DatePickerDialog;
-import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
@@ -29,8 +27,6 @@ import com.tridev.familyhub.feature.journey.FamilyJourneyRepository;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -84,6 +80,7 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
     @NonNull private FamilyReportRange currentRange =
             FamilyReportRange.weekly(System.currentTimeMillis());
     private long customStart = System.currentTimeMillis();
+    private boolean accessLoading;
 
     @Override
     protected void onCreate(@Nullable Bundle state) {
@@ -106,9 +103,18 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
         insightsList = findViewById(R.id.listReportsInsights);
         membersList = findViewById(R.id.listReportsMembers);
 
+        memberInput.setThreshold(0);
+        memberInput.setInputType(0);
+        memberInput.setOnClickListener(v -> showMemberDropdown());
+        memberInput.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                showMemberDropdown();
+            }
+        });
+
         findViewById(R.id.buttonReportsBack).setOnClickListener(v -> finish());
         findViewById(R.id.buttonReportsRefresh).setOnClickListener(v ->
-                loadReport());
+                loadMemberAccess(true));
         findViewById(R.id.buttonReportsExportPdf).setOnClickListener(v ->
                 beginExport(true));
         findViewById(R.id.buttonReportsExportExcel).setOnClickListener(v ->
@@ -135,10 +141,32 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
 
         updateRangeLabel();
         resetReport();
-        loadMemberAccess();
+        loadMemberAccess(false);
     }
 
-    private void loadMemberAccess() {
+    private void showMemberDropdown() {
+        if (selections.isEmpty()) {
+            if (!accessLoading) {
+                loadMemberAccess(true);
+            }
+            return;
+        }
+        memberInput.showDropDown();
+    }
+
+    private void loadMemberAccess(boolean preserveSelection) {
+        if (accessLoading) {
+            return;
+        }
+        accessLoading = true;
+        String previousUid = preserveSelection
+                && selectedSelection != null
+                && selectedSelection.member != null
+                ? selectedSelection.member.uid
+                : "";
+        boolean previousAll = preserveSelection
+                && selectedSelection != null
+                && selectedSelection.member == null;
         showLoading();
         repository.loadOverview(new FamilyJourneyRepository.OverviewCallback() {
             @Override
@@ -148,19 +176,31 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
                     @NonNull List<FamilyJourneyRepository.Member> loadedAccessible,
                     @NonNull FamilyJourneyRepository.PrivacySettings ownSettings
             ) {
+                accessLoading = false;
                 accessibleMembers = new ArrayList<>(loadedAccessible);
-                bindMemberOptions();
-                loadReport();
+                bindMemberOptions(previousUid, previousAll);
+                if (accessibleMembers.isEmpty()) {
+                    showError();
+                } else {
+                    loadReport();
+                }
             }
 
             @Override
             public void onError(@NonNull String reason) {
+                accessLoading = false;
+                selections.clear();
+                accessibleMembers.clear();
+                memberInput.setText("");
                 showError();
             }
         });
     }
 
-    private void bindMemberOptions() {
+    private void bindMemberOptions(
+            @NonNull String previousUid,
+            boolean previousAll
+    ) {
         selections = new ArrayList<>();
         selections.add(new MemberSelection(null,
                 getString(R.string.family_reports_all_accessible)));
@@ -170,14 +210,29 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
         ArrayAdapter<MemberSelection> adapter = new ArrayAdapter<>(
                 this,
                 android.R.layout.simple_dropdown_item_1line,
-                selections
+                new ArrayList<>(selections)
         );
         memberInput.setAdapter(adapter);
+        memberInput.setEnabled(true);
         memberInput.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 0 || position >= selections.size()) {
+                return;
+            }
             selectedSelection = selections.get(position);
+            memberInput.setText(selectedSelection.label, false);
             loadReport();
         });
+
         selectedSelection = selections.get(0);
+        if (!previousAll && !previousUid.isEmpty()) {
+            for (MemberSelection selection : selections) {
+                if (selection.member != null
+                        && previousUid.equals(selection.member.uid)) {
+                    selectedSelection = selection;
+                    break;
+                }
+            }
+        }
         memberInput.setText(selectedSelection.label, false);
     }
 
@@ -396,16 +451,16 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
         card.setStrokeColor(ContextCompat.getColor(this, accentColor));
         card.setCardBackgroundColor(ContextCompat.getColor(this, containerColor));
 
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout cardContent = new LinearLayout(this);
+        cardContent.setOrientation(LinearLayout.VERTICAL);
+        cardContent.setPadding(dp(14), dp(12), dp(14), dp(12));
 
         TextView titleView = new TextView(this);
         titleView.setText(title);
         titleView.setTextSize(15F);
         titleView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         titleView.setTextColor(ContextCompat.getColor(this, accentColor));
-        content.addView(titleView);
+        cardContent.addView(titleView);
 
         TextView detailView = new TextView(this);
         detailView.setText(detail);
@@ -419,8 +474,8 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
         detailParams.topMargin = dp(4);
-        content.addView(detailView, detailParams);
-        card.addView(content);
+        cardContent.addView(detailView, detailParams);
+        card.addView(cardContent);
         return card;
     }
 
