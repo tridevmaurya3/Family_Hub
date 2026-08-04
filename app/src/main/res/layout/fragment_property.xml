@@ -9,54 +9,156 @@
     android:paddingTop="@dimen/compact_page_top_padding"
     android:paddingEnd="@dimen/screen_padding_horizontal">
 
-    <TextView
-        android:id="@+id/property_screen_title"
-        style="@style/TextAppearance.FamilyHub.Heading"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/property_header_card"
+        style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/property_title"
+        app:cardBackgroundColor="@color/fh_surface"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:strokeColor="@color/fh_outline">
 
-    <TextView
-        android:id="@+id/property_subtitle"
-        style="@style/TextAppearance.FamilyHub.Body"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_4"
-        android:text="@string/property_subtitle"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/property_screen_title" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/space_10">
 
-    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
-        android:id="@+id/property_overview"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="@dimen/space_10"
+                app:cardBackgroundColor="@color/fh_module_property_container"
+                app:cardCornerRadius="@dimen/radius_12"
+                app:cardElevation="0dp">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_property"
+                    app:tint="@color/fh_module_property" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Heading"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/property_dashboard_title"
+                    android:textColor="@color/fh_on_surface"
+                    android:textSize="16sp" />
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_2"
+                    android:maxLines="2"
+                    android:text="@string/property_subtitle"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:id="@+id/property_summary_row"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
+        android:layout_height="58dp"
+        android:layout_marginTop="@dimen/space_8"
+        android:orientation="horizontal"
+        android:weightSum="4"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/property_subtitle"
-        app:overviewAccentColor="@color/fh_module_property"
-        app:overviewContainerColor="@color/fh_module_property_container"
-        app:overviewDetail="@string/property_subtitle"
-        app:overviewIcon="@drawable/ic_property"
-        app:overviewTitle="@string/property_title" />
+        app:layout_constraintTop_toBottomOf="@id/property_header_card">
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginEnd="3dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical">
+                <TextView android:id="@+id/property_total_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0" android:textColor="@color/fh_module_property" android:textSize="16sp" />
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/property_stat_total" android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginHorizontal="3dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical">
+                <TextView android:id="@+id/property_residential_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0" android:textColor="@color/fh_info" android:textSize="16sp" />
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/property_stat_homes" android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginHorizontal="3dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical">
+                <TextView android:id="@+id/property_land_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0" android:textColor="@color/fh_warning" android:textSize="16sp" />
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/property_stat_land" android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Subtle"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginStart="3dp" android:layout_weight="1">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical">
+                <TextView android:id="@+id/property_total_estimate_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:maxLines="1" android:text="₹0" android:textColor="@color/fh_success" android:textSize="12sp" />
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/property_stat_value" android:textSize="9sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/property_search_layout"
         style="@style/Widget.FamilyHub.TextInputLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
+        android:layout_marginTop="@dimen/space_8"
         android:hint="@string/property_search_hint"
         app:endIconMode="clear_text"
         app:startIconDrawable="@drawable/ic_search"
         app:startIconTint="@color/fh_module_property"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/property_overview">
+        app:layout_constraintTop_toBottomOf="@id/property_summary_row">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/property_search_input"
@@ -68,6 +170,47 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <HorizontalScrollView
+        android:id="@+id/property_filter_scroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_6"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/property_search_layout">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/property_filter_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleLine="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/property_filter_all"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:checkable="true" android:checked="true" android:text="@string/property_filter_all" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/property_filter_homes"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:checkable="true" android:text="@string/property_filter_homes" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/property_filter_land"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:checkable="true" android:text="@string/property_filter_land" />
+            <com.google.android.material.chip.Chip
+                android:id="@+id/property_filter_commercial"
+                style="@style/Widget.FamilyHub.StatusChip"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:checkable="true" android:text="@string/property_filter_commercial" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/property_recycler_view"
         android:layout_width="0dp"
@@ -78,7 +221,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/property_search_layout" />
+        app:layout_constraintTop_toBottomOf="@id/property_filter_scroll" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/property_empty_state"
@@ -90,7 +233,7 @@
         app:cardBackgroundColor="@color/fh_module_property_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/property_search_layout"
+        app:layout_constraintTop_toBottomOf="@id/property_filter_scroll"
         app:strokeColor="@color/fh_module_property">
 
         <LinearLayout
