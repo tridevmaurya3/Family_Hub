@@ -14,6 +14,7 @@ public interface PasswordEntryDao {
     @Query("SELECT * FROM password_entries ORDER BY title COLLATE NOCASE") List<PasswordEntry> getAll();
     @Query("SELECT * FROM password_entries WHERE title LIKE '%' || :query || '%' OR website LIKE '%' || :query || '%' ORDER BY title COLLATE NOCASE") List<PasswordEntry> search(String query);
     @Insert(onConflict = OnConflictStrategy.ABORT) long insert(PasswordEntry entry);
+    @Insert(onConflict = OnConflictStrategy.ABORT) List<Long> insertAll(List<PasswordEntry> entries);
     @Update int update(PasswordEntry entry);
     @Delete int delete(PasswordEntry entry);
 }
