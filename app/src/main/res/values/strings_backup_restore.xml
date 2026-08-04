@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="backup_title">Encrypted Backup &amp; Restore</string>
+    <string name="backup_subtitle">Protect Family Hub records, documents and profile photos with a portable password.</string>
+    <string name="backup_security_badge">AES-256-GCM • Password protected</string>
+
+    <string name="backup_status_title">Backup readiness</string>
+    <string name="backup_status_ready">Ready for encrypted backup</string>
+    <string name="backup_status_need_password">Set a backup password to continue</string>
+    <string name="backup_status_need_folder">Choose a backup folder to continue</string>
+    <string name="backup_status_need_both">Set a password and choose a backup folder</string>
+    <string name="backup_status_destination">Destination • %1$s</string>
+    <string name="backup_destination_not_selected">No backup folder selected</string>
+    <string name="backup_choose_folder">Choose backup folder</string>
+    <string name="backup_folder_hint">You may choose device storage, Google Drive, OneDrive or another document provider.</string>
+
+    <string name="backup_password_section">Backup password</string>
+    <string name="backup_password_explanation">This password encrypts the complete backup and is required after reinstalling the app. Family Hub cannot recover a forgotten password.</string>
+    <string name="backup_password_hint">Password</string>
+    <string name="backup_password_confirm_hint">Confirm password</string>
+    <string name="backup_save_password">Save backup password</string>
+    <string name="backup_change_password">Change backup password</string>
+    <string name="backup_password_saved">Backup password is protected by Android Keystore on this device.</string>
+    <string name="backup_password_requirements">Use 8–128 characters with at least one letter and one number.</string>
+    <string name="backup_password_weak">Password must contain at least 8 characters, one letter and one number.</string>
+    <string name="backup_password_mismatch">Passwords do not match.</string>
+    <string name="backup_password_saved_message">Backup password saved securely.</string>
+
+    <string name="backup_manual_section">Manual backup and restore</string>
+    <string name="backup_now">Create encrypted backup</string>
+    <string name="backup_restore">Restore from backup</string>
+    <string name="backup_manual_detail">Backup includes local database records, Password Vault entries, available documents, profile photos and safety alert preferences. Firebase account and live cloud data remain linked to your sign-in.</string>
+
+    <string name="backup_schedule_section">Automatic backup</string>
+    <string name="backup_schedule_switch">Enable automatic encrypted backup</string>
+    <string name="backup_frequency_hint">Frequency</string>
+    <string name="backup_frequency_daily">Daily</string>
+    <string name="backup_frequency_weekly">Weekly</string>
+    <string name="backup_wifi_only">Wi-Fi only</string>
+    <string name="backup_wifi_only_detail">Wait for an unmetered network</string>
+    <string name="backup_charging_only">Only while charging</string>
+    <string name="backup_charging_only_detail">Reduce battery use during large backups</string>
+    <string name="backup_save_schedule">Save automatic backup settings</string>
+    <string name="backup_schedule_saved">Automatic backup settings saved.</string>
+    <string name="backup_schedule_incomplete">Choose a folder and save a backup password before enabling automatic backup.</string>
+
+    <string name="backup_last_section">Last backup</string>
+    <string name="backup_never">No successful backup yet</string>
+    <string name="backup_last_time">Completed • %1$s</string>
+    <string name="backup_last_file">File • %1$s</string>
+    <string name="backup_last_summary">%1$d records • %2$d files • %3$s</string>
+    <string name="backup_last_error">Last error • %1$s</string>
+
+    <string name="backup_progress_preparing">Preparing encrypted backup…</string>
+    <string name="backup_progress_restoring">Checking and restoring backup…</string>
+    <string name="backup_operation_running">Please keep Family Hub open until this operation finishes.</string>
+    <string name="backup_success_title">Backup completed</string>
+    <string name="backup_success_message">%1$d records and %2$d files were encrypted successfully.%3$s</string>
+    <string name="backup_skipped_suffix">\n%1$d unavailable files could not be included.</string>
+    <string name="backup_restore_success_title">Restore completed</string>
+    <string name="backup_restore_success_message">%1$d records and %2$d files were restored and verified. Family Hub will reopen to refresh all modules.</string>
+
+    <string name="backup_restore_password_title">Unlock encrypted backup</string>
+    <string name="backup_restore_password_message">Enter the password used when this backup was created.</string>
+    <string name="backup_restore_preview_title">Review backup before restore</string>
+    <string name="backup_restore_preview_message">Created • %1$s\nApp version • %2$s\nDatabase version • %3$d\nRecords • %4$d\nFiles • %5$d\nSkipped when created • %6$d\n\nRestoring replaces current local records. Firebase account, family membership and live cloud data are not deleted.</string>
+    <string name="backup_restore_confirm">Replace local data</string>
+    <string name="backup_restore_cancel">Keep current data</string>
+
+    <string name="backup_error_title">Backup operation failed</string>
+    <string name="backup_error_wrong_password">The password is incorrect or the backup file is damaged.</string>
+    <string name="backup_error_not_family_hub">This is not a valid Family Hub encrypted backup.</string>
+    <string name="backup_error_newer_app">This backup was created by a newer Family Hub database version. Update the app before restoring it.</string>
+    <string name="backup_error_vault">A Password Vault entry could not be decrypted. Open and verify the vault before creating another backup.</string>
+    <string name="backup_error_folder">The selected backup folder is no longer available. Choose it again.</string>
+    <string name="backup_error_generic">The encrypted backup could not be completed. No current data was replaced.</string>
+    <string name="backup_restore_rollback">Restore verification failed. Your previous local database was kept unchanged.</string>
+
+    <string name="backup_privacy_note">Android permissions, Firebase login tokens and temporary location queues are intentionally not included. After reinstall, sign in again and grant permissions normally.</string>
+    <string name="backup_close">Close</string>
+    <string name="backup_back_description">Go back</string>
+    <string name="backup_folder_selected">Backup folder selected.</string>
+    <string name="backup_file_picker_title">Select a Family Hub backup</string>
+</resources>
