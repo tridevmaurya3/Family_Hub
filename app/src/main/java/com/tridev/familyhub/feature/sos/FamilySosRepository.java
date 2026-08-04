@@ -11,13 +11,14 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
+import com.tridev.familyhub.feature.automation.FirebaseNumericValueReader;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** Authenticated Realtime Database access for Family SOS Option A. */
@@ -62,7 +63,7 @@ public final class FamilySosRepository {
     @Nullable private DatabaseReference sosReference;
     @Nullable private ValueEventListener sosListener;
     @Nullable private Listener listener;
-    private long lastLocalRequestAt;
+    private long lastSuccessfulRequestAt;
     private int generation;
 
     public void observe(@NonNull Listener callback) {
@@ -90,11 +91,11 @@ public final class FamilySosRepository {
 
     public void requestSos(@NonNull ActionCallback callback) {
         long now = System.currentTimeMillis();
-        if (now - lastLocalRequestAt < FamilySosPolicy.LOCAL_REQUEST_COOLDOWN_MS) {
+        if (now - lastSuccessfulRequestAt
+                < FamilySosPolicy.LOCAL_REQUEST_COOLDOWN_MS) {
             callback.onError("PLEASE_WAIT");
             return;
         }
-        lastLocalRequestAt = now;
         ensureSession(new SessionCallback() {
             @Override
             public void onReady(@NonNull Session activeSession) {
@@ -103,7 +104,7 @@ public final class FamilySosRepository {
                         callback.onError("SOS_ALREADY_ACTIVE");
                         return;
                     }
-                    createSosFromLatestLocation(activeSession, callback);
+                    createBaseSos(activeSession, callback);
                 }, callback);
             }
 
@@ -129,11 +130,16 @@ public final class FamilySosRepository {
                 root.child("familySos")
                         .child(activeSession.familyId)
                         .child(sosId)
-                        .updateChildren(updates)
-                        .addOnSuccessListener(unused ->
-                                callback.onSuccess(sosId))
-                        .addOnFailureListener(error ->
-                                callback.onError("CANCEL_FAILED"));
+                        .updateChildren(updates, (error, reference) -> {
+                            if (error == null) {
+                                callback.onSuccess(sosId);
+                            } else {
+                                callback.onError(mapDatabaseError(
+                                        error,
+                                        "CANCEL_FAILED"
+                                ));
+                            }
+                        });
             }
 
             @Override
@@ -152,7 +158,10 @@ public final class FamilySosRepository {
             public void onReady(@NonNull Session activeSession) {
                 Map<String, Object> response = new LinkedHashMap<>();
                 response.put("uid", activeSession.uid);
-                response.put("displayName", activeSession.displayName);
+                response.put("displayName", bounded(
+                        activeSession.displayName,
+                        100
+                ));
                 response.put("state", FamilySosPolicy.RESPONSE_RESPONDING);
                 response.put("respondedAt", ServerValue.TIMESTAMP);
 
@@ -161,11 +170,16 @@ public final class FamilySosRepository {
                         .child(sosId)
                         .child("responses")
                         .child(activeSession.uid)
-                        .setValue(response)
-                        .addOnSuccessListener(unused ->
-                                callback.onSuccess(sosId))
-                        .addOnFailureListener(error ->
-                                callback.onError("RESPONSE_FAILED"));
+                        .setValue(response, (error, reference) -> {
+                            if (error == null) {
+                                callback.onSuccess(sosId);
+                            } else {
+                                callback.onError(mapDatabaseError(
+                                        error,
+                                        "RESPONSE_FAILED"
+                                ));
+                            }
+                        });
             }
 
             @Override
@@ -199,17 +213,28 @@ public final class FamilySosRepository {
                 }
                 List<FamilySosAlert> alerts = new ArrayList<>();
                 for (DataSnapshot child : snapshot.getChildren()) {
-                    FamilySosAlert alert = child.getValue(FamilySosAlert.class);
-                    if (alert == null
-                            || !FamilySosPolicy.isSupportedStatus(alert.status)) {
-                        continue;
+                    try {
+                        FamilySosAlert alert = child.getValue(
+                                FamilySosAlert.class
+                        );
+                        if (alert == null
+                                || !FamilySosPolicy.isSupportedStatus(
+                                alert.status
+                        )) {
+                            continue;
+                        }
+                        if (alert.sosId == null) {
+                            alert.sosId = "";
+                        }
+                        if (alert.sosId.trim().isEmpty()) {
+                            alert.sosId = child.getKey() == null
+                                    ? ""
+                                    : child.getKey();
+                        }
+                        alerts.add(alert);
+                    } catch (RuntimeException ignored) {
+                        // One legacy/corrupt SOS must not block the centre.
                     }
-                    if (alert.sosId.trim().isEmpty()) {
-                        alert.sosId = child.getKey() == null
-                                ? ""
-                                : child.getKey();
-                    }
-                    alerts.add(alert);
                 }
                 alerts.sort(Comparator.comparingLong(
                         FamilySosAlert::effectiveCreatedAt
@@ -226,116 +251,139 @@ public final class FamilySosRepository {
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 if (requestGeneration == generation && listener != null) {
-                    listener.onError("SOS_LIST_FAILED");
+                    listener.onError(mapDatabaseError(
+                            error,
+                            "SOS_LIST_FAILED"
+                    ));
                 }
             }
         };
         sosReference.addValueEventListener(sosListener);
     }
 
-    private void createSosFromLatestLocation(
+    /**
+     * Sends the emergency alert first without depending on location parsing.
+     * A valid recent Family Live location is attached immediately afterwards.
+     */
+    private void createBaseSos(
             @NonNull Session activeSession,
             @NonNull ActionCallback callback
+    ) {
+        DatabaseReference newReference = root
+                .child("familySos")
+                .child(activeSession.familyId)
+                .push();
+        String sosId = newReference.getKey();
+        if (sosId == null || sosId.trim().isEmpty()) {
+            callback.onError("SOS_CREATE_FAILED");
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("sosId", sosId);
+        values.put("familyId", activeSession.familyId);
+        values.put("senderUid", activeSession.uid);
+        values.put("senderName", bounded(activeSession.displayName, 100));
+        values.put("status", FamilySosPolicy.STATUS_ACTIVE);
+        values.put("message", "Emergency help requested");
+        values.put("hasLocation", false);
+        values.put("placeLabel", "");
+        values.put("locationUpdatedAt", 0L);
+        values.put("clientCreatedAt", now);
+        values.put("createdAt", ServerValue.TIMESTAMP);
+        values.put("updatedAt", ServerValue.TIMESTAMP);
+
+        newReference.setValue(values, (error, reference) -> {
+            if (error != null) {
+                callback.onError(mapDatabaseError(
+                        error,
+                        "SOS_CREATE_FAILED"
+                ));
+                return;
+            }
+            lastSuccessfulRequestAt = now;
+            callback.onSuccess(sosId);
+            attachLatestLocation(activeSession, sosId, now);
+        });
+    }
+
+    private void attachLatestLocation(
+            @NonNull Session activeSession,
+            @NonNull String sosId,
+            long requestAt
     ) {
         root.child("locations")
                 .child(activeSession.familyId)
                 .child(activeSession.uid)
                 .get()
                 .addOnSuccessListener(location -> {
-                    DatabaseReference newReference = root
-                            .child("familySos")
-                            .child(activeSession.familyId)
-                            .push();
-                    String sosId = newReference.getKey();
-                    if (sosId == null || sosId.trim().isEmpty()) {
-                        callback.onError("SOS_CREATE_FAILED");
+                    Map<String, Object> update = safeLocationUpdate(
+                            location,
+                            requestAt
+                    );
+                    if (update.isEmpty()) {
                         return;
                     }
-
-                    long now = System.currentTimeMillis();
-                    Map<String, Object> values = new LinkedHashMap<>();
-                    values.put("sosId", sosId);
-                    values.put("familyId", activeSession.familyId);
-                    values.put("senderUid", activeSession.uid);
-                    values.put("senderName", activeSession.displayName);
-                    values.put("status", FamilySosPolicy.STATUS_ACTIVE);
-                    values.put("message", "Emergency help requested");
-                    values.put("clientCreatedAt", now);
-                    values.put("createdAt", ServerValue.TIMESTAMP);
-                    values.put("updatedAt", ServerValue.TIMESTAMP);
-
-                    appendLocation(values, location, now);
-                    newReference.setValue(values)
-                            .addOnSuccessListener(unused ->
-                                    callback.onSuccess(sosId))
-                            .addOnFailureListener(error ->
-                                    callback.onError("SOS_CREATE_FAILED"));
-                })
-                .addOnFailureListener(error -> {
-                    DatabaseReference newReference = root
-                            .child("familySos")
+                    root.child("familySos")
                             .child(activeSession.familyId)
-                            .push();
-                    String sosId = newReference.getKey();
-                    if (sosId == null || sosId.trim().isEmpty()) {
-                        callback.onError("SOS_CREATE_FAILED");
-                        return;
-                    }
-                    long now = System.currentTimeMillis();
-                    Map<String, Object> values = new LinkedHashMap<>();
-                    values.put("sosId", sosId);
-                    values.put("familyId", activeSession.familyId);
-                    values.put("senderUid", activeSession.uid);
-                    values.put("senderName", activeSession.displayName);
-                    values.put("status", FamilySosPolicy.STATUS_ACTIVE);
-                    values.put("message", "Emergency help requested");
-                    values.put("hasLocation", false);
-                    values.put("placeLabel", "");
-                    values.put("locationUpdatedAt", 0L);
-                    values.put("clientCreatedAt", now);
-                    values.put("createdAt", ServerValue.TIMESTAMP);
-                    values.put("updatedAt", ServerValue.TIMESTAMP);
-                    newReference.setValue(values)
-                            .addOnSuccessListener(unused ->
-                                    callback.onSuccess(sosId))
-                            .addOnFailureListener(writeError ->
-                                    callback.onError("SOS_CREATE_FAILED"));
+                            .child(sosId)
+                            .updateChildren(update);
                 });
     }
 
-    private void appendLocation(
-            @NonNull Map<String, Object> values,
+    @NonNull
+    private Map<String, Object> safeLocationUpdate(
             @NonNull DataSnapshot location,
             long now
     ) {
-        Double latitude = location.child("latitude").getValue(Double.class);
-        Double longitude = location.child("longitude").getValue(Double.class);
-        Double accuracy = location.child("accuracy").getValue(Double.class);
-        Long updatedAt = location.child("updatedAt").getValue(Long.class);
+        Map<String, Object> update = new LinkedHashMap<>();
+        Double latitude = FirebaseNumericValueReader.doubleValue(
+                location.child("latitude")
+        );
+        Double longitude = FirebaseNumericValueReader.doubleValue(
+                location.child("longitude")
+        );
+        Double accuracy = FirebaseNumericValueReader.doubleValue(
+                location.child("accuracy")
+        );
+        long updatedAt = FirebaseNumericValueReader.nonNegativeLong(
+                location.child("updatedAt"),
+                0L
+        );
+        if (updatedAt <= 0L) {
+            updatedAt = FirebaseNumericValueReader.nonNegativeLong(
+                    location.child("clientTimestamp"),
+                    0L
+            );
+        }
         Boolean sharingEnabled = location.child("sharingEnabled")
                 .getValue(Boolean.class);
-        String placeLabel = location.child("placeLabel").getValue(String.class);
+        String placeLabel = location.child("placeLabel")
+                .getValue(String.class);
 
         boolean valid = Boolean.TRUE.equals(sharingEnabled)
                 && latitude != null
                 && longitude != null
                 && accuracy != null
-                && updatedAt != null
                 && FamilySosPolicy.validCoordinates(
                         latitude,
                         longitude,
                         accuracy
                 )
                 && FamilySosPolicy.isFreshLocation(updatedAt, now);
-
-        values.put("hasLocation", valid);
-        values.put("placeLabel", placeLabel == null ? "" : placeLabel.trim());
-        values.put("locationUpdatedAt", valid ? updatedAt : 0L);
-        if (valid) {
-            values.put("latitude", latitude);
-            values.put("longitude", longitude);
-            values.put("accuracy", accuracy);
+        if (!valid) {
+            return update;
         }
+
+        update.put("hasLocation", true);
+        update.put("latitude", latitude);
+        update.put("longitude", longitude);
+        update.put("accuracy", accuracy);
+        update.put("placeLabel", bounded(placeLabel, 160));
+        update.put("locationUpdatedAt", updatedAt);
+        update.put("updatedAt", ServerValue.TIMESTAMP);
+        return update;
     }
 
     private void findExistingActiveSos(
@@ -345,23 +393,31 @@ public final class FamilySosRepository {
     ) {
         root.child("familySos")
                 .child(activeSession.familyId)
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    for (DataSnapshot child : snapshot.getChildren()) {
-                        String senderUid = child.child("senderUid")
-                                .getValue(String.class);
-                        String status = child.child("status")
-                                .getValue(String.class);
-                        if (activeSession.uid.equals(senderUid)
-                                && FamilySosPolicy.isActive(status)) {
-                            existingCallback.onFound(child.getKey());
-                            return;
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        for (DataSnapshot child : snapshot.getChildren()) {
+                            String senderUid = child.child("senderUid")
+                                    .getValue(String.class);
+                            String status = child.child("status")
+                                    .getValue(String.class);
+                            if (activeSession.uid.equals(senderUid)
+                                    && FamilySosPolicy.isActive(status)) {
+                                existingCallback.onFound(child.getKey());
+                                return;
+                            }
                         }
+                        existingCallback.onFound(null);
                     }
-                    existingCallback.onFound(null);
-                })
-                .addOnFailureListener(error ->
-                        actionCallback.onError("SOS_CHECK_FAILED"));
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        actionCallback.onError(mapDatabaseError(
+                                error,
+                                "SOS_CHECK_FAILED"
+                        ));
+                    }
+                });
     }
 
     private void ensureSession(@NonNull SessionCallback callback) {
@@ -399,6 +455,15 @@ public final class FamilySosRepository {
                             .child(user.getUid())
                             .get()
                             .addOnSuccessListener(membership -> {
+                                String memberStatus = membership
+                                        .child("status")
+                                        .getValue(String.class);
+                                if (!"ACTIVE".equals(memberStatus)) {
+                                    callback.onError(
+                                            "MEMBERSHIP_NOT_ACTIVE"
+                                    );
+                                    return;
+                                }
                                 String displayName = membership
                                         .child("displayName")
                                         .getValue(String.class);
@@ -417,7 +482,7 @@ public final class FamilySosRepository {
                                 Session loaded = new Session(
                                         user.getUid(),
                                         safeFamilyId,
-                                        displayName.trim()
+                                        bounded(displayName, 100)
                                 );
                                 session = loaded;
                                 callback.onReady(loaded);
@@ -436,6 +501,37 @@ public final class FamilySosRepository {
         }
         sosReference = null;
         sosListener = null;
+    }
+
+    @NonNull
+    private static String mapDatabaseError(
+            @NonNull DatabaseError error,
+            @NonNull String fallback
+    ) {
+        switch (error.getCode()) {
+            case DatabaseError.PERMISSION_DENIED:
+            case DatabaseError.EXPIRED_TOKEN:
+            case DatabaseError.INVALID_TOKEN:
+                return "SOS_PERMISSION_DENIED";
+            case DatabaseError.DISCONNECTED:
+            case DatabaseError.NETWORK_ERROR:
+            case DatabaseError.UNAVAILABLE:
+                return "SOS_CONNECTION_FAILED";
+            case DatabaseError.OPERATION_FAILED:
+            case DatabaseError.USER_CODE_EXCEPTION:
+                return "SOS_DATA_REJECTED";
+            default:
+                return fallback;
+        }
+    }
+
+    @NonNull
+    private static String bounded(@Nullable String value, int maxLength) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.length() <= maxLength) {
+            return trimmed;
+        }
+        return trimmed.substring(0, Math.max(0, maxLength));
     }
 
     private interface SessionCallback {
