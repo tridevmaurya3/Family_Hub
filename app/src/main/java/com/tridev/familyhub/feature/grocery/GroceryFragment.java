@@ -118,6 +118,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 }
         );
         loadItems("");
+        repository.startRealtimeSync(() -> {
+            if (binding != null) {
+                loadItems(currentQuery());
+            }
+        });
     }
 
     @Override
@@ -333,6 +338,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     @Override
     public void onDestroyView() {
+        repository.stopRealtimeSync();
         binding.groceryRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();

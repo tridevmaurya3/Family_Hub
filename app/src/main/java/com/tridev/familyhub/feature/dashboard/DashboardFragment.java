@@ -9,17 +9,13 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
@@ -116,68 +112,12 @@ public class DashboardFragment extends Fragment {
         loadDashboardData();
     }
 
-    /** Converts the existing app-mark tile into a profile avatar and adds menu. */
+    /** Binds the stable Fluent header: menu, notification, then profile. */
     private void setupHeaderActions() {
-        View headerChild = binding.dashboardHeaderCard.getChildAt(0);
-        if (!(headerChild instanceof ViewGroup)) {
-            return;
-        }
-        ViewGroup headerRow = (ViewGroup) headerChild;
-
-        if (headerRow.getChildCount() > 0
-                && headerRow.getChildAt(0) instanceof MaterialCardView) {
-            MaterialCardView profileCard =
-                    (MaterialCardView) headerRow.getChildAt(0);
-            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
-                    dp(44),
-                    dp(44)
-            );
-            cardParams.rightMargin = dp(8);
-            profileCard.setLayoutParams(cardParams);
-            profileCard.setRadius(dp(22));
-            profileCard.setClickable(true);
-            profileCard.setFocusable(true);
-            profileCard.setForeground(ContextCompat.getDrawable(
-                    requireContext(),
-                    android.R.drawable.list_selector_background
-            ));
-            profileCard.setContentDescription(getString(
-                    R.string.dashboard_profile_content_description
-            ));
-            profileCard.setOnClickListener(v -> openProfile());
-
-            if (profileCard.getChildCount() > 0
-                    && profileCard.getChildAt(0) instanceof ImageView) {
-                profileAvatar = (ImageView) profileCard.getChildAt(0);
-                profileAvatar.setImageTintList(null);
-                FrameLayout.LayoutParams avatarParams = new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        Gravity.CENTER
-                );
-                profileAvatar.setLayoutParams(avatarParams);
-                profileAvatar.setContentDescription(getString(
-                        R.string.dashboard_profile_content_description
-                ));
-                renderProfileAvatar();
-            }
-        }
-
-        ImageButton menuButton = new ImageButton(requireContext());
-        menuButton.setBackgroundResource(R.drawable.bg_icon_button);
-        menuButton.setImageResource(R.drawable.ic_menu_hamburger);
-        menuButton.setPadding(dp(12), dp(12), dp(12), dp(12));
-        menuButton.setContentDescription(getString(
-                R.string.dashboard_feature_menu_content_description
-        ));
-        menuButton.setOnClickListener(v -> showFeatureMenu());
-        LinearLayout.LayoutParams menuParams = new LinearLayout.LayoutParams(
-                dp(48),
-                dp(48)
-        );
-        menuParams.rightMargin = dp(4);
-        int menuIndex = Math.min(1, headerRow.getChildCount());
-        headerRow.addView(menuButton, menuIndex, menuParams);
+        binding.dashboardMenuButton.setOnClickListener(v -> showFeatureMenu());
+        binding.dashboardProfileCard.setOnClickListener(v -> openProfile());
+        profileAvatar = binding.dashboardProfileAvatar;
+        renderProfileAvatar();
     }
 
     private void renderProfileAvatar() {

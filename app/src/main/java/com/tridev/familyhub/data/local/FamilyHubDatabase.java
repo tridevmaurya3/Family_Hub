@@ -63,7 +63,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 16,
+        version = 17,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -117,6 +117,20 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                             + "ON `safe_place_alerts` "
                             + "(`placeId`, `transitionType`, `deduplicationBucket`)"
             );
+        }
+    };
+
+    /** Adds stable family-cloud identity without deleting existing groceries. */
+    private static final Migration MIGRATION_16_17 = new Migration(16, 17) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `updatedByName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_cloudId` ON `grocery_items` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_familyId` ON `grocery_items` (`familyId`)");
         }
     };
 
@@ -621,7 +635,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_12_13,
                                     MIGRATION_13_14,
                                     MIGRATION_14_15,
-                                    MIGRATION_15_16
+                                    MIGRATION_15_16,
+                                    MIGRATION_16_17
                             )
                             .build();
                 }

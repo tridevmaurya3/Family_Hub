@@ -37,6 +37,12 @@ public interface GroceryItemDao {
     @Query("SELECT * FROM grocery_items WHERE id = :itemId LIMIT 1")
     GroceryItem getById(long itemId);
 
+    @Query("SELECT * FROM grocery_items WHERE cloudId = :cloudId LIMIT 1")
+    GroceryItem getByCloudId(String cloudId);
+
+    @Query("SELECT * FROM grocery_items WHERE cloudId != ''")
+    List<GroceryItem> getAllSynced();
+
     @Query("SELECT COUNT(*) FROM grocery_items WHERE isPurchased = 0")
     int countPending();
 
@@ -55,6 +61,9 @@ public interface GroceryItemDao {
 
     @Delete
     int delete(GroceryItem item);
+
+    @Query("DELETE FROM grocery_items WHERE cloudId = :cloudId")
+    int deleteByCloudId(String cloudId);
 
     @Query("DELETE FROM grocery_items WHERE isPurchased = 1")
     int deletePurchased();
