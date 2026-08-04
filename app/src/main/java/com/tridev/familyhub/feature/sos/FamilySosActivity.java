@@ -31,7 +31,6 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.tridev.familyhub.R;
 
 import java.text.DateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -462,12 +461,22 @@ public final class FamilySosActivity extends AppCompatActivity {
             message = R.string.family_sos_error_auth;
         } else if ("ACTIVE_FAMILY_REQUIRED".equals(reason)) {
             message = R.string.family_sos_error_family;
+        } else if ("MEMBERSHIP_NOT_ACTIVE".equals(reason)
+                || "MEMBER_LOAD_FAILED".equals(reason)) {
+            message = R.string.family_sos_error_membership;
         } else if ("SOS_ALREADY_ACTIVE".equals(reason)) {
             ownActiveSos = true;
             updateHoldButtonState();
             message = R.string.family_sos_error_existing;
         } else if ("PLEASE_WAIT".equals(reason)) {
             message = R.string.family_sos_error_wait;
+        } else if ("SOS_PERMISSION_DENIED".equals(reason)) {
+            message = R.string.family_sos_error_permission;
+        } else if ("SOS_CONNECTION_FAILED".equals(reason)
+                || "FAMILY_LOAD_FAILED".equals(reason)) {
+            message = R.string.family_sos_error_connection;
+        } else if ("SOS_DATA_REJECTED".equals(reason)) {
+            message = R.string.family_sos_error_data;
         } else {
             message = R.string.family_sos_error_generic;
         }
