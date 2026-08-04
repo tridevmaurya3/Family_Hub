@@ -1,20 +1,31 @@
 package com.tridev.familyhub.feature.documents;
 
+import android.Manifest;
+import android.content.ClipData;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.google.android.material.datepicker.MaterialDatePicker;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
@@ -24,19 +35,66 @@ import com.tridev.familyhub.databinding.DialogDocumentEditorBinding;
 import com.tridev.familyhub.databinding.FragmentDocumentsBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 
-/** Offline document vault backed by persisted Android document permissions. */
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * Private offline Documents Vault with device authentication, secure Android
+ * document permissions, expiry reminders, filters and encrypted-backup support.
+ */
 public class DocumentsFragment extends Fragment implements AddActionHost {
+
+    private enum FilterMode {
+        ALL,
+        EXPIRING,
+        EXPIRED,
+        FAVORITES
+    }
 
     private FragmentDocumentsBinding binding;
     private DocumentRepository repository;
     private DocumentAdapter adapter;
-    private String pendingTitle;
-    private String pendingCategory;
+    private DocumentVaultPreferences preferences;
+
+    private final List<DocumentEntry> loadedDocuments = new ArrayList<>();
+    private FilterMode filterMode = FilterMode.ALL;
+    @NonNull
+    private String selectedCategory = "";
+
+    @Nullable
+    private PendingDocument pendingDocument;
+    @Nullable
+    private androidx.appcompat.app.AlertDialog editorDialog;
+    @Nullable
+    private DialogDocumentEditorBinding editorBinding;
+    private long editorExpiryAt;
+    private boolean updatingLockSwitch;
+    @Nullable
+    private Runnable authenticationSuccessAction;
 
     private final ActivityResultLauncher<String[]> documentPicker =
             registerForActivityResult(
                     new ActivityResultContracts.OpenDocument(),
                     this::onDocumentPicked
+            );
+
+    private final ActivityResultLauncher<String> notificationPermission =
+            registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(),
+                    granted -> {
+                        if (binding == null) {
+                            return;
+                        }
+                        binding.switchDocumentExpiryAlerts.setChecked(granted);
+                        preferences.setExpiryAlertsEnabled(granted);
+                        DocumentExpiryScheduler.sync(requireContext());
+                        if (granted) {
+                            DocumentExpiryScheduler.runNow(requireContext());
+                        }
+                    }
             );
 
     @Nullable
@@ -62,15 +120,37 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         super.onViewCreated(view, savedInstanceState);
 
         repository = new DocumentRepository(requireContext());
+        preferences = new DocumentVaultPreferences(requireContext());
         adapter = new DocumentAdapter(new DocumentAdapter.DocumentActionListener() {
             @Override
             public void onOpen(@NonNull DocumentEntry document) {
-                openDocument(document);
+                runProtected(() -> openDocument(document));
+            }
+
+            @Override
+            public void onShare(@NonNull DocumentEntry document) {
+                runProtected(() -> shareDocument(document));
+            }
+
+            @Override
+            public void onEdit(@NonNull DocumentEntry document) {
+                runProtected(() -> showDocumentEditorInternal(document));
+            }
+
+            @Override
+            public void onToggleFavorite(@NonNull DocumentEntry document) {
+                preferences.toggleFavorite(document.id);
+                applyFilters();
             }
 
             @Override
             public void onDelete(@NonNull DocumentEntry document) {
-                confirmDelete(document);
+                runProtected(() -> confirmDelete(document));
+            }
+
+            @Override
+            public boolean isFavorite(@NonNull DocumentEntry document) {
+                return preferences.isFavorite(document.id);
             }
         });
 
@@ -78,9 +158,290 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.documentRecyclerView.setAdapter(adapter);
+
+        configureCategoryFilter();
+        configureReminderSettings();
+        configureFilters();
+        configureSearch();
+        configureVaultLock();
+
         binding.emptyAddDocumentButton.setOnClickListener(
-                clickedView -> showDocumentEditor()
+                clickedView -> onAddRequested()
         );
+        binding.unlockDocumentsButton.setOnClickListener(
+                clickedView -> authenticate(() -> {
+                    preferences.markUnlocked();
+                    renderLockState();
+                    loadDocuments();
+                })
+        );
+        binding.buttonDocumentsLockNow.setOnClickListener(clickedView -> {
+            preferences.lockNow();
+            renderLockState();
+        });
+
+        renderLockState();
+        if (preferences.isUnlocked()) {
+            loadDocuments();
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (binding != null) {
+            renderLockState();
+            if (preferences.isUnlocked()) {
+                loadDocuments();
+            }
+        }
+    }
+
+    @Override
+    public void onAddRequested() {
+        runProtected(() -> showDocumentEditorInternal(null));
+    }
+
+    private void configureVaultLock() {
+        updatingLockSwitch = true;
+        binding.switchDocumentVaultLock.setChecked(
+                preferences.lockEnabled()
+        );
+        updatingLockSwitch = false;
+
+        binding.switchDocumentVaultLock.setOnCheckedChangeListener(
+                (button, enabled) -> {
+                    if (updatingLockSwitch) {
+                        return;
+                    }
+                    if (enabled) {
+                        authenticate(() -> {
+                            preferences.setLockEnabled(true);
+                            preferences.markUnlocked();
+                            renderLockState();
+                        });
+                    } else if (preferences.lockEnabled()) {
+                        runProtected(() -> {
+                            preferences.setLockEnabled(false);
+                            renderLockState();
+                        });
+                    }
+                }
+        );
+    }
+
+    private void renderLockState() {
+        if (binding == null) {
+            return;
+        }
+        boolean lockEnabled = preferences.lockEnabled();
+        boolean unlocked = preferences.isUnlocked();
+        boolean locked = lockEnabled && !unlocked;
+
+        updatingLockSwitch = true;
+        binding.switchDocumentVaultLock.setChecked(lockEnabled);
+        updatingLockSwitch = false;
+        binding.documentsLockedState.setVisibility(
+                locked ? View.VISIBLE : View.GONE
+        );
+        binding.documentsVaultContent.setVisibility(
+                locked ? View.GONE : View.VISIBLE
+        );
+        binding.buttonDocumentsLockNow.setVisibility(
+                lockEnabled && unlocked ? View.VISIBLE : View.GONE
+        );
+        if (locked) {
+            adapter.submitList(new ArrayList<>());
+        }
+    }
+
+    private void runProtected(@NonNull Runnable action) {
+        if (preferences.isUnlocked()) {
+            action.run();
+            return;
+        }
+        authenticate(() -> {
+            preferences.markUnlocked();
+            renderLockState();
+            loadDocuments();
+            action.run();
+        });
+    }
+
+    private void authenticate(@NonNull Runnable onSuccess) {
+        int authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
+                | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+        int availability = BiometricManager.from(requireContext())
+                .canAuthenticate(authenticators);
+        if (availability != BiometricManager.BIOMETRIC_SUCCESS) {
+            resetLockSwitch();
+            showMessage(R.string.documents_vault_auth_unavailable);
+            return;
+        }
+
+        authenticationSuccessAction = onSuccess;
+        BiometricPrompt prompt = new BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(requireContext()),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            @NonNull BiometricPrompt.AuthenticationResult result
+                    ) {
+                        super.onAuthenticationSucceeded(result);
+                        Runnable success = authenticationSuccessAction;
+                        authenticationSuccessAction = null;
+                        if (success != null) {
+                            success.run();
+                        }
+                    }
+
+                    @Override
+                    public void onAuthenticationError(
+                            int errorCode,
+                            @NonNull CharSequence errorString
+                    ) {
+                        super.onAuthenticationError(errorCode, errorString);
+                        authenticationSuccessAction = null;
+                        resetLockSwitch();
+                        if (errorCode != BiometricPrompt.ERROR_USER_CANCELED
+                                && errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                                && errorCode != BiometricPrompt.ERROR_CANCELED) {
+                            showMessage(R.string.documents_vault_auth_failed);
+                        }
+                    }
+                }
+        );
+        BiometricPrompt.PromptInfo promptInfo =
+                new BiometricPrompt.PromptInfo.Builder()
+                        .setTitle(getString(
+                                R.string.documents_vault_auth_title
+                        ))
+                        .setSubtitle(getString(
+                                R.string.documents_vault_auth_subtitle
+                        ))
+                        .setAllowedAuthenticators(authenticators)
+                        .build();
+        prompt.authenticate(promptInfo);
+    }
+
+    private void resetLockSwitch() {
+        if (binding == null) {
+            return;
+        }
+        updatingLockSwitch = true;
+        binding.switchDocumentVaultLock.setChecked(
+                preferences.lockEnabled()
+        );
+        updatingLockSwitch = false;
+    }
+
+    private void configureReminderSettings() {
+        String[] labels = getResources().getStringArray(
+                R.array.documents_vault_reminder_labels
+        );
+        binding.documentReminderDaysInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                labels
+        ));
+        binding.documentReminderDaysInput.setText(
+                reminderLabel(preferences.reminderDays()),
+                false
+        );
+        binding.switchDocumentExpiryAlerts.setChecked(
+                preferences.expiryAlertsEnabled()
+        );
+        binding.documentReminderDaysInput.setEnabled(
+                preferences.expiryAlertsEnabled()
+        );
+        adapter.setReminderDays(preferences.reminderDays());
+
+        binding.switchDocumentExpiryAlerts.setOnCheckedChangeListener(
+                (button, enabled) -> {
+                    if (enabled && Build.VERSION.SDK_INT
+                            >= Build.VERSION_CODES.TIRAMISU
+                            && ContextCompat.checkSelfPermission(
+                            requireContext(),
+                            Manifest.permission.POST_NOTIFICATIONS
+                    ) != PackageManager.PERMISSION_GRANTED) {
+                        notificationPermission.launch(
+                                Manifest.permission.POST_NOTIFICATIONS
+                        );
+                        return;
+                    }
+                    preferences.setExpiryAlertsEnabled(enabled);
+                    binding.documentReminderDaysInput.setEnabled(enabled);
+                    DocumentExpiryScheduler.sync(requireContext());
+                    if (enabled) {
+                        DocumentExpiryScheduler.runNow(requireContext());
+                    }
+                }
+        );
+        binding.documentReminderDaysInput.setOnItemClickListener(
+                (parent, view, position, id) -> {
+                    int days = position == 0
+                            ? 7
+                            : position == 1
+                            ? 15
+                            : position == 3
+                            ? 60
+                            : 30;
+                    preferences.setReminderDays(days);
+                    adapter.setReminderDays(days);
+                    DocumentExpiryScheduler.sync(requireContext());
+                    DocumentExpiryScheduler.runNow(requireContext());
+                    loadDocuments();
+                }
+        );
+    }
+
+    private void configureCategoryFilter() {
+        List<String> categories = new ArrayList<>();
+        categories.add(getString(
+                R.string.documents_vault_all_categories
+        ));
+        categories.addAll(Arrays.asList(getResources().getStringArray(
+                R.array.documents_vault_category_labels
+        )));
+        binding.documentCategoryFilterInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                categories
+        ));
+        binding.documentCategoryFilterInput.setText(categories.get(0), false);
+        selectedCategory = "";
+        binding.documentCategoryFilterInput.setOnItemClickListener(
+                (parent, view, position, id) -> {
+                    selectedCategory = position == 0
+                            ? ""
+                            : categories.get(position);
+                    applyFilters();
+                }
+        );
+    }
+
+    private void configureFilters() {
+        binding.documentFilterGroup.setOnCheckedStateChangeListener(
+                (group, checkedIds) -> {
+                    int checkedId = checkedIds.isEmpty()
+                            ? R.id.filter_all_chip
+                            : checkedIds.get(0);
+                    if (checkedId == R.id.filter_expiring_chip) {
+                        filterMode = FilterMode.EXPIRING;
+                    } else if (checkedId == R.id.filter_expired_chip) {
+                        filterMode = FilterMode.EXPIRED;
+                    } else if (checkedId == R.id.filter_favorites_chip) {
+                        filterMode = FilterMode.FAVORITES;
+                    } else {
+                        filterMode = FilterMode.ALL;
+                    }
+                    applyFilters();
+                }
+        );
+    }
+
+    private void configureSearch() {
         binding.documentSearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -100,7 +461,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                             int before,
                             int count
                     ) {
-                        loadDocuments(text == null ? "" : text.toString());
+                        loadDocuments();
                     }
 
                     @Override
@@ -111,69 +472,302 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     }
                 }
         );
-
-        loadDocuments("");
     }
 
-    @Override
-    public void onAddRequested() {
-        showDocumentEditor();
+    private void loadDocuments() {
+        if (binding == null || repository == null
+                || !preferences.isUnlocked()) {
+            return;
+        }
+        repository.loadDocuments(currentQuery(), documents -> {
+            if (binding == null || !preferences.isUnlocked()) {
+                return;
+            }
+            loadedDocuments.clear();
+            loadedDocuments.addAll(documents);
+            applyFilters();
+        });
+        repository.loadStats(
+                preferences.reminderDays(),
+                (total, expiring, expired) -> {
+                    if (binding == null) {
+                        return;
+                    }
+                    binding.textDocumentsTotal.setText(String.valueOf(total));
+                    binding.textDocumentsExpiring.setText(
+                            String.valueOf(expiring)
+                    );
+                    binding.textDocumentsExpired.setText(
+                            String.valueOf(expired)
+                    );
+                }
+        );
     }
 
-    private void showDocumentEditor() {
-        DialogDocumentEditorBinding dialogBinding =
-                DialogDocumentEditorBinding.inflate(getLayoutInflater());
-        String[] categoryLabels = getResources().getStringArray(
-                R.array.document_category_labels
+    private void applyFilters() {
+        if (binding == null || !preferences.isUnlocked()) {
+            return;
+        }
+        List<DocumentEntry> visible = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        int reminderDays = preferences.reminderDays();
+        for (DocumentEntry document : loadedDocuments) {
+            if (!selectedCategory.isEmpty()
+                    && !selectedCategory.equalsIgnoreCase(document.category)) {
+                continue;
+            }
+            String status = DocumentExpiryPolicy.status(
+                    document.expiryAt,
+                    now,
+                    reminderDays
+            );
+            if (filterMode == FilterMode.EXPIRING
+                    && !DocumentExpiryPolicy.STATUS_EXPIRING.equals(status)) {
+                continue;
+            }
+            if (filterMode == FilterMode.EXPIRED
+                    && !DocumentExpiryPolicy.STATUS_EXPIRED.equals(status)) {
+                continue;
+            }
+            if (filterMode == FilterMode.FAVORITES
+                    && !preferences.isFavorite(document.id)) {
+                continue;
+            }
+            visible.add(document);
+        }
+
+        adapter.setReminderDays(reminderDays);
+        adapter.submitList(visible);
+        boolean empty = visible.isEmpty();
+        binding.documentRecyclerView.setVisibility(
+                empty ? View.GONE : View.VISIBLE
+        );
+        binding.documentsEmptyState.setVisibility(
+                empty ? View.VISIBLE : View.GONE
+        );
+        boolean hasAnyDocuments = !loadedDocuments.isEmpty()
+                || !currentQuery().isEmpty();
+        binding.documentsEmptyTitle.setText(hasAnyDocuments
+                ? R.string.documents_vault_no_results_title
+                : R.string.documents_empty_title);
+        binding.documentsEmptyDetail.setText(hasAnyDocuments
+                ? R.string.documents_vault_no_results_detail
+                : R.string.documents_empty_detail);
+        binding.emptyAddDocumentButton.setVisibility(
+                hasAnyDocuments ? View.GONE : View.VISIBLE
+        );
+    }
+
+    private void showDocumentEditorInternal(
+            @Nullable DocumentEntry existing
+    ) {
+        dismissEditor();
+        editorBinding = DialogDocumentEditorBinding.inflate(
+                getLayoutInflater()
+        );
+        DialogDocumentEditorBinding dialogBinding = editorBinding;
+        String[] categories = getResources().getStringArray(
+                R.array.documents_vault_category_labels
         );
         dialogBinding.documentCategoryInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
-                categoryLabels
+                categories
         ));
-        dialogBinding.documentCategoryInput.setText(categoryLabels[0], false);
 
-        androidx.appcompat.app.AlertDialog dialog =
-                new MaterialAlertDialogBuilder(requireContext())
-                        .setView(dialogBinding.getRoot())
-                        .create();
-
-        dialogBinding.cancelDocumentButton.setOnClickListener(
-                clickedView -> dialog.dismiss()
+        boolean editing = existing != null;
+        editorExpiryAt = editing ? existing.expiryAt : 0L;
+        dialogBinding.documentEditorTitle.setText(editing
+                ? R.string.documents_vault_editor_edit_title
+                : R.string.documents_vault_editor_add_title);
+        dialogBinding.documentTitleInput.setText(
+                editing ? existing.title : ""
         );
-        dialogBinding.chooseDocumentButton.setOnClickListener(clickedView -> {
-            String title = textOf(dialogBinding.documentTitleInput);
-            String category = textOf(dialogBinding.documentCategoryInput);
+        dialogBinding.documentCategoryInput.setText(
+                editing
+                        ? existing.category
+                        : categories[categories.length - 1],
+                false
+        );
+        renderEditorExpiry();
 
-            if (title.isEmpty()) {
-                dialogBinding.documentTitleLayout.setError(
-                        getString(R.string.document_title_required)
-                );
+        if (editing) {
+            dialogBinding.selectedDocumentFile.setText(
+                    displayFileName(existing.contentUri)
+            );
+            dialogBinding.chooseDocumentButton.setVisibility(View.GONE);
+            dialogBinding.saveDocumentChangesButton.setVisibility(View.VISIBLE);
+            dialogBinding.replaceDocumentButton.setVisibility(View.VISIBLE);
+        }
+
+        editorDialog = new MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogBinding.getRoot())
+                .create();
+
+        dialogBinding.documentExpiryInput.setOnClickListener(
+                clicked -> showExpiryPicker()
+        );
+        dialogBinding.documentExpiryLayout.setEndIconOnClickListener(
+                clicked -> showExpiryPicker()
+        );
+        dialogBinding.clearDocumentExpiryButton.setOnClickListener(
+                clicked -> {
+                    editorExpiryAt = 0L;
+                    renderEditorExpiry();
+                }
+        );
+        dialogBinding.cancelDocumentButton.setOnClickListener(
+                clicked -> dismissEditor()
+        );
+        dialogBinding.chooseDocumentButton.setOnClickListener(clicked -> {
+            DocumentEntry draft = buildDraft(null);
+            if (draft == null) {
                 return;
             }
-
-            dialogBinding.documentTitleLayout.setError(null);
-            pendingTitle = title;
-            pendingCategory = category.isEmpty()
-                    ? getString(R.string.document_default_category)
-                    : category;
-
-            dialog.dismiss();
-            documentPicker.launch(new String[]{
-                    "application/pdf",
-                    "image/*"
-            });
+            pendingDocument = new PendingDocument(draft, false);
+            dismissEditor();
+            launchDocumentPicker();
+        });
+        dialogBinding.saveDocumentChangesButton.setOnClickListener(clicked -> {
+            DocumentEntry draft = buildDraft(existing);
+            if (draft != null) {
+                saveDocument(draft, false);
+            }
+        });
+        dialogBinding.replaceDocumentButton.setOnClickListener(clicked -> {
+            DocumentEntry draft = buildDraft(existing);
+            if (draft == null) {
+                return;
+            }
+            pendingDocument = new PendingDocument(draft, true);
+            dismissEditor();
+            launchDocumentPicker();
         });
 
-        dialog.show();
+        editorDialog.setOnDismissListener(dialog -> {
+            editorDialog = null;
+            editorBinding = null;
+        });
+        editorDialog.show();
+    }
+
+    @Nullable
+    private DocumentEntry buildDraft(@Nullable DocumentEntry existing) {
+        if (editorBinding == null) {
+            return null;
+        }
+        String title = textOf(editorBinding.documentTitleInput);
+        String category = textOf(editorBinding.documentCategoryInput);
+        if (title.isEmpty()) {
+            editorBinding.documentTitleLayout.setError(
+                    getString(R.string.document_title_required)
+            );
+            return null;
+        }
+        editorBinding.documentTitleLayout.setError(null);
+
+        DocumentEntry draft = copyOf(existing);
+        draft.title = title;
+        draft.category = category.isEmpty()
+                ? getString(R.string.document_default_category)
+                : category;
+        draft.expiryAt = editorExpiryAt;
+        if (draft.createdAt <= 0L) {
+            draft.createdAt = System.currentTimeMillis();
+        }
+        return draft;
+    }
+
+    @NonNull
+    private static DocumentEntry copyOf(@Nullable DocumentEntry source) {
+        DocumentEntry copy = new DocumentEntry();
+        if (source == null) {
+            return copy;
+        }
+        copy.id = source.id;
+        copy.title = source.title;
+        copy.category = source.category;
+        copy.contentUri = source.contentUri;
+        copy.mimeType = source.mimeType;
+        copy.expiryAt = source.expiryAt;
+        copy.createdAt = source.createdAt;
+        return copy;
+    }
+
+    private void showExpiryPicker() {
+        long selection = editorExpiryAt > 0L
+                ? editorExpiryAt
+                : MaterialDatePicker.todayInUtcMilliseconds();
+        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder
+                .datePicker()
+                .setTitleText(R.string.documents_vault_expiry_date)
+                .setSelection(selection)
+                .build();
+        picker.addOnPositiveButtonClickListener(value -> {
+            if (value != null) {
+                editorExpiryAt = value;
+                renderEditorExpiry();
+            }
+        });
+        picker.show(getParentFragmentManager(), "document_expiry_picker");
+    }
+
+    private void renderEditorExpiry() {
+        if (editorBinding == null) {
+            return;
+        }
+        if (editorExpiryAt <= 0L) {
+            editorBinding.documentExpiryInput.setText("");
+            editorBinding.clearDocumentExpiryButton.setVisibility(View.GONE);
+        } else {
+            editorBinding.documentExpiryInput.setText(
+                    DateFormat.getDateInstance(DateFormat.MEDIUM)
+                            .format(new Date(editorExpiryAt))
+            );
+            editorBinding.clearDocumentExpiryButton.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void launchDocumentPicker() {
+        documentPicker.launch(new String[]{
+                "application/pdf",
+                "image/*"
+        });
     }
 
     private void onDocumentPicked(@Nullable Uri uri) {
-        if (uri == null || pendingTitle == null) {
-            clearPendingDocument();
+        PendingDocument pending = pendingDocument;
+        if (uri == null || pending == null) {
+            pendingDocument = null;
             return;
         }
 
+        String uriValue = uri.toString();
+        repository.checkDuplicate(
+                uriValue,
+                pending.document.id,
+                duplicate -> {
+                    if (binding == null) {
+                        pendingDocument = null;
+                        return;
+                    }
+                    if (duplicate) {
+                        pendingDocument = null;
+                        showMessage(R.string.documents_vault_duplicate_file);
+                        return;
+                    }
+                    persistPermission(uri);
+                    pending.document.contentUri = uriValue;
+                    String mime = requireContext().getContentResolver()
+                            .getType(uri);
+                    pending.document.mimeType = mime == null ? "" : mime;
+                    saveDocument(pending.document, pending.replacingFile);
+                    pendingDocument = null;
+                }
+        );
+    }
+
+    private void persistPermission(@NonNull Uri uri) {
         try {
             requireContext().getContentResolver()
                     .takePersistableUriPermission(
@@ -181,76 +775,79 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                             Intent.FLAG_GRANT_READ_URI_PERMISSION
                     );
         } catch (SecurityException ignored) {
-            // Some providers grant access without a persistable permission.
+            // Some providers grant durable access without this flag.
         }
-
-        String resolvedMimeType =
-                requireContext().getContentResolver().getType(uri);
-
-        DocumentEntry document = new DocumentEntry();
-        document.title = pendingTitle;
-        document.category = pendingCategory;
-        document.contentUri = uri.toString();
-        document.mimeType = resolvedMimeType == null
-                ? ""
-                : resolvedMimeType;
-        document.createdAt = System.currentTimeMillis();
-
-        repository.save(document, documentId -> {
-            if (binding == null) {
-                return;
-            }
-            clearPendingDocument();
-            loadDocuments(currentQuery());
-            Snackbar.make(
-                    binding.getRoot(),
-                    R.string.document_added,
-                    Snackbar.LENGTH_SHORT
-            ).show();
-        });
     }
 
-    private void loadDocuments(@NonNull String query) {
-        if (repository == null) {
-            return;
-        }
-
-        repository.loadDocuments(query, documents -> {
-            if (binding == null) {
-                return;
+    private void saveDocument(
+            @NonNull DocumentEntry document,
+            boolean fileReplaced
+    ) {
+        repository.save(document, new DocumentRepository.SaveCallback() {
+            @Override
+            public void onSaved(long documentId) {
+                if (binding == null) {
+                    return;
+                }
+                dismissEditor();
+                loadDocuments();
+                showMessage(fileReplaced
+                        ? R.string.documents_vault_replaced
+                        : document.id == documentId && document.createdAt > 0L
+                        ? R.string.documents_vault_updated
+                        : R.string.document_added);
             }
 
-            adapter.submitList(documents);
-            boolean isEmpty = documents.isEmpty();
-            binding.documentRecyclerView.setVisibility(
-                    isEmpty ? View.GONE : View.VISIBLE
-            );
-            binding.documentsEmptyState.setVisibility(
-                    isEmpty ? View.VISIBLE : View.GONE
-            );
+            @Override
+            public void onError(@NonNull Exception error) {
+                showMessage(R.string.backup_error_generic);
+            }
         });
     }
 
     private void openDocument(@NonNull DocumentEntry document) {
         try {
             Uri uri = Uri.parse(document.contentUri);
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(
-                    uri,
-                    document.mimeType.isEmpty()
-                            ? "*/*"
-                            : document.mimeType
-            );
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Intent intent = new Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(
+                            uri,
+                            document.mimeType.isEmpty()
+                                    ? "*/*"
+                                    : document.mimeType
+                    )
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .setClipData(ClipData.newUri(
+                            requireContext().getContentResolver(),
+                            document.title,
+                            uri
+                    ));
             startActivity(intent);
         } catch (Exception exception) {
-            if (binding != null) {
-                Snackbar.make(
-                        binding.getRoot(),
-                        R.string.document_unavailable,
-                        Snackbar.LENGTH_LONG
-                ).show();
-            }
+            showMessage(R.string.documents_vault_missing_file);
+        }
+    }
+
+    private void shareDocument(@NonNull DocumentEntry document) {
+        try {
+            Uri uri = Uri.parse(document.contentUri);
+            Intent share = new Intent(Intent.ACTION_SEND)
+                    .setType(document.mimeType.isEmpty()
+                            ? "*/*"
+                            : document.mimeType)
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .putExtra(Intent.EXTRA_SUBJECT, document.title)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .setClipData(ClipData.newUri(
+                            requireContext().getContentResolver(),
+                            document.title,
+                            uri
+                    ));
+            startActivity(Intent.createChooser(
+                    share,
+                    getString(R.string.documents_vault_share_title)
+            ));
+        } catch (Exception exception) {
+            showMessage(R.string.documents_vault_missing_file);
         }
     }
 
@@ -260,42 +857,141 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 .setMessage(R.string.document_remove_message)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.remove, (dialog, which) ->
-                        repository.delete(document, () -> {
-                            if (binding == null) {
-                                return;
-                            }
-                            loadDocuments(currentQuery());
-                            Snackbar.make(
-                                    binding.getRoot(),
-                                    R.string.document_removed,
-                                    Snackbar.LENGTH_SHORT
-                            ).show();
-                        })
+                        repository.delete(
+                                document,
+                                new DocumentRepository.ActionCallback() {
+                                    @Override
+                                    public void onComplete() {
+                                        preferences.removeFavorite(document.id);
+                                        releasePermission(document.contentUri);
+                                        loadDocuments();
+                                        showMessage(R.string.document_removed);
+                                    }
+
+                                    @Override
+                                    public void onError(@NonNull Exception error) {
+                                        showMessage(R.string.backup_error_generic);
+                                    }
+                                }
+                        )
                 )
                 .show();
     }
 
-    @NonNull
-    private String currentQuery() {
-        return textOf(binding.documentSearchInput);
+    private void releasePermission(@NonNull String uriValue) {
+        try {
+            requireContext().getContentResolver()
+                    .releasePersistableUriPermission(
+                            Uri.parse(uriValue),
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    );
+        } catch (Exception ignored) {
+            // Restored FileProvider URIs do not use persistable permissions.
+        }
     }
 
     @NonNull
-    private String textOf(@NonNull android.widget.EditText input) {
+    private String displayFileName(@NonNull String uriValue) {
+        Uri uri;
+        try {
+            uri = Uri.parse(uriValue);
+        } catch (RuntimeException error) {
+            return getString(R.string.documents_vault_file_selected);
+        }
+        try (Cursor cursor = requireContext().getContentResolver().query(
+                uri,
+                new String[]{OpenableColumns.DISPLAY_NAME},
+                null,
+                null,
+                null
+        )) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (index >= 0) {
+                    String value = cursor.getString(index);
+                    if (value != null && !value.trim().isEmpty()) {
+                        return value;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall through to a safe non-sensitive label.
+        }
+        String last = uri.getLastPathSegment();
+        return last == null || last.trim().isEmpty()
+                ? getString(R.string.documents_vault_file_selected)
+                : last;
+    }
+
+    @NonNull
+    private String currentQuery() {
+        return binding == null
+                ? ""
+                : textOf(binding.documentSearchInput);
+    }
+
+    @NonNull
+    private String reminderLabel(int days) {
+        if (days == 7) {
+            return getString(R.string.documents_vault_days_7);
+        }
+        if (days == 15) {
+            return getString(R.string.documents_vault_days_15);
+        }
+        if (days == 60) {
+            return getString(R.string.documents_vault_days_60);
+        }
+        return getString(R.string.documents_vault_days_30);
+    }
+
+    @NonNull
+    private static String textOf(@NonNull EditText input) {
         return input.getText() == null
                 ? ""
                 : input.getText().toString().trim();
     }
 
-    private void clearPendingDocument() {
-        pendingTitle = null;
-        pendingCategory = null;
+    private void showMessage(int messageRes) {
+        if (binding == null) {
+            return;
+        }
+        Snackbar.make(
+                binding.getRoot(),
+                messageRes,
+                Snackbar.LENGTH_LONG
+        ).show();
+    }
+
+    private void dismissEditor() {
+        if (editorDialog != null) {
+            editorDialog.dismiss();
+        }
+        editorDialog = null;
+        editorBinding = null;
     }
 
     @Override
     public void onDestroyView() {
-        binding.documentRecyclerView.setAdapter(null);
+        dismissEditor();
+        authenticationSuccessAction = null;
+        if (binding != null) {
+            binding.documentRecyclerView.setAdapter(null);
+        }
         binding = null;
         super.onDestroyView();
+    }
+
+    private static final class PendingDocument {
+        @NonNull
+        final DocumentEntry document;
+        final boolean replacingFile;
+
+        PendingDocument(
+                @NonNull DocumentEntry document,
+                boolean replacingFile
+        ) {
+            this.document = document;
+            this.replacingFile = replacingFile;
+        }
     }
 }
