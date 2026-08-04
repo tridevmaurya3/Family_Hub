@@ -21,9 +21,35 @@
     </style>
 
     <style name="Widget.FamilyHub.Card.FormSection" parent="Widget.FamilyHub.Card.Flat">
-        <item name="cardBackgroundColor">@color/fh_surface</item>
+        <item name="cardBackgroundColor">@color/fh_form_surface</item>
         <item name="cardCornerRadius">@dimen/radius_20</item>
-        <item name="strokeColor">@color/fh_outline</item>
+        <item name="strokeColor">@color/fh_form_outline</item>
+    </style>
+
+    <!-- Standard for every present and future Family Hub form section. -->
+    <style name="Widget.FamilyHub.Form.Section" parent="Widget.FamilyHub.Card.FormSection">
+        <item name="cardCornerRadius">@dimen/radius_16</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">@dimen/border_width</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Form.Header" parent="Widget.FamilyHub.Card.Flat">
+        <item name="cardBackgroundColor">@color/fh_form_surface_tint</item>
+        <item name="cardCornerRadius">@dimen/radius_16</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/fh_form_outline</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Button.FormPrimary" parent="Widget.FamilyHub.Button.Primary">
+        <item name="backgroundTint">@color/fh_form_accent</item>
+        <item name="cornerRadius">@dimen/radius_24</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Button.FormSecondary" parent="Widget.FamilyHub.Button.Tonal">
+        <item name="android:textColor">@color/fh_form_accent</item>
+        <item name="backgroundTint">@color/fh_form_accent_container</item>
+        <item name="cornerRadius">@dimen/radius_24</item>
+        <item name="iconTint">@color/fh_form_accent</item>
     </style>
 
     <style name="Widget.FamilyHub.Card.Data" parent="Widget.FamilyHub.Card">
