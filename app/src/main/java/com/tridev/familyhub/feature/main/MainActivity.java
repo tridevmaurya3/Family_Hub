@@ -21,6 +21,7 @@ import com.tridev.familyhub.R;
 import com.tridev.familyhub.databinding.ActivityMainBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.dashboard.DashboardFragment;
+import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.family.FamilyFragment;
 import com.tridev.familyhub.feature.finance.FinanceFragment;
 import com.tridev.familyhub.feature.more.MoreFragment;
@@ -29,6 +30,9 @@ import com.tridev.familyhub.feature.reminders.RemindersFragment;
 
 /** Hosts the primary bottom navigation and feature screens. */
 public class MainActivity extends AppCompatActivity {
+
+    private static final String EXTRA_OPEN_DOCUMENTS_VAULT =
+            "open_documents_vault";
 
     private ActivityMainBinding binding;
     private boolean redirectingToAuth;
@@ -79,7 +83,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
         if (savedInstanceState == null) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
+            if (!handleLaunchIntent(getIntent())) {
+                binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
+            }
         }
     }
 
@@ -108,6 +114,30 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
         ViewCompat.requestApplyInsets(binding.getRoot());
+    }
+
+    @Override
+    protected void onNewIntent(@NonNull Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleLaunchIntent(intent);
+    }
+
+    private boolean handleLaunchIntent(@Nullable Intent intent) {
+        if (binding == null || intent == null
+                || !intent.getBooleanExtra(
+                EXTRA_OPEN_DOCUMENTS_VAULT,
+                false
+        )) {
+            return false;
+        }
+        intent.removeExtra(EXTRA_OPEN_DOCUMENTS_VAULT);
+        clearSecondaryScreens();
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.main_content, new DocumentsFragment())
+                .commit();
+        return true;
     }
 
     @Override
