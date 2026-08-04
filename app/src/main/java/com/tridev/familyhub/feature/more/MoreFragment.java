@@ -51,6 +51,7 @@ public class MoreFragment extends Fragment {
     ) {
         super.onViewCreated(view, savedInstanceState);
 
+        retitlePage();
         hideModuleCards();
         addProfileEntry();
         styleSettingsCards();
@@ -90,6 +91,24 @@ public class MoreFragment extends Fragment {
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
     }
 
+    private void retitlePage() {
+        View rootChild = binding.getRoot().getChildAt(0);
+        if (!(rootChild instanceof LinearLayout)) {
+            return;
+        }
+        LinearLayout content = (LinearLayout) rootChild;
+        if (content.getChildCount() > 0
+                && content.getChildAt(0) instanceof TextView) {
+            ((TextView) content.getChildAt(0)).setText(R.string.profile_title);
+        }
+        if (content.getChildCount() > 1
+                && content.getChildAt(1) instanceof TextView) {
+            ((TextView) content.getChildAt(1)).setText(
+                    R.string.profile_subtitle
+            );
+        }
+    }
+
     /** Removes feature duplicates; modules are available from the hamburger. */
     private void hideModuleCards() {
         binding.cardVehicle.setVisibility(View.GONE);
@@ -118,7 +137,7 @@ public class MoreFragment extends Fragment {
         }
     }
 
-    /** Adds a clear account entry directly below the More page description. */
+    /** Adds a clear account entry directly below the page description. */
     private void addProfileEntry() {
         View rootChild = binding.getRoot().getChildAt(0);
         if (!(rootChild instanceof LinearLayout)) {
