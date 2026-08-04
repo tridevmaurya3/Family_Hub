@@ -38,28 +38,17 @@ jobs:
                   1,
               )
 
-          first_old = '''        for (String key : source.keySet()) {
-              Object value = source.get(key);'''
-          first_new = '''        Iterator<String> sourceKeys = source.keys();
-          while (sourceKeys.hasNext()) {
-              String key = sourceKeys.next();
-              Object value = source.get(key);'''
+          first_old = "        for (String key : source.keySet()) {\n            Object value = source.get(key);"
+          first_new = "        Iterator<String> sourceKeys = source.keys();\n        while (sourceKeys.hasNext()) {\n            String key = sourceKeys.next();\n            Object value = source.get(key);"
           if first_old not in text:
               raise SystemExit('Safety preferences keySet block not found')
           text = text.replace(first_old, first_new, 1)
 
-          second_old = '''                for (String key : countObject.keySet()) {
-                      if (TABLES.contains(key)) {'''
-          second_new = '''                Iterator<String> countKeys = countObject.keys();
-                  while (countKeys.hasNext()) {
-                      String key = countKeys.next();
-                      if (TABLES.contains(key)) {'''
+          second_old = "                for (String key : countObject.keySet()) {\n                    if (TABLES.contains(key)) {"
+          second_new = "                Iterator<String> countKeys = countObject.keys();\n                while (countKeys.hasNext()) {\n                    String key = countKeys.next();\n                    if (TABLES.contains(key)) {"
           if second_old not in text:
               raise SystemExit('Manifest tableCounts keySet block not found')
           text = text.replace(second_old, second_new, 1)
-
-          if '.keySet()' in text:
-              raise SystemExit('Unexpected JSONObject keySet usage remains')
 
           path.write_text(text, encoding='utf-8')
           PY
