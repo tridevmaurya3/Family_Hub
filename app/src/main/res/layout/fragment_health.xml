@@ -6,139 +6,323 @@
     android:layout_height="match_parent"
     android:background="@color/fh_background"
     android:paddingStart="@dimen/screen_padding_horizontal"
-    android:paddingTop="@dimen/compact_page_top_padding"
+    android:paddingTop="@dimen/space_10"
     android:paddingEnd="@dimen/screen_padding_horizontal">
 
-    <TextView
-        android:id="@+id/health_title"
-        style="@style/TextAppearance.FamilyHub.Heading"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="@string/health_title"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/health_subtitle"
-        style="@style/TextAppearance.FamilyHub.Body"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_4"
-        android:text="@string/health_subtitle"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/health_title" />
-
-    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
-        android:id="@+id/health_overview"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/health_subtitle"
-        app:overviewAccentColor="@color/fh_module_health"
-        app:overviewContainerColor="@color/fh_module_health_container"
-        app:overviewDetail="@string/health_subtitle"
-        app:overviewIcon="@drawable/ic_health"
-        app:overviewTitle="@string/health_title" />
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/health_search_layout"
-        style="@style/Widget.FamilyHub.TextInputLayout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
-        android:hint="@string/health_search_hint"
-        app:endIconMode="clear_text"
-        app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="@color/fh_module_health"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/health_overview">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/health_search_input"
-            style="@style/TextAppearance.FamilyHub.Body"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/health_recycler_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingTop="@dimen/space_16"
-        android:paddingBottom="88dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/health_search_layout" />
-
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/health_empty_state"
+        android:id="@+id/health_header_card"
         style="@style/Widget.FamilyHub.Card.Flat"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
-        android:visibility="gone"
-        app:cardBackgroundColor="@color/fh_module_health_container"
+        app:cardBackgroundColor="@color/fh_surface"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/health_search_layout"
-        app:strokeColor="@color/fh_module_health">
+        app:layout_constraintTop_toTopOf="parent"
+        app:strokeColor="@color/fh_outline">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="@dimen/compact_empty_state_padding">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/space_10">
 
-            <ImageView
-                android:layout_width="@dimen/compact_empty_state_icon_size"
-                android:layout_height="@dimen/compact_empty_state_icon_size"
-                android:background="@drawable/bg_placeholder_icon"
-                android:contentDescription="@null"
-                android:padding="@dimen/compact_empty_state_icon_padding"
-                android:src="@drawable/ic_health"
-                app:tint="@color/fh_module_health" />
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="@dimen/space_10"
+                app:cardBackgroundColor="@color/fh_module_health_container"
+                app:cardCornerRadius="@dimen/radius_12"
+                app:cardElevation="0dp">
 
-            <TextView
-                style="@style/TextAppearance.FamilyHub.SectionTitle"
-                android:layout_width="wrap_content"
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_health"
+                    app:tint="@color/fh_module_health" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/compact_section_spacing"
-                android:text="@string/health_empty_title" />
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                style="@style/TextAppearance.FamilyHub.Body"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_8"
-                android:gravity="center"
-                android:text="@string/health_empty_detail"
-                android:textAlignment="center" />
+                <TextView
+                    android:id="@+id/health_title"
+                    style="@style/TextAppearance.FamilyHub.Heading"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/health_title"
+                    android:textColor="@color/fh_on_surface"
+                    android:textSize="16sp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/empty_add_health_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/button_height"
-                android:layout_marginTop="@dimen/compact_section_spacing"
-                android:text="@string/health_add_record"
-                app:icon="@drawable/ic_add"
-                app:iconGravity="textStart"
-                app:iconPadding="@dimen/space_6" />
-
+                <TextView
+                    android:id="@+id/health_subtitle"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_2"
+                    android:maxLines="2"
+                    android:text="@string/health_subtitle"
+                    android:textSize="11sp" />
+            </LinearLayout>
         </LinearLayout>
-
     </com.google.android.material.card.MaterialCardView>
 
+    <LinearLayout
+        android:id="@+id/health_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_8"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/health_header_card">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:orientation="horizontal"
+            android:weightSum="4">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="3dp"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:gravity="center" android:orientation="vertical">
+                    <TextView android:id="@+id/health_total_value"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/fh_module_health"
+                        android:textSize="16sp" />
+                    <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Records" android:textSize="9sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="3dp"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:gravity="center" android:orientation="vertical">
+                    <TextView android:id="@+id/health_medicine_value"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/fh_success"
+                        android:textSize="16sp" />
+                    <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Medicines" android:textSize="9sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginHorizontal="3dp"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:gravity="center" android:orientation="vertical">
+                    <TextView android:id="@+id/health_upcoming_value"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/fh_warning"
+                        android:textSize="16sp" />
+                    <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Upcoming" android:textSize="9sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="3dp"
+                android:layout_weight="1">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:gravity="center" android:orientation="vertical">
+                    <TextView android:id="@+id/health_vitals_value"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="0" android:textColor="@color/fh_info"
+                        android:textSize="16sp" />
+                    <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Vitals" android:textSize="9sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:strokeColor="@color/fh_outline">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_8">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/health_search_layout"
+                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/health_search_hint"
+                    app:endIconMode="clear_text"
+                    app:startIconDrawable="@drawable/ic_search"
+                    app:startIconTint="@color/fh_module_health">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/health_search_input"
+                        style="@style/TextAppearance.FamilyHub.Body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_6"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/health_filter_group"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/health_filter_all"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:checked="true"
+                            android:text="All" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/health_filter_medicine"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Medicines" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/health_filter_appointments"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Appointments" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/health_filter_vitals"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="Vitals" />
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/health_filter_history"
+                            style="@style/Widget.FamilyHub.StatusChip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checkable="true"
+                            android:text="History" />
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/health_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingTop="@dimen/space_4"
+                android:paddingBottom="88dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/health_empty_state"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/fh_module_health_container"
+                app:strokeColor="@color/fh_module_health">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_placeholder_icon"
+                        android:contentDescription="@null"
+                        android:padding="12dp"
+                        android:src="@drawable/ic_health"
+                        app:tint="@color/fh_module_health" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_10"
+                        android:text="@string/health_empty_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:gravity="center"
+                        android:maxLines="2"
+                        android:text="@string/health_empty_detail"
+                        android:textAlignment="center"
+                        android:textSize="11sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/empty_add_health_button"
+                        style="@style/Widget.FamilyHub.Button.Primary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_height"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:text="@string/health_add_record"
+                        app:icon="@drawable/ic_add"
+                        app:iconGravity="textStart" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </FrameLayout>
+    </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
