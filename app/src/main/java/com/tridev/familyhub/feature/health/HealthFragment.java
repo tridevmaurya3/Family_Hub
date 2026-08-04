@@ -47,6 +47,10 @@ public class HealthFragment extends Fragment implements AddActionHost {
     private FragmentHealthBinding binding;
     private HealthRepository repository;
     private HealthRecordAdapter adapter;
+    private final List<HealthRecordWithMember> loadedRecords =
+            new ArrayList<>();
+    @NonNull
+    private String selectedRecordType = "";
     private final SimpleDateFormat dateFormat =
             new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
 
@@ -90,6 +94,27 @@ public class HealthFragment extends Fragment implements AddActionHost {
         binding.emptyAddHealthButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );
+        binding.healthFilterGroup.setOnCheckedStateChangeListener(
+                (group, checkedIds) -> {
+                    int checkedId = checkedIds.isEmpty()
+                            ? R.id.health_filter_all
+                            : checkedIds.get(0);
+                    if (checkedId == R.id.health_filter_medicine) {
+                        selectedRecordType = HealthRecord.TYPE_MEDICINE;
+                    } else if (checkedId
+                            == R.id.health_filter_appointments) {
+                        selectedRecordType = HealthRecord.TYPE_APPOINTMENT;
+                    } else if (checkedId == R.id.health_filter_vitals) {
+                        selectedRecordType = HealthRecord.TYPE_MEASUREMENT;
+                    } else if (checkedId == R.id.health_filter_history) {
+                        selectedRecordType = "HISTORY";
+                    } else {
+                        selectedRecordType = "";
+                    }
+                    applyRecordFilter();
+                }
+        );
+
         binding.healthSearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -346,15 +371,72 @@ public class HealthFragment extends Fragment implements AddActionHost {
             if (binding == null) {
                 return;
             }
-            adapter.submitList(records);
-            boolean isEmpty = records.isEmpty();
-            binding.healthRecyclerView.setVisibility(
-                    isEmpty ? View.GONE : View.VISIBLE
-            );
-            binding.healthEmptyState.setVisibility(
-                    isEmpty ? View.VISIBLE : View.GONE
-            );
+            loadedRecords.clear();
+            loadedRecords.addAll(records);
+            applyRecordFilter();
         });
+    }
+
+    private void applyRecordFilter() {
+        if (binding == null) {
+            return;
+        }
+
+        List<HealthRecordWithMember> visible = new ArrayList<>();
+        int medicineCount = 0;
+        int vitalsCount = 0;
+        int upcomingCount = 0;
+        long now = System.currentTimeMillis();
+
+        for (HealthRecordWithMember item : loadedRecords) {
+            String type = item.record.recordType;
+            if (HealthRecord.TYPE_MEDICINE.equals(type)) {
+                medicineCount++;
+            }
+            if (HealthRecord.TYPE_MEASUREMENT.equals(type)) {
+                vitalsCount++;
+            }
+            if (HealthRecord.TYPE_APPOINTMENT.equals(type)
+                    && item.record.recordedAt >= now) {
+                upcomingCount++;
+            }
+
+            boolean matches;
+            if (selectedRecordType.isEmpty()) {
+                matches = true;
+            } else if ("HISTORY".equals(selectedRecordType)) {
+                matches = !HealthRecord.TYPE_MEDICINE.equals(type)
+                        && !HealthRecord.TYPE_MEASUREMENT.equals(type)
+                        && !HealthRecord.TYPE_APPOINTMENT.equals(type);
+            } else {
+                matches = selectedRecordType.equals(type);
+            }
+            if (matches) {
+                visible.add(item);
+            }
+        }
+
+        binding.healthTotalValue.setText(
+                String.valueOf(loadedRecords.size())
+        );
+        binding.healthMedicineValue.setText(
+                String.valueOf(medicineCount)
+        );
+        binding.healthUpcomingValue.setText(
+                String.valueOf(upcomingCount)
+        );
+        binding.healthVitalsValue.setText(
+                String.valueOf(vitalsCount)
+        );
+
+        adapter.submitList(visible);
+        boolean isEmpty = visible.isEmpty();
+        binding.healthRecyclerView.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE
+        );
+        binding.healthEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE
+        );
     }
 
     @NonNull
