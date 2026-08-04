@@ -149,6 +149,7 @@ public class DashboardFragment extends Fragment {
             if (profileCard.getChildCount() > 0
                     && profileCard.getChildAt(0) instanceof ImageView) {
                 profileAvatar = (ImageView) profileCard.getChildAt(0);
+                profileAvatar.setImageTintList(null);
                 FrameLayout.LayoutParams avatarParams = new FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -175,8 +176,8 @@ public class DashboardFragment extends Fragment {
                 dp(48)
         );
         menuParams.rightMargin = dp(4);
-        int notificationIndex = Math.max(0, headerRow.getChildCount() - 1);
-        headerRow.addView(menuButton, notificationIndex, menuParams);
+        int menuIndex = Math.min(1, headerRow.getChildCount());
+        headerRow.addView(menuButton, menuIndex, menuParams);
     }
 
     private void renderProfileAvatar() {
@@ -184,6 +185,7 @@ public class DashboardFragment extends Fragment {
         if (avatar == null) {
             return;
         }
+        avatar.setImageTintList(null);
         Bitmap bitmap = ProfilePhotoStore.load(requireContext());
         if (bitmap == null) {
             avatar.setPadding(dp(10), dp(10), dp(10), dp(10));
@@ -449,6 +451,39 @@ public class DashboardFragment extends Fragment {
                 v -> openActivity(FamilyLocationReportsActivity.class));
         binding.actionFamilyLive.setOnClickListener(
                 v -> openActivity(FamilyAutomationActivity.class));
+
+        binding.actionDocuments.setModel(new ActionCardModel(
+                getString(R.string.dashboard_shortcut_safety),
+                getString(R.string.dashboard_shortcut_safety_value),
+                getString(R.string.dashboard_shortcut_safety_detail),
+                R.drawable.ic_safe_place_shield,
+                R.color.fh_primary,
+                R.color.fh_primary_container
+        ));
+        binding.actionVehicles.setModel(new ActionCardModel(
+                getString(R.string.dashboard_shortcut_journey),
+                getString(R.string.dashboard_shortcut_journey_value),
+                getString(R.string.dashboard_shortcut_journey_detail),
+                R.drawable.ic_family_map_route,
+                R.color.fh_secondary,
+                R.color.fh_secondary_container
+        ));
+        binding.actionNotes.setModel(new ActionCardModel(
+                getString(R.string.dashboard_shortcut_reports),
+                getString(R.string.dashboard_shortcut_reports_value),
+                getString(R.string.dashboard_shortcut_reports_detail),
+                R.drawable.ic_family_map_route,
+                R.color.fh_info,
+                R.color.fh_info_container
+        ));
+        binding.actionFamilyLive.setModel(new ActionCardModel(
+                getString(R.string.dashboard_shortcut_routines),
+                getString(R.string.dashboard_shortcut_routines_value),
+                getString(R.string.dashboard_shortcut_routines_detail),
+                R.drawable.ic_family_automation,
+                R.color.fh_warning,
+                R.color.fh_warning_container
+        ));
     }
 
     private void setupNotificationAction() {
