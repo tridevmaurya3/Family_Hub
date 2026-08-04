@@ -6,18 +6,15 @@ import androidx.annotation.Nullable;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ServerValue;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -107,26 +104,26 @@ public final class FamilyAutomationRepository {
         resolveSession(new SessionCallback() {
             @Override
             public void onReady(@NonNull Session session) {
-                root.child("memberships").child(session.familyId).get()
+                root.child("memberships")
+                        .child(session.familyId)
+                        .get()
                         .addOnSuccessListener(memberships ->
                                 root.child("journeyPrivacy")
                                         .child(session.familyId)
                                         .get()
-                                        .addOnSuccessListener(privacy -> {
-                                            MemberLists lists = buildMembers(
-                                                    session,
-                                                    memberships,
-                                                    privacy
-                                            );
-                                            loadBranches(
-                                                    session,
-                                                    lists,
-                                                    callback
-                                            );
-                                        })
+                                        .addOnSuccessListener(privacy ->
+                                                continueOverviewLoad(
+                                                        session,
+                                                        memberships,
+                                                        privacy,
+                                                        callback
+                                                ))
                                         .addOnFailureListener(error ->
-                                                callback.onError(
-                                                        "PRIVACY_LOAD_FAILED"
+                                                continueOverviewLoad(
+                                                        session,
+                                                        memberships,
+                                                        null,
+                                                        callback
                                                 )))
                         .addOnFailureListener(error ->
                                 callback.onError("MEMBERS_LOAD_FAILED"));
@@ -139,28 +136,53 @@ public final class FamilyAutomationRepository {
         });
     }
 
+    private void continueOverviewLoad(
+            @NonNull Session session,
+            @NonNull DataSnapshot memberships,
+            @Nullable DataSnapshot privacy,
+            @NonNull OverviewCallback callback
+    ) {
+        try {
+            MemberLists lists = buildMembers(
+                    session,
+                    memberships,
+                    privacy
+            );
+            loadBranches(session, lists, callback);
+        } catch (DatabaseException error) {
+            callback.onError("AUTOMATION_DATA_INVALID");
+        } catch (RuntimeException error) {
+            callback.onError("AUTOMATION_DATA_INVALID");
+        }
+    }
+
     @NonNull
     private MemberLists buildMembers(
             @NonNull Session session,
             @NonNull DataSnapshot memberships,
-            @NonNull DataSnapshot privacy
+            @Nullable DataSnapshot privacy
     ) {
         List<Member> all = new ArrayList<>();
         List<Member> visible = new ArrayList<>();
         List<Member> manageable = new ArrayList<>();
+
         for (DataSnapshot child : memberships.getChildren()) {
             String uid = stringValue(child.child("uid"));
+            if (uid.isEmpty() && child.getKey() != null) {
+                uid = child.getKey();
+            }
             String status = stringValue(child.child("status"));
             if (uid.isEmpty() || !"ACTIVE".equals(status)) {
                 continue;
             }
+
             String name = stringValue(child.child("displayName"));
             if (name.isEmpty()) {
                 name = uid;
             }
             String role = stringValue(child.child("role"));
             boolean self = session.uid.equals(uid);
-            boolean trusted = Boolean.TRUE.equals(
+            boolean trusted = privacy != null && Boolean.TRUE.equals(
                     privacy.child(uid)
                             .child("viewers")
                             .child(session.uid)
@@ -168,6 +190,7 @@ public final class FamilyAutomationRepository {
             );
             boolean canManage = self || session.canManageFamilyRules();
             boolean canSee = canManage || trusted;
+
             Member member = new Member(
                     uid,
                     name,
@@ -184,8 +207,9 @@ public final class FamilyAutomationRepository {
                 manageable.add(member);
             }
         }
+
         Comparator<Member> comparator = Comparator.comparing(
-                value -> value.displayName.toLowerCase()
+                value -> value.displayName.toLowerCase(Locale.ROOT)
         );
         all.sort(comparator);
         visible.sort((first, second) -> first.self != second.self
@@ -194,6 +218,7 @@ public final class FamilyAutomationRepository {
         manageable.sort((first, second) -> first.self != second.self
                 ? (first.self ? -1 : 1)
                 : comparator.compare(first, second));
+
         return new MemberLists(all, visible, manageable);
     }
 
@@ -227,22 +252,7 @@ public final class FamilyAutomationRepository {
                     .child(member.uid)
                     .get()
                     .addOnSuccessListener(snapshot -> {
-                        for (DataSnapshot child : snapshot.getChildren()) {
-                            FamilyAutomationRule rule = child.getValue(
-                                    FamilyAutomationRule.class
-                            );
-                            if (rule == null) {
-                                continue;
-                            }
-                            if ((rule.ruleId == null
-                                    || rule.ruleId.trim().isEmpty())
-                                    && child.getKey() != null) {
-                                rule.ruleId = child.getKey();
-                            }
-                            if (FamilyAutomationPolicy.validRule(rule)) {
-                                rules.add(rule);
-                            }
-                        }
+                        appendValidRules(snapshot, rules);
                         finishBranch(
                                 session,
                                 lists,
@@ -253,10 +263,14 @@ public final class FamilyAutomationRepository {
                                 callback
                         );
                     })
-                    .addOnFailureListener(error -> failOnce(
+                    .addOnFailureListener(error -> finishBranch(
+                            session,
+                            lists,
+                            rules,
+                            events,
+                            remaining,
                             completed,
-                            callback,
-                            "RULE_ACCESS_DENIED"
+                            callback
                     ));
 
             root.child("familyAutomationEvents")
@@ -265,22 +279,7 @@ public final class FamilyAutomationRepository {
                     .limitToLast(60)
                     .get()
                     .addOnSuccessListener(snapshot -> {
-                        for (DataSnapshot child : snapshot.getChildren()) {
-                            FamilyAutomationEvent event = child.getValue(
-                                    FamilyAutomationEvent.class
-                            );
-                            if (event == null) {
-                                continue;
-                            }
-                            if ((event.eventId == null
-                                    || event.eventId.trim().isEmpty())
-                                    && child.getKey() != null) {
-                                event.eventId = child.getKey();
-                            }
-                            if (!event.eventId.trim().isEmpty()) {
-                                events.add(event);
-                            }
-                        }
+                        appendValidEvents(snapshot, events);
                         finishBranch(
                                 session,
                                 lists,
@@ -291,11 +290,75 @@ public final class FamilyAutomationRepository {
                                 callback
                         );
                     })
-                    .addOnFailureListener(error -> failOnce(
+                    .addOnFailureListener(error -> finishBranch(
+                            session,
+                            lists,
+                            rules,
+                            events,
+                            remaining,
                             completed,
-                            callback,
-                            "EVENT_ACCESS_DENIED"
+                            callback
                     ));
+        }
+    }
+
+    private void appendValidRules(
+            @NonNull DataSnapshot snapshot,
+            @NonNull List<FamilyAutomationRule> destination
+    ) {
+        for (DataSnapshot child : snapshot.getChildren()) {
+            try {
+                FamilyAutomationRule rule = child.getValue(
+                        FamilyAutomationRule.class
+                );
+                if (rule == null) {
+                    continue;
+                }
+                if (rule.ruleId == null) {
+                    rule.ruleId = "";
+                }
+                if (rule.ruleId.trim().isEmpty()
+                        && child.getKey() != null) {
+                    rule.ruleId = child.getKey();
+                }
+                if (FamilyAutomationPolicy.validRule(rule)) {
+                    destination.add(rule);
+                }
+            } catch (DatabaseException ignored) {
+                // Skip one legacy/corrupt rule and continue loading others.
+            } catch (RuntimeException ignored) {
+                // Skip malformed values without failing the whole page.
+            }
+        }
+    }
+
+    private void appendValidEvents(
+            @NonNull DataSnapshot snapshot,
+            @NonNull List<FamilyAutomationEvent> destination
+    ) {
+        for (DataSnapshot child : snapshot.getChildren()) {
+            try {
+                FamilyAutomationEvent event = child.getValue(
+                        FamilyAutomationEvent.class
+                );
+                if (event == null) {
+                    continue;
+                }
+                if (event.eventId == null) {
+                    event.eventId = "";
+                }
+                if (event.eventId.trim().isEmpty()
+                        && child.getKey() != null) {
+                    event.eventId = child.getKey();
+                }
+                if (!event.eventId.trim().isEmpty()) {
+                    destination.add(event);
+                }
+            } catch (DatabaseException ignored) {
+                // Skip one legacy/corrupt event and continue loading others.
+            } catch (RuntimeException ignored) {
+                // Skip malformed values without failing the whole page.
+            }
         }
     }
 
@@ -312,6 +375,7 @@ public final class FamilyAutomationRepository {
                 || !completed.compareAndSet(false, true)) {
             return;
         }
+
         List<FamilyAutomationRule> ruleCopy = new ArrayList<>(rules);
         ruleCopy.sort((first, second) -> {
             if (first.enabled != second.enabled) {
@@ -319,12 +383,14 @@ public final class FamilyAutomationRepository {
             }
             return Long.compare(second.updatedAt, first.updatedAt);
         });
+
         List<FamilyAutomationEvent> eventCopy = new ArrayList<>(events);
         eventCopy.sort((first, second) ->
                 Long.compare(second.occurredAt, first.occurredAt));
         if (eventCopy.size() > 60) {
             eventCopy = new ArrayList<>(eventCopy.subList(0, 60));
         }
+
         callback.onLoaded(
                 session,
                 lists.all,
@@ -333,16 +399,6 @@ public final class FamilyAutomationRepository {
                 ruleCopy,
                 eventCopy
         );
-    }
-
-    private void failOnce(
-            @NonNull AtomicBoolean completed,
-            @NonNull OverviewCallback callback,
-            @NonNull String reason
-    ) {
-        if (completed.compareAndSet(false, true)) {
-            callback.onError(reason);
-        }
     }
 
     public void saveRule(
@@ -357,6 +413,7 @@ public final class FamilyAutomationRepository {
                         callback.onError("MANAGE_ACCESS_DENIED");
                         return;
                     }
+
                     FamilyAutomationRule rule = copyRule(source);
                     DatabaseReference branch = root
                             .child("familyAutomationRules")
@@ -378,6 +435,7 @@ public final class FamilyAutomationRepository {
                         callback.onError("INVALID_RULE");
                         return;
                     }
+
                     branch.child(rule.ruleId)
                             .setValue(rule)
                             .addOnSuccessListener(unused ->
@@ -480,12 +538,16 @@ public final class FamilyAutomationRepository {
             callback.onReady(cachedSession);
             return;
         }
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || !user.isEmailVerified()) {
             callback.onError("AUTH_REQUIRED");
             return;
         }
-        root.child("users").child(user.getUid()).get()
+
+        root.child("users")
+                .child(user.getUid())
+                .get()
                 .addOnSuccessListener(userSnapshot -> {
                     String familyId = stringValue(
                             userSnapshot.child("familyId")
@@ -497,6 +559,7 @@ public final class FamilyAutomationRepository {
                         callback.onError("ACTIVE_FAMILY_REQUIRED");
                         return;
                     }
+
                     root.child("memberships")
                             .child(familyId)
                             .child(user.getUid())
@@ -511,6 +574,7 @@ public final class FamilyAutomationRepository {
                                     );
                                     return;
                                 }
+
                                 String displayName = stringValue(
                                         membership.child("displayName")
                                 );
@@ -525,6 +589,7 @@ public final class FamilyAutomationRepository {
                                         || displayName.trim().isEmpty()) {
                                     displayName = user.getUid();
                                 }
+
                                 cachedSession = new Session(
                                         user.getUid(),
                                         familyId,
