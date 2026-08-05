@@ -13,6 +13,7 @@
         <item name="colorTertiaryContainer">@color/fh_tertiary_container</item>
         <item name="colorOnTertiaryContainer">@color/fh_on_tertiary_container</item>
         <item name="android:colorBackground">@color/fh_background</item>
+        <item name="android:windowBackground">@drawable/bg_page_three_tone</item>
         <item name="colorSurface">@color/fh_surface</item>
         <item name="colorSurfaceVariant">@color/fh_surface_variant</item>
         <item name="colorOnSurface">@color/fh_on_surface</item>
@@ -96,6 +97,7 @@
     </style>
 
     <style name="ThemeOverlay.FamilyHub.FormDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowBackground">@drawable/bg_form_three_tone</item>
         <item name="colorPrimary">@color/fh_form_accent</item>
         <item name="colorPrimaryContainer">@color/fh_form_accent_container</item>
         <item name="colorSurface">@color/fh_form_background</item>
