@@ -151,13 +151,25 @@
             app:chipSpacingHorizontal="@dimen/space_8"
             app:selectionRequired="true"
             app:singleSelection="true">
-            <com.google.android.material.chip.Chip android:id="@+id/filter_all" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:text="@string/grocery_filter_all" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_daily" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_daily" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_monthly" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_monthly" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_pending" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_pending" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_purchased" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_purchased" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_all" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:text="@string/grocery_filter_all" android:textColor="@color/fh_primary_dark" app:chipBackgroundColor="@color/fh_primary_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_daily" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_daily" android:textColor="@color/fh_on_success_container" app:chipBackgroundColor="@color/fh_success_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_monthly" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_monthly" android:textColor="@color/fh_form_accent" app:chipBackgroundColor="@color/fh_form_accent_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_pending" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_pending" android:textColor="@color/fh_on_warning_container" app:chipBackgroundColor="@color/fh_warning_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_purchased" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_purchased" android:textColor="@color/fh_module_health" app:chipBackgroundColor="@color/fh_module_health_container" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/floating_grocery_button"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/touch_target_min"
+        android:text="@string/grocery_floating_enable"
+        android:textColor="@color/fh_module_grocery"
+        app:icon="@drawable/ic_grocery"
+        app:iconTint="@color/fh_module_grocery"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/clear_purchased_button"
