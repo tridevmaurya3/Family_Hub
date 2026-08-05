@@ -72,6 +72,38 @@
             android:layout_marginTop="@dimen/form_field_spacing"
             android:orientation="horizontal">
             <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.Form.Dropdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                android:hint="@string/grocery_list_type">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/grocery_list_type_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.Form.Dropdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                android:hint="@string/grocery_assign_to">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/grocery_assignee_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.FamilyHub.TextInputLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

@@ -13,10 +13,15 @@ import androidx.room.PrimaryKey;
                 @Index("isPurchased"),
                 @Index("priority"),
                 @Index("cloudId"),
-                @Index("familyId")
+                @Index("familyId"),
+                @Index("listType"),
+                @Index("assignedMemberId")
         }
 )
 public class GroceryItem {
+
+    public static final String LIST_DAILY = "DAILY";
+    public static final String LIST_MONTHLY = "MONTHLY";
 
     public static final String PRIORITY_NORMAL = "NORMAL";
     public static final String PRIORITY_HIGH = "HIGH";
@@ -44,6 +49,21 @@ public class GroceryItem {
 
     @NonNull
     public String notes = "";
+
+    /** Daily essentials or the recurring monthly household list. */
+    @NonNull
+    public String listType = LIST_DAILY;
+
+    /** Stable family-profile id and display label of the person buying it. */
+    @NonNull
+    public String assignedMemberId = "";
+
+    @NonNull
+    public String assignedMemberName = "";
+
+    /** Kept separately so later edits do not hide who completed the item. */
+    @NonNull
+    public String purchasedByName = "";
 
     public long createdAt;
 

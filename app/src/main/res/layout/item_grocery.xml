@@ -70,6 +70,13 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/fh_success" />
         </LinearLayout>
+        <TextView
+            android:id="@+id/grocery_assignment"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:textColor="@color/fh_primary" />
         <View
             android:layout_width="match_parent"
             android:layout_height="@dimen/border_width"

@@ -104,6 +104,28 @@ public class GroceryAdapter
                             )
             );
             binding.groceryPriority.setText(displayPriority(item.priority));
+            String listLabel = binding.getRoot().getContext().getString(
+                    GroceryItem.LIST_MONTHLY.equals(item.listType)
+                            ? R.string.grocery_list_monthly
+                            : R.string.grocery_list_daily
+            );
+            String assignment;
+            if (item.isPurchased && !item.purchasedByName.isEmpty()) {
+                assignment = binding.getRoot().getContext().getString(
+                        R.string.grocery_purchased_by,
+                        item.purchasedByName
+                );
+            } else if (!item.assignedMemberName.isEmpty()) {
+                assignment = binding.getRoot().getContext().getString(
+                        R.string.grocery_assigned_to,
+                        item.assignedMemberName
+                );
+            } else {
+                assignment = binding.getRoot().getContext().getString(
+                        R.string.grocery_shared_family
+                );
+            }
+            binding.groceryAssignment.setText(listLabel + " • " + assignment);
 
             int flags = binding.groceryName.getPaintFlags();
             if (item.isPurchased) {

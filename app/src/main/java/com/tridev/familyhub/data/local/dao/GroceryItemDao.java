@@ -24,6 +24,7 @@ public interface GroceryItemDao {
             + "WHERE name LIKE '%' || :query || '%' "
             + "OR category LIKE '%' || :query || '%' "
             + "OR notes LIKE '%' || :query || '%' "
+            + "OR assignedMemberName LIKE '%' || :query || '%' "
             + "ORDER BY isPurchased ASC, "
             + "CASE priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END, "
             + "createdAt DESC")

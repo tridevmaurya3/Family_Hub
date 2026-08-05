@@ -63,7 +63,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 17,
+        version = 18,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -131,6 +131,19 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `updatedByName` TEXT NOT NULL DEFAULT ''");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_cloudId` ON `grocery_items` (`cloudId`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_familyId` ON `grocery_items` (`familyId`)");
+        }
+    };
+
+    /** Adds daily/monthly grouping and family assignment without losing items. */
+    private static final Migration MIGRATION_17_18 = new Migration(17, 18) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `listType` TEXT NOT NULL DEFAULT 'DAILY'");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `assignedMemberId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `assignedMemberName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `purchasedByName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_listType` ON `grocery_items` (`listType`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_assignedMemberId` ON `grocery_items` (`assignedMemberId`)");
         }
     };
 
@@ -636,7 +649,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_13_14,
                                     MIGRATION_14_15,
                                     MIGRATION_15_16,
-                                    MIGRATION_16_17
+                                    MIGRATION_16_17,
+                                    MIGRATION_17_18
                             )
                             .build();
                 }

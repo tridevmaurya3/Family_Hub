@@ -144,6 +144,9 @@ public class GroceryRepository {
     ) {
         item.isPurchased = purchased;
         item.purchasedAt = purchased ? System.currentTimeMillis() : 0L;
+        item.purchasedByName = purchased
+                ? displayName(FirebaseAuth.getInstance().getCurrentUser())
+                : "";
         save(item, callback);
     }
 
@@ -314,6 +317,10 @@ public class GroceryRepository {
         values.put("priority", item.priority);
         values.put("purchased", item.isPurchased);
         values.put("notes", item.notes);
+        values.put("listType", item.listType);
+        values.put("assignedMemberId", item.assignedMemberId);
+        values.put("assignedMemberName", item.assignedMemberName);
+        values.put("purchasedByName", item.purchasedByName);
         values.put("createdAt", item.createdAt);
         values.put("purchasedAt", item.purchasedAt);
         values.put("updatedAt", item.updatedAt);
@@ -347,6 +354,19 @@ public class GroceryRepository {
         Boolean purchased = snapshot.child("purchased").getValue(Boolean.class);
         item.isPurchased = Boolean.TRUE.equals(purchased);
         item.notes = stringValue(snapshot.child("notes"));
+        item.listType = stringValue(snapshot.child("listType"));
+        if (item.listType.isEmpty()) {
+            item.listType = GroceryItem.LIST_DAILY;
+        }
+        item.assignedMemberId = stringValue(
+                snapshot.child("assignedMemberId")
+        );
+        item.assignedMemberName = stringValue(
+                snapshot.child("assignedMemberName")
+        );
+        item.purchasedByName = stringValue(
+                snapshot.child("purchasedByName")
+        );
         item.createdAt = longValue(snapshot.child("createdAt"));
         item.purchasedAt = longValue(snapshot.child("purchasedAt"));
         item.updatedAt = longValue(snapshot.child("updatedAt"));

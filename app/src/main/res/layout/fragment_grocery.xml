@@ -134,6 +134,31 @@
             android:maxLines="1" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <HorizontalScrollView
+        android:id="@+id/grocery_filter_scroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:fillViewport="false"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/grocery_search_layout">
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/grocery_filter_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:chipSpacingHorizontal="@dimen/space_8"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+            <com.google.android.material.chip.Chip android:id="@+id/filter_all" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:text="@string/grocery_filter_all" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_daily" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_daily" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_monthly" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_monthly" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_pending" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_pending" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_purchased" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_purchased" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/clear_purchased_button"
         style="@style/Widget.Material3.Button.TextButton"
@@ -142,7 +167,7 @@
         android:text="@string/grocery_clear_purchased"
         android:textColor="@color/fh_primary"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/grocery_search_layout" />
+        app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/grocery_recycler_view"
