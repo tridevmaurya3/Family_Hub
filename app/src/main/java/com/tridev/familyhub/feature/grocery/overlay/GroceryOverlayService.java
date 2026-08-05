@@ -434,13 +434,10 @@ public class GroceryOverlayService extends Service {
             row.setTextColor(Color.rgb(36, 36, 36));
             row.setMinHeight(dp(42));
             row.setPadding(dp(8), 0, dp(8), 0);
-            row.setBackground(rounded(
+            row.setBackground(roundedFill(
                     GroceryItem.LIST_MONTHLY.equals(listType)
                             ? Color.rgb(246, 241, 252)
-                            : Color.rgb(237, 249, 243),
-                    GroceryItem.LIST_MONTHLY.equals(listType)
-                            ? Color.rgb(221, 207, 238)
-                            : Color.rgb(205, 232, 218), 10));
+                            : Color.rgb(237, 249, 243), 10));
             row.setOnCheckedChangeListener((button, checked) -> {
                 if (checked) {
                     repository.setPurchased(item, true, this::refreshPanel);
@@ -450,16 +447,6 @@ public class GroceryOverlayService extends Service {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
             rowParams.bottomMargin = dp(4);
             itemContainer.addView(row, rowParams);
-            if (shownHere < Math.min(count, 6) - 1) {
-                View divider = new View(this);
-                divider.setBackgroundColor(Color.rgb(220, 225, 231));
-                LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
-                dividerParams.setMarginStart(dp(12));
-                dividerParams.setMarginEnd(dp(12));
-                dividerParams.bottomMargin = dp(4);
-                itemContainer.addView(divider, dividerParams);
-            }
             shownHere++;
         }
         if (count == 0) {
@@ -608,6 +595,13 @@ public class GroceryOverlayService extends Service {
         drawable.setColor(fill);
         drawable.setCornerRadius(dp(radiusDp));
         drawable.setStroke(dp(1), stroke);
+        return drawable;
+    }
+
+    private GradientDrawable roundedFill(int fill, int radiusDp) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(fill);
+        drawable.setCornerRadius(dp(radiusDp));
         return drawable;
     }
 
