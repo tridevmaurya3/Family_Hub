@@ -19,6 +19,8 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -79,11 +81,12 @@ public class GroceryOverlayService extends Service {
             return;
         }
         TextView strip = new TextView(this);
-        strip.setText("＋  Grocery");
+        strip.setText("+");
         strip.setTextColor(Color.rgb(11, 79, 59));
-        strip.setTextSize(13f);
+        strip.setTextSize(26f);
+        strip.setTypeface(strip.getTypeface(), android.graphics.Typeface.BOLD);
         strip.setGravity(Gravity.CENTER);
-        strip.setPadding(dp(14), 0, dp(14), 0);
+        strip.setPadding(0, 0, 0, dp(2));
         strip.setBackground(rounded(Color.rgb(231, 246, 240),
                 Color.rgb(15, 122, 90), 22));
         strip.setElevation(dp(8));
@@ -91,7 +94,7 @@ public class GroceryOverlayService extends Service {
                 .getFloat("alpha", 0.88f));
         stripView = strip;
 
-        stripParams = overlayParams(dp(132), dp(46), true);
+        stripParams = overlayParams(dp(44), dp(44), true);
         stripParams.gravity = Gravity.TOP | Gravity.START;
         stripParams.x = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getInt("x", dp(12));
@@ -161,6 +164,29 @@ public class GroceryOverlayService extends Service {
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(44)));
         root.addView(header);
 
+        final String[] selectedListType = {GroceryItem.LIST_DAILY};
+        RadioGroup listTypeGroup = new RadioGroup(this);
+        listTypeGroup.setOrientation(RadioGroup.HORIZONTAL);
+        listTypeGroup.setGravity(Gravity.CENTER_VERTICAL);
+        RadioButton daily = new RadioButton(this);
+        daily.setId(View.generateViewId());
+        daily.setText(R.string.grocery_list_daily);
+        daily.setTextSize(12f);
+        daily.setChecked(true);
+        RadioButton monthly = new RadioButton(this);
+        monthly.setId(View.generateViewId());
+        monthly.setText(R.string.grocery_list_monthly);
+        monthly.setTextSize(12f);
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(
+                0, dp(42), 1f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(
+                0, dp(42), 1f));
+        listTypeGroup.setOnCheckedChangeListener((group, checkedId) ->
+                selectedListType[0] = checkedId == monthly.getId()
+                        ? GroceryItem.LIST_MONTHLY
+                        : GroceryItem.LIST_DAILY);
+        root.addView(listTypeGroup);
+
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
         EditText input = new EditText(this);
@@ -218,7 +244,7 @@ public class GroceryOverlayService extends Service {
             }
             GroceryItem item = new GroceryItem();
             item.name = name;
-            item.listType = GroceryItem.LIST_DAILY;
+            item.listType = selectedListType[0];
             repository.save(item, () -> {
                 input.setText("");
                 refreshPanel();
@@ -257,8 +283,12 @@ public class GroceryOverlayService extends Service {
                 continue;
             }
             CheckBox row = new CheckBox(this);
+            String type = GroceryItem.LIST_MONTHLY.equals(item.listType)
+                    ? getString(R.string.grocery_filter_monthly)
+                    : getString(R.string.grocery_filter_daily);
             String detail = item.quantity.isEmpty()
-                    ? item.name : item.name + "  •  " + item.quantity;
+                    ? type + "  •  " + item.name
+                    : type + "  •  " + item.name + "  •  " + item.quantity;
             if (!item.assignedMemberName.isEmpty()) {
                 detail += "  •  " + item.assignedMemberName;
             }
