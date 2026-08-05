@@ -5,12 +5,18 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
+import android.os.Bundle;
 import android.provider.Settings;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -18,6 +24,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -28,6 +35,7 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
@@ -58,6 +66,9 @@ public class GroceryOverlayService extends Service {
     private GroceryRepository repository;
     private FamilyMemberRepository memberRepository;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
+    private String visibleListType = GroceryItem.LIST_DAILY;
+    private SpeechRecognizer speechRecognizer;
+    private EditText voiceTarget;
 
     @Override
     public void onCreate() {
@@ -161,8 +172,17 @@ public class GroceryOverlayService extends Service {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16), dp(14), dp(16), dp(14));
-        root.setBackground(rounded(Color.WHITE, Color.rgb(214, 220, 227), 20));
+        root.setBackground(panelGradient());
         root.setElevation(dp(12));
+        root.setFocusableInTouchMode(true);
+        root.setOnKeyListener((view, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK
+                    && event.getAction() == KeyEvent.ACTION_UP) {
+                closePanel();
+                return true;
+            }
+            return false;
+        });
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -199,10 +219,13 @@ public class GroceryOverlayService extends Service {
                 0, dp(42), 1f));
         listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(
                 0, dp(42), 1f));
-        listTypeGroup.setOnCheckedChangeListener((group, checkedId) ->
-                selectedListType[0] = checkedId == monthly.getId()
-                        ? GroceryItem.LIST_MONTHLY
-                        : GroceryItem.LIST_DAILY);
+        listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            selectedListType[0] = checkedId == monthly.getId()
+                    ? GroceryItem.LIST_MONTHLY
+                    : GroceryItem.LIST_DAILY;
+            visibleListType = selectedListType[0];
+            refreshPanel();
+        });
         LinearLayout typeBlock = labelledField(
                 getString(R.string.grocery_list_type), listTypeGroup);
         root.addView(typeBlock);
@@ -251,10 +274,29 @@ public class GroceryOverlayService extends Service {
         input.setSingleLine(true);
         input.setTextSize(13f);
         input.setHint(R.string.grocery_overlay_add_hint);
-        input.setPadding(dp(12), 0, dp(12), 0);
+        input.setPadding(dp(12), 0, dp(8), 0);
         input.setBackground(rounded(Color.rgb(248, 249, 250),
                 Color.rgb(214, 220, 227), 12));
+        input.setOnKeyListener((view, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK
+                    && event.getAction() == KeyEvent.ACTION_UP) {
+                closePanel();
+                return true;
+            }
+            return false;
+        });
         quickAdd.addView(input, new LinearLayout.LayoutParams(0, dp(48), 1f));
+        ImageButton voice = new ImageButton(this);
+        voice.setImageResource(R.drawable.ic_mic);
+        voice.setContentDescription(getString(R.string.grocery_overlay_voice));
+        voice.setColorFilter(Color.rgb(15, 108, 189));
+        voice.setPadding(dp(11), dp(11), dp(11), dp(11));
+        voice.setBackground(rounded(Color.rgb(232, 243, 252),
+                Color.rgb(190, 216, 236), 22));
+        LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(
+                dp(44), dp(44));
+        voiceParams.setMarginStart(dp(6));
+        quickAdd.addView(voice, voiceParams);
         Button add = new Button(this);
         add.setText("＋ Add");
         add.setTextSize(12f);
@@ -294,6 +336,8 @@ public class GroceryOverlayService extends Service {
         root.addView(opacity, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
+        voice.setOnClickListener(v -> startVoiceInput(input));
+
         add.setOnClickListener(v -> {
             String name = input.getText().toString().trim();
             if (name.isEmpty()) {
@@ -332,6 +376,7 @@ public class GroceryOverlayService extends Service {
         params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         params.y = dp(74);
         windowManager.addView(panelView, params);
+        root.requestFocus();
         refreshPanel();
         input.requestFocus();
         input.postDelayed(() -> ((InputMethodManager) getSystemService(
@@ -351,10 +396,10 @@ public class GroceryOverlayService extends Service {
             return;
         }
         itemContainer.removeAllViews();
-        int shown = renderSection(items, GroceryItem.LIST_DAILY,
-                getString(R.string.grocery_overlay_daily_section), 0);
-        renderSection(items, GroceryItem.LIST_MONTHLY,
-                getString(R.string.grocery_overlay_monthly_section), shown);
+        boolean monthly = GroceryItem.LIST_MONTHLY.equals(visibleListType);
+        renderSection(items, visibleListType,
+                getString(monthly ? R.string.grocery_overlay_monthly_section
+                        : R.string.grocery_overlay_daily_section), 0);
     }
 
     private int renderSection(List<GroceryItem> items, String listType,
@@ -374,7 +419,7 @@ public class GroceryOverlayService extends Service {
         int shownHere = 0;
         for (GroceryItem item : items) {
             if (item.isPurchased || !listType.equals(item.listType)
-                    || shownHere >= 3) {
+                    || shownHere >= 6) {
                 continue;
             }
             CheckBox row = new CheckBox(this);
@@ -388,12 +433,33 @@ public class GroceryOverlayService extends Service {
             row.setTextSize(13f);
             row.setTextColor(Color.rgb(36, 36, 36));
             row.setMinHeight(dp(42));
+            row.setPadding(dp(8), 0, dp(8), 0);
+            row.setBackground(rounded(
+                    GroceryItem.LIST_MONTHLY.equals(listType)
+                            ? Color.rgb(246, 241, 252)
+                            : Color.rgb(237, 249, 243),
+                    GroceryItem.LIST_MONTHLY.equals(listType)
+                            ? Color.rgb(221, 207, 238)
+                            : Color.rgb(205, 232, 218), 10));
             row.setOnCheckedChangeListener((button, checked) -> {
                 if (checked) {
                     repository.setPurchased(item, true, this::refreshPanel);
                 }
             });
-            itemContainer.addView(row);
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+            rowParams.bottomMargin = dp(4);
+            itemContainer.addView(row, rowParams);
+            if (shownHere < Math.min(count, 6) - 1) {
+                View divider = new View(this);
+                divider.setBackgroundColor(Color.rgb(220, 225, 231));
+                LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+                dividerParams.setMarginStart(dp(12));
+                dividerParams.setMarginEnd(dp(12));
+                dividerParams.bottomMargin = dp(4);
+                itemContainer.addView(divider, dividerParams);
+            }
             shownHere++;
         }
         if (count == 0) {
@@ -410,10 +476,68 @@ public class GroceryOverlayService extends Service {
     }
 
     private void closePanel() {
+        stopVoiceInput();
         if (panelView != null) {
             windowManager.removeView(panelView);
             panelView = null;
             itemContainer = null;
+        }
+    }
+
+    private void startVoiceInput(EditText target) {
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            target.setError(getString(R.string.grocery_overlay_voice_permission));
+            return;
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            target.setError(getString(R.string.grocery_overlay_voice_unavailable));
+            return;
+        }
+        stopVoiceInput();
+        voiceTarget = target;
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        speechRecognizer.setRecognitionListener(new RecognitionListener() {
+            @Override public void onReadyForSpeech(Bundle params) {
+                target.setHint(R.string.grocery_overlay_voice_listening);
+            }
+            @Override public void onResults(Bundle results) {
+                ArrayList<String> matches = results.getStringArrayList(
+                        SpeechRecognizer.RESULTS_RECOGNITION);
+                if (matches != null && !matches.isEmpty()) target.setText(matches.get(0));
+                target.setSelection(target.length());
+                target.setHint(R.string.grocery_overlay_add_hint);
+                stopVoiceInput();
+            }
+            @Override public void onError(int error) {
+                target.setHint(R.string.grocery_overlay_add_hint);
+                stopVoiceInput();
+            }
+            @Override public void onBeginningOfSpeech() { }
+            @Override public void onRmsChanged(float rmsdB) { }
+            @Override public void onBufferReceived(byte[] buffer) { }
+            @Override public void onEndOfSpeech() { }
+            @Override public void onPartialResults(Bundle partialResults) { }
+            @Override public void onEvent(int eventType, Bundle params) { }
+        });
+        Intent listen = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
+        speechRecognizer.startListening(listen);
+    }
+
+    private void stopVoiceInput() {
+        if (speechRecognizer != null) {
+            speechRecognizer.cancel();
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+        if (voiceTarget != null) {
+            voiceTarget.setHint(R.string.grocery_overlay_add_hint);
+            voiceTarget = null;
         }
     }
 
@@ -484,6 +608,16 @@ public class GroceryOverlayService extends Service {
         drawable.setColor(fill);
         drawable.setCornerRadius(dp(radiusDp));
         drawable.setStroke(dp(1), stroke);
+        return drawable;
+    }
+
+    private GradientDrawable panelGradient() {
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.rgb(239, 250, 243),
+                        Color.rgb(255, 244, 245), Color.rgb(238, 246, 253)});
+        drawable.setCornerRadius(dp(20));
+        drawable.setStroke(dp(1), Color.rgb(214, 220, 227));
         return drawable;
     }
 
