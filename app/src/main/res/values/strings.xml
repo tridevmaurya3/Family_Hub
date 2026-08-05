@@ -538,12 +538,12 @@
 
     <!-- Grocery -->
     <string name="grocery_title">Grocery &amp; Shopping</string>
-    <string name="grocery_subtitle">A simple private shopping list for the whole family</string>
+    <string name="grocery_subtitle">Daily and monthly shopping, shared live with your family</string>
     <string name="grocery_pending">Pending items</string>
     <string name="grocery_estimated_total">Estimated total</string>
     <string name="grocery_search_hint">Search item, category, or notes</string>
     <string name="grocery_clear_purchased">Clear purchased</string>
-    <string name="grocery_widget_title">Monthly Shopping</string>
+    <string name="grocery_widget_title">Family Shopping</string>
     <string name="grocery_widget_pending">%1$d items pending</string>
     <string name="grocery_widget_empty">Everything is purchased</string>
     <string name="grocery_widget_quick_add">＋ Quick add item</string>
@@ -560,6 +560,19 @@
     <string name="grocery_estimated_cost">Estimated cost</string>
     <string name="grocery_priority">Priority</string>
     <string name="grocery_notes">Notes (optional)</string>
+    <string name="grocery_list_type">Shopping list</string>
+    <string name="grocery_list_daily">Daily items</string>
+    <string name="grocery_list_monthly">Monthly items</string>
+    <string name="grocery_assign_to">Send / assign to</string>
+    <string name="grocery_whole_family">Whole family</string>
+    <string name="grocery_filter_all">All</string>
+    <string name="grocery_filter_daily">Daily</string>
+    <string name="grocery_filter_monthly">Monthly</string>
+    <string name="grocery_filter_pending">Pending</string>
+    <string name="grocery_filter_purchased">Purchased</string>
+    <string name="grocery_assigned_to">Assigned to %1$s</string>
+    <string name="grocery_shared_family">Shared with whole family</string>
+    <string name="grocery_purchased_by">Purchased by %1$s</string>
     <string name="grocery_name_required">Enter an item name</string>
     <string name="grocery_priority_required">Select a priority</string>
     <string name="grocery_item_added">Item added</string>
@@ -580,6 +593,10 @@
         <item>@string/grocery_priority_normal</item>
         <item>@string/grocery_priority_high</item>
         <item>@string/grocery_priority_urgent</item>
+    </string-array>
+    <string-array name="grocery_list_type_labels">
+        <item>@string/grocery_list_daily</item>
+        <item>@string/grocery_list_monthly</item>
     </string-array>
 
     <!-- Notes -->
