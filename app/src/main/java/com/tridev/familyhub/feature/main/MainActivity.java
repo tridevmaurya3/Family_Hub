@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             if (!handleLaunchIntent(getIntent())) {
                 binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
+                showDestination(R.id.nav_home);
             }
         }
     }
