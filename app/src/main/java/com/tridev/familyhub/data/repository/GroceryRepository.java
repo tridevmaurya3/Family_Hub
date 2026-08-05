@@ -367,8 +367,18 @@ public class GroceryRepository {
     }
 
     private static double doubleValue(@NonNull DataSnapshot snapshot) {
-        Number value = snapshot.getValue(Number.class);
-        return value == null ? 0D : value.doubleValue();
+        Object value = snapshot.getValue();
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (NumberFormatException ignored) {
+                return 0D;
+            }
+        }
+        return 0D;
     }
 
     @NonNull
