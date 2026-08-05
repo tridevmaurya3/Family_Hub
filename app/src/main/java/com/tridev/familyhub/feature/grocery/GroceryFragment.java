@@ -57,6 +57,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private GroceryAdapter adapter;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private int activeFilterId = R.id.filter_all;
+    @Nullable private android.widget.EditText activeDialogVoiceInput;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
     private final ActivityResultLauncher<Intent> voiceLauncher =
@@ -71,7 +72,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                                 .getStringArrayListExtra(
                                         RecognizerIntent.EXTRA_RESULTS);
                         if (matches != null && !matches.isEmpty()) {
-                            addFromVoice(matches.get(0));
+                            if (activeDialogVoiceInput != null) {
+                                activeDialogVoiceInput.setText(matches.get(0).trim());
+                                activeDialogVoiceInput.setSelection(
+                                        activeDialogVoiceInput.length());
+                            } else {
+                                addFromVoice(matches.get(0));
+                            }
                         }
                     }
             );
@@ -315,6 +322,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] listTypeLabels = getResources().getStringArray(
                 R.array.grocery_list_type_labels
         );
+        String[] quantityUnits = getResources().getStringArray(
+                R.array.grocery_quantity_units
+        );
         List<String> assigneeLabels = new ArrayList<>();
         assigneeLabels.add(getString(R.string.grocery_whole_family));
         for (FamilyMember member : familyMembers) {
@@ -340,17 +350,29 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 assigneeLabels
         ));
+        form.groceryQuantityUnitInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                quantityUnits
+        ));
+        form.groceryNameLayout.setEndIconOnClickListener(v -> {
+            activeDialogVoiceInput = form.groceryNameInput;
+            startVoiceAdd();
+        });
 
         if (existing == null) {
             form.groceryCategoryInput.setText(categoryLabels[0], false);
             form.groceryPriorityInput.setText(priorityLabels[0], false);
             form.groceryListTypeInput.setText(listTypeLabels[0], false);
             form.groceryAssigneeInput.setText(assigneeLabels.get(0), false);
+            form.groceryQuantityUnitInput.setText(quantityUnits[0], false);
         } else {
             form.groceryDialogTitle.setText(R.string.grocery_edit_item);
             form.groceryNameInput.setText(item.name);
             form.groceryCategoryInput.setText(item.category, false);
-            form.groceryQuantityInput.setText(item.quantity);
+            String[] parsedQuantity = splitQuantity(item.quantity, quantityUnits);
+            form.groceryQuantityInput.setText(parsedQuantity[0]);
+            form.groceryQuantityUnitInput.setText(parsedQuantity[1], false);
             if (item.estimatedCost > 0) {
                 form.groceryCostInput.setText(String.valueOf(
                         item.estimatedCost
@@ -382,6 +404,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setView(form.getRoot())
                 .create();
+        dialog.setOnDismissListener(ignored -> activeDialogVoiceInput = null);
         form.cancelGroceryButton.setOnClickListener(
                 clickedView -> dialog.dismiss()
         );
@@ -408,7 +431,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
             item.name = name;
             item.category = textOf(form.groceryCategoryInput);
-            item.quantity = textOf(form.groceryQuantityInput);
+            String quantityAmount = textOf(form.groceryQuantityInput);
+            String quantityUnit = textOf(form.groceryQuantityUnitInput);
+            item.quantity = quantityAmount.isEmpty() ? ""
+                    : quantityAmount + " " + (quantityUnit.isEmpty()
+                    ? quantityUnits[0] : quantityUnit);
             item.estimatedCost = parseAmount(textOf(form.groceryCostInput));
             item.priority = PRIORITIES[priorityIndex];
             item.notes = textOf(form.groceryNotesInput);
@@ -452,6 +479,27 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             estimateAndSave(item, saveComplete);
         });
         dialog.show();
+    }
+
+    @NonNull
+    private String[] splitQuantity(@NonNull String stored,
+            @NonNull String[] supportedUnits) {
+        String clean = stored.trim();
+        if (clean.isEmpty()) return new String[]{"", supportedUnits[0]};
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                "^([0-9]+(?:[.,][0-9]+)?)\\s*([A-Za-z]+)?$"
+        ).matcher(clean);
+        if (!matcher.matches()) return new String[]{"", supportedUnits[0]};
+        String amount = matcher.group(1) == null ? ""
+                : matcher.group(1).replace(',', '.');
+        String storedUnit = matcher.group(2) == null ? supportedUnits[0]
+                : matcher.group(2);
+        for (String unit : supportedUnits) {
+            if (unit.equalsIgnoreCase(storedUnit)) {
+                return new String[]{amount, unit};
+            }
+        }
+        return new String[]{amount, supportedUnits[0]};
     }
 
     private int findPriorityIndex(

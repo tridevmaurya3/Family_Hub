@@ -3,7 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_form_three_tone">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -46,7 +47,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
-            android:hint="@string/grocery_item_name">
+            android:hint="@string/grocery_item_name"
+            app:endIconDrawable="@drawable/ic_mic"
+            app:endIconMode="custom"
+            app:endIconTint="@color/fh_primary">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/grocery_name_input"
                 android:layout_width="match_parent"
@@ -105,12 +109,48 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/space_4"
                 android:layout_weight="1"
-                android:hint="@string/grocery_quantity">
+                android:hint="@string/grocery_quantity_amount">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/grocery_quantity_input"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
+                    android:inputType="numberDecimal"
+                    android:maxLines="1"
+                    android:textSize="13sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.Form.Dropdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1"
+                android:hint="@string/grocery_quantity_unit">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/grocery_quantity_unit_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:textSize="13sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.TextInputLayout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1"
+                android:hint="@string/grocery_overlay_price"
+                app:prefixText="₹ ">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/grocery_cost_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
                     android:maxLines="1"
                     android:textSize="13sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -120,9 +160,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_4"
                 android:layout_weight="1"
-                android:hint="@string/grocery_estimated_cost">
+                android:hint="@string/grocery_paid_price"
+                app:prefixText="₹ ">
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/grocery_cost_input"
+                    android:id="@+id/grocery_actual_cost_input"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="numberDecimal"
@@ -130,21 +171,6 @@
                     android:textSize="13sp" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/grocery_actual_cost"
-            app:prefixText="₹ ">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/grocery_actual_cost_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="numberDecimal"
-                android:maxLines="1"
-                android:textSize="13sp" />
-        </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/grocery_auto_price_switch"
             android:layout_width="match_parent"

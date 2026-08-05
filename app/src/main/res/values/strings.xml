@@ -1162,6 +1162,7 @@ Sharing: %12$s</string>
     <string name="grocery_overlay_price">Price (optional)</string>
     <string name="grocery_overlay_price_hint">₹ amount</string>
     <string name="grocery_invalid_cost">Enter a valid price amount</string>
+    <string name="grocery_paid_price">Paid price (optional)</string>
     <string-array name="grocery_quantity_units">
         <item>pcs</item>
         <item>packet</item>
