@@ -104,7 +104,7 @@
                         android:textSize="16sp" />
                     <TextView style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Records" android:textSize="9sp" />
+                        android:text="@string/health_summary_records" android:textSize="9sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -123,7 +123,7 @@
                         android:textSize="16sp" />
                     <TextView style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Medicines" android:textSize="9sp" />
+                        android:text="@string/health_summary_medicines" android:textSize="9sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -142,7 +142,7 @@
                         android:textSize="16sp" />
                     <TextView style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Upcoming" android:textSize="9sp" />
+                        android:text="@string/health_summary_upcoming" android:textSize="9sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -161,7 +161,7 @@
                         android:textSize="16sp" />
                     <TextView style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="Vitals" android:textSize="9sp" />
+                        android:text="@string/health_summary_vitals" android:textSize="9sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
@@ -221,35 +221,35 @@
                             android:layout_height="wrap_content"
                             android:checkable="true"
                             android:checked="true"
-                            android:text="All" />
+                            android:text="@string/health_filter_all" />
                         <com.google.android.material.chip.Chip
                             android:id="@+id/health_filter_medicine"
                             style="@style/Widget.FamilyHub.StatusChip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:checkable="true"
-                            android:text="Medicines" />
+                            android:text="@string/health_filter_medicines" />
                         <com.google.android.material.chip.Chip
                             android:id="@+id/health_filter_appointments"
                             style="@style/Widget.FamilyHub.StatusChip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:checkable="true"
-                            android:text="Appointments" />
+                            android:text="@string/health_filter_appointments" />
                         <com.google.android.material.chip.Chip
                             android:id="@+id/health_filter_vitals"
                             style="@style/Widget.FamilyHub.StatusChip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:checkable="true"
-                            android:text="Vitals" />
+                            android:text="@string/health_filter_vitals" />
                         <com.google.android.material.chip.Chip
                             android:id="@+id/health_filter_history"
                             style="@style/Widget.FamilyHub.StatusChip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:checkable="true"
-                            android:text="History" />
+                            android:text="@string/health_filter_history" />
                     </com.google.android.material.chip.ChipGroup>
                 </HorizontalScrollView>
             </LinearLayout>
