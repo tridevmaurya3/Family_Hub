@@ -4,6 +4,8 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.room.ColumnInfo;
+import androidx.room.Ignore;
 
 /** One local family grocery or shopping-list item. */
 @Entity(
@@ -15,7 +17,10 @@ import androidx.room.PrimaryKey;
                 @Index("cloudId"),
                 @Index("familyId"),
                 @Index("listType"),
-                @Index("assignedMemberId")
+                @Index("assignedMemberId"),
+                @Index("buyingStatus"),
+                @Index("isMonthlyMaster"),
+                @Index("priceLocationKey")
         }
 )
 public class GroceryItem {
@@ -26,6 +31,9 @@ public class GroceryItem {
     public static final String PRIORITY_NORMAL = "NORMAL";
     public static final String PRIORITY_HIGH = "HIGH";
     public static final String PRIORITY_URGENT = "URGENT";
+    public static final String STATUS_PENDING = "PENDING";
+    public static final String STATUS_BUYING = "BUYING";
+    public static final String STATUS_PURCHASED = "PURCHASED";
 
     @PrimaryKey(autoGenerate = true)
     public long id;
@@ -42,10 +50,31 @@ public class GroceryItem {
 
     public double estimatedCost;
 
+    @ColumnInfo(defaultValue = "0") public double actualCost;
+
+    @ColumnInfo(defaultValue = "1") public boolean autoPriceEnabled = true;
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''") public String priceLocationKey = "";
+
+    @ColumnInfo(defaultValue = "0") public int priceConfidence;
+
     @NonNull
     public String priority = PRIORITY_NORMAL;
 
     public boolean isPurchased;
+
+    @NonNull
+    @ColumnInfo(defaultValue = "'PENDING'") public String buyingStatus = STATUS_PENDING;
+
+    @ColumnInfo(defaultValue = "0") public boolean isMonthlyMaster;
+
+    @NonNull
+    @ColumnInfo(defaultValue = "''") public String lastResetMonth = "";
+
+    @ColumnInfo(defaultValue = "0") public int purchaseCount;
+
+    @ColumnInfo(defaultValue = "0") public long financeEntryId;
 
     @NonNull
     public String notes = "";
@@ -85,4 +114,7 @@ public class GroceryItem {
 
     @NonNull
     public String updatedByName = "";
+
+    /** Runtime-only signal used to explain duplicate reuse in the UI. */
+    @Ignore public boolean duplicateMerged;
 }
