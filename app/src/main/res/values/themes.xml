@@ -23,6 +23,8 @@
         <item name="android:fontFamily">sans</item>
         <item name="materialButtonStyle">@style/Widget.FamilyHub.Button.Primary</item>
         <item name="textInputStyle">@style/Widget.FamilyHub.TextInputLayout</item>
+        <item name="editTextStyle">@style/Widget.FamilyHub.FormInputText</item>
+        <item name="android:autoCompleteTextViewStyle">@style/Widget.FamilyHub.FormDropdownText</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.FamilyHub.FormDialog</item>
         <item name="android:navigationBarColor">@color/fh_background</item>
         <item name="android:statusBarColor">@color/fh_background</item>
@@ -56,10 +58,10 @@
 
     <style name="Widget.FamilyHub.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxBackgroundColor">@color/fh_form_surface</item>
-        <item name="boxCornerRadiusTopStart">@dimen/radius_16</item>
-        <item name="boxCornerRadiusTopEnd">@dimen/radius_16</item>
-        <item name="boxCornerRadiusBottomStart">@dimen/radius_16</item>
-        <item name="boxCornerRadiusBottomEnd">@dimen/radius_16</item>
+        <item name="boxCornerRadiusTopStart">@dimen/radius_12</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/radius_12</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/radius_12</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/radius_12</item>
         <item name="boxStrokeColor">@color/form_input_stroke</item>
         <item name="boxStrokeWidth">@dimen/border_width</item>
         <item name="boxStrokeWidthFocused">1dp</item>
@@ -67,6 +69,25 @@
         <item name="hintTextColor">@color/fh_on_surface_variant</item>
         <item name="startIconTint">@color/fh_form_accent</item>
         <item name="endIconTint">@color/fh_form_accent</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FormInputText" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@null</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
+        <item name="android:textColorHint">@color/fh_on_surface_variant</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FormDropdownText" parent="Widget.AppCompat.AutoCompleteTextView">
+        <item name="android:background">@null</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
+        <item name="android:textColorHint">@color/fh_on_surface_variant</item>
+        <item name="android:textSize">13sp</item>
     </style>
 
     <style name="ShapeAppearanceOverlayFamilyHubFormDialog">
