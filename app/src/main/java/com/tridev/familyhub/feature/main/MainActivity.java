@@ -80,8 +80,8 @@ public class MainActivity extends AppCompatActivity {
                 false
         );
 
-        binding.bottomNavigation.setOnItemSelectedListener(item -> {
-            showDestination(item.getItemId());
+        binding.bottomNavigation.setOnItemSelectedListener(destinationId -> {
+            showDestination(destinationId);
             return true;
         });
 
