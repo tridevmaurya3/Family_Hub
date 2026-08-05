@@ -8,7 +8,8 @@ import androidx.room.PrimaryKey;
 /** A private income or expense entry stored only in the Family Hub database. */
 @Entity(
         tableName = "finance_entries",
-        indices = {@Index(value = {"transactionDate"}), @Index(value = {"category"})}
+        indices = {@Index(value = {"transactionDate"}), @Index(value = {"category"}),
+                @Index(value = {"accountName"}), @Index(value = {"isRecurring"})}
 )
 public class FinanceEntry {
 
@@ -34,4 +35,9 @@ public class FinanceEntry {
     public String transactionDate = "";
 
     public long createdAt;
+    @NonNull public String accountName = "Cash";
+    @NonNull public String paymentMethod = "CASH";
+    public boolean isRecurring;
+    public boolean isShared;
+    public long updatedAt;
 }

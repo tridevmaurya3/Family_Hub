@@ -190,6 +190,26 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/collaboration_status"
+            app:endIconMode="dropdown_menu">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/reminder_collaboration_status_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/reminder_shared_switch"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/touch_target_min"
+            android:text="@string/share_with_family" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

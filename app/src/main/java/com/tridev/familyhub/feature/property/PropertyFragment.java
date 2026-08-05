@@ -220,6 +220,8 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                     property.registrationReference
             );
             form.propertyNotesInput.setText(property.notes);
+            form.propertyLinkedDocumentInput.setText(property.linkedDocumentTitle);
+            form.propertyTimelineNoteInput.setText(property.timelineNote);
         }
         if (purchaseDate[0] > 0L) {
             form.propertyPurchaseDateInput.setText(
@@ -306,6 +308,9 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                     form.propertyRegistrationInput
             );
             property.notes = textOf(form.propertyNotesInput);
+            property.linkedDocumentTitle = textOf(form.propertyLinkedDocumentInput);
+            property.timelineNote = textOf(form.propertyTimelineNoteInput);
+            property.updatedAt = System.currentTimeMillis();
 
             repository.save(property, () -> {
                 if (binding == null) {

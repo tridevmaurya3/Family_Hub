@@ -11,6 +11,8 @@ import com.tridev.familyhub.data.local.dao.NoteDao;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -70,8 +72,33 @@ public class NotesRepository {
             } else {
                 noteDao.update(note);
             }
+            if (note.isShared) {
+                publish(note);
+            } else {
+                FamilyCollaborationPublisher.remove("notes", note.familyId, note.cloudId);
+            }
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    private void publish(@NonNull NoteEntry note) {
+        Map<String, Object> values = new HashMap<>();
+        values.put("title", note.title);
+        values.put("content", note.content);
+        values.put("category", note.category);
+        values.put("noteType", note.noteType);
+        values.put("colorKey", note.colorKey);
+        values.put("assignedMemberId", note.assignedMemberId == 0 ? "" : String.valueOf(note.assignedMemberId));
+        values.put("assignedMemberName", note.assignedMemberName);
+        values.put("collaborationStatus", note.collaborationStatus);
+        values.put("reminderAt", note.reminderAt);
+        FamilyCollaborationPublisher.publish("notes", note.cloudId, values,
+                (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    note.cloudId = cloudId;
+                    note.familyId = familyId;
+                    note.updatedByUid = uid;
+                    noteDao.update(note);
+                }));
     }
 
     public void setPinned(
@@ -100,6 +127,7 @@ public class NotesRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            FamilyCollaborationPublisher.remove("notes", note.familyId, note.cloudId);
             noteDao.delete(note);
             mainHandler.post(callback::onComplete);
         });

@@ -11,6 +11,8 @@ import com.tridev.familyhub.data.local.dao.ReminderDao;
 import com.tridev.familyhub.data.local.entity.Reminder;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -52,18 +54,44 @@ public class ReminderRepository {
 
     public void save(Reminder reminder, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            reminder.updatedAt = System.currentTimeMillis();
             if (reminder.id == 0) {
-                reminder.createdAt = System.currentTimeMillis();
+                reminder.createdAt = reminder.updatedAt;
                 reminder.id = reminderDao.insert(reminder);
             } else {
                 reminderDao.update(reminder);
+            }
+            if (reminder.isShared) {
+                publish(reminder);
+            } else {
+                FamilyCollaborationPublisher.remove("reminders", reminder.familyId, reminder.cloudId);
             }
             mainHandler.post(() -> callback.onComplete(reminder));
         });
     }
 
+    private void publish(@NonNull Reminder reminder) {
+        Map<String, Object> values = new HashMap<>();
+        values.put("title", reminder.title);
+        values.put("note", reminder.note);
+        values.put("reminderAt", reminder.reminderAt);
+        values.put("repeatType", reminder.repeatType);
+        values.put("enabled", reminder.isEnabled);
+        values.put("assignedMemberId", reminder.assignedMemberId == 0 ? "" : String.valueOf(reminder.assignedMemberId));
+        values.put("assignedMemberName", reminder.assignedMemberName);
+        values.put("collaborationStatus", reminder.collaborationStatus);
+        FamilyCollaborationPublisher.publish("reminders", reminder.cloudId, values,
+                (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    reminder.cloudId = cloudId;
+                    reminder.familyId = familyId;
+                    reminder.updatedByUid = uid;
+                    reminderDao.update(reminder);
+                }));
+    }
+
     public void delete(Reminder reminder, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            FamilyCollaborationPublisher.remove("reminders", reminder.familyId, reminder.cloudId);
             reminderDao.delete(reminder);
             mainHandler.post(() -> callback.onComplete(reminder));
         });

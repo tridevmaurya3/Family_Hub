@@ -111,6 +111,39 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_account_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_account">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/finance_account_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_payment_method_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_payment_method">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/finance_payment_method_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/finance_category_layout"
             style="@style/Widget.FamilyHub.Form.Dropdown"
             android:layout_width="match_parent"
@@ -125,6 +158,19 @@
                 android:inputType="none" />
 
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/finance_recurring_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:text="@string/finance_recurring" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/finance_shared_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/finance_share_summary" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/finance_entry_date_layout"

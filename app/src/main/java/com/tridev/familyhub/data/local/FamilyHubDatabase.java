@@ -63,7 +63,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 19,
+        version = 20,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -162,6 +162,68 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_buyingStatus` ON `grocery_items` (`buyingStatus`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_isMonthlyMaster` ON `grocery_items` (`isMonthlyMaster`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_priceLocationKey` ON `grocery_items` (`priceLocationKey`)");
+        }
+    };
+
+    /** Adds Finance 2.0, collaboration and document-timeline metadata safely. */
+    private static final Migration MIGRATION_19_20 = new Migration(19, 20) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `accountName` TEXT NOT NULL DEFAULT 'Cash'");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `paymentMethod` TEXT NOT NULL DEFAULT 'CASH'");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `isRecurring` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_accountName` ON `finance_entries` (`accountName`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_isRecurring` ON `finance_entries` (`isRecurring`)");
+
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `assignedMemberId` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `assignedMemberName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `collaborationStatus` TEXT NOT NULL DEFAULT 'PENDING'");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_reminders_cloudId` ON `reminders` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_reminders_familyId` ON `reminders` (`familyId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_reminders_assignedMemberId` ON `reminders` (`assignedMemberId`)");
+
+            database.execSQL("ALTER TABLE `planner_items` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `planner_items` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `planner_items` ADD COLUMN `assignedMemberName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `planner_items` ADD COLUMN `collaborationStatus` TEXT NOT NULL DEFAULT 'PENDING'");
+            database.execSQL("ALTER TABLE `planner_items` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `planner_items` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_planner_items_cloudId` ON `planner_items` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_planner_items_familyId` ON `planner_items` (`familyId`)");
+
+            addDocumentTimelineColumns(database, "health_records", true);
+            addDocumentTimelineColumns(database, "vehicles", false);
+            addDocumentTimelineColumns(database, "properties", false);
+
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `assignedMemberId` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `assignedMemberName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `collaborationStatus` TEXT NOT NULL DEFAULT 'DRAFT'");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `reminderAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `notes` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_notes_cloudId` ON `notes` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_notes_familyId` ON `notes` (`familyId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_notes_assignedMemberId` ON `notes` (`assignedMemberId`)");
+        }
+
+        private void addDocumentTimelineColumns(SupportSQLiteDatabase database,
+                                                String table,
+                                                boolean includeSharing) {
+            database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `linkedDocumentId` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `linkedDocumentTitle` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `timelineNote` TEXT NOT NULL DEFAULT ''");
+            if (includeSharing) {
+                database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            }
+            database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0");
         }
     };
 
@@ -669,7 +731,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_15_16,
                                     MIGRATION_16_17,
                                     MIGRATION_17_18,
-                                    MIGRATION_18_19
+                                    MIGRATION_18_19,
+                                    MIGRATION_19_20
                             )
                             .build();
                 }

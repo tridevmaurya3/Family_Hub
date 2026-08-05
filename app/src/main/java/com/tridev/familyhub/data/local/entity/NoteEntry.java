@@ -12,7 +12,10 @@ import androidx.room.PrimaryKey;
                 @Index("category"),
                 @Index("isPinned"),
                 @Index("isArchived"),
-                @Index("updatedAt")
+                @Index("updatedAt"),
+                @Index("cloudId"),
+                @Index("familyId"),
+                @Index("assignedMemberId")
         }
 )
 public class NoteEntry {
@@ -48,4 +51,12 @@ public class NoteEntry {
 
     public long createdAt;
     public long updatedAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    public long assignedMemberId;
+    @NonNull public String assignedMemberName = "";
+    @NonNull public String collaborationStatus = "DRAFT";
+    public boolean isShared;
+    public long reminderAt;
+    @NonNull public String updatedByUid = "";
 }

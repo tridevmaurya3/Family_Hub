@@ -123,6 +123,11 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
 
     private void showReminderEditor(@Nullable Reminder existingReminder) {
         DialogReminderBinding dialogBinding = DialogReminderBinding.inflate(getLayoutInflater());
+        String[] collaborationLabels =
+                getResources().getStringArray(R.array.collaboration_status_labels);
+        dialogBinding.reminderCollaborationStatusInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line, collaborationLabels
+        ));
         boolean isNewReminder = existingReminder == null;
         Calendar selectedTime = Calendar.getInstance();
         selectedTime.add(Calendar.HOUR_OF_DAY, 1);
@@ -140,6 +145,12 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                     ? R.id.repeat_daily_button
                     : R.id.repeat_once_button);
             dialogBinding.reminderEnabledSwitch.setChecked(existingReminder.isEnabled);
+            dialogBinding.reminderSharedSwitch.setChecked(existingReminder.isShared);
+            dialogBinding.reminderCollaborationStatusInput.setText(
+                    existingReminder.collaborationStatus, false
+            );
+        } else {
+            dialogBinding.reminderCollaborationStatusInput.setText(collaborationLabels[0], false);
         }
         updateDateTimeInputs(dialogBinding, selectedTime);
 
@@ -170,6 +181,9 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             reminder.reminderAt = selectedTime.getTimeInMillis();
             reminder.repeatType = isDaily ? Reminder.REPEAT_DAILY : Reminder.REPEAT_ONCE;
             reminder.isEnabled = dialogBinding.reminderEnabledSwitch.isChecked();
+            reminder.isShared = dialogBinding.reminderSharedSwitch.isChecked();
+            reminder.collaborationStatus = dialogBinding.reminderCollaborationStatusInput
+                    .getText().toString().trim();
 
             repository.save(reminder, savedReminder -> {
                 if (binding == null) {

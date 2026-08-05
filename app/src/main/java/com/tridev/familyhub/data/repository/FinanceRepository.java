@@ -61,8 +61,9 @@ public class FinanceRepository {
 
     public void save(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            entry.updatedAt = System.currentTimeMillis();
             if (entry.id == 0) {
-                entry.createdAt = System.currentTimeMillis();
+                entry.createdAt = entry.updatedAt;
                 financeEntryDao.insert(entry);
             } else {
                 financeEntryDao.update(entry);

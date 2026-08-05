@@ -225,6 +225,8 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 ));
             }
             form.vehicleNotesInput.setText(vehicle.notes);
+            form.vehicleLinkedDocumentInput.setText(vehicle.linkedDocumentTitle);
+            form.vehicleTimelineNoteInput.setText(vehicle.timelineNote);
         }
 
         bindDateField(
@@ -309,6 +311,9 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             vehicle.pollutionExpiryAt = selectedDates[1];
             vehicle.serviceDueAt = selectedDates[2];
             vehicle.notes = textOf(form.vehicleNotesInput);
+            vehicle.linkedDocumentTitle = textOf(form.vehicleLinkedDocumentInput);
+            vehicle.timelineNote = textOf(form.vehicleTimelineNoteInput);
+            vehicle.updatedAt = System.currentTimeMillis();
 
             repository.save(vehicle, successful -> {
                 if (binding == null) {

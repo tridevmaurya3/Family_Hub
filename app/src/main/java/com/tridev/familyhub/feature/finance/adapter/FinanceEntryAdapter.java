@@ -94,7 +94,19 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
 
         private String details(FinanceEntry entry) {
             String date = displayDate(entry.transactionDate);
-            return TextUtils.isEmpty(entry.note) ? date : date + " · " + entry.note;
+            StringBuilder detail = new StringBuilder(date)
+                    .append(" · ").append(entry.accountName)
+                    .append(" · ").append(entry.paymentMethod);
+            if (entry.isRecurring) {
+                detail.append(" · Monthly");
+            }
+            if (entry.isShared) {
+                detail.append(" · Shared");
+            }
+            if (!TextUtils.isEmpty(entry.note)) {
+                detail.append(" · ").append(entry.note);
+            }
+            return detail.toString();
         }
 
         private String displayDate(String storedDate) {
