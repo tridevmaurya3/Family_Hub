@@ -41,6 +41,14 @@
         <item name="postSplashScreenTheme">@style/Theme.FamilyHub</item>
     </style>
 
+    <style name="Theme.FamilyHub.VoiceCapture" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <style name="Widget.FamilyHub.BottomNavigation.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
         <item name="android:color">@color/fh_primary_container</item>
     </style>

@@ -20,6 +20,9 @@ import androidx.core.content.ContextCompat;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.transition.TransitionManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
@@ -72,19 +75,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         }
                     }
             );
-    private final ActivityResultLauncher<String> overlayVoicePermissionLauncher =
-            registerForActivityResult(
-                    new ActivityResultContracts.RequestPermission(),
-                    granted -> {
-                        if (granted && binding != null) {
-                            continueFloatingStripSetup();
-                        } else if (binding != null) {
-                            Snackbar.make(binding.getRoot(),
-                                    R.string.grocery_overlay_voice_permission,
-                                    Snackbar.LENGTH_LONG).show();
-                        }
-                    }
-            );
+    private boolean groceryHeaderCollapsed;
 
     @Nullable
     @Override
@@ -141,6 +132,16 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.groceryRecyclerView.setAdapter(adapter);
+        binding.groceryRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                if (dy > 6 && !groceryHeaderCollapsed) {
+                    setGroceryHeaderCollapsed(true);
+                } else if (!recyclerView.canScrollVertically(-1) && groceryHeaderCollapsed) {
+                    setGroceryHeaderCollapsed(false);
+                }
+            }
+        });
         binding.emptyAddGroceryButton.setOnClickListener(
                 clickedView -> showEditor(null)
         );
@@ -233,12 +234,27 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     this::updateFloatingButton, 250L);
             return;
         }
-        if (ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            overlayVoicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
-            return;
-        }
         continueFloatingStripSetup();
+    }
+
+    private void setGroceryHeaderCollapsed(boolean collapsed) {
+        if (binding == null || groceryHeaderCollapsed == collapsed) return;
+        groceryHeaderCollapsed = collapsed;
+        TransitionManager.beginDelayedTransition(binding.getRoot());
+        int visibility = collapsed ? View.GONE : View.VISIBLE;
+        binding.groceryTitle.setVisibility(visibility);
+        binding.grocerySubtitle.setVisibility(visibility);
+        binding.groceryOverview.setVisibility(visibility);
+        binding.grocerySummary.setVisibility(visibility);
+        ConstraintSet constraints = new ConstraintSet();
+        constraints.clone(binding.getRoot());
+        constraints.clear(R.id.grocery_search_layout, ConstraintSet.TOP);
+        constraints.connect(R.id.grocery_search_layout, ConstraintSet.TOP,
+                collapsed ? ConstraintSet.PARENT_ID : R.id.grocery_summary,
+                collapsed ? ConstraintSet.TOP : ConstraintSet.BOTTOM,
+                getResources().getDimensionPixelSize(collapsed
+                        ? R.dimen.space_4 : R.dimen.space_12));
+        constraints.applyTo(binding.getRoot());
     }
 
     private void continueFloatingStripSetup() {

@@ -4,17 +4,15 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
-import android.os.Bundle;
 import android.provider.Settings;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -35,7 +33,6 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
 
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
@@ -67,8 +64,18 @@ public class GroceryOverlayService extends Service {
     private FamilyMemberRepository memberRepository;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private String visibleListType = GroceryItem.LIST_DAILY;
-    private SpeechRecognizer speechRecognizer;
     private EditText voiceTarget;
+    private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (voiceTarget == null || intent == null) return;
+            String result = intent.getStringExtra(GroceryVoiceCaptureActivity.EXTRA_RESULT);
+            if (result != null && !result.trim().isEmpty()) {
+                voiceTarget.setText(result.trim());
+                voiceTarget.setSelection(voiceTarget.length());
+            }
+            voiceTarget.setHint(R.string.grocery_overlay_add_hint);
+        }
+    };
 
     @Override
     public void onCreate() {
@@ -85,6 +92,10 @@ public class GroceryOverlayService extends Service {
         });
         repository.startRealtimeSync(this::refreshPanel);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        androidx.core.content.ContextCompat.registerReceiver(this,
+                voiceResultReceiver,
+                new IntentFilter(GroceryVoiceCaptureActivity.ACTION_RESULT),
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
         if (Settings.canDrawOverlays(this)) {
             showStrip();
         }
@@ -336,7 +347,13 @@ public class GroceryOverlayService extends Service {
         root.addView(opacity, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
-        voice.setOnClickListener(v -> startVoiceInput(input));
+        voice.setOnClickListener(v -> {
+            voiceTarget = input;
+            input.setHint(R.string.grocery_overlay_voice_listening);
+            Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(capture);
+        });
 
         add.setOnClickListener(v -> {
             String name = input.getText().toString().trim();
@@ -463,68 +480,11 @@ public class GroceryOverlayService extends Service {
     }
 
     private void closePanel() {
-        stopVoiceInput();
+        voiceTarget = null;
         if (panelView != null) {
             windowManager.removeView(panelView);
             panelView = null;
             itemContainer = null;
-        }
-    }
-
-    private void startVoiceInput(EditText target) {
-        if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            target.setError(getString(R.string.grocery_overlay_voice_permission));
-            return;
-        }
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            target.setError(getString(R.string.grocery_overlay_voice_unavailable));
-            return;
-        }
-        stopVoiceInput();
-        voiceTarget = target;
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-        speechRecognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) {
-                target.setHint(R.string.grocery_overlay_voice_listening);
-            }
-            @Override public void onResults(Bundle results) {
-                ArrayList<String> matches = results.getStringArrayList(
-                        SpeechRecognizer.RESULTS_RECOGNITION);
-                if (matches != null && !matches.isEmpty()) target.setText(matches.get(0));
-                target.setSelection(target.length());
-                target.setHint(R.string.grocery_overlay_add_hint);
-                stopVoiceInput();
-            }
-            @Override public void onError(int error) {
-                target.setHint(R.string.grocery_overlay_add_hint);
-                stopVoiceInput();
-            }
-            @Override public void onBeginningOfSpeech() { }
-            @Override public void onRmsChanged(float rmsdB) { }
-            @Override public void onBufferReceived(byte[] buffer) { }
-            @Override public void onEndOfSpeech() { }
-            @Override public void onPartialResults(Bundle partialResults) { }
-            @Override public void onEvent(int eventType, Bundle params) { }
-        });
-        Intent listen = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-        speechRecognizer.startListening(listen);
-    }
-
-    private void stopVoiceInput() {
-        if (speechRecognizer != null) {
-            speechRecognizer.cancel();
-            speechRecognizer.destroy();
-            speechRecognizer = null;
-        }
-        if (voiceTarget != null) {
-            voiceTarget.setHint(R.string.grocery_overlay_add_hint);
-            voiceTarget = null;
         }
     }
 
@@ -674,6 +634,7 @@ public class GroceryOverlayService extends Service {
         }
         getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, false).apply();
+        unregisterReceiver(voiceResultReceiver);
         super.onDestroy();
     }
 }
