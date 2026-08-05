@@ -2,6 +2,9 @@ package com.tridev.familyhub.feature.grocery;
 
 import android.os.Bundle;
 import android.content.Intent;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.speech.RecognizerIntent;
 import android.net.Uri;
 import android.provider.Settings;
 import android.view.LayoutInflater;
@@ -14,10 +17,13 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.core.content.ContextCompat;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.gms.location.LocationServices;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
@@ -50,6 +56,22 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private int activeFilterId = R.id.filter_all;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
+    private final ActivityResultLauncher<Intent> voiceLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() != android.app.Activity.RESULT_OK
+                                || result.getData() == null) {
+                            return;
+                        }
+                        ArrayList<String> matches = result.getData()
+                                .getStringArrayListExtra(
+                                        RecognizerIntent.EXTRA_RESULTS);
+                        if (matches != null && !matches.isEmpty()) {
+                            addFromVoice(matches.get(0));
+                        }
+                    }
+            );
 
     @Nullable
     @Override
@@ -93,6 +115,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     public void onDelete(@NonNull GroceryItem item) {
                         confirmDelete(item);
                     }
+
+                    @Override
+                    public void onBuying(@NonNull GroceryItem item) {
+                        repository.setBuyingStatus(item,
+                                GroceryItem.STATUS_BUYING,
+                                () -> loadItems(currentQuery()));
+                    }
                 }
         );
         binding.groceryRecyclerView.setLayoutManager(
@@ -108,6 +137,14 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.floatingGroceryButton.setOnClickListener(
                 clickedView -> toggleFloatingStrip()
         );
+        binding.groceryVoiceButton.setOnClickListener(v -> startVoiceAdd());
+        binding.groceryVoiceButton.setOnLongClickListener(v -> {
+            showRecurringSuggestions();
+            return true;
+        });
+        binding.groceryBudgetButton.setOnClickListener(v -> showBudgetEditor());
+        binding.grocerySuggestionsButton.setOnClickListener(
+                v -> showRecurringSuggestions());
         binding.grocerySearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -286,6 +323,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     false
             );
             form.groceryNotesInput.setText(item.notes);
+            if (item.actualCost > 0D) {
+                form.groceryActualCostInput.setText(String.valueOf(item.actualCost));
+            }
+            form.groceryAutoPriceSwitch.setChecked(item.autoPriceEnabled);
+            form.groceryMonthlyMasterSwitch.setChecked(item.isMonthlyMaster);
             form.groceryListTypeInput.setText(
                     GroceryItem.LIST_MONTHLY.equals(item.listType)
                             ? listTypeLabels[1] : listTypeLabels[0],
@@ -332,9 +374,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             item.estimatedCost = parseAmount(textOf(form.groceryCostInput));
             item.priority = PRIORITIES[priorityIndex];
             item.notes = textOf(form.groceryNotesInput);
+            item.actualCost = parseAmount(textOf(form.groceryActualCostInput));
+            item.autoPriceEnabled = form.groceryAutoPriceSwitch.isChecked();
             item.listType = listTypeLabels[1].equalsIgnoreCase(
                     textOf(form.groceryListTypeInput)
             ) ? GroceryItem.LIST_MONTHLY : GroceryItem.LIST_DAILY;
+            item.isMonthlyMaster = GroceryItem.LIST_MONTHLY.equals(item.listType)
+                    && form.groceryMonthlyMasterSwitch.isChecked();
             int assigneeIndex = assigneeLabels.indexOf(
                     textOf(form.groceryAssigneeInput)
             );
@@ -349,7 +395,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 item.assignedMemberName = "";
             }
 
-            repository.save(item, () -> {
+            Runnable saveComplete = () -> {
                 if (binding == null) {
                     return;
                 }
@@ -357,12 +403,15 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 loadItems(currentQuery());
                 Snackbar.make(
                         binding.getRoot(),
-                        existing == null
+                        item.duplicateMerged
+                                ? R.string.grocery_duplicate_reused
+                                : existing == null
                                 ? R.string.grocery_item_added
                                 : R.string.grocery_item_updated,
                         Snackbar.LENGTH_SHORT
                 ).show();
-            });
+            };
+            estimateAndSave(item, saveComplete);
         });
         dialog.show();
     }
@@ -487,7 +536,149 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         }
         binding.groceryPendingValue.setText(String.valueOf(pending));
         binding.groceryTotalValue.setText(currencyFormat.format(total));
+        double budget = repository.getMonthlyBudget();
+        binding.groceryBudgetValue.setText(budget <= 0D
+                ? getString(R.string.grocery_set_budget)
+                : currencyFormat.format(Math.max(0D, budget - total)));
         binding.clearPurchasedButton.setEnabled(purchased > 0);
+    }
+
+    private void showBudgetEditor() {
+        android.widget.EditText input = new android.widget.EditText(requireContext());
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        input.setHint(R.string.grocery_budget_hint);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.grocery_budget)
+                .setView(input)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.save, (dialog, which) -> {
+                    repository.setMonthlyBudget(parseAmount(textOf(input)));
+                    loadItems(currentQuery());
+                }).show();
+    }
+
+    private void startVoiceAdd() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                getString(R.string.grocery_voice_add));
+        voiceLauncher.launch(intent);
+    }
+
+    private void addFromVoice(@NonNull String spoken) {
+        String normalized = spoken.trim();
+        GroceryItem item = new GroceryItem();
+        item.listType = normalized.toLowerCase(Locale.ROOT).contains("monthly")
+                || normalized.contains("मंथली")
+                || normalized.contains("मासिक")
+                ? GroceryItem.LIST_MONTHLY : GroceryItem.LIST_DAILY;
+        item.isMonthlyMaster = GroceryItem.LIST_MONTHLY.equals(item.listType);
+        normalized = normalized.replaceAll(
+                "(?i)monthly|daily|list|add|item|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
+                " ").replaceAll("\\s+", " ").trim();
+        item.name = normalized.isEmpty() ? spoken.trim() : normalized;
+        estimateAndSave(item, () -> {
+            if (binding != null) {
+                loadItems(currentQuery());
+                Snackbar.make(binding.getRoot(),
+                        R.string.grocery_item_added,
+                        Snackbar.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showRecurringSuggestions() {
+        repository.loadSuggestions(items -> {
+            if (items.isEmpty() || binding == null) {
+                Snackbar.make(binding.getRoot(),
+                        R.string.grocery_no_suggestions,
+                        Snackbar.LENGTH_SHORT).show();
+                return;
+            }
+            String[] labels = new String[items.size()];
+            for (int i = 0; i < items.size(); i++) {
+                labels[i] = items.get(i).name;
+            }
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.grocery_suggestions)
+                    .setItems(labels, (dialog, which) -> {
+                        GroceryItem source = items.get(which);
+                        GroceryItem suggested = new GroceryItem();
+                        suggested.name = source.name;
+                        suggested.category = source.category;
+                        suggested.quantity = source.quantity;
+                        suggested.estimatedCost = source.actualCost > 0D
+                                ? source.actualCost : source.estimatedCost;
+                        suggested.listType = source.listType;
+                        repository.save(suggested,
+                                () -> loadItems(currentQuery()));
+                    }).show();
+        });
+    }
+
+    private void estimateAndSave(
+            @NonNull GroceryItem item,
+            @NonNull Runnable complete
+    ) {
+        if (item.autoPriceEnabled && item.actualCost > 0D
+                && item.priceLocationKey.isEmpty()
+                && ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            LocationServices.getFusedLocationProviderClient(requireContext())
+                    .getLastLocation()
+                    .addOnSuccessListener(location -> {
+                        if (location != null) {
+                            item.priceLocationKey = String.format(Locale.US,
+                                    "%.2f,%.2f", location.getLatitude(),
+                                    location.getLongitude());
+                            item.priceConfidence = 100;
+                        }
+                        repository.save(item, complete::run);
+                    })
+                    .addOnFailureListener(error ->
+                            repository.save(item, complete::run));
+            return;
+        }
+        if (!item.autoPriceEnabled || item.estimatedCost > 0D
+                || item.name.trim().isEmpty()) {
+            repository.save(item, complete::run);
+            return;
+        }
+        if (ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            estimateWithKey(item, "", complete);
+            return;
+        }
+        LocationServices.getFusedLocationProviderClient(requireContext())
+                .getLastLocation()
+                .addOnSuccessListener(location -> {
+                    String key = location == null ? "" : String.format(
+                            Locale.US, "%.2f,%.2f",
+                            location.getLatitude(), location.getLongitude());
+                    estimateWithKey(item, key, complete);
+                })
+                .addOnFailureListener(error ->
+                        estimateWithKey(item, "", complete));
+    }
+
+    private void estimateWithKey(
+            @NonNull GroceryItem item,
+            @NonNull String key,
+            @NonNull Runnable complete
+    ) {
+        repository.estimatePrice(item.name, key, (amount, confidence) -> {
+            if (amount > 0D) {
+                item.estimatedCost = amount;
+                item.priceLocationKey = key;
+                item.priceConfidence = confidence;
+            }
+            repository.save(item, complete::run);
+        });
     }
 
     @NonNull
