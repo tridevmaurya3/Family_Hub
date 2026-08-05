@@ -17,8 +17,11 @@ import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.GroceryItemDao;
+import com.tridev.familyhub.data.local.dao.FinanceEntryDao;
+import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
+import com.tridev.familyhub.feature.grocery.GroceryNotificationHelper;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,6 +29,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,6 +50,7 @@ public class GroceryRepository {
             Executors.newSingleThreadExecutor();
 
     private final GroceryItemDao groceryItemDao;
+    private final FinanceEntryDao financeEntryDao;
     private final Context appContext;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final FamilyAccountRepository accountRepository;
@@ -58,6 +65,8 @@ public class GroceryRepository {
         appContext = context.getApplicationContext();
         groceryItemDao = FamilyHubDatabase.getInstance(appContext)
                 .groceryItemDao();
+        financeEntryDao = FamilyHubDatabase.getInstance(appContext)
+                .financeEntryDao();
         accountRepository = new FamilyAccountRepository();
         firebaseRoot = FirebaseDatabase.getInstance().getReference();
     }
@@ -103,6 +112,7 @@ public class GroceryRepository {
             @NonNull ItemsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            resetMonthlyMastersIfNeeded();
             String trimmedQuery = query.trim();
             List<GroceryItem> items = trimmedQuery.isEmpty()
                     ? groceryItemDao.getAll()
@@ -128,6 +138,23 @@ public class GroceryRepository {
         }
 
         DATABASE_EXECUTOR.execute(() -> {
+            if (item.id == 0L) {
+                GroceryItem duplicate = groceryItemDao.findDuplicate(item.name);
+                if (duplicate != null) {
+                    item.duplicateMerged = true;
+                    item.id = duplicate.id;
+                    item.cloudId = duplicate.cloudId;
+                    item.familyId = duplicate.familyId;
+                    item.createdAt = duplicate.createdAt;
+                    item.purchaseCount = duplicate.purchaseCount;
+                    // A new shopping cycle must not remove the previous expense.
+                    item.financeEntryId = 0L;
+                    item.isPurchased = false;
+                    item.purchasedAt = 0L;
+                    item.buyingStatus = GroceryItem.STATUS_PENDING;
+                }
+            }
+            linkFinance(item);
             upsertLocal(item);
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
@@ -144,10 +171,76 @@ public class GroceryRepository {
     ) {
         item.isPurchased = purchased;
         item.purchasedAt = purchased ? System.currentTimeMillis() : 0L;
+        item.buyingStatus = purchased
+                ? GroceryItem.STATUS_PURCHASED : GroceryItem.STATUS_PENDING;
+        if (purchased) {
+            item.purchaseCount++;
+            if (item.actualCost <= 0D) {
+                item.actualCost = item.estimatedCost;
+            }
+        }
         item.purchasedByName = purchased
                 ? displayName(FirebaseAuth.getInstance().getCurrentUser())
                 : "";
         save(item, callback);
+    }
+
+    public void setBuyingStatus(
+            @NonNull GroceryItem item,
+            @NonNull String status,
+            @NonNull ActionCallback callback
+    ) {
+        item.buyingStatus = status;
+        if (GroceryItem.STATUS_PURCHASED.equals(status)) {
+            setPurchased(item, true, callback);
+        } else {
+            save(item, callback);
+        }
+    }
+
+    public void loadSuggestions(@NonNull ItemsCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<GroceryItem> items = groceryItemDao.getRecurringSuggestions(8);
+            mainHandler.post(() -> callback.onItemsLoaded(items));
+        });
+    }
+
+    public void estimatePrice(
+            @NonNull String name,
+            @NonNull String locationKey,
+            @NonNull PriceCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            GroceryItem history = locationKey.isEmpty() ? null
+                    : groceryItemDao.findLocalPrice(name.trim(), locationKey);
+            int confidence = history == null ? 0 : 90;
+            if (history == null) {
+                history = groceryItemDao.findAnyPrice(name.trim());
+                confidence = history == null ? 0 : 60;
+            }
+            GroceryItem result = history;
+            int resultConfidence = confidence;
+            mainHandler.post(() -> callback.onPrice(
+                    result == null ? 0D : result.actualCost,
+                    resultConfidence
+            ));
+        });
+    }
+
+    public interface PriceCallback {
+        void onPrice(double amount, int confidence);
+    }
+
+    public double getMonthlyBudget() {
+        return Double.longBitsToDouble(appContext.getSharedPreferences(
+                "grocery_budget", Context.MODE_PRIVATE
+        ).getLong(currentMonth(), Double.doubleToRawLongBits(0D)));
+    }
+
+    public void setMonthlyBudget(double budget) {
+        appContext.getSharedPreferences("grocery_budget", Context.MODE_PRIVATE)
+                .edit().putLong(currentMonth(),
+                        Double.doubleToRawLongBits(Math.max(0D, budget))).apply();
     }
 
     public void delete(
@@ -210,10 +303,26 @@ public class GroceryRepository {
                         GroceryItem local = groceryItemDao.getByCloudId(
                                 remote.cloudId);
                         if (local == null || remote.updatedAt >= local.updatedAt) {
+                            boolean statusChanged = local != null
+                                    && !remote.buyingStatus.equals(local.buyingStatus);
+                            boolean assignmentChanged = local != null
+                                    && !remote.assignedMemberId.equals(local.assignedMemberId);
+                            FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+                            boolean fromAnotherMember = current == null
+                                    || !remote.updatedByUid.equals(current.getUid());
                             if (local != null) {
                                 remote.id = local.id;
+                                remote.financeEntryId = local.financeEntryId;
                             }
+                            linkFinance(remote);
                             upsertLocal(remote);
+                            if (fromAnotherMember && (statusChanged
+                                    || assignmentChanged
+                                    || (local == null
+                                    && !remote.assignedMemberId.isEmpty()))) {
+                                mainHandler.post(() -> GroceryNotificationHelper
+                                        .notifyUpdate(appContext, remote));
+                            }
                         }
                     }
                     for (GroceryItem local : groceryItemDao.getAllSynced()) {
@@ -314,8 +423,16 @@ public class GroceryRepository {
         values.put("category", item.category);
         values.put("quantity", item.quantity);
         values.put("estimatedCost", item.estimatedCost);
+        values.put("actualCost", item.actualCost);
+        values.put("autoPriceEnabled", item.autoPriceEnabled);
+        values.put("priceLocationKey", item.priceLocationKey);
+        values.put("priceConfidence", item.priceConfidence);
         values.put("priority", item.priority);
         values.put("purchased", item.isPurchased);
+        values.put("buyingStatus", item.buyingStatus);
+        values.put("isMonthlyMaster", item.isMonthlyMaster);
+        values.put("lastResetMonth", item.lastResetMonth);
+        values.put("purchaseCount", item.purchaseCount);
         values.put("notes", item.notes);
         values.put("listType", item.listType);
         values.put("assignedMemberId", item.assignedMemberId);
@@ -347,12 +464,24 @@ public class GroceryRepository {
         item.category = stringValue(snapshot.child("category"));
         item.quantity = stringValue(snapshot.child("quantity"));
         item.estimatedCost = doubleValue(snapshot.child("estimatedCost"));
+        item.actualCost = doubleValue(snapshot.child("actualCost"));
+        item.autoPriceEnabled = booleanValue(snapshot.child("autoPriceEnabled"), true);
+        item.priceLocationKey = stringValue(snapshot.child("priceLocationKey"));
+        item.priceConfidence = intValue(snapshot.child("priceConfidence"));
         item.priority = stringValue(snapshot.child("priority"));
         if (item.priority.isEmpty()) {
             item.priority = GroceryItem.PRIORITY_NORMAL;
         }
         Boolean purchased = snapshot.child("purchased").getValue(Boolean.class);
         item.isPurchased = Boolean.TRUE.equals(purchased);
+        item.buyingStatus = stringValue(snapshot.child("buyingStatus"));
+        if (item.buyingStatus.isEmpty()) {
+            item.buyingStatus = item.isPurchased
+                    ? GroceryItem.STATUS_PURCHASED : GroceryItem.STATUS_PENDING;
+        }
+        item.isMonthlyMaster = booleanValue(snapshot.child("isMonthlyMaster"), false);
+        item.lastResetMonth = stringValue(snapshot.child("lastResetMonth"));
+        item.purchaseCount = intValue(snapshot.child("purchaseCount"));
         item.notes = stringValue(snapshot.child("notes"));
         item.listType = stringValue(snapshot.child("listType"));
         if (item.listType.isEmpty()) {
@@ -399,6 +528,83 @@ public class GroceryRepository {
             }
         }
         return 0D;
+    }
+
+    private static int intValue(@NonNull DataSnapshot snapshot) {
+        return (int) longValue(snapshot);
+    }
+
+    private static boolean booleanValue(
+            @NonNull DataSnapshot snapshot,
+            boolean fallback
+    ) {
+        Boolean value = snapshot.getValue(Boolean.class);
+        return value == null ? fallback : value;
+    }
+
+    private void resetMonthlyMastersIfNeeded() {
+        String month = currentMonth();
+        for (GroceryItem item : groceryItemDao.getAll()) {
+            if (!item.isMonthlyMaster || month.equals(item.lastResetMonth)) {
+                continue;
+            }
+            item.lastResetMonth = month;
+            item.isPurchased = false;
+            item.purchasedAt = 0L;
+            item.purchasedByName = "";
+            item.actualCost = 0D;
+            // Preserve the previous month's Finance entry as purchase history.
+            item.financeEntryId = 0L;
+            item.buyingStatus = GroceryItem.STATUS_PENDING;
+            item.updatedAt = System.currentTimeMillis();
+            groceryItemDao.update(item);
+            if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
+                firebaseRoot.child("sharedShopping").child(activeFamilyId)
+                        .child("items").child(item.cloudId)
+                        .updateChildren(toCloudValues(item));
+            }
+        }
+    }
+
+    private void linkFinance(@NonNull GroceryItem item) {
+        if (!item.isPurchased) {
+            if (item.financeEntryId > 0L) {
+                financeEntryDao.deleteById(item.financeEntryId);
+                item.financeEntryId = 0L;
+            }
+            return;
+        }
+        double amount = item.actualCost > 0D
+                ? item.actualCost : item.estimatedCost;
+        if (amount <= 0D) {
+            return;
+        }
+        if (item.financeEntryId > 0L) {
+            FinanceEntry existing = financeEntryDao.getById(item.financeEntryId);
+            if (existing != null) {
+                existing.amount = amount;
+                existing.note = item.name + (item.quantity.isEmpty()
+                        ? "" : " • " + item.quantity);
+                financeEntryDao.update(existing);
+                return;
+            }
+            item.financeEntryId = 0L;
+        }
+        FinanceEntry entry = new FinanceEntry();
+        entry.entryType = FinanceEntry.TYPE_EXPENSE;
+        entry.amount = amount;
+        entry.category = "Grocery";
+        entry.note = item.name + (item.quantity.isEmpty()
+                ? "" : " • " + item.quantity);
+        entry.transactionDate = new SimpleDateFormat(
+                "yyyy-MM-dd", Locale.US).format(new Date());
+        entry.createdAt = System.currentTimeMillis();
+        item.financeEntryId = financeEntryDao.insert(entry);
+    }
+
+    @NonNull
+    private static String currentMonth() {
+        return new SimpleDateFormat("yyyy-MM", Locale.US).format(new Date());
     }
 
     @NonNull
