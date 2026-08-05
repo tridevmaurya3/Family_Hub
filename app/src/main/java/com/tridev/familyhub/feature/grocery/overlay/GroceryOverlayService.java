@@ -19,6 +19,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.text.InputType;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -283,6 +284,12 @@ public class GroceryOverlayService extends Service {
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
         EditText input = new BackAwareEditText();
         input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        input.setFocusable(true);
+        input.setFocusableInTouchMode(true);
+        input.setCursorVisible(true);
+        input.setClickable(true);
         input.setTextSize(13f);
         input.setHint(R.string.grocery_overlay_add_hint);
         input.setPadding(dp(12), 0, dp(8), 0);
@@ -295,6 +302,11 @@ public class GroceryOverlayService extends Service {
                 return true;
             }
             return false;
+        });
+        input.setOnClickListener(v -> {
+            input.requestFocus();
+            ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                    .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
         });
         quickAdd.addView(input, new LinearLayout.LayoutParams(0, dp(48), 1f));
         ImageButton voice = new ImageButton(this);
