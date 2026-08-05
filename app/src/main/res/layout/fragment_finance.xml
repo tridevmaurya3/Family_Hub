@@ -185,6 +185,36 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <LinearLayout
+        android:id="@+id/finance_insights_actions"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/month_summary_card">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/finance_budget_button"
+            style="@style/Widget.FamilyHub.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginEnd="@dimen/space_4"
+            android:layout_weight="1"
+            android:text="@string/finance_budget" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/finance_report_button"
+            style="@style/Widget.FamilyHub.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/button_height"
+            android:layout_marginStart="@dimen/space_4"
+            android:layout_weight="1"
+            android:text="@string/finance_monthly_report" />
+
+    </LinearLayout>
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/finance_search_layout"
         style="@style/Widget.FamilyHub.TextInputLayout"
@@ -197,7 +227,7 @@
         app:startIconTint="@color/fh_module_finance"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/month_summary_card">
+        app:layout_constraintTop_toBottomOf="@id/finance_insights_actions">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/finance_search_input"

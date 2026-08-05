@@ -163,11 +163,19 @@ public class NotesFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 colorLabels
         ));
+        String[] collaborationLabels =
+                getResources().getStringArray(R.array.collaboration_status_labels);
+        form.noteCollaborationStatusInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                collaborationLabels
+        ));
 
         if (existing == null) {
             form.noteCategoryInput.setText(categoryLabels[0], false);
             form.noteTypeInput.setText(typeLabels[0], false);
             form.noteColorInput.setText(colorLabels[0], false);
+            form.noteCollaborationStatusInput.setText(collaborationLabels[0], false);
         } else {
             form.noteDialogTitle.setText(R.string.notes_edit);
             form.noteTitleInput.setText(note.title);
@@ -181,6 +189,8 @@ public class NotesFragment extends Fragment implements AddActionHost {
                     colorLabels[indexOf(COLOR_KEYS, note.colorKey)],
                     false
             );
+            form.noteSharedSwitch.setChecked(note.isShared);
+            form.noteCollaborationStatusInput.setText(note.collaborationStatus, false);
         }
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
@@ -208,6 +218,8 @@ public class NotesFragment extends Fragment implements AddActionHost {
             note.category = textOf(form.noteCategoryInput);
             note.noteType = NOTE_TYPES[typeIndex];
             note.colorKey = COLOR_KEYS[colorIndex];
+            note.isShared = form.noteSharedSwitch.isChecked();
+            note.collaborationStatus = textOf(form.noteCollaborationStatusInput);
             repository.save(note, () -> {
                 if (binding == null) {
                     return;

@@ -21,7 +21,9 @@ import androidx.room.PrimaryKey;
                 @Index("assignedMemberId"),
                 @Index("itemType"),
                 @Index("startAt"),
-                @Index("isCompleted")
+                @Index("isCompleted"),
+                @Index("cloudId"),
+                @Index("familyId")
         }
 )
 public class PlannerItem {
@@ -81,4 +83,10 @@ public class PlannerItem {
 
     public long createdAt;
     public long updatedAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    @NonNull public String assignedMemberName = "";
+    @NonNull public String collaborationStatus = "PENDING";
+    public boolean isShared;
+    @NonNull public String updatedByUid = "";
 }

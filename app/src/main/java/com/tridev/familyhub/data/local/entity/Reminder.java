@@ -6,7 +6,9 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 /** A local reminder with an optional daily repeat schedule. */
-@Entity(tableName = "reminders", indices = {@Index(value = {"reminderAt"})})
+@Entity(tableName = "reminders", indices = {@Index(value = {"reminderAt"}),
+        @Index(value = {"cloudId"}), @Index(value = {"familyId"}),
+        @Index(value = {"assignedMemberId"})})
 public class Reminder {
 
     public static final String REPEAT_ONCE = "ONCE";
@@ -29,4 +31,12 @@ public class Reminder {
     public boolean isEnabled = true;
 
     public long createdAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    public long assignedMemberId;
+    @NonNull public String assignedMemberName = "";
+    @NonNull public String collaborationStatus = "PENDING";
+    public boolean isShared;
+    public long updatedAt;
+    @NonNull public String updatedByUid = "";
 }

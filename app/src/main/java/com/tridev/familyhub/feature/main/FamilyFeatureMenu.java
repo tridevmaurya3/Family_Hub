@@ -1,10 +1,15 @@
 package com.tridev.familyhub.feature.main;
 
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -12,9 +17,9 @@ import androidx.annotation.ColorRes;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
 import androidx.core.widget.NestedScrollView;
 
-import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -47,15 +52,23 @@ public final class FamilyFeatureMenu {
     }
 
     public static void show(@NonNull MainActivity activity) {
-        BottomSheetDialog dialog = new BottomSheetDialog(activity);
+        Dialog dialog = new Dialog(activity);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         NestedScrollView scrollView = new NestedScrollView(activity);
         scrollView.setFillViewport(true);
 
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(activity, 18), dp(activity, 12),
-                dp(activity, 18), dp(activity, 30));
+        content.setPadding(dp(activity, 12), dp(activity, 10),
+                dp(activity, 12), dp(activity, 18));
+        GradientDrawable drawerSurface = new GradientDrawable();
+        drawerSurface.setColor(ContextCompat.getColor(activity, R.color.fh_surface));
+        drawerSurface.setCornerRadii(new float[]{
+                0F, 0F, dp(activity, 22), dp(activity, 22),
+                dp(activity, 22), dp(activity, 22), 0F, 0F
+        });
+        content.setBackground(drawerSurface);
         scrollView.addView(content, new NestedScrollView.LayoutParams(
                 NestedScrollView.LayoutParams.MATCH_PARENT,
                 NestedScrollView.LayoutParams.WRAP_CONTENT
@@ -216,12 +229,27 @@ public final class FamilyFeatureMenu {
                 FamilyManagementActivity.class);
 
         dialog.setContentView(scrollView);
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            window.setGravity(Gravity.START | Gravity.TOP);
+            window.setDimAmount(0.22F);
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setWindowAnimations(R.style.Animation_FamilyHub_SideDrawer);
+        }
         dialog.show();
+        if (window != null) {
+            int width = Math.min(
+                    dp(activity, 360),
+                    Math.round(activity.getResources().getDisplayMetrics().widthPixels * 0.88F)
+            );
+            window.setLayout(width, android.view.WindowManager.LayoutParams.MATCH_PARENT);
+        }
     }
 
     private static void addAccountHeader(
             @NonNull MainActivity activity,
-            @NonNull BottomSheetDialog dialog,
+            @NonNull Dialog dialog,
             @NonNull LinearLayout parent
     ) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -236,32 +264,30 @@ public final class FamilyFeatureMenu {
 
         MaterialCardView card = new MaterialCardView(activity);
         LinearLayout.LayoutParams cardParams = matchWrap();
-        cardParams.topMargin = dp(activity, 14);
+        cardParams.topMargin = dp(activity, 10);
         card.setLayoutParams(cardParams);
         card.setRadius(dp(activity, 18));
         card.setCardElevation(0F);
         card.setStrokeWidth(dp(activity, 1));
-        card.setStrokeColor(ContextCompat.getColor(activity, R.color.fh_primary));
-        card.setCardBackgroundColor(ContextCompat.getColor(
-                activity,
-                R.color.fh_primary_container
-        ));
+        card.setStrokeColor(lighten(activity, R.color.fh_primary, 0.68F));
+        card.setCardBackgroundColor(lighten(
+                activity, R.color.fh_primary_container, 0.48F));
         card.setClickable(true);
         card.setFocusable(true);
 
         LinearLayout row = new LinearLayout(activity);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(activity, 14), dp(activity, 12),
-                dp(activity, 14), dp(activity, 12));
+        row.setPadding(dp(activity, 12), dp(activity, 8),
+                dp(activity, 12), dp(activity, 8));
 
         TextView avatar = text(activity, firstLetter(name), 20F, true,
                 R.color.fh_primary);
         avatar.setGravity(Gravity.CENTER);
         avatar.setBackgroundResource(R.drawable.bg_placeholder_icon);
         row.addView(avatar, new LinearLayout.LayoutParams(
-                dp(activity, 46),
-                dp(activity, 46)
+                dp(activity, 40),
+                dp(activity, 40)
         ));
 
         LinearLayout labels = new LinearLayout(activity);
@@ -295,14 +321,14 @@ public final class FamilyFeatureMenu {
                 13F, true, R.color.fh_primary);
         title.setAllCaps(true);
         LinearLayout.LayoutParams params = matchWrap();
-        params.topMargin = dp(activity, 20);
-        params.bottomMargin = dp(activity, 4);
+        params.topMargin = dp(activity, 12);
+        params.bottomMargin = dp(activity, 2);
         parent.addView(title, params);
     }
 
     private static void addActivityButton(
             @NonNull MainActivity activity,
-            @NonNull BottomSheetDialog dialog,
+            @NonNull Dialog dialog,
             @NonNull LinearLayout parent,
             int titleRes,
             @DrawableRes int iconRes,
@@ -319,7 +345,7 @@ public final class FamilyFeatureMenu {
 
     private static void addTabButton(
             @NonNull MainActivity activity,
-            @NonNull BottomSheetDialog dialog,
+            @NonNull Dialog dialog,
             @NonNull LinearLayout parent,
             int titleRes,
             @DrawableRes int iconRes,
@@ -336,7 +362,7 @@ public final class FamilyFeatureMenu {
 
     private static void addFragmentButton(
             @NonNull MainActivity activity,
-            @NonNull BottomSheetDialog dialog,
+            @NonNull Dialog dialog,
             @NonNull LinearLayout parent,
             int titleRes,
             @DrawableRes int iconRes,
@@ -366,29 +392,34 @@ public final class FamilyFeatureMenu {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle
         );
         LinearLayout.LayoutParams params = matchWrap();
-        params.topMargin = dp(activity, 7);
+        params.topMargin = dp(activity, 3);
+        params.height = dp(activity, 46);
         button.setLayoutParams(params);
-        button.setMinHeight(dp(activity, 54));
+        button.setMinHeight(0);
+        button.setMinimumHeight(0);
+        button.setInsetTop(0);
+        button.setInsetBottom(0);
+        button.setPadding(dp(activity, 12), 0, dp(activity, 10), 0);
         button.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
         button.setText(titleRes);
-        button.setTextSize(14F);
+        button.setTextSize(13F);
         button.setAllCaps(false);
         button.setIconResource(iconRes);
-        button.setIconSize(dp(activity, 22));
-        button.setIconPadding(dp(activity, 12));
+        button.setIconSize(dp(activity, 19));
+        button.setIconPadding(dp(activity, 10));
         button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         button.setTextColor(ContextCompat.getColor(activity, accentColor));
         button.setIconTint(ColorStateList.valueOf(
                 ContextCompat.getColor(activity, accentColor)
         ));
         button.setBackgroundTintList(ColorStateList.valueOf(
-                ContextCompat.getColor(activity, containerColor)
+                lighten(activity, containerColor, 0.48F)
         ));
         button.setStrokeColor(ColorStateList.valueOf(
-                ContextCompat.getColor(activity, accentColor)
+                lighten(activity, accentColor, 0.62F)
         ));
         button.setStrokeWidth(dp(activity, 1));
-        button.setCornerRadius(dp(activity, 16));
+        button.setCornerRadius(dp(activity, 12));
         button.setOnClickListener(listener);
         parent.addView(button);
     }
@@ -430,5 +461,17 @@ public final class FamilyFeatureMenu {
     private static int dp(@NonNull MainActivity activity, int value) {
         return Math.round(value * activity.getResources()
                 .getDisplayMetrics().density);
+    }
+
+    private static int lighten(
+            @NonNull MainActivity activity,
+            @ColorRes int colorRes,
+            float whiteRatio
+    ) {
+        return ColorUtils.blendARGB(
+                ContextCompat.getColor(activity, colorRes),
+                Color.WHITE,
+                whiteRatio
+        );
     }
 }

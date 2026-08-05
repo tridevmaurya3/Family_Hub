@@ -67,4 +67,8 @@ public class Vehicle {
     public String notes = "";
 
     public long createdAt;
+    public long linkedDocumentId;
+    @NonNull public String linkedDocumentTitle = "";
+    @NonNull public String timelineNote = "";
+    public long updatedAt;
 }

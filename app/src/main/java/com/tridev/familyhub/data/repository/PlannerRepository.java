@@ -11,6 +11,8 @@ import com.tridev.familyhub.data.local.dao.PlannerItemDao;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -103,8 +105,34 @@ public class PlannerRepository {
             } else {
                 plannerItemDao.update(item);
             }
+            if (item.isShared) {
+                publish(item);
+            } else {
+                FamilyCollaborationPublisher.remove("planner", item.familyId, item.cloudId);
+            }
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    private void publish(@NonNull PlannerItem item) {
+        Map<String, Object> values = new HashMap<>();
+        values.put("title", item.title);
+        values.put("notes", item.notes);
+        values.put("location", item.location);
+        values.put("itemType", item.itemType);
+        values.put("priority", item.priority);
+        values.put("startAt", item.startAt);
+        values.put("endAt", item.endAt);
+        values.put("assignedMemberId", item.assignedMemberId == null ? "" : String.valueOf(item.assignedMemberId));
+        values.put("assignedMemberName", item.assignedMemberName);
+        values.put("collaborationStatus", item.collaborationStatus);
+        FamilyCollaborationPublisher.publish("planner", item.cloudId, values,
+                (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    item.cloudId = cloudId;
+                    item.familyId = familyId;
+                    item.updatedByUid = uid;
+                    plannerItemDao.update(item);
+                }));
     }
 
     public void setCompleted(
@@ -121,6 +149,7 @@ public class PlannerRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            FamilyCollaborationPublisher.remove("planner", item.familyId, item.cloudId);
             plannerItemDao.delete(item);
             mainHandler.post(callback::onComplete);
         });

@@ -115,4 +115,9 @@
         <item name="buttonBarPositiveButtonStyle">@style/Widget.FamilyHub.Button.FormPrimary</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.FamilyHub.Button.FormSecondary</item>
     </style>
+
+    <style name="Animation.FamilyHub.SideDrawer">
+        <item name="android:windowEnterAnimation">@anim/fh_drawer_enter</item>
+        <item name="android:windowExitAnimation">@anim/fh_drawer_exit</item>
+    </style>
 </resources>

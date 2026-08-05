@@ -170,6 +170,8 @@ public class PlannerFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 memberNames
         ));
+        String[] collaborationLabels = getResources().getStringArray(R.array.collaboration_status_labels);
+        form.plannerCollaborationStatusInput.setAdapter(dropdown(collaborationLabels));
 
         long[] startAt = {
                 item.startAt > 0L
@@ -182,6 +184,7 @@ public class PlannerFragment extends Fragment implements AddActionHost {
             form.plannerPriorityInput.setText(priorityLabels[0], false);
             form.plannerRepeatInput.setText(repeatLabels[0], false);
             form.plannerMemberInput.setText(memberNames.get(0), false);
+            form.plannerCollaborationStatusInput.setText(collaborationLabels[0], false);
         } else {
             form.plannerDialogTitle.setText(R.string.planner_edit);
             form.plannerTitleInput.setText(item.title);
@@ -201,6 +204,8 @@ public class PlannerFragment extends Fragment implements AddActionHost {
             form.plannerReminderMinutesInput.setText(
                     String.valueOf(item.reminderMinutesBefore)
             );
+            form.plannerSharedSwitch.setChecked(item.isShared);
+            form.plannerCollaborationStatusInput.setText(item.collaborationStatus, false);
             if (item.assignedMemberId != null) {
                 for (int i = 0; i < members.size(); i++) {
                     if (members.get(i).id == item.assignedMemberId) {
@@ -276,6 +281,10 @@ public class PlannerFragment extends Fragment implements AddActionHost {
             );
             item.assignedMemberId = memberIndex == 0
                     ? null : members.get(memberIndex - 1).id;
+            item.assignedMemberName = memberIndex == 0
+                    ? getString(R.string.planner_whole_family) : members.get(memberIndex - 1).name;
+            item.isShared = form.plannerSharedSwitch.isChecked();
+            item.collaborationStatus = textOf(form.plannerCollaborationStatusInput);
             repository.save(item, () -> {
                 if (binding != null) {
                     if (item.isReminderEnabled) {

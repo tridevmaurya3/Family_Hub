@@ -210,6 +210,8 @@ public class HealthFragment extends Fragment implements AddActionHost {
             dialogBinding.healthTitleInput.setText(record.title);
             dialogBinding.healthValueInput.setText(record.value);
             dialogBinding.healthNotesInput.setText(record.notes);
+            dialogBinding.healthLinkedDocumentInput.setText(record.linkedDocumentTitle);
+            dialogBinding.healthTimelineNoteInput.setText(record.timelineNote);
             selectedDate.setTimeInMillis(record.recordedAt);
         } else {
             dialogBinding.healthMemberInput.setText(
@@ -286,6 +288,9 @@ public class HealthFragment extends Fragment implements AddActionHost {
             record.value = textOf(dialogBinding.healthValueInput);
             record.notes = textOf(dialogBinding.healthNotesInput);
             record.recordedAt = selectedDate.getTimeInMillis();
+            record.linkedDocumentTitle = textOf(dialogBinding.healthLinkedDocumentInput);
+            record.timelineNote = textOf(dialogBinding.healthTimelineNoteInput);
+            record.updatedAt = System.currentTimeMillis();
 
             repository.save(record, () -> {
                 if (binding == null) {

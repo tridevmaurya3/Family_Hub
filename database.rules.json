@@ -146,6 +146,19 @@
         }
       }
     },
+    "sharedModules": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        "$module": {
+          ".validate": "$module.matches(/^(planner|reminders|notes)$/)",
+          ".indexOn": ["updatedAt", "assignedMemberId", "collaborationStatus"],
+          "$itemId": {
+            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+            ".validate": "!newData.exists() || (newData.child('cloudId').val() === $itemId && newData.child('familyId').val() === $familyId && newData.child('updatedByUid').val() === auth.uid && newData.child('updatedAt').isNumber() && newData.child('collaborationStatus').isString() && newData.child('collaborationStatus').val().length <= 24 && newData.child('assignedMemberId').isString() && newData.child('assignedMemberId').val().length <= 128 && newData.child('assignedMemberName').isString() && newData.child('assignedMemberName').val().length <= 100)"
+          }
+        }
+      }
+    },
     "sharedShopping": {
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",

@@ -1268,4 +1268,42 @@ Sharing: %12$s</string>
     <string name="diagnostics_database_error">Local database could not be opened.</string>
     <string name="diagnostics_ready">Required checks are ready</string>
     <string name="diagnostics_attention">One or more required checks need attention</string>
+    <string name="finance_account">Account</string>
+    <string name="finance_payment_method">Payment method</string>
+    <string name="finance_recurring">Repeat this entry every month</string>
+    <string name="finance_share_summary">Share entry summary with family</string>
+    <string name="finance_budget">Monthly budget</string>
+    <string name="finance_monthly_report">Monthly report</string>
+    <string name="finance_budget_prompt">Set the maximum planned expense for this month.</string>
+    <string name="finance_budget_saved">Monthly budget updated</string>
+    <string name="finance_report_title">Finance report · %1$s</string>
+    <string name="finance_report_body">Income: %1$s\nExpense: %2$s\nBalance: %3$s\nBudget: %4$s\nRemaining budget: %5$s</string>
+    <string name="finance_account_required">Choose or enter an account</string>
+    <string name="finance_payment_required">Choose a payment method</string>
+    <string name="finance_budget_invalid">Enter a valid budget amount</string>
+    <string name="save">Save</string>
+    <string name="collaboration_status">Collaboration status</string>
+    <string name="share_with_family">Share and sync with family</string>
+    <string name="linked_document">Linked document title</string>
+    <string name="timeline_note">Timeline note</string>
+    <string-array name="collaboration_status_labels">
+        <item>PENDING</item>
+        <item>IN_PROGRESS</item>
+        <item>COMPLETED</item>
+    </string-array>
+
+    <string-array name="finance_account_defaults">
+        <item>Cash</item>
+        <item>Bank account</item>
+        <item>UPI wallet</item>
+        <item>Credit card</item>
+    </string-array>
+    <string-array name="finance_payment_method_labels">
+        <item>Cash</item>
+        <item>UPI</item>
+        <item>Debit card</item>
+        <item>Credit card</item>
+        <item>Bank transfer</item>
+        <item>Other</item>
+    </string-array>
 </resources>

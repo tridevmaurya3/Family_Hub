@@ -1,6 +1,8 @@
 package com.tridev.familyhub.feature.finance;
 
 import android.app.DatePickerDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -34,15 +36,21 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /** Complete local income and expense feature. */
 public class FinanceFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
 
     private static final String ISO_DATE_PATTERN = "yyyy-MM-dd";
+    private static final String FINANCE_PREFS = "finance_2_preferences";
+    private static final String KEY_MONTHLY_BUDGET = "monthly_budget";
+    private static final String KEY_ACCOUNTS = "accounts";
 
     private FragmentFinanceBinding binding;
     private FinanceEntryAdapter entryAdapter;
     private FinanceRepository repository;
+    private FinanceSummary latestSummary = new FinanceSummary();
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
     @Nullable
@@ -72,6 +80,8 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         binding.financeRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.financeRecyclerView.setAdapter(entryAdapter);
         binding.emptyAddFinanceButton.setOnClickListener(v -> showEntryEditor(null));
+        binding.financeBudgetButton.setOnClickListener(v -> showBudgetEditor());
+        binding.financeReportButton.setOnClickListener(v -> showMonthlyReport());
         binding.financeSearchInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -127,6 +137,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                 return;
             }
             FinanceSummary safeSummary = summary == null ? new FinanceSummary() : summary;
+            latestSummary = safeSummary;
             binding.monthExpenseValue.setText(currencyFormatter.format(safeSummary.expense));
             binding.monthIncomeValue.setText(currencyFormatter.format(safeSummary.income));
             binding.monthBalanceValue.setText(currencyFormatter.format(
@@ -163,6 +174,17 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                 R.array.finance_income_category_labels
         );
         updateCategoryChoices(dialogBinding, expenseCategories);
+        dialogBinding.financeAccountInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line, loadAccounts()
+        ));
+        dialogBinding.financePaymentMethodInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                getResources().getStringArray(R.array.finance_payment_method_labels)
+        ));
+        dialogBinding.financeAccountInput.setText(isNewEntry ? "Cash" : existingEntry.accountName, false);
+        dialogBinding.financePaymentMethodInput.setText(
+                isNewEntry ? "Cash" : existingEntry.paymentMethod, false
+        );
         dialogBinding.financeTypeGroup.setOnCheckedChangeListener(
                 (group, checkedId) -> updateCategoryChoices(
                         dialogBinding,
@@ -176,6 +198,8 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             dialogBinding.financeAmountInput.setText(String.valueOf(existingEntry.amount));
             dialogBinding.financeCategoryInput.setText(existingEntry.category);
             dialogBinding.financeNoteInput.setText(existingEntry.note);
+            dialogBinding.financeRecurringSwitch.setChecked(existingEntry.isRecurring);
+            dialogBinding.financeSharedSwitch.setChecked(existingEntry.isShared);
             dialogBinding.financeTypeGroup.check(FinanceEntry.TYPE_INCOME.equals(existingEntry.entryType)
                     ? R.id.type_income_button
                     : R.id.type_expense_button);
@@ -212,6 +236,11 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             entry.category = dialogBinding.financeCategoryInput.getText().toString().trim();
             entry.note = dialogBinding.financeNoteInput.getText().toString().trim();
             entry.transactionDate = dialogBinding.financeEntryDateInput.getText().toString().trim();
+            entry.accountName = dialogBinding.financeAccountInput.getText().toString().trim();
+            entry.paymentMethod = dialogBinding.financePaymentMethodInput.getText().toString().trim();
+            entry.isRecurring = dialogBinding.financeRecurringSwitch.isChecked();
+            entry.isShared = dialogBinding.financeSharedSwitch.isChecked();
+            rememberAccount(entry.accountName);
 
             repository.save(entry, () -> {
                 if (binding == null) {
@@ -245,6 +274,8 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         String amountText = editor.financeAmountInput.getText().toString().trim();
         String category = editor.financeCategoryInput.getText().toString().trim();
         String date = editor.financeEntryDateInput.getText().toString().trim();
+        String account = editor.financeAccountInput.getText().toString().trim();
+        String paymentMethod = editor.financePaymentMethodInput.getText().toString().trim();
         boolean valid = true;
         Double amount = null;
 
@@ -259,6 +290,8 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             valid = false;
         }
         valid &= requireText(editor.financeCategoryLayout, category, R.string.finance_category_required);
+        valid &= requireText(editor.financeAccountLayout, account, R.string.finance_account_required);
+        valid &= requireText(editor.financePaymentMethodLayout, paymentMethod, R.string.finance_payment_required);
         if (!isValidIsoDate(date)) {
             editor.financeEntryDateLayout.setError(getString(R.string.finance_date_invalid));
             valid = false;
@@ -266,6 +299,90 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             editor.financeEntryDateLayout.setError(null);
         }
         return valid ? amount : null;
+    }
+
+    private String[] loadAccounts() {
+        Set<String> accounts = new LinkedHashSet<>();
+        for (String defaultAccount : getResources().getStringArray(R.array.finance_account_defaults)) {
+            accounts.add(defaultAccount);
+        }
+        accounts.addAll(financePreferences().getStringSet(KEY_ACCOUNTS, new LinkedHashSet<>()));
+        return accounts.toArray(new String[0]);
+    }
+
+    private void rememberAccount(String account) {
+        if (account.isEmpty()) {
+            return;
+        }
+        Set<String> accounts = new LinkedHashSet<>(
+                financePreferences().getStringSet(KEY_ACCOUNTS, new LinkedHashSet<>())
+        );
+        accounts.add(account);
+        financePreferences().edit().putStringSet(KEY_ACCOUNTS, accounts).apply();
+    }
+
+    private SharedPreferences financePreferences() {
+        return requireContext().getSharedPreferences(FINANCE_PREFS, Context.MODE_PRIVATE);
+    }
+
+    private double monthlyBudget() {
+        return Double.longBitsToDouble(financePreferences().getLong(
+                KEY_MONTHLY_BUDGET, Double.doubleToRawLongBits(0D)
+        ));
+    }
+
+    private void showBudgetEditor() {
+        EditText input = new EditText(requireContext());
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        double budget = monthlyBudget();
+        if (budget > 0) {
+            input.setText(String.valueOf(budget));
+        }
+        int padding = getResources().getDimensionPixelSize(R.dimen.space_20);
+        input.setPadding(padding, padding / 2, padding, padding / 2);
+        final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.finance_budget)
+                .setMessage(R.string.finance_budget_prompt)
+                .setView(input)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.save, null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> {
+                    try {
+                        double value = Double.parseDouble(input.getText().toString().trim());
+                        if (!Double.isFinite(value) || value < 0) {
+                            throw new NumberFormatException();
+                        }
+                        financePreferences().edit().putLong(
+                                KEY_MONTHLY_BUDGET, Double.doubleToRawLongBits(value)
+                        ).apply();
+                        dialog.dismiss();
+                        Snackbar.make(binding.getRoot(), R.string.finance_budget_saved, Snackbar.LENGTH_SHORT).show();
+                    } catch (NumberFormatException exception) {
+                        input.setError(getString(R.string.finance_budget_invalid));
+                    }
+                }));
+        dialog.show();
+    }
+
+    private void showMonthlyReport() {
+        double balance = latestSummary.income - latestSummary.expense;
+        double budget = monthlyBudget();
+        String month = new SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(new Date());
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.finance_report_title, month))
+                .setMessage(getString(
+                        R.string.finance_report_body,
+                        currencyFormatter.format(latestSummary.income),
+                        currencyFormatter.format(latestSummary.expense),
+                        currencyFormatter.format(balance),
+                        currencyFormatter.format(budget),
+                        currencyFormatter.format(budget - latestSummary.expense)
+                ))
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private boolean requireText(TextInputLayout layout, String value, int errorMessage) {

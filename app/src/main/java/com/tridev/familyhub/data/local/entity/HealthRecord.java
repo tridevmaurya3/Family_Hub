@@ -54,4 +54,9 @@ public class HealthRecord {
     public long recordedAt;
 
     public long createdAt;
+    public long linkedDocumentId;
+    @NonNull public String linkedDocumentTitle = "";
+    @NonNull public String timelineNote = "";
+    public boolean isShared;
+    public long updatedAt;
 }
