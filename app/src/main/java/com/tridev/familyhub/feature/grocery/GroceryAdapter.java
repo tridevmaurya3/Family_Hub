@@ -26,6 +26,8 @@ public class GroceryAdapter
         void onEdit(@NonNull GroceryItem item);
 
         void onDelete(@NonNull GroceryItem item);
+
+        void onBuying(@NonNull GroceryItem item);
     }
 
     private final List<GroceryItem> items = new ArrayList<>();
@@ -97,8 +99,9 @@ public class GroceryAdapter
                             : item.quantity
             );
             binding.groceryCost.setText(
-                    item.estimatedCost > 0
-                            ? currencyFormat.format(item.estimatedCost)
+                    (item.actualCost > 0 || item.estimatedCost > 0)
+                            ? currencyFormat.format(item.actualCost > 0
+                                    ? item.actualCost : item.estimatedCost)
                             : binding.getRoot().getContext().getString(
                                     R.string.grocery_cost_not_added
                             )
@@ -114,6 +117,11 @@ public class GroceryAdapter
                 assignment = binding.getRoot().getContext().getString(
                         R.string.grocery_purchased_by,
                         item.purchasedByName
+                );
+            } else if (GroceryItem.STATUS_BUYING.equals(item.buyingStatus)) {
+                assignment = binding.getRoot().getContext().getString(
+                        R.string.grocery_status_buying,
+                        item.updatedByName
                 );
             } else if (!item.assignedMemberName.isEmpty()) {
                 assignment = binding.getRoot().getContext().getString(
@@ -152,6 +160,10 @@ public class GroceryAdapter
             );
             binding.deleteGroceryButton.setOnClickListener(
                     view -> listener.onDelete(item)
+            );
+            binding.buyingGroceryButton.setEnabled(!item.isPurchased);
+            binding.buyingGroceryButton.setOnClickListener(
+                    view -> listener.onBuying(item)
             );
         }
 

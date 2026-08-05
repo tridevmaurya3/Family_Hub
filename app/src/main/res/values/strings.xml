@@ -581,6 +581,19 @@
     <string name="grocery_overlay_title">Family Grocery</string>
     <string name="grocery_overlay_add_hint">Quick add an item</string>
     <string name="grocery_overlay_opacity">Transparency</string>
+    <string name="grocery_actual_cost">Actual purchase price (optional)</string>
+    <string name="grocery_auto_price">Smart price estimate from my family’s local purchase history</string>
+    <string name="grocery_monthly_master">Keep in Monthly Master List and reset next month</string>
+    <string name="grocery_budget">Monthly budget</string>
+    <string name="grocery_set_budget">Budget</string>
+    <string name="grocery_budget_hint">Enter this month’s Grocery budget</string>
+    <string name="grocery_voice_add">Voice quick add</string>
+    <string name="grocery_mark_buying">Buying</string>
+    <string name="grocery_status_buying">Buying by %1$s</string>
+    <string name="grocery_price_estimated">Estimated from purchase history (%1$d%% confidence)</string>
+    <string name="grocery_duplicate_reused">Existing item updated instead of creating a duplicate</string>
+    <string name="grocery_suggestions">Recurring suggestions</string>
+    <string name="grocery_no_suggestions">Suggestions will appear after an item is purchased more than once</string>
     <string name="grocery_name_required">Enter an item name</string>
     <string name="grocery_priority_required">Select a priority</string>
     <string name="grocery_item_added">Item added</string>
@@ -1129,4 +1142,8 @@ Sharing: %12$s</string>
     <string name="safe_place_alert_read">Read</string>
     <string name="safe_place_alert_unread">Unread — tap to mark read</string>
     <string name="safe_place_alert_history_error">Alert history could not be loaded.</string>
+    <string name="grocery_notification_channel">Family grocery updates</string>
+    <string name="grocery_notification_buying">%1$s is buying this item</string>
+    <string name="grocery_notification_assigned">Assigned to %1$s</string>
+    <string name="grocery_notification_updated">Grocery item updated</string>
 </resources>

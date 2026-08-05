@@ -63,7 +63,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 18,
+        version = 19,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -144,6 +144,24 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `purchasedByName` TEXT NOT NULL DEFAULT ''");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_listType` ON `grocery_items` (`listType`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_assignedMemberId` ON `grocery_items` (`assignedMemberId`)");
+        }
+    };
+
+    /** Adds advanced recurring, price, assignment-status and Finance metadata. */
+    private static final Migration MIGRATION_18_19 = new Migration(18, 19) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `actualCost` REAL NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `autoPriceEnabled` INTEGER NOT NULL DEFAULT 1");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `priceLocationKey` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `priceConfidence` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `buyingStatus` TEXT NOT NULL DEFAULT 'PENDING'");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `isMonthlyMaster` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `lastResetMonth` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `purchaseCount` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `financeEntryId` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_buyingStatus` ON `grocery_items` (`buyingStatus`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_isMonthlyMaster` ON `grocery_items` (`isMonthlyMaster`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_items_priceLocationKey` ON `grocery_items` (`priceLocationKey`)");
         }
     };
 
@@ -650,7 +668,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_14_15,
                                     MIGRATION_15_16,
                                     MIGRATION_16_17,
-                                    MIGRATION_17_18
+                                    MIGRATION_17_18,
+                                    MIGRATION_18_19
                             )
                             .build();
                 }

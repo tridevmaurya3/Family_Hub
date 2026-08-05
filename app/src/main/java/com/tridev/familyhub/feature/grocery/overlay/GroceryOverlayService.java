@@ -18,10 +18,12 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -29,8 +31,11 @@ import androidx.core.app.NotificationCompat;
 
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** Draggable, adjustable quick-grocery surface shown over other phone screens. */
@@ -51,6 +56,8 @@ public class GroceryOverlayService extends Service {
     private View panelView;
     private LinearLayout itemContainer;
     private GroceryRepository repository;
+    private FamilyMemberRepository memberRepository;
+    private final List<FamilyMember> familyMembers = new ArrayList<>();
 
     @Override
     public void onCreate() {
@@ -60,6 +67,11 @@ public class GroceryOverlayService extends Service {
         getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, true).apply();
         repository = new GroceryRepository(this);
+        memberRepository = new FamilyMemberRepository(this);
+        memberRepository.loadMembers("", members -> {
+            familyMembers.clear();
+            familyMembers.addAll(members);
+        });
         repository.startRealtimeSync(this::refreshPanel);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         if (Settings.canDrawOverlays(this)) {
@@ -187,6 +199,33 @@ public class GroceryOverlayService extends Service {
                         : GroceryItem.LIST_DAILY);
         root.addView(listTypeGroup);
 
+        LinearLayout detailsOne = new LinearLayout(this);
+        detailsOne.setOrientation(LinearLayout.HORIZONTAL);
+        EditText quantity = compactInput(getString(R.string.grocery_quantity));
+        detailsOne.addView(quantity, weightedField());
+        Spinner category = compactSpinner(
+                getResources().getStringArray(R.array.grocery_category_labels));
+        LinearLayout.LayoutParams categoryParams = weightedField();
+        categoryParams.setMarginStart(dp(8));
+        detailsOne.addView(category, categoryParams);
+        root.addView(detailsOne);
+
+        LinearLayout detailsTwo = new LinearLayout(this);
+        detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
+        Spinner priority = compactSpinner(
+                getResources().getStringArray(R.array.grocery_priority_labels));
+        detailsTwo.addView(priority, weightedField());
+        List<String> memberLabels = new ArrayList<>();
+        memberLabels.add(getString(R.string.grocery_whole_family));
+        for (FamilyMember member : familyMembers) {
+            memberLabels.add(member.name);
+        }
+        Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
+        LinearLayout.LayoutParams memberParams = weightedField();
+        memberParams.setMarginStart(dp(8));
+        detailsTwo.addView(member, memberParams);
+        root.addView(detailsTwo);
+
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
         EditText input = new EditText(this);
@@ -245,8 +284,24 @@ public class GroceryOverlayService extends Service {
             GroceryItem item = new GroceryItem();
             item.name = name;
             item.listType = selectedListType[0];
+            item.quantity = quantity.getText().toString().trim();
+            item.category = String.valueOf(category.getSelectedItem());
+            int priorityIndex = priority.getSelectedItemPosition();
+            item.priority = priorityIndex == 2
+                    ? GroceryItem.PRIORITY_URGENT
+                    : priorityIndex == 1
+                    ? GroceryItem.PRIORITY_HIGH
+                    : GroceryItem.PRIORITY_NORMAL;
+            int memberIndex = member.getSelectedItemPosition();
+            if (memberIndex > 0 && memberIndex <= familyMembers.size()) {
+                FamilyMember selected = familyMembers.get(memberIndex - 1);
+                item.assignedMemberId = selected.cloudProfileId.isEmpty()
+                        ? String.valueOf(selected.id) : selected.cloudProfileId;
+                item.assignedMemberName = selected.name;
+            }
             repository.save(item, () -> {
                 input.setText("");
+                quantity.setText("");
                 refreshPanel();
             });
         });
@@ -340,6 +395,34 @@ public class GroceryOverlayService extends Service {
         }
         view.setGravity(Gravity.CENTER_VERTICAL);
         return view;
+    }
+
+    private EditText compactInput(String hint) {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setTextSize(12f);
+        input.setHint(hint);
+        input.setPadding(dp(10), 0, dp(10), 0);
+        input.setBackground(rounded(Color.rgb(248, 249, 250),
+                Color.rgb(214, 220, 227), 12));
+        return input;
+    }
+
+    private Spinner compactSpinner(String[] values) {
+        Spinner spinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, values);
+        spinner.setAdapter(adapter);
+        spinner.setBackground(rounded(Color.rgb(248, 249, 250),
+                Color.rgb(214, 220, 227), 12));
+        return spinner;
+    }
+
+    private LinearLayout.LayoutParams weightedField() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, dp(44), 1f);
+        params.topMargin = dp(8);
+        return params;
     }
 
     private GradientDrawable rounded(int fill, int stroke, int radiusDp) {

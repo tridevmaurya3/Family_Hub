@@ -87,6 +87,23 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/space_4"
+            android:layout_weight="1"
+            app:cardBackgroundColor="@color/fh_warning_container">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding">
+                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_budget" />
+                <TextView android:id="@+id/grocery_budget_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="₹0" android:textColor="@color/fh_warning" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_4"
             android:layout_weight="1.4"
             app:cardBackgroundColor="@color/fh_success_container">
             <LinearLayout
@@ -159,6 +176,25 @@
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
+    <HorizontalScrollView
+        android:id="@+id/grocery_action_scroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:fillViewport="false"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll">
+      <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/grocery_voice_button"
+        style="@style/Widget.Material3.Button.IconButton"
+        android:layout_width="@dimen/touch_target_min"
+        android:layout_height="@dimen/touch_target_min"
+        android:contentDescription="@string/grocery_voice_add"
+        app:icon="@drawable/ic_mic"
+        app:iconTint="@color/fh_primary" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/floating_grocery_button"
         style="@style/Widget.Material3.Button.TextButton"
@@ -167,9 +203,23 @@
         android:text="@string/grocery_floating_enable"
         android:textColor="@color/fh_module_grocery"
         app:icon="@drawable/ic_grocery"
-        app:iconTint="@color/fh_module_grocery"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll" />
+        app:iconTint="@color/fh_module_grocery" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_budget_button"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_set_budget"
+                android:textColor="@color/fh_warning" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_suggestions_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_suggestions"
+                android:textColor="@color/fh_module_grocery" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/clear_purchased_button"
@@ -177,9 +227,9 @@
         android:layout_width="wrap_content"
         android:layout_height="@dimen/touch_target_min"
         android:text="@string/grocery_clear_purchased"
-        android:textColor="@color/fh_primary"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll" />
+        android:textColor="@color/fh_primary" />
+      </LinearLayout>
+    </HorizontalScrollView>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/grocery_recycler_view"
@@ -191,7 +241,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/clear_purchased_button" />
+        app:layout_constraintTop_toBottomOf="@id/grocery_action_scroll" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/grocery_empty_state"

@@ -88,6 +88,13 @@
             android:gravity="end"
             android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/buying_grocery_button"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_mark_buying"
+                android:textColor="@color/fh_warning" />
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_grocery_button"
                 style="@style/Widget.FamilyHub.Button.Action"
                 android:layout_width="wrap_content"

@@ -41,6 +41,22 @@ public interface GroceryItemDao {
     @Query("SELECT * FROM grocery_items WHERE cloudId = :cloudId LIMIT 1")
     GroceryItem getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM grocery_items WHERE name = :name COLLATE NOCASE LIMIT 1")
+    GroceryItem findDuplicate(String name);
+
+    @Query("SELECT * FROM grocery_items WHERE name = :name COLLATE NOCASE "
+            + "AND actualCost > 0 AND priceLocationKey = :locationKey "
+            + "ORDER BY purchasedAt DESC LIMIT 1")
+    GroceryItem findLocalPrice(String name, String locationKey);
+
+    @Query("SELECT * FROM grocery_items WHERE name = :name COLLATE NOCASE "
+            + "AND actualCost > 0 ORDER BY purchasedAt DESC LIMIT 1")
+    GroceryItem findAnyPrice(String name);
+
+    @Query("SELECT * FROM grocery_items WHERE purchaseCount >= 2 "
+            + "ORDER BY purchaseCount DESC, purchasedAt DESC LIMIT :limit")
+    List<GroceryItem> getRecurringSuggestions(int limit);
+
     @Query("SELECT * FROM grocery_items WHERE cloudId != ''")
     List<GroceryItem> getAllSynced();
 

@@ -31,6 +31,12 @@ public interface FinanceEntryDao {
             + "FROM finance_entries WHERE transactionDate LIKE :monthPrefix || '%'")
     FinanceSummary getMonthSummary(String monthPrefix);
 
+    @Query("SELECT * FROM finance_entries WHERE id = :id LIMIT 1")
+    FinanceEntry getById(long id);
+
+    @Query("DELETE FROM finance_entries WHERE id = :id")
+    int deleteById(long id);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(FinanceEntry entry);
 
