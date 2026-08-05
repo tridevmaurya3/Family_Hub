@@ -54,6 +54,15 @@ public class GroceryWidgetService extends RemoteViewsService {
             String detail = item.quantity.isEmpty()
                     ? item.category
                     : item.quantity + " • " + item.category;
+            String type = context.getString(
+                    GroceryItem.LIST_MONTHLY.equals(item.listType)
+                            ? R.string.grocery_filter_monthly
+                            : R.string.grocery_filter_daily
+            );
+            detail = type + " • " + detail;
+            if (!item.assignedMemberName.isEmpty()) {
+                detail += " • " + item.assignedMemberName;
+            }
             views.setTextViewText(R.id.widget_item_detail, detail);
             Intent fillIntent = new Intent();
             fillIntent.putExtra(
