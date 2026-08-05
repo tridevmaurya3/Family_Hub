@@ -1306,4 +1306,5 @@ Sharing: %12$s</string>
         <item>Bank transfer</item>
         <item>Other</item>
     </string-array>
+    <string name="feature_menu_help">Help &amp; Guide</string>
 </resources>

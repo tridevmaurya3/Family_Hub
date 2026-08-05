@@ -33,6 +33,7 @@ import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
+import com.tridev.familyhub.feature.help.HelpActivity;
 import com.tridev.familyhub.feature.insights.FamilyLocationReportsActivity;
 import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.feature.notes.NotesFragment;
@@ -215,6 +216,12 @@ public final class FamilyFeatureMenu {
                 R.color.fh_success,
                 R.color.fh_success_container,
                 AppDiagnosticsActivity.class);
+        addActivityButton(activity, dialog, content,
+                R.string.feature_menu_help,
+                R.drawable.ic_help,
+                R.color.fh_secondary,
+                R.color.fh_secondary_container,
+                HelpActivity.class);
         addActivityButton(activity, dialog, content,
                 R.string.feature_menu_profile,
                 R.drawable.ic_profile_person,
