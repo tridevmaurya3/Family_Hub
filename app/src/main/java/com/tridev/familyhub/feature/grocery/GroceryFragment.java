@@ -1,6 +1,9 @@
 package com.tridev.familyhub.feature.grocery;
 
 import android.os.Bundle;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -22,6 +26,7 @@ import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.databinding.DialogGroceryBinding;
 import com.tridev.familyhub.databinding.FragmentGroceryBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -100,6 +105,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.clearPurchasedButton.setOnClickListener(
                 clickedView -> confirmClearPurchased()
         );
+        binding.floatingGroceryButton.setOnClickListener(
+                clickedView -> toggleFloatingStrip()
+        );
         binding.grocerySearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -142,6 +150,74 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 loadItems(currentQuery());
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (binding == null) {
+            return;
+        }
+        boolean requested = requireContext().getSharedPreferences(
+                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
+        ).getBoolean(GroceryOverlayService.KEY_REQUESTED, false);
+        if (requested && Settings.canDrawOverlays(requireContext())) {
+            requireContext().getSharedPreferences(
+                    GroceryOverlayService.PREFS,
+                    android.content.Context.MODE_PRIVATE
+            ).edit().putBoolean(GroceryOverlayService.KEY_REQUESTED, false).apply();
+            startFloatingStrip();
+        }
+        updateFloatingButton();
+    }
+
+    private void toggleFloatingStrip() {
+        boolean enabled = requireContext().getSharedPreferences(
+                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
+        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
+        if (enabled) {
+            Intent stop = new Intent(requireContext(), GroceryOverlayService.class);
+            stop.setAction(GroceryOverlayService.ACTION_STOP);
+            requireContext().startService(stop);
+            binding.floatingGroceryButton.postDelayed(
+                    this::updateFloatingButton, 250L);
+            return;
+        }
+        if (!Settings.canDrawOverlays(requireContext())) {
+            requireContext().getSharedPreferences(
+                    GroceryOverlayService.PREFS,
+                    android.content.Context.MODE_PRIVATE
+            ).edit().putBoolean(GroceryOverlayService.KEY_REQUESTED, true).apply();
+            Snackbar.make(binding.getRoot(),
+                    R.string.grocery_overlay_permission,
+                    Snackbar.LENGTH_LONG).show();
+            Intent permission = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + requireContext().getPackageName())
+            );
+            startActivity(permission);
+            return;
+        }
+        startFloatingStrip();
+    }
+
+    private void startFloatingStrip() {
+        ContextCompat.startForegroundService(requireContext(),
+                new Intent(requireContext(), GroceryOverlayService.class));
+        binding.floatingGroceryButton.postDelayed(
+                this::updateFloatingButton, 250L);
+    }
+
+    private void updateFloatingButton() {
+        if (binding == null) {
+            return;
+        }
+        boolean enabled = requireContext().getSharedPreferences(
+                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
+        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
+        binding.floatingGroceryButton.setText(enabled
+                ? R.string.grocery_floating_disable
+                : R.string.grocery_floating_enable);
     }
 
     @Override
