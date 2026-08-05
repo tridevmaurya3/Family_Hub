@@ -560,6 +560,23 @@ public class DashboardFragment extends Fragment {
         binding.dashboardPendingValue.setText(String.valueOf(pending));
         binding.dashboardUpcomingValue.setText(String.valueOf(upcoming));
         binding.dashboardUrgentValue.setText(String.valueOf(urgent));
+        binding.dashboardPendingSource.setText(getString(
+                R.string.dashboard_pending_breakdown,
+                stats.getPlannerOpen(), stats.getGroceryPending()));
+        binding.dashboardUpcomingSource.setText(getString(
+                R.string.dashboard_upcoming_breakdown,
+                stats.getUpcomingReminders()));
+        binding.dashboardUrgentSource.setText(getString(
+                R.string.dashboard_urgent_breakdown,
+                stats.getDocumentsExpiringSoon(), stats.getVehiclesDueSoon()));
+        binding.dashboardPendingCard.setOnClickListener(v ->
+                openPendingPriority(stats));
+        binding.dashboardUpcomingCard.setOnClickListener(v -> {
+            if (stats.getUpcomingReminders() > 0) openTab(R.id.nav_reminders);
+            else showNoPriorityData();
+        });
+        binding.dashboardUrgentCard.setOnClickListener(v ->
+                openUrgentPriority(stats));
         binding.dashboardNotificationBadge.setText(String.valueOf(upcoming));
         binding.dashboardNotificationBadge.setVisibility(
                 upcoming > 0 ? View.VISIBLE : View.GONE);
@@ -573,6 +590,59 @@ public class DashboardFragment extends Fragment {
                 && stats.getExpense() == 0D;
         binding.dashboardEmptyState.setVisibility(
                 empty ? View.VISIBLE : View.GONE);
+    }
+
+    private void openPendingPriority(@NonNull DashboardStats stats) {
+        int planner = stats.getPlannerOpen();
+        int grocery = stats.getGroceryPending();
+        if (planner <= 0 && grocery <= 0) {
+            showNoPriorityData();
+        } else if (planner > 0 && grocery <= 0) {
+            openFeature(new PlannerFragment());
+        } else if (grocery > 0 && planner <= 0) {
+            openFeature(new GroceryFragment());
+        } else {
+            String[] labels = {
+                    getString(R.string.dashboard_priority_planner, planner),
+                    getString(R.string.dashboard_priority_grocery, grocery)
+            };
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.dashboard_priority_choose)
+                    .setItems(labels, (dialog, which) -> {
+                        if (which == 0) openFeature(new PlannerFragment());
+                        else openFeature(new GroceryFragment());
+                    }).show();
+        }
+    }
+
+    private void openUrgentPriority(@NonNull DashboardStats stats) {
+        int documents = stats.getDocumentsExpiringSoon();
+        int vehicles = stats.getVehiclesDueSoon();
+        if (documents <= 0 && vehicles <= 0) {
+            showNoPriorityData();
+        } else if (documents > 0 && vehicles <= 0) {
+            openFeature(new DocumentsFragment());
+        } else if (vehicles > 0 && documents <= 0) {
+            openFeature(new VehicleFragment());
+        } else {
+            String[] labels = {
+                    getString(R.string.dashboard_priority_documents, documents),
+                    getString(R.string.dashboard_priority_vehicles, vehicles)
+            };
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.dashboard_priority_choose)
+                    .setItems(labels, (dialog, which) -> {
+                        if (which == 0) openFeature(new DocumentsFragment());
+                        else openFeature(new VehicleFragment());
+                    }).show();
+        }
+    }
+
+    private void showNoPriorityData() {
+        if (binding != null) {
+            Snackbar.make(binding.getRoot(), R.string.dashboard_priority_none,
+                    Snackbar.LENGTH_SHORT).show();
+        }
     }
 
     private void renderBirthday(@NonNull DashboardData data) {
