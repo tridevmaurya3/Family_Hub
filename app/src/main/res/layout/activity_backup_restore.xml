@@ -5,7 +5,7 @@
     android:id="@+id/backupRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/fh_background">
+    android:background="@drawable/bg_page_three_tone">
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
