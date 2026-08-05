@@ -70,15 +70,18 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
-                <ImageButton
-                    android:id="@+id/notification_button"
-                    android:layout_width="@dimen/touch_target_min"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:background="@drawable/bg_icon_button"
-                    android:contentDescription="@string/content_description_notifications"
-                    android:padding="@dimen/space_12"
-                    android:src="@drawable/ic_bell"
-                    app:tint="@color/fh_on_surface" />
+                <FrameLayout android:layout_width="@dimen/touch_target_min" android:layout_height="@dimen/touch_target_min">
+                    <ImageButton
+                        android:id="@+id/notification_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_icon_button"
+                        android:contentDescription="@string/content_description_notifications"
+                        android:padding="@dimen/space_12"
+                        android:src="@drawable/ic_bell"
+                        app:tint="@color/fh_on_surface" />
+                    <TextView android:id="@+id/dashboard_notification_badge" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="top|end" android:background="@drawable/bg_status_pill" android:gravity="center" android:text="0" android:textColor="@color/fh_error" android:textSize="9sp" android:textStyle="bold" android:visibility="gone" />
+                </FrameLayout>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/dashboard_profile_card"
@@ -170,6 +173,53 @@
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_priority_card"
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            app:cardBackgroundColor="@color/fh_surface"
+            app:strokeColor="@color/fh_outline">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/space_12">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_priority_title" android:textSize="15sp" />
+                        <TextView android:id="@+id/dashboard_last_updated" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="@string/dashboard_updating" />
+                    </LinearLayout>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/dashboard_refresh" style="@style/Widget.Material3.Button.IconButton" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/dashboard_refresh" app:icon="@drawable/ic_family_map_refresh" app:iconTint="@color/fh_primary" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:baselineAligned="false" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
+                        <TextView android:id="@+id/dashboard_pending_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_primary" />
+                        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_pending" />
+                    </LinearLayout>
+                    <View android:layout_width="6dp" android:layout_height="1dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
+                        <TextView android:id="@+id/dashboard_upcoming_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_warning" />
+                        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_upcoming" />
+                    </LinearLayout>
+                    <View android:layout_width="6dp" android:layout_height="1dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
+                        <TextView android:id="@+id/dashboard_urgent_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_error" />
+                        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_urgent" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/dashboard_empty_state"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_8"
+            android:background="@drawable/bg_status_pill"
+            android:gravity="center"
+            android:padding="@dimen/space_12"
+            android:text="@string/dashboard_empty_state"
+            android:visibility="gone" />
 
         <!-- Live action center -->
         <TextView

@@ -26,6 +26,12 @@ import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.family.FamilyFragment;
 import com.tridev.familyhub.feature.finance.FinanceFragment;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
+import com.tridev.familyhub.feature.health.HealthFragment;
+import com.tridev.familyhub.feature.notes.NotesFragment;
+import com.tridev.familyhub.feature.passwordvault.PasswordVaultFragment;
+import com.tridev.familyhub.feature.planner.PlannerFragment;
+import com.tridev.familyhub.feature.property.PropertyFragment;
+import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 import com.tridev.familyhub.feature.more.MoreFragment;
 import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
@@ -36,6 +42,18 @@ public class MainActivity extends AppCompatActivity {
     private static final String EXTRA_OPEN_DOCUMENTS_VAULT =
             "open_documents_vault";
     public static final String EXTRA_OPEN_GROCERY = "open_grocery";
+    public static final String EXTRA_OPEN_ROUTE = "open_feature_route";
+    public static final String ROUTE_FAMILY = "family";
+    public static final String ROUTE_REMINDERS = "reminders";
+    public static final String ROUTE_FINANCE = "finance";
+    public static final String ROUTE_GROCERY = "grocery";
+    public static final String ROUTE_DOCUMENTS = "documents";
+    public static final String ROUTE_HEALTH = "health";
+    public static final String ROUTE_VEHICLES = "vehicles";
+    public static final String ROUTE_PROPERTY = "property";
+    public static final String ROUTE_NOTES = "notes";
+    public static final String ROUTE_PLANNER = "planner";
+    public static final String ROUTE_VAULT = "vault";
 
     private ActivityMainBinding binding;
     private boolean redirectingToAuth;
@@ -148,6 +166,12 @@ public class MainActivity extends AppCompatActivity {
         if (binding == null || intent == null) {
             return false;
         }
+        String route = intent.getStringExtra(EXTRA_OPEN_ROUTE);
+        if (route != null && !route.isEmpty()) {
+            intent.removeExtra(EXTRA_OPEN_ROUTE);
+            openRoute(route);
+            return true;
+        }
         if (intent.getBooleanExtra(EXTRA_OPEN_GROCERY, false)) {
             intent.removeExtra(EXTRA_OPEN_GROCERY);
             clearSecondaryScreens();
@@ -167,6 +191,30 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.main_content, new DocumentsFragment())
                 .commit();
         return true;
+    }
+
+    private void openRoute(@NonNull String route) {
+        clearSecondaryScreens();
+        if (ROUTE_FAMILY.equals(route)) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_family);
+        } else if (ROUTE_REMINDERS.equals(route)) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_reminders);
+        } else if (ROUTE_FINANCE.equals(route)) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_finance);
+        } else {
+            Fragment fragment;
+            if (ROUTE_GROCERY.equals(route)) fragment = new GroceryFragment();
+            else if (ROUTE_DOCUMENTS.equals(route)) fragment = new DocumentsFragment();
+            else if (ROUTE_HEALTH.equals(route)) fragment = new HealthFragment();
+            else if (ROUTE_VEHICLES.equals(route)) fragment = new VehicleFragment();
+            else if (ROUTE_PROPERTY.equals(route)) fragment = new PropertyFragment();
+            else if (ROUTE_NOTES.equals(route)) fragment = new NotesFragment();
+            else if (ROUTE_PLANNER.equals(route)) fragment = new PlannerFragment();
+            else if (ROUTE_VAULT.equals(route)) fragment = new PasswordVaultFragment();
+            else fragment = new DashboardFragment();
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.main_content, fragment).commit();
+        }
     }
 
     @Override
