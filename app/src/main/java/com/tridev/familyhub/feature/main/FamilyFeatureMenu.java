@@ -22,6 +22,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.automation.FamilyAutomationActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
+import com.tridev.familyhub.feature.diagnostics.AppDiagnosticsActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
 import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
@@ -36,6 +37,7 @@ import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.safety.FamilySafetyCenterActivity;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
+import com.tridev.familyhub.feature.search.GlobalSearchActivity;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
 /** A categorized hamburger menu for all Family Hub features. */
@@ -188,6 +190,18 @@ public final class FamilyFeatureMenu {
                 new PasswordVaultFragment());
 
         addSection(activity, content, R.string.feature_menu_account);
+        addActivityButton(activity, dialog, content,
+                R.string.feature_menu_global_search,
+                R.drawable.ic_search,
+                R.color.fh_info,
+                R.color.fh_info_container,
+                GlobalSearchActivity.class);
+        addActivityButton(activity, dialog, content,
+                R.string.feature_menu_diagnostics,
+                R.drawable.ic_health,
+                R.color.fh_success,
+                R.color.fh_success_container,
+                AppDiagnosticsActivity.class);
         addActivityButton(activity, dialog, content,
                 R.string.feature_menu_profile,
                 R.drawable.ic_profile_person,
