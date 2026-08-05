@@ -4,13 +4,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/fh_background">
+    android:background="@drawable/bg_page_three_tone">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/familyLiveAppBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/fh_background"
+        android:background="@drawable/bg_page_three_tone"
         android:elevation="0dp"
         app:elevation="0dp"
         app:liftOnScroll="true">
@@ -198,7 +198,7 @@
             android:id="@+id/familyLivePinnedControls"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/fh_background"
+            android:background="@drawable/bg_page_three_tone"
             android:orientation="vertical"
             android:paddingStart="@dimen/family_live_responsive_horizontal_padding"
             android:paddingEnd="@dimen/family_live_responsive_horizontal_padding"
