@@ -1156,6 +1156,22 @@ Sharing: %12$s</string>
     <string name="grocery_overlay_voice_listening">Listening…</string>
     <string name="grocery_overlay_voice_unavailable">Voice input is unavailable on this device.</string>
     <string name="grocery_overlay_voice_permission">Microphone permission is required only for Floating Grocery voice input.</string>
+    <string name="grocery_quantity_amount">Amount</string>
+    <string name="grocery_quantity_amount_hint">e.g. 500 or 2</string>
+    <string name="grocery_quantity_unit">Unit</string>
+    <string name="grocery_overlay_price">Price (optional)</string>
+    <string name="grocery_overlay_price_hint">₹ amount</string>
+    <string name="grocery_invalid_cost">Enter a valid price amount</string>
+    <string-array name="grocery_quantity_units">
+        <item>pcs</item>
+        <item>packet</item>
+        <item>kg</item>
+        <item>g</item>
+        <item>L</item>
+        <item>ml</item>
+        <item>bottle</item>
+        <item>dozen</item>
+    </string-array>
     <string name="global_search_title">Global Search</string>
     <string name="global_search_subtitle">Find anything across your private family modules</string>
     <string name="global_search_hint">Search members, tasks, groceries, records and more</string>

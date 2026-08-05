@@ -66,16 +66,15 @@ public class GroceryOverlayService extends Service {
     private FamilyMemberRepository memberRepository;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private String visibleListType = GroceryItem.LIST_DAILY;
-    private EditText voiceTarget;
+    private String pendingVoiceText = "";
     private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
-            if (voiceTarget == null || intent == null) return;
+            if (intent == null) return;
             String result = intent.getStringExtra(GroceryVoiceCaptureActivity.EXTRA_RESULT);
             if (result != null && !result.trim().isEmpty()) {
-                voiceTarget.setText(result.trim());
-                voiceTarget.setSelection(voiceTarget.length());
+                pendingVoiceText = result.trim();
             }
-            voiceTarget.setHint(R.string.grocery_overlay_add_hint);
+            if (panelView == null) togglePanel();
         }
     };
 
@@ -215,7 +214,7 @@ public class GroceryOverlayService extends Service {
         root.addView(subtitle, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(28)));
 
-        final String[] selectedListType = {GroceryItem.LIST_DAILY};
+        final String[] selectedListType = {visibleListType};
         RadioGroup listTypeGroup = new RadioGroup(this);
         listTypeGroup.setOrientation(RadioGroup.HORIZONTAL);
         listTypeGroup.setGravity(Gravity.CENTER_VERTICAL);
@@ -223,11 +222,12 @@ public class GroceryOverlayService extends Service {
         daily.setId(View.generateViewId());
         daily.setText(R.string.grocery_list_daily);
         daily.setTextSize(12f);
-        daily.setChecked(true);
+        daily.setChecked(GroceryItem.LIST_DAILY.equals(visibleListType));
         RadioButton monthly = new RadioButton(this);
         monthly.setId(View.generateViewId());
         monthly.setText(R.string.grocery_list_monthly);
         monthly.setTextSize(12f);
+        monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
         listTypeGroup.addView(daily, new RadioGroup.LayoutParams(
                 0, dp(42), 1f));
         listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(
@@ -245,22 +245,39 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout detailsOne = new LinearLayout(this);
         detailsOne.setOrientation(LinearLayout.HORIZONTAL);
-        EditText quantity = compactInput(getString(R.string.grocery_quantity));
+        EditText quantity = compactInput(getString(R.string.grocery_quantity_amount_hint));
+        quantity.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         detailsOne.addView(labelledField(
-                getString(R.string.grocery_quantity), quantity), weightedField());
-        Spinner category = compactSpinner(
-                getResources().getStringArray(R.array.grocery_category_labels));
-        LinearLayout.LayoutParams categoryParams = weightedField();
-        categoryParams.setMarginStart(dp(8));
+                getString(R.string.grocery_quantity_amount), quantity), weightedField());
+        Spinner quantityUnit = compactSpinner(
+                getResources().getStringArray(R.array.grocery_quantity_units));
+        LinearLayout.LayoutParams unitParams = weightedField();
+        unitParams.setMarginStart(dp(8));
         detailsOne.addView(labelledField(
-                getString(R.string.grocery_category), category), categoryParams);
+                getString(R.string.grocery_quantity_unit), quantityUnit), unitParams);
         root.addView(detailsOne);
 
         LinearLayout detailsTwo = new LinearLayout(this);
         detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
+        Spinner category = compactSpinner(
+                getResources().getStringArray(R.array.grocery_category_labels));
+        detailsTwo.addView(labelledField(
+                getString(R.string.grocery_category), category), weightedField());
+        EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
+        price.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        LinearLayout.LayoutParams priceParams = weightedField();
+        priceParams.setMarginStart(dp(8));
+        detailsTwo.addView(labelledField(
+                getString(R.string.grocery_overlay_price), price), priceParams);
+        root.addView(detailsTwo);
+
+        LinearLayout detailsThree = new LinearLayout(this);
+        detailsThree.setOrientation(LinearLayout.HORIZONTAL);
         Spinner priority = compactSpinner(
                 getResources().getStringArray(R.array.grocery_priority_labels));
-        detailsTwo.addView(labelledField(
+        detailsThree.addView(labelledField(
                 getString(R.string.grocery_priority), priority), weightedField());
         List<String> memberLabels = new ArrayList<>();
         memberLabels.add(getString(R.string.grocery_whole_family));
@@ -270,9 +287,9 @@ public class GroceryOverlayService extends Service {
         Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
         LinearLayout.LayoutParams memberParams = weightedField();
         memberParams.setMarginStart(dp(8));
-        detailsTwo.addView(labelledField(
+        detailsThree.addView(labelledField(
                 getString(R.string.grocery_assign_to), member), memberParams);
-        root.addView(detailsTwo);
+        root.addView(detailsThree);
 
         TextView quickLabel = text(getString(
                 R.string.grocery_overlay_quick_item), 11, true);
@@ -296,6 +313,11 @@ public class GroceryOverlayService extends Service {
         input.setPadding(dp(12), 0, dp(8), 0);
         input.setBackground(rounded(Color.rgb(248, 249, 250),
                 Color.rgb(214, 220, 227), 12));
+        if (!pendingVoiceText.isEmpty()) {
+            input.setText(pendingVoiceText);
+            input.setSelection(input.length());
+            pendingVoiceText = "";
+        }
         input.setOnKeyListener((view, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_BACK
                     && event.getAction() == KeyEvent.ACTION_UP) {
@@ -344,7 +366,7 @@ public class GroceryOverlayService extends Service {
                 ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT));
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        int listHeight = Math.max(dp(120), Math.min(dp(220), screenHeight / 4));
+        int listHeight = Math.max(dp(110), Math.min(dp(180), screenHeight / 5));
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 listHeight);
@@ -371,11 +393,13 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
         voice.setOnClickListener(v -> {
-            voiceTarget = input;
-            input.setHint(R.string.grocery_overlay_voice_listening);
-            Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(capture);
+            pendingVoiceText = input.getText().toString();
+            closePanel();
+            new android.os.Handler(getMainLooper()).postDelayed(() -> {
+                Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(capture);
+            }, 180L);
         });
 
         add.setOnClickListener(v -> {
@@ -387,8 +411,19 @@ public class GroceryOverlayService extends Service {
             GroceryItem item = new GroceryItem();
             item.name = name;
             item.listType = selectedListType[0];
-            item.quantity = quantity.getText().toString().trim();
+            String amount = quantity.getText().toString().trim();
+            item.quantity = amount.isEmpty() ? "" : amount + " "
+                    + String.valueOf(quantityUnit.getSelectedItem());
             item.category = String.valueOf(category.getSelectedItem());
+            String priceText = price.getText().toString().trim();
+            if (!priceText.isEmpty()) {
+                try {
+                    item.estimatedCost = Double.parseDouble(priceText);
+                } catch (NumberFormatException error) {
+                    price.setError(getString(R.string.grocery_invalid_cost));
+                    return;
+                }
+            }
             int priorityIndex = priority.getSelectedItemPosition();
             item.priority = priorityIndex == 2
                     ? GroceryItem.PRIORITY_URGENT
@@ -405,6 +440,7 @@ public class GroceryOverlayService extends Service {
             repository.save(item, () -> {
                 input.setText("");
                 quantity.setText("");
+                price.setText("");
                 refreshPanel();
             });
         });
@@ -462,7 +498,7 @@ public class GroceryOverlayService extends Service {
                 continue;
             }
             CheckBox row = new CheckBox(this);
-            String detail = item.name;
+            String detail = (shownHere + 1) + ".  " + item.name;
             if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
             if (!item.category.isEmpty()) detail += "  •  " + item.category;
             if (!item.assignedMemberName.isEmpty()) {
@@ -502,7 +538,6 @@ public class GroceryOverlayService extends Service {
     }
 
     private void closePanel() {
-        voiceTarget = null;
         if (panelView != null) {
             windowManager.removeView(panelView);
             panelView = null;

@@ -54,7 +54,7 @@ public class GroceryVoiceCaptureActivity extends AppCompatActivity {
         } catch (ActivityNotFoundException error) {
             Toast.makeText(this, R.string.grocery_overlay_voice_unavailable,
                     Toast.LENGTH_LONG).show();
-            finish();
+            finishWithResult("");
         }
     }
 
@@ -67,23 +67,29 @@ public class GroceryVoiceCaptureActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, R.string.grocery_overlay_voice_permission,
                     Toast.LENGTH_LONG).show();
-            finish();
+            finishWithResult("");
         }
     }
 
     @Override protected void onActivityResult(int requestCode, int resultCode,
             @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        String recognized = "";
         if (requestCode == REQUEST_SPEECH && resultCode == Activity.RESULT_OK
                 && data != null) {
             ArrayList<String> results = data.getStringArrayListExtra(
                     RecognizerIntent.EXTRA_RESULTS);
             if (results != null && !results.isEmpty()) {
-                sendBroadcast(new Intent(ACTION_RESULT)
-                        .setPackage(getPackageName())
-                        .putExtra(EXTRA_RESULT, results.get(0)));
+                recognized = results.get(0);
             }
         }
+        finishWithResult(recognized);
+    }
+
+    private void finishWithResult(String recognized) {
+        sendBroadcast(new Intent(ACTION_RESULT)
+                .setPackage(getPackageName())
+                .putExtra(EXTRA_RESULT, recognized == null ? "" : recognized));
         finish();
     }
 
