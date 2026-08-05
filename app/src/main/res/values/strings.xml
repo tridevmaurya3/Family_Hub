@@ -541,6 +541,7 @@
     <string name="grocery_subtitle">Daily and monthly shopping, shared live with your family</string>
     <string name="grocery_pending">Pending items</string>
     <string name="grocery_estimated_total">Estimated total</string>
+    <string name="grocery_actual_total">Actual price</string>
     <string name="grocery_search_hint">Search item, category, or notes</string>
     <string name="grocery_clear_purchased">Clear purchased</string>
     <string name="grocery_widget_title">Family Shopping</string>
