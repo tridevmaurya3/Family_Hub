@@ -11,6 +11,7 @@ import android.widget.RemoteViews;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.NumberFormat;
@@ -56,11 +57,14 @@ public class GroceryWidgetProvider extends AppWidgetProvider {
             );
             GroceryItem item = database.groceryItemDao().getById(itemId);
             if (item != null) {
-                item.isPurchased = true;
-                item.purchasedAt = System.currentTimeMillis();
-                database.groceryItemDao().update(item);
+                new GroceryRepository(appContext).setPurchased(
+                        item,
+                        true,
+                        () -> refreshAll(appContext)
+                );
+            } else {
+                refreshAll(appContext);
             }
-            refreshAll(appContext);
         });
     }
 
