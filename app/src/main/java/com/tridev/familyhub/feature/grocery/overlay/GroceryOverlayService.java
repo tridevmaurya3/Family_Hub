@@ -176,6 +176,12 @@ public class GroceryOverlayService extends Service {
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(44)));
         root.addView(header);
 
+        TextView subtitle = text(getString(R.string.grocery_overlay_subtitle),
+                11, false);
+        subtitle.setTextColor(Color.rgb(91, 101, 114));
+        root.addView(subtitle, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(28)));
+
         final String[] selectedListType = {GroceryItem.LIST_DAILY};
         RadioGroup listTypeGroup = new RadioGroup(this);
         listTypeGroup.setOrientation(RadioGroup.HORIZONTAL);
@@ -197,24 +203,29 @@ public class GroceryOverlayService extends Service {
                 selectedListType[0] = checkedId == monthly.getId()
                         ? GroceryItem.LIST_MONTHLY
                         : GroceryItem.LIST_DAILY);
-        root.addView(listTypeGroup);
+        LinearLayout typeBlock = labelledField(
+                getString(R.string.grocery_list_type), listTypeGroup);
+        root.addView(typeBlock);
 
         LinearLayout detailsOne = new LinearLayout(this);
         detailsOne.setOrientation(LinearLayout.HORIZONTAL);
         EditText quantity = compactInput(getString(R.string.grocery_quantity));
-        detailsOne.addView(quantity, weightedField());
+        detailsOne.addView(labelledField(
+                getString(R.string.grocery_quantity), quantity), weightedField());
         Spinner category = compactSpinner(
                 getResources().getStringArray(R.array.grocery_category_labels));
         LinearLayout.LayoutParams categoryParams = weightedField();
         categoryParams.setMarginStart(dp(8));
-        detailsOne.addView(category, categoryParams);
+        detailsOne.addView(labelledField(
+                getString(R.string.grocery_category), category), categoryParams);
         root.addView(detailsOne);
 
         LinearLayout detailsTwo = new LinearLayout(this);
         detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
         Spinner priority = compactSpinner(
                 getResources().getStringArray(R.array.grocery_priority_labels));
-        detailsTwo.addView(priority, weightedField());
+        detailsTwo.addView(labelledField(
+                getString(R.string.grocery_priority), priority), weightedField());
         List<String> memberLabels = new ArrayList<>();
         memberLabels.add(getString(R.string.grocery_whole_family));
         for (FamilyMember member : familyMembers) {
@@ -223,8 +234,16 @@ public class GroceryOverlayService extends Service {
         Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
         LinearLayout.LayoutParams memberParams = weightedField();
         memberParams.setMarginStart(dp(8));
-        detailsTwo.addView(member, memberParams);
+        detailsTwo.addView(labelledField(
+                getString(R.string.grocery_assign_to), member), memberParams);
         root.addView(detailsTwo);
+
+        TextView quickLabel = text(getString(
+                R.string.grocery_overlay_quick_item), 11, true);
+        LinearLayout.LayoutParams quickLabelParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(28));
+        quickLabelParams.topMargin = dp(8);
+        root.addView(quickLabel, quickLabelParams);
 
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
@@ -332,18 +351,36 @@ public class GroceryOverlayService extends Service {
             return;
         }
         itemContainer.removeAllViews();
-        int shown = 0;
+        int shown = renderSection(items, GroceryItem.LIST_DAILY,
+                getString(R.string.grocery_overlay_daily_section), 0);
+        renderSection(items, GroceryItem.LIST_MONTHLY,
+                getString(R.string.grocery_overlay_monthly_section), shown);
+    }
+
+    private int renderSection(List<GroceryItem> items, String listType,
+                              String heading, int alreadyShown) {
+        int count = 0;
         for (GroceryItem item : items) {
-            if (item.isPurchased || shown >= 6) {
+            if (!item.isPurchased && listType.equals(item.listType)) count++;
+        }
+        TextView sectionTitle = text(heading + "  (" + count + ")", 12, true);
+        sectionTitle.setTextColor(GroceryItem.LIST_MONTHLY.equals(listType)
+                ? Color.rgb(107, 76, 154) : Color.rgb(15, 108, 89));
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(34));
+        titleParams.topMargin = alreadyShown == 0 ? 0 : dp(6);
+        itemContainer.addView(sectionTitle, titleParams);
+
+        int shownHere = 0;
+        for (GroceryItem item : items) {
+            if (item.isPurchased || !listType.equals(item.listType)
+                    || shownHere >= 3) {
                 continue;
             }
             CheckBox row = new CheckBox(this);
-            String type = GroceryItem.LIST_MONTHLY.equals(item.listType)
-                    ? getString(R.string.grocery_filter_monthly)
-                    : getString(R.string.grocery_filter_daily);
-            String detail = item.quantity.isEmpty()
-                    ? type + "  •  " + item.name
-                    : type + "  •  " + item.name + "  •  " + item.quantity;
+            String detail = item.name;
+            if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
+            if (!item.category.isEmpty()) detail += "  •  " + item.category;
             if (!item.assignedMemberName.isEmpty()) {
                 detail += "  •  " + item.assignedMemberName;
             }
@@ -357,14 +394,19 @@ public class GroceryOverlayService extends Service {
                 }
             });
             itemContainer.addView(row);
-            shown++;
+            shownHere++;
         }
-        if (shown == 0) {
-            TextView empty = text(getString(R.string.grocery_widget_empty), 12, false);
-            empty.setGravity(Gravity.CENTER);
+        if (count == 0) {
+            TextView empty = text(getString(
+                    GroceryItem.LIST_MONTHLY.equals(listType)
+                            ? R.string.grocery_overlay_monthly_empty
+                            : R.string.grocery_overlay_daily_empty), 11, false);
+            empty.setTextColor(Color.rgb(110, 118, 128));
+            empty.setPadding(dp(8), 0, 0, 0);
             itemContainer.addView(empty, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         }
+        return alreadyShown + shownHere;
     }
 
     private void closePanel() {
@@ -420,9 +462,21 @@ public class GroceryOverlayService extends Service {
 
     private LinearLayout.LayoutParams weightedField() {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                0, dp(44), 1f);
+                0, dp(66), 1f);
         params.topMargin = dp(8);
         return params;
+    }
+
+    private LinearLayout labelledField(String label, View field) {
+        LinearLayout block = new LinearLayout(this);
+        block.setOrientation(LinearLayout.VERTICAL);
+        TextView fieldLabel = text(label, 10, true);
+        fieldLabel.setTextColor(Color.rgb(84, 93, 105));
+        block.addView(fieldLabel, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(22)));
+        block.addView(field, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
+        return block;
     }
 
     private GradientDrawable rounded(int fill, int stroke, int radiusDp) {
