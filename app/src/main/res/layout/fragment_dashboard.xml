@@ -191,19 +191,22 @@
                     <com.google.android.material.button.MaterialButton android:id="@+id/dashboard_refresh" style="@style/Widget.Material3.Button.IconButton" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/dashboard_refresh" app:icon="@drawable/ic_family_map_refresh" app:iconTint="@color/fh_primary" />
                 </LinearLayout>
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:baselineAligned="false" android:orientation="horizontal">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
+                    <LinearLayout android:id="@+id/dashboard_pending_card" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:clickable="true" android:focusable="true" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
                         <TextView android:id="@+id/dashboard_pending_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_primary" />
                         <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_pending" />
+                        <TextView android:id="@+id/dashboard_pending_source" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:text="@string/dashboard_pending_sources" android:textSize="9sp" />
                     </LinearLayout>
                     <View android:layout_width="6dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
+                    <LinearLayout android:id="@+id/dashboard_upcoming_card" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:clickable="true" android:focusable="true" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
                         <TextView android:id="@+id/dashboard_upcoming_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_warning" />
                         <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_upcoming" />
+                        <TextView android:id="@+id/dashboard_upcoming_source" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="@string/dashboard_upcoming_sources" android:textSize="9sp" />
                     </LinearLayout>
                     <View android:layout_width="6dp" android:layout_height="1dp" />
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
+                    <LinearLayout android:id="@+id/dashboard_urgent_card" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:clickable="true" android:focusable="true" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
                         <TextView android:id="@+id/dashboard_urgent_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_error" />
                         <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_urgent" />
+                        <TextView android:id="@+id/dashboard_urgent_source" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:text="@string/dashboard_urgent_sources" android:textSize="9sp" />
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
