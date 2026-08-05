@@ -270,7 +270,7 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
-        EditText input = new EditText(this);
+        EditText input = new BackAwareEditText();
         input.setSingleLine(true);
         input.setTextSize(13f);
         input.setHint(R.string.grocery_overlay_add_hint);
@@ -623,6 +623,23 @@ public class GroceryOverlayService extends Service {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    /** Captures Back before the IME so one press closes the floating panel. */
+    private final class BackAwareEditText extends androidx.appcompat.widget.AppCompatEditText {
+        BackAwareEditText() {
+            super(GroceryOverlayService.this);
+        }
+
+        @Override
+        public boolean onKeyPreIme(int keyCode, KeyEvent event) {
+            if (keyCode == KeyEvent.KEYCODE_BACK
+                    && event.getAction() == KeyEvent.ACTION_UP) {
+                closePanel();
+                return true;
+            }
+            return super.onKeyPreIme(keyCode, event);
+        }
     }
 
     private void createNotificationChannel() {
