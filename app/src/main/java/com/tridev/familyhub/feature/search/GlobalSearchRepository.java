@@ -35,7 +35,7 @@ public class GlobalSearchRepository {
     public void search(@NonNull String query, @NonNull String filter,
                        @NonNull Callback callback) {
         executor.execute(() -> {
-            String q = query.trim();
+            String q = GlobalSearchPolicy.normalize(query);
             List<GlobalSearchResult> out = new ArrayList<>();
             if (!q.isEmpty()) collect(q, filter, out);
             main.post(() -> callback.onLoaded(out));
