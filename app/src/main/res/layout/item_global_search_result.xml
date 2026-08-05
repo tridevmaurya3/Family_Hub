@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" style="@style/Widget.FamilyHub.Card.Data" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="@dimen/space_8" android:clickable="true" android:focusable="true" android:foreground="?attr/selectableItemBackground">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="@dimen/space_12">
+        <ImageView android:id="@+id/search_result_icon" android:layout_width="42dp" android:layout_height="42dp" android:background="@drawable/bg_placeholder_icon" android:padding="10dp" app:tint="@color/fh_primary" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="@dimen/space_12" android:layout_weight="1" android:orientation="vertical">
+            <TextView android:id="@+id/search_result_module" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/fh_primary" android:textStyle="bold" />
+            <TextView android:id="@+id/search_result_title" style="@style/TextAppearance.FamilyHub.CardTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/search_result_detail" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:maxLines="2" android:ellipsize="end" />
+        </LinearLayout>
+        <TextView android:id="@+id/search_result_urgent" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:background="@drawable/bg_status_pill" android:paddingStart="8dp" android:paddingTop="4dp" android:paddingEnd="8dp" android:paddingBottom="4dp" android:text="@string/global_search_urgent" android:textColor="@color/fh_error" android:textStyle="bold" android:visibility="gone" />
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:layout_marginStart="6dp" android:src="@drawable/ic_arrow_right" app:tint="@color/fh_on_surface_variant" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
