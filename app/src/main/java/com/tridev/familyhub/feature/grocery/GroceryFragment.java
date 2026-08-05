@@ -72,6 +72,19 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         }
                     }
             );
+    private final ActivityResultLauncher<String> overlayVoicePermissionLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.RequestPermission(),
+                    granted -> {
+                        if (granted && binding != null) {
+                            continueFloatingStripSetup();
+                        } else if (binding != null) {
+                            Snackbar.make(binding.getRoot(),
+                                    R.string.grocery_overlay_voice_permission,
+                                    Snackbar.LENGTH_LONG).show();
+                        }
+                    }
+            );
 
     @Nullable
     @Override
@@ -220,6 +233,15 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     this::updateFloatingButton, 250L);
             return;
         }
+        if (ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            overlayVoicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        continueFloatingStripSetup();
+    }
+
+    private void continueFloatingStripSetup() {
         if (!Settings.canDrawOverlays(requireContext())) {
             requireContext().getSharedPreferences(
                     GroceryOverlayService.PREFS,
