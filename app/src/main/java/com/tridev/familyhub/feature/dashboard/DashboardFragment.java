@@ -47,6 +47,7 @@ import com.tridev.familyhub.feature.profile.ProfilePhotoStore;
 import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.safety.FamilySafetyCenterActivity;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
+import com.tridev.familyhub.feature.search.GlobalSearchActivity;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
 import java.text.NumberFormat;
@@ -202,7 +203,14 @@ public class DashboardFragment extends Fragment {
             return;
         }
 
-        if (normalizedQuery.contains("sos")) {
+        binding.dashboardSearchBar.clearSearchFocus();
+        startActivity(new Intent(requireContext(), GlobalSearchActivity.class)
+                .putExtra(GlobalSearchActivity.EXTRA_INITIAL_QUERY, query.trim()));
+        return;
+
+        /* Legacy keyword routing is intentionally retained below for source
+           compatibility, but Global Search now handles every non-empty query. */
+        /* if (normalizedQuery.contains("sos")) {
             binding.dashboardSearchBar.clearSearchFocus();
             openActivity(FamilySosActivity.class);
             return;
@@ -328,7 +336,7 @@ public class DashboardFragment extends Fragment {
                 binding.getRoot(),
                 getString(R.string.dashboard_search_no_result, query),
                 Snackbar.LENGTH_LONG
-        ).show();
+        ).show(); */
     }
 
     private void setupHeroCard() {
@@ -439,6 +447,7 @@ public class DashboardFragment extends Fragment {
         binding.dashboardViewAll.setOnClickListener(
                 v -> openTab(R.id.nav_reminders));
         binding.dashboardRetry.setOnClickListener(v -> loadDashboardData());
+        binding.dashboardRefresh.setOnClickListener(v -> loadDashboardData());
         binding.dashboardSosButton.setOnClickListener(
                 v -> showEmergencyDialerConfirmation());
     }
@@ -527,6 +536,7 @@ public class DashboardFragment extends Fragment {
                     renderFinance(data.getStats());
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
+                    renderPrioritySummary(data.getStats());
                     renderReminder(data);
                     renderBirthday(data);
                     renderBill(data);
@@ -540,6 +550,29 @@ public class DashboardFragment extends Fragment {
                     binding.dashboardErrorCard.setVisibility(View.VISIBLE);
                 }
         );
+    }
+
+    private void renderPrioritySummary(@NonNull DashboardStats stats) {
+        int pending = stats.getPlannerOpen() + stats.getGroceryPending();
+        int upcoming = stats.getUpcomingReminders();
+        int urgent = stats.getDocumentsExpiringSoon()
+                + stats.getVehiclesDueSoon();
+        binding.dashboardPendingValue.setText(String.valueOf(pending));
+        binding.dashboardUpcomingValue.setText(String.valueOf(upcoming));
+        binding.dashboardUrgentValue.setText(String.valueOf(urgent));
+        binding.dashboardNotificationBadge.setText(String.valueOf(upcoming));
+        binding.dashboardNotificationBadge.setVisibility(
+                upcoming > 0 ? View.VISIBLE : View.GONE);
+        binding.dashboardLastUpdated.setText(getString(
+                R.string.dashboard_last_updated,
+                new SimpleDateFormat("hh:mm a", Locale.getDefault())
+                        .format(new Date())));
+        boolean empty = pending == 0 && upcoming == 0 && urgent == 0
+                && stats.getTotalMembers() == 0 && stats.getDocuments() == 0
+                && stats.getHealthAlerts() == 0 && stats.getIncome() == 0D
+                && stats.getExpense() == 0D;
+        binding.dashboardEmptyState.setVisibility(
+                empty ? View.VISIBLE : View.GONE);
     }
 
     private void renderBirthday(@NonNull DashboardData data) {
