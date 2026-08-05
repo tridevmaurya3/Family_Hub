@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.google.android.material.chip.Chip;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.search.SearchBarModel;
+import com.tridev.familyhub.core.security.VaultCipher;
 import com.tridev.familyhub.databinding.ActivityGlobalSearchBinding;
 import com.tridev.familyhub.feature.main.MainActivity;
 
@@ -28,6 +29,7 @@ public class GlobalSearchActivity extends AppCompatActivity {
     public static final String EXTRA_INITIAL_QUERY = "initial_global_query";
     private static final String PREFS = "global_search_history";
     private static final String KEY_RECENT = "recent_queries";
+    private static final String ENCRYPTED_PREFIX = "enc1:";
     private ActivityGlobalSearchBinding binding;
     private GlobalSearchRepository repository;
     private GlobalSearchAdapter adapter;
@@ -70,7 +72,7 @@ public class GlobalSearchActivity extends AppCompatActivity {
     }
 
     private void performSearch() {
-        String query = binding.globalSearchBar.getQuery();
+        String query = GlobalSearchPolicy.normalize(binding.globalSearchBar.getQuery());
         if (query.isEmpty()) { adapter.submit(new ArrayList<>()); renderState(false, true); return; }
         binding.globalSearchLoading.setVisibility(View.VISIBLE);
         binding.globalSearchEmpty.setVisibility(View.GONE);
@@ -103,6 +105,11 @@ public class GlobalSearchActivity extends AppCompatActivity {
         if (id == R.id.search_filter_grocery) return "Grocery";
         if (id == R.id.search_filter_documents) return "Documents";
         if (id == R.id.search_filter_health) return "Health";
+        if (id == R.id.search_filter_vehicles) return "Vehicles";
+        if (id == R.id.search_filter_property) return "Property";
+        if (id == R.id.search_filter_notes) return "Notes";
+        if (id == R.id.search_filter_planner) return "Planner";
+        if (id == R.id.search_filter_vault) return "Vault";
         return GlobalSearchRepository.FILTER_ALL;
     }
 
@@ -132,22 +139,49 @@ public class GlobalSearchActivity extends AppCompatActivity {
     }
 
     private void saveRecent(String query) {
-        String clean = query == null ? "" : query.trim();
+        String clean = GlobalSearchPolicy.normalize(query);
         if (clean.isEmpty()) return;
         LinkedHashSet<String> values = new LinkedHashSet<>();
         values.add(clean);
         values.addAll(readRecent());
         List<String> limited = new ArrayList<>(values);
         if (limited.size() > 5) limited = limited.subList(0, 5);
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                .putString(KEY_RECENT, String.join("\u001F", limited)).apply();
+        try {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putString(KEY_RECENT, ENCRYPTED_PREFIX + VaultCipher.encrypt(
+                            String.join("\u001F", limited))).apply();
+        } catch (IllegalStateException encryptionError) {
+            // Never fall back to plaintext if Android Keystore is unavailable.
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(KEY_RECENT).apply();
+        }
         renderRecent();
     }
 
     private List<String> readRecent() {
         String stored = getSharedPreferences(PREFS, MODE_PRIVATE).getString(KEY_RECENT, "");
-        return stored.isEmpty() ? new ArrayList<>()
-                : new ArrayList<>(Arrays.asList(stored.split("\u001F")));
+        if (stored.isEmpty()) return new ArrayList<>();
+        String plain;
+        try {
+            plain = stored.startsWith(ENCRYPTED_PREFIX)
+                    ? VaultCipher.decryptOrThrow(stored.substring(ENCRYPTED_PREFIX.length()))
+                    : stored;
+        } catch (Exception error) {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .remove(KEY_RECENT).apply();
+            return new ArrayList<>();
+        }
+        List<String> values = new ArrayList<>(Arrays.asList(plain.split("\u001F")));
+        if (!stored.startsWith(ENCRYPTED_PREFIX)) {
+            // Upgrade legacy plaintext history immediately after a successful read.
+            try {
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(KEY_RECENT,
+                        ENCRYPTED_PREFIX + VaultCipher.encrypt(plain)).apply();
+            } catch (IllegalStateException encryptionError) {
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(KEY_RECENT).apply();
+                return new ArrayList<>();
+            }
+        }
+        return values;
     }
 
     @Override protected void onDestroy() {
