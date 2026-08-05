@@ -62,6 +62,12 @@ public class GroceryOverlayService extends Service {
     private View stripView;
     private View panelView;
     private LinearLayout itemContainer;
+    private LinearLayout overlayFormDetails;
+    private ScrollView overlayItemScroll;
+    private Button overlayFormToggle;
+    private boolean overlayFormCollapsed;
+    private int overlayListCompactHeight;
+    private int overlayListExpandedHeight;
     private GroceryRepository repository;
     private FamilyMemberRepository memberRepository;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
@@ -200,6 +206,18 @@ public class GroceryOverlayService extends Service {
         header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = text(getString(R.string.grocery_overlay_title), 16, true);
         header.addView(title, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        overlayFormToggle = new Button(this);
+        overlayFormToggle.setText(R.string.grocery_overlay_hide_form);
+        overlayFormToggle.setTextSize(10f);
+        overlayFormToggle.setTextColor(Color.rgb(15, 108, 189));
+        overlayFormToggle.setAllCaps(false);
+        overlayFormToggle.setMinWidth(0);
+        overlayFormToggle.setMinimumWidth(0);
+        overlayFormToggle.setPadding(dp(6), 0, dp(6), 0);
+        overlayFormToggle.setBackground(rounded(Color.rgb(232, 243, 252),
+                Color.rgb(190, 216, 236), 16));
+        header.addView(overlayFormToggle,
+                new LinearLayout.LayoutParams(dp(78), dp(34)));
         Button close = new Button(this);
         close.setText("×");
         close.setTextSize(20f);
@@ -208,10 +226,13 @@ public class GroceryOverlayService extends Service {
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(44)));
         root.addView(header);
 
+        overlayFormDetails = new LinearLayout(this);
+        overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
+
         TextView subtitle = text(getString(R.string.grocery_overlay_subtitle),
                 11, false);
         subtitle.setTextColor(Color.rgb(91, 101, 114));
-        root.addView(subtitle, new LinearLayout.LayoutParams(
+        overlayFormDetails.addView(subtitle, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(28)));
 
         final String[] selectedListType = {visibleListType};
@@ -241,7 +262,7 @@ public class GroceryOverlayService extends Service {
         });
         LinearLayout typeBlock = labelledField(
                 getString(R.string.grocery_list_type), listTypeGroup);
-        root.addView(typeBlock);
+        overlayFormDetails.addView(typeBlock);
 
         LinearLayout detailsOne = new LinearLayout(this);
         detailsOne.setOrientation(LinearLayout.HORIZONTAL);
@@ -256,7 +277,7 @@ public class GroceryOverlayService extends Service {
         unitParams.setMarginStart(dp(8));
         detailsOne.addView(labelledField(
                 getString(R.string.grocery_quantity_unit), quantityUnit), unitParams);
-        root.addView(detailsOne);
+        overlayFormDetails.addView(detailsOne);
 
         LinearLayout detailsTwo = new LinearLayout(this);
         detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
@@ -271,7 +292,7 @@ public class GroceryOverlayService extends Service {
         priceParams.setMarginStart(dp(8));
         detailsTwo.addView(labelledField(
                 getString(R.string.grocery_overlay_price), price), priceParams);
-        root.addView(detailsTwo);
+        overlayFormDetails.addView(detailsTwo);
 
         LinearLayout detailsThree = new LinearLayout(this);
         detailsThree.setOrientation(LinearLayout.HORIZONTAL);
@@ -289,7 +310,8 @@ public class GroceryOverlayService extends Service {
         memberParams.setMarginStart(dp(8));
         detailsThree.addView(labelledField(
                 getString(R.string.grocery_assign_to), member), memberParams);
-        root.addView(detailsThree);
+        overlayFormDetails.addView(detailsThree);
+        root.addView(overlayFormDetails);
 
         TextView quickLabel = text(getString(
                 R.string.grocery_overlay_quick_item), 11, true);
@@ -357,21 +379,34 @@ public class GroceryOverlayService extends Service {
 
         itemContainer = new LinearLayout(this);
         itemContainer.setOrientation(LinearLayout.VERTICAL);
-        ScrollView itemScroll = new ScrollView(this);
-        itemScroll.setFillViewport(false);
-        itemScroll.setVerticalScrollBarEnabled(true);
-        itemScroll.setScrollbarFadingEnabled(false);
-        itemScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
-        itemScroll.addView(itemContainer, new ScrollView.LayoutParams(
+        overlayItemScroll = new ScrollView(this);
+        overlayItemScroll.setFillViewport(false);
+        overlayItemScroll.setVerticalScrollBarEnabled(true);
+        overlayItemScroll.setScrollbarFadingEnabled(false);
+        overlayItemScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        overlayItemScroll.addView(itemContainer, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT));
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        int listHeight = Math.max(dp(110), Math.min(dp(180), screenHeight / 5));
+        overlayListCompactHeight = Math.max(dp(110),
+                Math.min(dp(180), screenHeight / 5));
+        overlayListExpandedHeight = Math.max(dp(250),
+                Math.min(dp(480), screenHeight * 46 / 100));
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                listHeight);
+                overlayListCompactHeight);
         listParams.topMargin = dp(10);
-        root.addView(itemScroll, listParams);
+        root.addView(overlayItemScroll, listParams);
+
+        overlayFormCollapsed = false;
+        overlayFormToggle.setOnClickListener(v ->
+                setOverlayFormCollapsed(!overlayFormCollapsed));
+        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY,
+                oldScrollX, oldScrollY) -> {
+            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) {
+                setOverlayFormCollapsed(true);
+            }
+        });
 
         TextView opacityLabel = text(getString(
                 R.string.grocery_overlay_opacity), 11, false);
@@ -542,7 +577,29 @@ public class GroceryOverlayService extends Service {
             windowManager.removeView(panelView);
             panelView = null;
             itemContainer = null;
+            overlayFormDetails = null;
+            overlayItemScroll = null;
+            overlayFormToggle = null;
+            overlayFormCollapsed = false;
         }
+    }
+
+    private void setOverlayFormCollapsed(boolean collapsed) {
+        if (overlayFormDetails == null || overlayItemScroll == null
+                || overlayFormToggle == null) {
+            return;
+        }
+        overlayFormCollapsed = collapsed;
+        overlayFormDetails.setVisibility(collapsed ? View.GONE : View.VISIBLE);
+        overlayFormToggle.setText(collapsed
+                ? R.string.grocery_overlay_show_form
+                : R.string.grocery_overlay_hide_form);
+        LinearLayout.LayoutParams params =
+                (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
+        params.height = collapsed
+                ? overlayListExpandedHeight
+                : overlayListCompactHeight;
+        overlayItemScroll.setLayoutParams(params);
     }
 
     private WindowManager.LayoutParams overlayParams(int width, int height, boolean passive) {

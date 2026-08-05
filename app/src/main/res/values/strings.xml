@@ -1147,6 +1147,8 @@ Sharing: %12$s</string>
     <string name="grocery_notification_assigned">Assigned to %1$s</string>
     <string name="grocery_notification_updated">Grocery item updated</string>
     <string name="grocery_overlay_subtitle">Add quickly and manage Daily and Monthly lists separately</string>
+    <string name="grocery_overlay_show_form">Show form</string>
+    <string name="grocery_overlay_hide_form">Hide form</string>
     <string name="grocery_overlay_quick_item">Item name</string>
     <string name="grocery_overlay_daily_section">Daily items</string>
     <string name="grocery_overlay_monthly_section">Monthly items</string>
