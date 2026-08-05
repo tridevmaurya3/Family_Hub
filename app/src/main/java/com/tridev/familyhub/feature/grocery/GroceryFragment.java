@@ -552,7 +552,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 .setTitle(R.string.grocery_budget)
                 .setView(input)
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.save, (dialog, which) -> {
+                .setPositiveButton(R.string.grocery_save_item, (dialog, which) -> {
                     repository.setMonthlyBudget(parseAmount(textOf(input)));
                     loadItems(currentQuery());
                 }).show();
