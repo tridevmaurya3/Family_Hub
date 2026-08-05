@@ -29,6 +29,7 @@ import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -334,11 +335,21 @@ public class GroceryOverlayService extends Service {
 
         itemContainer = new LinearLayout(this);
         itemContainer.setOrientation(LinearLayout.VERTICAL);
+        ScrollView itemScroll = new ScrollView(this);
+        itemScroll.setFillViewport(false);
+        itemScroll.setVerticalScrollBarEnabled(true);
+        itemScroll.setScrollbarFadingEnabled(false);
+        itemScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        itemScroll.addView(itemContainer, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.WRAP_CONTENT));
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int listHeight = Math.max(dp(120), Math.min(dp(220), screenHeight / 4));
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
+                listHeight);
         listParams.topMargin = dp(10);
-        root.addView(itemContainer, listParams);
+        root.addView(itemScroll, listParams);
 
         TextView opacityLabel = text(getString(
                 R.string.grocery_overlay_opacity), 11, false);
@@ -447,8 +458,7 @@ public class GroceryOverlayService extends Service {
 
         int shownHere = 0;
         for (GroceryItem item : items) {
-            if (item.isPurchased || !listType.equals(item.listType)
-                    || shownHere >= 6) {
+            if (item.isPurchased || !listType.equals(item.listType)) {
                 continue;
             }
             CheckBox row = new CheckBox(this);
