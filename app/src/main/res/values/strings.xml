@@ -573,6 +573,14 @@
     <string name="grocery_assigned_to">Assigned to %1$s</string>
     <string name="grocery_shared_family">Shared with whole family</string>
     <string name="grocery_purchased_by">Purchased by %1$s</string>
+    <string name="grocery_floating_enable">Floating strip</string>
+    <string name="grocery_floating_disable">Hide floating strip</string>
+    <string name="grocery_overlay_permission">Allow “Display over other apps”, then return to Family Hub.</string>
+    <string name="grocery_overlay_channel">Floating grocery list</string>
+    <string name="grocery_overlay_notification">Grocery quick strip is available on every screen</string>
+    <string name="grocery_overlay_title">Family Grocery</string>
+    <string name="grocery_overlay_add_hint">Quick add an item</string>
+    <string name="grocery_overlay_opacity">Transparency</string>
     <string name="grocery_name_required">Enter an item name</string>
     <string name="grocery_priority_required">Select a priority</string>
     <string name="grocery_item_added">Item added</string>
