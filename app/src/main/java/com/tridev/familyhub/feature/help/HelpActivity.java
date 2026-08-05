@@ -43,6 +43,8 @@ public class HelpActivity extends AppCompatActivity {
     private EditText searchInput;
     private MaterialButton hindiButton;
     private MaterialButton englishButton;
+    private TextView expandedStepView;
+    private TextView expandedArrowView;
     private boolean hindi;
 
     @Override
@@ -158,6 +160,8 @@ public class HelpActivity extends AppCompatActivity {
     }
 
     private void renderGuides(@NonNull String query) {
+        expandedStepView = null;
+        expandedArrowView = null;
         guideContainer.removeAllViews();
         String normalized = query.trim().toLowerCase(Locale.ROOT);
         int shown = 0;
@@ -216,8 +220,23 @@ public class HelpActivity extends AppCompatActivity {
         body.addView(stepView, topMargin(10));
         View.OnClickListener toggle = v -> {
             boolean open = stepView.getVisibility() == View.VISIBLE;
-            stepView.setVisibility(open ? View.GONE : View.VISIBLE);
-            arrow.setText(open ? "+" : "−");
+            if (expandedStepView != null && expandedStepView != stepView) {
+                expandedStepView.setVisibility(View.GONE);
+                if (expandedArrowView != null) {
+                    expandedArrowView.setText("+");
+                }
+            }
+            if (open) {
+                stepView.setVisibility(View.GONE);
+                arrow.setText("+");
+                expandedStepView = null;
+                expandedArrowView = null;
+            } else {
+                stepView.setVisibility(View.VISIBLE);
+                arrow.setText("−");
+                expandedStepView = stepView;
+                expandedArrowView = arrow;
+            }
         };
         heading.setOnClickListener(toggle);
         card.setOnClickListener(toggle);
