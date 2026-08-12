@@ -177,6 +177,16 @@
             android:layout_height="@dimen/touch_target_min"
             android:checked="true"
             android:text="@string/grocery_auto_price" />
+        <TextView
+            android:id="@+id/grocery_price_comparison"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:background="@color/fh_success_container"
+            android:padding="8dp"
+            android:textColor="@color/fh_success"
+            android:visibility="gone" />
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/grocery_monthly_master_switch"
             android:layout_width="match_parent"

@@ -30,6 +30,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.gms.location.LocationServices;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
@@ -419,6 +420,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             : item.assignedMemberName,
                     false
             );
+            repository.loadLatestPurchase(item.name, history -> {
+                if (history == null || !isAdded()) return;
+                applyPurchaseHistory(form, item, history, quantityUnits,
+                        categoryLabels, completeAfterSave);
+            });
         }
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
@@ -545,6 +551,56 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             }
         }
         return new String[]{amount, supportedUnits[0]};
+    }
+
+    private void applyPurchaseHistory(
+            @NonNull DialogGroceryBinding form,
+            @NonNull GroceryItem item,
+            @NonNull GroceryPurchase history,
+            @NonNull String[] units,
+            @NonNull String[] categories,
+            boolean autoFill
+    ) {
+        if (autoFill) {
+            String[] parsed = splitQuantity(history.quantity, units);
+            form.groceryQuantityInput.setText(parsed[0]);
+            form.groceryQuantityUnitInput.setText(parsed[1], false);
+            if (!history.category.isEmpty()) {
+                form.groceryCategoryInput.setText(history.category, false);
+            }
+            if (history.actualCost > 0D) {
+                form.groceryActualCostInput.setText(
+                        String.valueOf(history.actualCost));
+            }
+        }
+        form.groceryPriceComparison.setVisibility(View.VISIBLE);
+        form.groceryPriceComparison.setText(getString(
+                R.string.grocery_previous_purchase,
+                history.quantity.isEmpty()
+                        ? getString(R.string.grocery_quantity_not_added)
+                        : history.quantity,
+                history.category.isEmpty()
+                        ? getString(R.string.grocery_uncategorized)
+                        : history.category,
+                currencyFormat.format(history.actualCost)));
+        form.groceryActualCostInput.addTextChangedListener(
+                new android.text.TextWatcher() {
+                    @Override public void beforeTextChanged(
+                            CharSequence s, int start, int count, int after) { }
+                    @Override public void onTextChanged(
+                            CharSequence s, int start, int before, int count) {
+                        double current = parseAmount(s == null ? "" : s.toString());
+                        if (current <= 0D || history.actualCost <= 0D) return;
+                        double percent = (current - history.actualCost)
+                                / history.actualCost * 100D;
+                        form.groceryPriceComparison.setText(Math.abs(percent) < 0.05D
+                                ? getString(R.string.grocery_price_same)
+                                : getString(R.string.grocery_price_change,
+                                        history.actualCost, current, percent));
+                    }
+                    @Override public void afterTextChanged(
+                            android.text.Editable s) { }
+                });
     }
 
     private int findPriorityIndex(

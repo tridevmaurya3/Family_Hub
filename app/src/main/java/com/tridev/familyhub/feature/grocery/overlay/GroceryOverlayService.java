@@ -38,6 +38,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
@@ -650,6 +651,19 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(labelledField(
                 getString(R.string.grocery_category), category), fullEditorField());
 
+        TextView historyInsight = text("", 10, false);
+        historyInsight.setTextColor(Color.rgb(15, 108, 89));
+        historyInsight.setPadding(dp(8), 0, dp(8), 0);
+        historyInsight.setBackground(roundedFill(Color.rgb(226, 244, 238), 8));
+        historyInsight.setVisibility(View.GONE);
+        itemContainer.addView(historyInsight, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
+        repository.loadLatestPurchase(item.name, history -> {
+            if (history == null || itemContainer == null) return;
+            applyInlineHistory(history, price, quantity, unit, units,
+                    category, categories, historyInsight);
+        });
+
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         Button cancel = compactAction(getString(R.string.cancel),
@@ -699,6 +713,55 @@ public class GroceryOverlayService extends Service {
                 return;
             }
         }
+    }
+
+    private void applyInlineHistory(
+            GroceryPurchase history,
+            EditText price,
+            EditText quantity,
+            Spinner unit,
+            String[] units,
+            Spinner category,
+            String[] categories,
+            TextView insight
+    ) {
+        String[] previousQuantity = history.quantity.trim().split("\\s+", 2);
+        if (previousQuantity.length > 0) quantity.setText(previousQuantity[0]);
+        if (previousQuantity.length > 1) {
+            selectSpinner(unit, units, previousQuantity[1]);
+        }
+        selectSpinner(category, categories, history.category);
+        if (history.actualCost > 0D) {
+            price.setText(String.valueOf(history.actualCost));
+        }
+        insight.setVisibility(View.VISIBLE);
+        insight.setText(getString(R.string.grocery_previous_purchase,
+                history.quantity.isEmpty()
+                        ? getString(R.string.grocery_quantity_not_added)
+                        : history.quantity,
+                history.category.isEmpty()
+                        ? getString(R.string.grocery_uncategorized)
+                        : history.category,
+                String.format(java.util.Locale.ENGLISH, "₹%.2f",
+                        history.actualCost)));
+        price.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(
+                    CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(
+                    CharSequence s, int start, int before, int count) {
+                if (history.actualCost <= 0D || s == null) return;
+                try {
+                    double current = Double.parseDouble(s.toString().trim());
+                    double percent = (current - history.actualCost)
+                            / history.actualCost * 100D;
+                    insight.setText(Math.abs(percent) < 0.05D
+                            ? getString(R.string.grocery_price_same)
+                            : getString(R.string.grocery_price_change,
+                                    history.actualCost, current, percent));
+                } catch (NumberFormatException ignored) { }
+            }
+            @Override public void afterTextChanged(android.text.Editable s) { }
+        });
     }
 
     private LinearLayout.LayoutParams fullEditorField() {

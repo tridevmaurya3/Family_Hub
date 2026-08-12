@@ -47,6 +47,10 @@ public class GroceryRepository {
         void onComplete();
     }
 
+    public interface PurchaseHistoryCallback {
+        void onLoaded(@Nullable GroceryPurchase purchase);
+    }
+
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
 
@@ -217,6 +221,17 @@ public class GroceryRepository {
         DATABASE_EXECUTOR.execute(() -> {
             List<GroceryItem> items = groceryItemDao.getRecurringSuggestions(8);
             mainHandler.post(() -> callback.onItemsLoaded(items));
+        });
+    }
+
+    public void loadLatestPurchase(
+            @NonNull String itemName,
+            @NonNull PurchaseHistoryCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            GroceryPurchase purchase = FamilyHubDatabase.getInstance(appContext)
+                    .groceryPurchaseDao().getLatestForItem(itemName.trim());
+            mainHandler.post(() -> callback.onLoaded(purchase));
         });
     }
 

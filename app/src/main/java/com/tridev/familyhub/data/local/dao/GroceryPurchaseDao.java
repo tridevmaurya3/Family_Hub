@@ -12,4 +12,8 @@ public interface GroceryPurchaseDao {
     @Query("SELECT * FROM grocery_purchases WHERE purchasedAt >= :from AND purchasedAt < :to "
             + "ORDER BY category COLLATE NOCASE, itemName COLLATE NOCASE, purchasedAt")
     List<GroceryPurchase> getForPeriod(long from, long to);
+
+    @Query("SELECT * FROM grocery_purchases WHERE itemName = :itemName COLLATE NOCASE "
+            + "ORDER BY purchasedAt DESC LIMIT 1")
+    GroceryPurchase getLatestForItem(String itemName);
 }
