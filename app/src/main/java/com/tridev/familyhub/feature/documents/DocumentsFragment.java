@@ -598,6 +598,18 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                         : categories[categories.length - 1],
                 false
         );
+        dialogBinding.documentNumberInput.setText(
+                editing ? existing.documentNumber : "");
+        dialogBinding.documentIssuerInput.setText(
+                editing ? existing.issuer : "");
+        dialogBinding.documentMemberInput.setText(
+                editing ? existing.memberName : "");
+        dialogBinding.documentTagsInput.setText(
+                editing ? existing.tags : "");
+        dialogBinding.documentNotesInput.setText(
+                editing ? existing.notes : "");
+        dialogBinding.documentEmergencySwitch.setChecked(
+                editing && existing.emergency);
         renderEditorExpiry();
 
         if (editing) {
@@ -690,6 +702,16 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 ? getString(R.string.document_default_category)
                 : category;
         draft.expiryAt = editorExpiryAt;
+        draft.documentNumber = textOf(editorBinding.documentNumberInput);
+        draft.issuer = textOf(editorBinding.documentIssuerInput);
+        draft.memberName = textOf(editorBinding.documentMemberInput);
+        draft.tags = textOf(editorBinding.documentTagsInput);
+        draft.notes = textOf(editorBinding.documentNotesInput);
+        draft.emergency = editorBinding.documentEmergencySwitch.isChecked();
+        draft.searchableText = (draft.title + " " + draft.category + " "
+                + draft.documentNumber + " " + draft.issuer + " "
+                + draft.memberName + " " + draft.tags + " " + draft.notes)
+                .trim();
         if (draft.createdAt <= 0L) {
             draft.createdAt = System.currentTimeMillis();
         }
@@ -707,8 +729,21 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         copy.category = source.category;
         copy.contentUri = source.contentUri;
         copy.mimeType = source.mimeType;
+        copy.documentNumber = source.documentNumber;
+        copy.issuer = source.issuer;
+        copy.memberName = source.memberName;
+        copy.tags = source.tags;
+        copy.notes = source.notes;
+        copy.searchableText = source.searchableText;
+        copy.fingerprint = source.fingerprint;
+        copy.linkedModule = source.linkedModule;
+        copy.emergency = source.emergency;
+        copy.issuedAt = source.issuedAt;
         copy.expiryAt = source.expiryAt;
         copy.createdAt = source.createdAt;
+        copy.updatedAt = source.updatedAt;
+        copy.deletedAt = source.deletedAt;
+        copy.previousVersionId = source.previousVersionId;
         return copy;
     }
 
@@ -947,13 +982,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                                     @Override
                                     public void onComplete() {
                                         preferences.removeFavorite(document.id);
-                                        DocumentCaptureStorage.deleteIfOwned(
-                                                requireContext(),
-                                                document.contentUri
-                                        );
-                                        releasePermission(document.contentUri);
                                         loadDocuments();
-                                        showMessage(R.string.document_removed);
+                                        showMessage(R.string.documents_vault_moved_to_trash);
                                     }
 
                                     @Override
