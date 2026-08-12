@@ -13,7 +13,7 @@
         android:paddingStart="10dp"
         android:paddingTop="7dp"
         android:paddingEnd="10dp"
-        android:paddingBottom="5dp">
+        android:paddingBottom="8dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -88,27 +88,34 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:gravity="end"
             android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buying_grocery_button"
                 style="@style/Widget.FamilyHub.Button.Action"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="38dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="@string/grocery_mark_buying"
                 android:textColor="@color/fh_warning" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_grocery_button"
                 style="@style/Widget.FamilyHub.Button.Action"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="38dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="@string/edit"
                 android:textColor="@color/fh_primary" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/delete_grocery_button"
                 style="@style/Widget.FamilyHub.Button.Danger"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="38dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="@string/remove"
                 android:textColor="@color/fh_error" />
         </LinearLayout>
