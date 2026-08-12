@@ -9,30 +9,12 @@
     android:paddingTop="@dimen/compact_page_top_padding"
     android:paddingEnd="@dimen/screen_padding_horizontal">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/grocery_back_button"
-        style="@style/Widget.Material3.Button.IconButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:contentDescription="@string/back"
-        app:backgroundTint="@color/fh_module_grocery_container"
-        app:icon="@drawable/ic_arrow_back"
-        app:iconSize="20dp"
-        app:iconTint="@color/fh_primary"
-        app:cornerRadius="24dp"
-        app:layout_constraintBottom_toBottomOf="@id/grocery_overview"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/grocery_overview" />
-
     <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
         android:id="@+id/grocery_overview"
         android:layout_width="0dp"
         android:layout_height="76dp"
-        android:layout_marginStart="6dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/grocery_back_button"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:overviewAccentColor="@color/fh_module_grocery"
         app:overviewContainerColor="@color/fh_module_grocery_container"
