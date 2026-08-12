@@ -66,7 +66,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 22,
+        version = 23,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -249,6 +249,29 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         @Override public void migrate(SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `storeName` TEXT NOT NULL DEFAULT ''");
             database.execSQL("ALTER TABLE `grocery_purchases` ADD COLUMN `storeName` TEXT NOT NULL DEFAULT ''");
+        }
+    };
+
+    /** Upgrades Documents Vault metadata without touching existing files. */
+    private static final Migration MIGRATION_22_23 = new Migration(22, 23) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            String[] textColumns = {"documentNumber", "issuer", "memberName",
+                    "tags", "notes", "searchableText", "fingerprint",
+                    "linkedModule"};
+            for (String column : textColumns) {
+                database.execSQL("ALTER TABLE `documents` ADD COLUMN `"
+                        + column + "` TEXT NOT NULL DEFAULT ''");
+            }
+            database.execSQL("ALTER TABLE `documents` ADD COLUMN `emergency` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `documents` ADD COLUMN `issuedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `documents` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `documents` ADD COLUMN `deletedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE `documents` ADD COLUMN `previousVersionId` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("UPDATE `documents` SET `updatedAt` = `createdAt` WHERE `updatedAt` = 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_memberName` ON `documents` (`memberName`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_documentNumber` ON `documents` (`documentNumber`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_deletedAt` ON `documents` (`deletedAt`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_fingerprint` ON `documents` (`fingerprint`)");
         }
     };
 
@@ -759,7 +782,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_18_19,
                                     MIGRATION_19_20,
                                     MIGRATION_20_21,
-                                    MIGRATION_21_22
+                                    MIGRATION_21_22,
+                                    MIGRATION_22_23
                             )
                             .build();
                 }
