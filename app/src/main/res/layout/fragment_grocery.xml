@@ -12,13 +12,19 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/grocery_back_button"
         style="@style/Widget.Material3.Button.IconButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
         android:contentDescription="@string/back"
+        app:backgroundTint="@color/fh_module_grocery_container"
         app:icon="@drawable/ic_arrow_back"
+        app:iconSize="20dp"
         app:iconTint="@color/fh_primary"
+        app:cornerRadius="24dp"
+        app:layout_constraintBottom_toBottomOf="@id/grocery_overview"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@id/grocery_overview" />
 
     <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
         android:id="@+id/grocery_overview"
@@ -162,33 +168,67 @@
 
     </LinearLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
+    <FrameLayout
         android:id="@+id/grocery_search_layout"
-        style="@style/Widget.FamilyHub.TextInputLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_12"
-        android:hint="@string/grocery_search_hint"
-        app:endIconMode="clear_text"
-        app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="@color/fh_success"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/grocery_summary">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/grocery_search_input"
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:hint="@string/grocery_search_hint"
+            app:startIconDrawable="@drawable/ic_search"
+            app:startIconTint="@color/fh_success">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/grocery_search_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingEnd="96dp"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="end|center_vertical"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingEnd="4dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_filter_button"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="@string/grocery_filter_all"
+                app:backgroundTint="@color/fh_transparent"
+                app:icon="@drawable/ic_filter"
+                app:iconSize="20dp"
+                app:iconTint="@color/fh_module_grocery" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_export_button"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="@string/grocery_share_report"
+                app:backgroundTint="@color/fh_transparent"
+                app:icon="@drawable/ic_document_share"
+                app:iconSize="20dp"
+                app:iconTint="@color/fh_primary" />
+        </LinearLayout>
+    </FrameLayout>
 
     <HorizontalScrollView
         android:id="@+id/grocery_filter_scroll"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8"
+        android:visibility="gone"
         android:fillViewport="false"
         android:scrollbars="none"
         app:layout_constraintEnd_toEndOf="parent"
@@ -198,7 +238,6 @@
             android:id="@+id/grocery_filter_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingEnd="16dp"
             app:chipSpacingHorizontal="@dimen/space_8"
             app:selectionRequired="true"
             app:singleSelection="true">
@@ -220,16 +259,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll">
       <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingEnd="16dp">
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/grocery_add_button"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="@dimen/touch_target_min"
-        android:text="@string/grocery_add_item"
-        android:textColor="@color/fh_module_grocery"
-        app:icon="@drawable/ic_add"
-        app:iconTint="@color/fh_module_grocery" />
-
     <com.google.android.material.button.MaterialButton
         android:id="@+id/grocery_voice_button"
         style="@style/Widget.Material3.Button.IconButton"
@@ -286,6 +315,7 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
+                android:visibility="gone"
                 android:text="@string/grocery_export_pdf"
                 app:icon="@drawable/ic_file_pdf" />
             <com.google.android.material.button.MaterialButton
@@ -293,6 +323,7 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
+                android:visibility="gone"
                 android:text="@string/grocery_export_excel"
                 app:icon="@drawable/ic_file_excel" />
             <com.google.android.material.button.MaterialButton
@@ -300,6 +331,7 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
+                android:visibility="gone"
                 android:text="@string/grocery_share_report"
                 app:icon="@drawable/ic_document_share" />
 
@@ -319,7 +351,7 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:paddingTop="@dimen/space_8"
-        android:paddingBottom="32dp"
+        android:paddingBottom="88dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
