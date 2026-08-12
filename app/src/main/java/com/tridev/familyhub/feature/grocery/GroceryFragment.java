@@ -472,6 +472,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             if (item.actualCost > 0D) {
                 form.groceryActualCostInput.setText(String.valueOf(item.actualCost));
             }
+            form.groceryStoreInput.setText(item.storeName);
             form.groceryAutoPriceSwitch.setChecked(item.autoPriceEnabled);
             form.groceryMonthlyMasterSwitch.setChecked(item.isMonthlyMaster);
             form.groceryListTypeInput.setText(
@@ -544,6 +545,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             item.priority = PRIORITIES[priorityIndex];
             item.notes = textOf(form.groceryNotesInput);
             item.actualCost = parseAmount(textOf(form.groceryActualCostInput));
+            item.storeName = textOf(form.groceryStoreInput);
             item.autoPriceEnabled = form.groceryAutoPriceSwitch.isChecked();
             item.listType = listTypeLabels[1].equalsIgnoreCase(
                     textOf(form.groceryListTypeInput)
@@ -648,6 +650,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 form.groceryActualCostInput.setText(
                         String.valueOf(history.actualCost));
             }
+            if (!history.storeName.isEmpty()) {
+                form.groceryStoreInput.setText(history.storeName);
+            }
         }
         form.groceryPriceComparison.setVisibility(View.VISIBLE);
         form.groceryPriceComparison.setText(getString(
@@ -658,7 +663,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 history.category.isEmpty()
                         ? getString(R.string.grocery_uncategorized)
                         : history.category,
-                currencyFormat.format(history.actualCost)));
+                currencyFormat.format(history.actualCost))
+                + (history.storeName.isEmpty() ? "" : "\n" + getString(
+                        R.string.grocery_previous_store, history.storeName)));
         form.groceryActualCostInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override public void beforeTextChanged(
