@@ -22,6 +22,7 @@ final class GroceryReportExporter {
     private GroceryReportExporter() { }
 
     static void pdf(File file, List<GroceryPurchase> rows) throws IOException {
+        double possibleSaving = possibleSaving(rows);
         rows = aggregate(rows);
         PdfDocument document = new PdfDocument();
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -58,6 +59,12 @@ final class GroceryReportExporter {
                 canvas.drawText("MONTH TOTAL", 44, y + 14, paint);
                 canvas.drawText(String.format(Locale.ENGLISH, "Rs %.2f", grand),
                         455, y + 14, paint);
+                if (possibleSaving > 0D) {
+                    paint.setTextSize(10); paint.setFakeBoldText(false);
+                    canvas.drawText(String.format(Locale.ENGLISH,
+                            "POSSIBLE SAVING  Rs %.2f", possibleSaving),
+                            375, y + 31, paint);
+                }
                 break;
             }
             GroceryPurchase row = rows.get(index);
@@ -84,6 +91,7 @@ final class GroceryReportExporter {
     }
 
     static void excel(File file, List<GroceryPurchase> rows) throws IOException {
+        double possibleSaving = possibleSaving(rows);
         rows = aggregate(rows);
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\"?>"
                 + "<?mso-application progid=\"Excel.Sheet\"?>"
@@ -103,6 +111,8 @@ final class GroceryReportExporter {
         }
         xml.append(row("","MONTH TOTAL","","",
                 String.format(Locale.ENGLISH, "%.2f", total), ""));
+        xml.append(row("", "POSSIBLE SAVING", "", "",
+                String.format(Locale.ENGLISH, "%.2f", possibleSaving), ""));
         xml.append("</Table><WorksheetOptions xmlns=\"urn:schemas-microsoft-com:office:excel\">"
                 + "<PageSetup><Layout x:Orientation=\"Landscape\"/>"
                 + "<PageMargins x:Bottom=\"0.4\" x:Left=\"0.35\" x:Right=\"0.35\" x:Top=\"0.5\"/>"
@@ -153,6 +163,27 @@ final class GroceryReportExporter {
     private static String displayStore(String storeName) {
         return storeName == null || storeName.trim().isEmpty()
                 ? "Not specified" : storeName.trim();
+    }
+
+    private static double possibleSaving(List<GroceryPurchase> purchases) {
+        Map<String, Double> cheapest = new LinkedHashMap<>();
+        for (GroceryPurchase purchase : purchases) {
+            if (purchase.actualCost <= 0D || purchase.storeName.trim().isEmpty()) continue;
+            String key = purchase.itemName.toLowerCase(Locale.ENGLISH) + "|"
+                    + purchase.quantity.toLowerCase(Locale.ENGLISH);
+            cheapest.put(key, Math.min(cheapest.getOrDefault(key,
+                    purchase.actualCost), purchase.actualCost));
+        }
+        double saving = 0D;
+        for (GroceryPurchase purchase : purchases) {
+            String key = purchase.itemName.toLowerCase(Locale.ENGLISH) + "|"
+                    + purchase.quantity.toLowerCase(Locale.ENGLISH);
+            Double best = cheapest.get(key);
+            if (best != null && purchase.actualCost > best) {
+                saving += purchase.actualCost - best;
+            }
+        }
+        return saving;
     }
 
     private static String quantityFamily(String unit) {
