@@ -26,6 +26,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.SeekBar;
@@ -408,9 +409,18 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout listTools = new LinearLayout(this);
         listTools.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout searchBox = new LinearLayout(this);
+        searchBox.setGravity(Gravity.CENTER_VERTICAL);
+        searchBox.setBackground(rounded(Color.rgb(248, 249, 250),
+                Color.rgb(214, 220, 227), 12));
         EditText search = compactInput(getString(R.string.grocery_search_hint));
+        search.setBackgroundColor(Color.TRANSPARENT);
         search.setInputType(InputType.TYPE_CLASS_TEXT);
         search.setText(overlaySearchQuery);
+        search.setHint(overlayCategoryFilter.isEmpty()
+                ? getString(R.string.grocery_search_hint)
+                : getString(R.string.grocery_search_hint) + " • " + overlayCategoryFilter);
         search.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
             @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
@@ -419,7 +429,21 @@ public class GroceryOverlayService extends Service {
             }
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
-        listTools.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1f));
+
+        ImageButton categoryFilter = new ImageButton(this);
+        categoryFilter.setImageResource(R.drawable.ic_filter);
+        categoryFilter.setContentDescription(
+                getString(R.string.grocery_filter_by_category));
+        categoryFilter.setColorFilter(overlayCategoryFilter.isEmpty()
+                ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
+        categoryFilter.setPadding(dp(10), dp(10), dp(10), dp(10));
+        categoryFilter.setBackgroundColor(Color.TRANSPARENT);
+        searchBox.addView(categoryFilter,
+                new LinearLayout.LayoutParams(dp(42), dp(42)));
+        listTools.addView(searchBox, new LinearLayout.LayoutParams(
+                0, dp(42), 1f));
+
         Button collapse = compactAction(getString(R.string.grocery_collapse_all),
                 Color.rgb(15, 108, 89), Color.rgb(226, 244, 238));
         LinearLayout.LayoutParams collapseParams = new LinearLayout.LayoutParams(
@@ -430,6 +454,37 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
         toolsParams.topMargin = dp(6);
         root.addView(listTools, toolsParams);
+
+        String[] categoryLabels = getResources().getStringArray(
+                R.array.grocery_category_labels);
+        categoryFilter.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(this, categoryFilter);
+            popup.getMenu().setGroupCheckable(1, true, true);
+            android.view.MenuItem allCategories = popup.getMenu().add(
+                    1, 20_000, 0, R.string.grocery_filter_all_categories);
+            allCategories.setChecked(overlayCategoryFilter.isEmpty());
+            for (int index = 1; index < categoryLabels.length; index++) {
+                android.view.MenuItem categoryItem = popup.getMenu().add(
+                        1, 20_000 + index, index, categoryLabels[index]);
+                categoryItem.setChecked(categoryLabels[index]
+                        .equalsIgnoreCase(overlayCategoryFilter));
+            }
+            popup.setOnMenuItemClickListener(item -> {
+                int categoryIndex = item.getItemId() - 20_000;
+                overlayCategoryFilter = categoryIndex <= 0
+                        ? "" : categoryLabels[categoryIndex];
+                item.setChecked(true);
+                search.setHint(overlayCategoryFilter.isEmpty()
+                        ? getString(R.string.grocery_search_hint)
+                        : getString(R.string.grocery_search_hint)
+                                + " • " + overlayCategoryFilter);
+                categoryFilter.setColorFilter(overlayCategoryFilter.isEmpty()
+                        ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
+                refreshPanel();
+                return true;
+            });
+            popup.show();
+        });
         collapse.setOnClickListener(v -> {
             collapseAllCategories = !collapseAllCategories;
             collapsedCategories.clear();
@@ -437,40 +492,6 @@ public class GroceryOverlayService extends Service {
                     ? R.string.grocery_expand_all : R.string.grocery_collapse_all);
             refreshPanel();
         });
-
-        String[] categoryLabels = getResources().getStringArray(
-                R.array.grocery_category_labels);
-        String[] categoryFilters = new String[categoryLabels.length];
-        categoryFilters[0] = getString(R.string.grocery_filter_all_categories);
-        System.arraycopy(categoryLabels, 1, categoryFilters, 1,
-                categoryLabels.length - 1);
-        Spinner categoryFilter = compactSpinner(categoryFilters);
-        selectSpinner(categoryFilter, categoryFilters, overlayCategoryFilter.isEmpty()
-                ? categoryFilters[0] : overlayCategoryFilter);
-        categoryFilter.setOnItemSelectedListener(
-                new android.widget.AdapterView.OnItemSelectedListener() {
-                    @Override public void onItemSelected(
-                            android.widget.AdapterView<?> parent, View view,
-                            int position, long id) {
-                        String selected = String.valueOf(
-                                parent.getItemAtPosition(position));
-                        String nextFilter = position == 0 ? "" : selected;
-                        if (!nextFilter.equalsIgnoreCase(overlayCategoryFilter)) {
-                            overlayCategoryFilter = nextFilter;
-                            refreshPanel();
-                        }
-                    }
-
-                    @Override public void onNothingSelected(
-                            android.widget.AdapterView<?> parent) { }
-                });
-        LinearLayout categoryFilterBlock = labelledField(
-                getString(R.string.grocery_filter_by_category), categoryFilter);
-        LinearLayout.LayoutParams categoryFilterParams =
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(58));
-        categoryFilterParams.topMargin = dp(2);
-        root.addView(categoryFilterBlock, categoryFilterParams);
 
         itemContainer = new LinearLayout(this);
         itemContainer.setOrientation(LinearLayout.VERTICAL);
