@@ -89,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
                         if (binding != null) {
                             binding.fabAdd.setVisibility(
                                     fragment instanceof AddActionHost
+                                            && !(fragment instanceof GroceryFragment)
                                             ? View.VISIBLE
                                             : View.GONE
                             );
