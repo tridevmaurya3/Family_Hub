@@ -625,6 +625,9 @@
     <string name="grocery_filter_monthly">Monthly</string>
     <string name="grocery_filter_pending">Pending</string>
     <string name="grocery_filter_purchased">Purchased</string>
+    <string name="grocery_filter_category_heading">Category</string>
+    <string name="grocery_filter_all_categories">All categories</string>
+    <string name="grocery_filter_by_category">View category</string>
     <string name="grocery_assigned_to">Assigned to %1$s</string>
     <string name="grocery_shared_family">Shared with whole family</string>
     <string name="grocery_purchased_by">Purchased by %1$s</string>
