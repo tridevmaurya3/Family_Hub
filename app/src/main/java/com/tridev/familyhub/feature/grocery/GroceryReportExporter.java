@@ -45,8 +45,9 @@ final class GroceryReportExporter {
                         .format(new Date()), 34, 60, paint);
                 paint.setColor(Color.DKGRAY);
                 canvas.drawText("ITEM", 44, 82, paint);
-                canvas.drawText("QUANTITY", 285, 82, paint);
-                canvas.drawText("AMOUNT", 475, 82, paint);
+                canvas.drawText("QUANTITY", 245, 82, paint);
+                canvas.drawText("STORE", 345, 82, paint);
+                canvas.drawText("AMOUNT", 485, 82, paint);
                 y = 100;
                 category = "";
             }
@@ -71,9 +72,10 @@ final class GroceryReportExporter {
             }
             paint.setColor(Color.DKGRAY); paint.setTextSize(10); paint.setFakeBoldText(false);
             canvas.drawText(row.itemName, 44, y, paint);
-            canvas.drawText(row.quantity, 285, y, paint);
+            canvas.drawText(row.quantity, 245, y, paint);
+            canvas.drawText(displayStore(row.storeName), 345, y, paint);
             canvas.drawText(String.format(Locale.ENGLISH, "Rs %.2f", row.actualCost),
-                    475, y, paint);
+                    485, y, paint);
             grand += row.actualCost; y += 19;
         }
         if (current != null) document.finishPage(current);
@@ -89,16 +91,17 @@ final class GroceryReportExporter {
                 + "xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\" "
                 + "xmlns:x=\"urn:schemas-microsoft-com:office:excel\">"
                 + "<Worksheet ss:Name=\"Monthly Grocery\"><Table>"
-                + row("Category","Item","Quantity","Amount","Purchase date"));
+                + row("Category","Item","Quantity","Store / Shop","Amount","Purchase date"));
         double total = 0D;
         for (GroceryPurchase p : rows) {
             xml.append(row(p.category, p.itemName, p.quantity,
+                    displayStore(p.storeName),
                     String.format(Locale.ENGLISH, "%.2f", p.actualCost),
                     new SimpleDateFormat("dd-MM-yyyy", Locale.ENGLISH)
                             .format(new Date(p.purchasedAt))));
             total += p.actualCost;
         }
-        xml.append(row("","MONTH TOTAL","",
+        xml.append(row("","MONTH TOTAL","","",
                 String.format(Locale.ENGLISH, "%.2f", total), ""));
         xml.append("</Table><WorksheetOptions xmlns=\"urn:schemas-microsoft-com:office:excel\">"
                 + "<PageSetup><Layout x:Orientation=\"Landscape\"/>"
@@ -125,13 +128,15 @@ final class GroceryReportExporter {
             String unit = quantity.length > 1 ? quantity[1] : "";
             String key = purchase.category.toLowerCase(Locale.ENGLISH) + "|"
                     + purchase.itemName.toLowerCase(Locale.ENGLISH) + "|"
-                    + quantityFamily(unit);
+                    + quantityFamily(unit) + "|"
+                    + purchase.storeName.toLowerCase(Locale.ENGLISH);
             GroceryPurchase total = totals.get(key);
             if (total == null) {
                 total = new GroceryPurchase();
                 total.category = purchase.category;
                 total.itemName = purchase.itemName;
                 total.quantity = purchase.quantity;
+                total.storeName = purchase.storeName;
                 total.actualCost = purchase.actualCost;
                 total.purchasedAt = purchase.purchasedAt;
                 totals.put(key, total);
@@ -143,6 +148,11 @@ final class GroceryReportExporter {
             }
         }
         return new ArrayList<>(totals.values());
+    }
+
+    private static String displayStore(String storeName) {
+        return storeName == null || storeName.trim().isEmpty()
+                ? "Not specified" : storeName.trim();
     }
 
     private static String quantityFamily(String unit) {
