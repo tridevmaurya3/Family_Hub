@@ -1224,6 +1224,9 @@ Sharing: %12$s</string>
     <string name="grocery_store_name">Store / Shop (optional)</string>
     <string name="grocery_store_hint">e.g. Reliance Smart, Local Market</string>
     <string name="grocery_previous_store">Last store: %1$s</string>
+    <string name="grocery_cheapest_store">Best recorded: %1$s • ₹%2$.2f</string>
+    <string name="grocery_possible_saving">You can save ₹%1$.2f compared with this price</string>
+    <string name="grocery_report_saving">Possible saving</string>
     <string-array name="grocery_quantity_units">
         <item>pcs</item>
         <item>packet</item>
