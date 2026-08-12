@@ -171,6 +171,21 @@
                     android:textSize="13sp" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/grocery_store_name">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/grocery_store_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/grocery_store_hint"
+                android:inputType="textCapWords"
+                android:maxLines="1"
+                android:textSize="13sp" />
+        </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/grocery_auto_price_switch"
             android:layout_width="match_parent"
