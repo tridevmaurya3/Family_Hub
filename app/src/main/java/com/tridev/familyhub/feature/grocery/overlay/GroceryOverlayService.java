@@ -742,7 +742,7 @@ public class GroceryOverlayService extends Service {
 
         cancel.setOnClickListener(v -> refreshPanel());
         skip.setOnClickListener(v -> repository.setPurchased(
-                item, true, this::refreshPanel));
+                item, true, () -> showFloatingUndo(item)));
         save.setOnClickListener(v -> {
             String priceText = price.getText().toString().trim();
             if (!priceText.isEmpty()) {
@@ -762,8 +762,33 @@ public class GroceryOverlayService extends Service {
                 return;
             }
             item.category = String.valueOf(category.getSelectedItem());
-            repository.setPurchased(item, true, this::refreshPanel);
+            repository.setPurchased(item, true, () -> showFloatingUndo(item));
         });
+    }
+
+    private void showFloatingUndo(GroceryItem item) {
+        if (itemContainer == null) return;
+        itemContainer.removeAllViews();
+        TextView message = text(getString(
+                R.string.grocery_purchase_completed, item.name), 12, true);
+        message.setGravity(Gravity.CENTER);
+        message.setTextColor(Color.rgb(15, 108, 89));
+        itemContainer.addView(message, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
+        Button undo = compactAction(getString(R.string.grocery_undo),
+                Color.WHITE, Color.rgb(15, 108, 89));
+        LinearLayout.LayoutParams undoParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
+        undoParams.leftMargin = dp(24); undoParams.rightMargin = dp(24);
+        itemContainer.addView(undo, undoParams);
+        final boolean[] handled = {false};
+        undo.setOnClickListener(v -> {
+            handled[0] = true;
+            repository.undoPurchase(item, this::refreshPanel);
+        });
+        new android.os.Handler(getMainLooper()).postDelayed(() -> {
+            if (!handled[0] && itemContainer != null) refreshPanel();
+        }, 7000L);
     }
 
     private void selectSpinner(Spinner spinner, String[] values, String wanted) {

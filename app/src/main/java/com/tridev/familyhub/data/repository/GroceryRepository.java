@@ -207,6 +207,30 @@ public class GroceryRepository {
         save(item, callback);
     }
 
+    public void undoPurchase(
+            @NonNull GroceryItem item,
+            @NonNull ActionCallback callback
+    ) {
+        long completedAt = item.purchasedAt;
+        DATABASE_EXECUTOR.execute(() -> {
+            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                    .deletePurchase(item.id, completedAt);
+            item.isPurchased = false;
+            item.purchasedAt = 0L;
+            item.buyingStatus = GroceryItem.STATUS_PENDING;
+            item.purchasedByName = "";
+            if (item.purchaseCount > 0) item.purchaseCount--;
+            linkFinance(item);
+            item.updatedAt = System.currentTimeMillis();
+            upsertLocal(item);
+            GroceryWidgetProvider.refreshAll(appContext);
+            mainHandler.post(() -> {
+                callback.onComplete();
+                syncItem(item);
+            });
+        });
+    }
+
     public void setBuyingStatus(
             @NonNull GroceryItem item,
             @NonNull String status,

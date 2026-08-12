@@ -439,10 +439,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         form.skipGroceryButton.setVisibility(
                 completeAfterSave ? View.VISIBLE : View.GONE);
         form.skipGroceryButton.setOnClickListener(clickedView ->
-                repository.setPurchased(item, true, () -> {
-                    dialog.dismiss();
-                    if (binding != null) loadItems(currentQuery());
-                }));
+                completeWithUndo(item, dialog));
         form.saveGroceryButton.setOnClickListener(clickedView -> {
             String name = textOf(form.groceryNameInput);
             int priorityIndex = findPriorityIndex(
@@ -510,14 +507,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 }
                 dialog.dismiss();
                 if (completeAfterSave) {
-                    repository.setPurchased(item, true, () -> {
-                        if (binding != null) {
-                            loadItems(currentQuery());
-                            Snackbar.make(binding.getRoot(),
-                                    R.string.grocery_purchase_saved,
-                                    Snackbar.LENGTH_SHORT).show();
-                        }
-                    });
+                    completeWithUndo(item, dialog);
                 } else {
                     loadItems(currentQuery());
                     Snackbar.make(binding.getRoot(),
@@ -532,6 +522,27 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             estimateAndSave(item, saveComplete);
         });
         dialog.show();
+    }
+
+    private void completeWithUndo(@NonNull GroceryItem item,
+                                  @NonNull AlertDialog dialog) {
+        repository.setPurchased(item, true, () -> {
+            dialog.dismiss();
+            if (binding == null) return;
+            loadItems(currentQuery());
+            Snackbar.make(binding.getRoot(),
+                            getString(R.string.grocery_purchase_completed, item.name),
+                            Snackbar.LENGTH_LONG)
+                    .setAction(R.string.grocery_undo, v ->
+                            repository.undoPurchase(item, () -> {
+                                if (binding != null) {
+                                    loadItems(currentQuery());
+                                    Snackbar.make(binding.getRoot(),
+                                            R.string.grocery_purchase_restored,
+                                            Snackbar.LENGTH_SHORT).show();
+                                }
+                            })).show();
+        });
     }
 
     @NonNull
