@@ -55,6 +55,10 @@ public class GroceryOverlayService extends Service {
 
     public static final String ACTION_STOP =
             "com.tridev.familyhub.action.STOP_GROCERY_OVERLAY";
+    public static final String ACTION_HIDE =
+            "com.tridev.familyhub.action.HIDE_GROCERY_OVERLAY";
+    public static final String ACTION_SHOW =
+            "com.tridev.familyhub.action.SHOW_GROCERY_OVERLAY";
     public static final String PREFS = "grocery_overlay";
     public static final String KEY_ENABLED = "enabled";
     public static final String KEY_REQUESTED = "permission_requested";
@@ -121,6 +125,22 @@ public class GroceryOverlayService extends Service {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_HIDE.equals(intent.getAction())) {
+            closePanel();
+            if (stripView != null) {
+                stripView.setVisibility(View.GONE);
+            }
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_SHOW.equals(intent.getAction())) {
+            if (stripView == null && Settings.canDrawOverlays(this)) {
+                showStrip();
+            }
+            if (stripView != null) {
+                stripView.setVisibility(View.VISIBLE);
+            }
+            return START_STICKY;
         }
         return START_STICKY;
     }
