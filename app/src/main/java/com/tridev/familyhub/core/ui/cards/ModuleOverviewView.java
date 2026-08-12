@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.view.View;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
@@ -124,5 +125,19 @@ public final class ModuleOverviewView extends FrameLayout {
         );
         iconView.setImageTintList(ColorStateList.valueOf(accent));
         titleView.setTextColor(accent);
+    }
+
+    /** Turns the leading icon tile into an accessible navigation action. */
+    public void setNavigationAction(
+            int iconResource,
+            int contentDescriptionResource,
+            @NonNull View.OnClickListener listener
+    ) {
+        iconView.setImageResource(iconResource);
+        iconView.setContentDescription(getContext().getString(
+                contentDescriptionResource));
+        iconContainer.setClickable(true);
+        iconContainer.setFocusable(true);
+        iconContainer.setOnClickListener(listener);
     }
 }
