@@ -53,6 +53,10 @@ public class GroceryRepository {
     public interface PurchasesCallback {
         void onLoaded(@NonNull List<GroceryPurchase> purchases);
     }
+    public interface StoreComparisonCallback {
+        void onLoaded(@Nullable GroceryPurchase latest,
+                      @Nullable GroceryPurchase cheapest);
+    }
 
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
@@ -260,6 +264,25 @@ public class GroceryRepository {
             GroceryPurchase purchase = FamilyHubDatabase.getInstance(appContext)
                     .groceryPurchaseDao().getLatestForItem(itemName.trim());
             mainHandler.post(() -> callback.onLoaded(purchase));
+        });
+    }
+
+    public void loadStoreComparison(
+            @NonNull String itemName,
+            @NonNull String quantity,
+            @NonNull StoreComparisonCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            com.tridev.familyhub.data.local.dao.GroceryPurchaseDao dao =
+                    FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao();
+            GroceryPurchase latest = dao.getLatestForItem(itemName.trim());
+            String comparableQuantity = quantity.trim();
+            if (comparableQuantity.isEmpty() && latest != null) {
+                comparableQuantity = latest.quantity;
+            }
+            GroceryPurchase cheapest = dao.getCheapestStoreForItem(
+                    itemName.trim(), comparableQuantity);
+            mainHandler.post(() -> callback.onLoaded(latest, cheapest));
         });
     }
 
