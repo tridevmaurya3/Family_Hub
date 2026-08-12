@@ -600,6 +600,11 @@
     <string name="grocery_keep_screen_awake">Keep screen awake while shopping</string>
     <string name="grocery_shopping_summary">%1$d pending • Estimated %2$s</string>
     <string name="grocery_shopping_complete">Everything purchased ✓</string>
+    <string name="grocery_scan_bill">Scan Bill</string>
+    <string name="grocery_bill_confirm">Confirm detected bill items</string>
+    <string name="grocery_bill_add">Add selected</string>
+    <string name="grocery_bill_added">Selected bill items added for review</string>
+    <string name="grocery_bill_no_items">No reliable item and price rows found. Try a clearer bill photo.</string>
     <string name="grocery_purchase_saved">Purchase saved in this month’s Grocery report</string>
     <string name="grocery_export_pdf">PDF</string>
     <string name="grocery_export_excel">Excel</string>
