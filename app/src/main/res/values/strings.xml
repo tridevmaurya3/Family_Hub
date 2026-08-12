@@ -573,7 +573,21 @@
     <string name="grocery_edit_item">Edit item</string>
     <string name="grocery_save_item">Save item</string>
     <string name="grocery_item_name">Item name</string>
-    <string name="grocery_category">Category (optional)</string>
+    <string name="grocery_category">Category</string>
+    <string name="grocery_select_category">Select category</string>
+    <string name="grocery_category_required">Please select a category</string>
+    <string name="grocery_complete_title">Complete purchase</string>
+    <string name="grocery_complete_message">Update purchase details before removing “%1$s” from the pending list.</string>
+    <string name="grocery_update_price">Price update</string>
+    <string name="grocery_update_category">Category update</string>
+    <string name="grocery_update_quantity">Quantity / unit update</string>
+    <string name="grocery_skip_and_complete">Skip</string>
+    <string name="grocery_purchase_saved">Purchase saved in this month’s Grocery report</string>
+    <string name="grocery_export_pdf">PDF</string>
+    <string name="grocery_export_excel">Excel</string>
+    <string name="grocery_share_report">Share</string>
+    <string name="grocery_export_success">Monthly Grocery report created</string>
+    <string name="grocery_export_error">Could not create Grocery report</string>
     <string name="grocery_quantity">Quantity (optional)</string>
     <string name="grocery_estimated_cost">Estimated cost</string>
     <string name="grocery_priority">Priority</string>
@@ -826,6 +840,7 @@
         <item>Other</item>
     </string-array>
     <string-array name="grocery_category_labels">
+        <item>@string/grocery_select_category</item>
         <item>Vegetables</item>
         <item>Fruits</item>
         <item>Dairy</item>

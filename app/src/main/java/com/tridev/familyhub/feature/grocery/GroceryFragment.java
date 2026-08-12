@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,6 +42,9 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.io.File;
+import java.util.Calendar;
+import java.util.concurrent.Executors;
 
 /** Offline-first family Grocery and Shopping List screen. */
 public class GroceryFragment extends Fragment implements AddActionHost {
@@ -110,11 +114,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             @NonNull GroceryItem item,
                             boolean purchased
                     ) {
-                        repository.setPurchased(
-                                item,
-                                purchased,
-                                () -> loadItems(currentQuery())
-                        );
+                        if (purchased) {
+                            showPurchaseOptions(item);
+                        } else {
+                            repository.setPurchased(item, false,
+                                    () -> loadItems(currentQuery()));
+                        }
                     }
 
                     @Override
@@ -166,6 +171,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryBudgetButton.setOnClickListener(v -> showBudgetEditor());
         binding.grocerySuggestionsButton.setOnClickListener(
                 v -> showRecurringSuggestions());
+        binding.groceryPdfButton.setOnClickListener(v -> exportMonthly(true, false));
+        binding.groceryExcelButton.setOnClickListener(v -> exportMonthly(false, false));
+        binding.groceryShareButton.setOnClickListener(v -> exportMonthly(true, true));
         binding.grocerySearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -306,6 +314,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void showEditor(@Nullable GroceryItem existing) {
+        showEditor(existing, false);
+    }
+
+    private void showEditor(@Nullable GroceryItem existing,
+                            boolean completeAfterSave) {
         DialogGroceryBinding form =
                 DialogGroceryBinding.inflate(getLayoutInflater());
         GroceryItem item = existing == null
@@ -427,8 +440,17 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             }
             form.groceryPriorityLayout.setError(null);
 
+            String selectedCategory = textOf(form.groceryCategoryInput);
+            if (selectedCategory.isEmpty()
+                    || categoryLabels[0].equalsIgnoreCase(selectedCategory)) {
+                ((com.google.android.material.textfield.TextInputLayout)
+                        form.groceryCategoryInput.getParent().getParent())
+                        .setError(getString(R.string.grocery_category_required));
+                return;
+            }
+
             item.name = name;
-            item.category = textOf(form.groceryCategoryInput);
+            item.category = selectedCategory;
             String quantityAmount = textOf(form.groceryQuantityInput);
             String quantityUnit = textOf(form.groceryQuantityUnitInput);
             item.quantity = quantityAmount.isEmpty() ? ""
@@ -463,16 +485,25 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     return;
                 }
                 dialog.dismiss();
-                loadItems(currentQuery());
-                Snackbar.make(
-                        binding.getRoot(),
-                        item.duplicateMerged
-                                ? R.string.grocery_duplicate_reused
-                                : existing == null
-                                ? R.string.grocery_item_added
-                                : R.string.grocery_item_updated,
-                        Snackbar.LENGTH_SHORT
-                ).show();
+                if (completeAfterSave) {
+                    repository.setPurchased(item, true, () -> {
+                        if (binding != null) {
+                            loadItems(currentQuery());
+                            Snackbar.make(binding.getRoot(),
+                                    R.string.grocery_purchase_saved,
+                                    Snackbar.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    loadItems(currentQuery());
+                    Snackbar.make(binding.getRoot(),
+                            item.duplicateMerged
+                                    ? R.string.grocery_duplicate_reused
+                                    : existing == null
+                                            ? R.string.grocery_item_added
+                                            : R.string.grocery_item_updated,
+                            Snackbar.LENGTH_SHORT).show();
+                }
             };
             estimateAndSave(item, saveComplete);
         });
@@ -563,6 +594,68 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         })
                 )
                 .show();
+    }
+
+    private void showPurchaseOptions(@NonNull GroceryItem item) {
+        loadItems(currentQuery());
+        String[] actions = {
+                getString(R.string.grocery_update_price),
+                getString(R.string.grocery_update_category),
+                getString(R.string.grocery_update_quantity)
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.grocery_complete_title)
+                .setMessage(getString(R.string.grocery_complete_message,
+                        item.name))
+                .setItems(actions, (dialog, which) ->
+                        showEditor(item, true))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.grocery_skip_and_complete,
+                        (dialog, which) -> repository.setPurchased(item, true,
+                                () -> loadItems(currentQuery())))
+                .show();
+    }
+
+    private void exportMonthly(boolean pdf, boolean share) {
+        android.content.Context context = requireContext().getApplicationContext();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                Calendar start = Calendar.getInstance();
+                start.set(Calendar.DAY_OF_MONTH, 1);
+                start.set(Calendar.HOUR_OF_DAY, 0); start.set(Calendar.MINUTE, 0);
+                start.set(Calendar.SECOND, 0); start.set(Calendar.MILLISECOND, 0);
+                Calendar end = (Calendar) start.clone(); end.add(Calendar.MONTH, 1);
+                List<com.tridev.familyhub.data.local.entity.GroceryPurchase> rows =
+                        com.tridev.familyhub.data.local.FamilyHubDatabase
+                                .getInstance(context).groceryPurchaseDao()
+                                .getForPeriod(start.getTimeInMillis(), end.getTimeInMillis());
+                File folder = new File(context.getCacheDir(), "grocery_reports");
+                if (!folder.exists() && !folder.mkdirs()) throw new java.io.IOException();
+                File file = new File(folder, "Grocery_Report_"
+                        + new java.text.SimpleDateFormat("yyyy_MM", Locale.ENGLISH)
+                                .format(new java.util.Date())
+                        + (pdf ? ".pdf" : ".xls"));
+                if (pdf) GroceryReportExporter.pdf(file, rows);
+                else GroceryReportExporter.excel(file, rows);
+                requireActivity().runOnUiThread(() -> shareReport(file,
+                        pdf ? "application/pdf" : "application/vnd.ms-excel", share));
+            } catch (Exception error) {
+                if (isAdded()) requireActivity().runOnUiThread(() ->
+                        Snackbar.make(binding.getRoot(), R.string.grocery_export_error,
+                                Snackbar.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void shareReport(File file, String mime, boolean directShare) {
+        Uri uri = FileProvider.getUriForFile(requireContext(),
+                requireContext().getPackageName() + ".backupfiles", file);
+        Intent intent = new Intent(Intent.ACTION_SEND).setType(mime)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent,
+                getString(directShare ? R.string.grocery_share_report
+                        : R.string.grocery_export_success)));
     }
 
     private void loadItems(@NonNull String query) {

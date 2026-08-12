@@ -31,7 +31,7 @@ public interface GroceryItemDao {
     List<GroceryItem> search(String query);
 
     @Query("SELECT * FROM grocery_items WHERE isPurchased = 0 "
-            + "ORDER BY CASE priority WHEN 'URGENT' THEN 0 "
+            + "ORDER BY category COLLATE NOCASE, CASE priority WHEN 'URGENT' THEN 0 "
             + "WHEN 'HIGH' THEN 1 ELSE 2 END, createdAt DESC")
     List<GroceryItem> getPendingForWidget();
 

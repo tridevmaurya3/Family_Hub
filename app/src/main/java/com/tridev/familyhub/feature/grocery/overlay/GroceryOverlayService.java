@@ -443,6 +443,12 @@ public class GroceryOverlayService extends Service {
                 input.setError(getString(R.string.grocery_name_required));
                 return;
             }
+            if (category.getSelectedItemPosition() <= 0) {
+                android.widget.Toast.makeText(this,
+                        R.string.grocery_category_required,
+                        android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
             GroceryItem item = new GroceryItem();
             item.name = name;
             item.listType = selectedListType[0];

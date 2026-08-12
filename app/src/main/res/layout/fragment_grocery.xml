@@ -242,6 +242,28 @@
                 android:text="@string/grocery_suggestions"
                 android:textColor="@color/fh_module_grocery" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_pdf_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_export_pdf"
+                app:icon="@drawable/ic_file_pdf" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_excel_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_export_excel"
+                app:icon="@drawable/ic_file_excel" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_share_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_share_report"
+                app:icon="@drawable/ic_document_share" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/clear_purchased_button"
         style="@style/Widget.Material3.Button.TextButton"

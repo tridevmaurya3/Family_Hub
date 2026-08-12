@@ -20,6 +20,7 @@ import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.dao.FinanceEntryDao;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
 import com.tridev.familyhub.feature.grocery.GroceryNotificationHelper;
 
@@ -169,6 +170,7 @@ public class GroceryRepository {
             boolean purchased,
             @NonNull ActionCallback callback
     ) {
+        boolean recordPurchase = purchased && !item.isPurchased;
         item.isPurchased = purchased;
         item.purchasedAt = purchased ? System.currentTimeMillis() : 0L;
         item.buyingStatus = purchased
@@ -182,6 +184,19 @@ public class GroceryRepository {
         item.purchasedByName = purchased
                 ? displayName(FirebaseAuth.getInstance().getCurrentUser())
                 : "";
+        if (recordPurchase) {
+            GroceryPurchase purchase = new GroceryPurchase();
+            purchase.sourceItemId = item.id;
+            purchase.itemName = item.name;
+            purchase.category = item.category;
+            purchase.quantity = item.quantity;
+            purchase.actualCost = item.actualCost > 0D
+                    ? item.actualCost : item.estimatedCost;
+            purchase.purchasedAt = item.purchasedAt;
+            DATABASE_EXECUTOR.execute(() -> FamilyHubDatabase
+                    .getInstance(appContext).groceryPurchaseDao()
+                    .insert(purchase));
+        }
         save(item, callback);
     }
 

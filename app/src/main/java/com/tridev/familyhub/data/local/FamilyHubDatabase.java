@@ -18,6 +18,7 @@ import com.tridev.familyhub.data.local.dao.HealthRecordDao;
 import com.tridev.familyhub.data.local.dao.VehicleDao;
 import com.tridev.familyhub.data.local.dao.PropertyDao;
 import com.tridev.familyhub.data.local.dao.GroceryItemDao;
+import com.tridev.familyhub.data.local.dao.GroceryPurchaseDao;
 import com.tridev.familyhub.data.local.dao.NoteDao;
 import com.tridev.familyhub.data.local.dao.PlannerItemDao;
 import com.tridev.familyhub.data.local.dao.SafePlaceDao;
@@ -33,6 +34,7 @@ import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.PropertyEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
 import com.tridev.familyhub.data.local.entity.SafePlace;
@@ -57,13 +59,14 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 Vehicle.class,
                 PropertyEntry.class,
                 GroceryItem.class,
+                GroceryPurchase.class,
                 NoteEntry.class,
                 PlannerItem.class,
                 SafePlace.class,
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 20,
+        version = 21,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -83,6 +86,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract VehicleDao vehicleDao();
     public abstract PropertyDao propertyDao();
     public abstract GroceryItemDao groceryItemDao();
+    public abstract GroceryPurchaseDao groceryPurchaseDao();
     public abstract NoteDao noteDao();
     public abstract PlannerItemDao plannerItemDao();
     public abstract SafePlaceDao safePlaceDao();
@@ -224,6 +228,19 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                 database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
             }
             database.execSQL("ALTER TABLE `" + table + "` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    private static final Migration MIGRATION_20_21 = new Migration(20, 21) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `grocery_purchases` "
+                    + "(`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, "
+                    + "`sourceItemId` INTEGER NOT NULL, `itemName` TEXT NOT NULL, "
+                    + "`category` TEXT NOT NULL, `quantity` TEXT NOT NULL, "
+                    + "`actualCost` REAL NOT NULL, `purchasedAt` INTEGER NOT NULL)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_purchases_purchasedAt` ON `grocery_purchases` (`purchasedAt`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_purchases_category` ON `grocery_purchases` (`category`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_purchases_itemName` ON `grocery_purchases` (`itemName`)");
         }
     };
 
@@ -732,7 +749,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_16_17,
                                     MIGRATION_17_18,
                                     MIGRATION_18_19,
-                                    MIGRATION_19_20
+                                    MIGRATION_19_20,
+                                    MIGRATION_20_21
                             )
                             .build();
                 }

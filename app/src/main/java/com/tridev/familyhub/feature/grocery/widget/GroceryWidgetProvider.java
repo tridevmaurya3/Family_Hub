@@ -11,14 +11,11 @@ import android.widget.RemoteViews;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
-import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /** Resizable household shopping widget backed by the Room grocery list. */
 public class GroceryWidgetProvider extends AppWidgetProvider {
@@ -26,8 +23,6 @@ public class GroceryWidgetProvider extends AppWidgetProvider {
     public static final String ACTION_TOGGLE_PURCHASED =
             "com.tridev.familyhub.action.GROCERY_WIDGET_TOGGLE";
     public static final String EXTRA_ITEM_ID = "grocery_item_id";
-    private static final ExecutorService EXECUTOR =
-            Executors.newSingleThreadExecutor();
 
     @Override
     public void onUpdate(
@@ -50,22 +45,11 @@ public class GroceryWidgetProvider extends AppWidgetProvider {
         if (itemId <= 0L) {
             return;
         }
-        Context appContext = context.getApplicationContext();
-        EXECUTOR.execute(() -> {
-            FamilyHubDatabase database = FamilyHubDatabase.getInstance(
-                    appContext
-            );
-            GroceryItem item = database.groceryItemDao().getById(itemId);
-            if (item != null) {
-                new GroceryRepository(appContext).setPurchased(
-                        item,
-                        true,
-                        () -> refreshAll(appContext)
-                );
-            } else {
-                refreshAll(appContext);
-            }
-        });
+        Intent editor = new Intent(context, GroceryWidgetPurchaseActivity.class);
+        editor.putExtra(EXTRA_ITEM_ID, itemId);
+        editor.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        context.startActivity(editor);
     }
 
     public static void refreshAll(Context context) {
@@ -87,7 +71,7 @@ public class GroceryWidgetProvider extends AppWidgetProvider {
             int widgetId
     ) {
         Context appContext = context.getApplicationContext();
-        EXECUTOR.execute(() -> {
+        GroceryWidgetExecutors.DATABASE.execute(() -> {
             List<GroceryItem> pending = FamilyHubDatabase.getInstance(
                     appContext
             ).groceryItemDao().getPendingForWidget();

@@ -77,6 +77,11 @@
         </receiver>
 
         <activity
+            android:name=".feature.grocery.widget.GroceryWidgetPurchaseActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FamilyHub" />
+
+        <activity
             android:name=".backup.BackupRestoreActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

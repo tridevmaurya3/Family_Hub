@@ -3,6 +3,8 @@ package com.tridev.familyhub.feature.grocery;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
+import android.view.View;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -14,11 +16,21 @@ import com.tridev.familyhub.databinding.ItemGroceryBinding;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Locale;
 
 /** Fluent shopping-list adapter with purchase toggles. */
 public class GroceryAdapter
-        extends RecyclerView.Adapter<GroceryAdapter.ItemViewHolder> {
+        extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final int TYPE_HEADER = 0;
+    private static final int TYPE_ITEM = 1;
+    private static final class Row {
+        final String header;
+        final GroceryItem item;
+        Row(String header, GroceryItem item) { this.header = header; this.item = item; }
+    }
 
     public interface ItemActionListener {
         void onPurchasedChanged(@NonNull GroceryItem item, boolean purchased);
@@ -30,7 +42,7 @@ public class GroceryAdapter
         void onBuying(@NonNull GroceryItem item);
     }
 
-    private final List<GroceryItem> items = new ArrayList<>();
+    private final List<Row> rows = new ArrayList<>();
     private final ItemActionListener listener;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -40,17 +52,34 @@ public class GroceryAdapter
     }
 
     public void submitList(@NonNull List<GroceryItem> updated) {
-        items.clear();
-        items.addAll(updated);
+        rows.clear();
+        Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
+        for (GroceryItem item : updated) {
+            String category = item.category.isEmpty() ? "Uncategorized" : item.category;
+            grouped.computeIfAbsent(category, key -> new ArrayList<>()).add(item);
+        }
+        for (Map.Entry<String, List<GroceryItem>> group : grouped.entrySet()) {
+            rows.add(new Row(group.getKey() + "  (" + group.getValue().size() + ")", null));
+            for (GroceryItem item : group.getValue()) rows.add(new Row(null, item));
+        }
         notifyDataSetChanged();
+    }
+
+    @Override public int getItemViewType(int position) {
+        return rows.get(position).item == null ? TYPE_HEADER : TYPE_ITEM;
     }
 
     @NonNull
     @Override
-    public ItemViewHolder onCreateViewHolder(
+    public RecyclerView.ViewHolder onCreateViewHolder(
             @NonNull ViewGroup parent,
             int viewType
     ) {
+        if (viewType == TYPE_HEADER) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(
+                    R.layout.item_grocery_category_header, parent, false);
+            return new HeaderViewHolder(view);
+        }
         return new ItemViewHolder(ItemGroceryBinding.inflate(
                 LayoutInflater.from(parent.getContext()),
                 parent,
@@ -60,15 +89,28 @@ public class GroceryAdapter
 
     @Override
     public void onBindViewHolder(
-            @NonNull ItemViewHolder holder,
+            @NonNull RecyclerView.ViewHolder holder,
             int position
     ) {
-        holder.bind(items.get(position));
+        Row row = rows.get(position);
+        if (holder instanceof HeaderViewHolder) {
+            ((HeaderViewHolder) holder).title.setText(row.header);
+        } else {
+            ((ItemViewHolder) holder).bind(row.item);
+        }
     }
 
     @Override
     public int getItemCount() {
-        return items.size();
+        return rows.size();
+    }
+
+    static class HeaderViewHolder extends RecyclerView.ViewHolder {
+        final TextView title;
+        HeaderViewHolder(View view) {
+            super(view);
+            title = view.findViewById(R.id.grocery_category_header);
+        }
     }
 
     class ItemViewHolder extends RecyclerView.ViewHolder {

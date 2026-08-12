@@ -6,4 +6,5 @@
     <files-path
         name="document_captures"
         path="document_captures/" />
+    <cache-path name="grocery_reports" path="grocery_reports/" />
 </paths>
