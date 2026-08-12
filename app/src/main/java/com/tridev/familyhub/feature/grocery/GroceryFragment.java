@@ -183,6 +183,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryBudgetButton.setOnClickListener(v -> showBudgetEditor());
         binding.grocerySuggestionsButton.setOnClickListener(
                 v -> showRecurringSuggestions());
+        binding.groceryShoppingModeButton.setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), ShoppingModeActivity.class)));
         binding.groceryPdfButton.setOnClickListener(v -> exportMonthly(true, false));
         binding.groceryExcelButton.setOnClickListener(v -> exportMonthly(false, false));
         binding.groceryShareButton.setOnClickListener(v -> exportMonthly(true, true));

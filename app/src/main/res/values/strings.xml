@@ -596,6 +596,10 @@
     <string name="grocery_purchase_completed">%1$s purchased</string>
     <string name="grocery_undo">UNDO</string>
     <string name="grocery_purchase_restored">Purchase restored to pending list</string>
+    <string name="grocery_shopping_mode">Shopping Mode</string>
+    <string name="grocery_keep_screen_awake">Keep screen awake while shopping</string>
+    <string name="grocery_shopping_summary">%1$d pending • Estimated %2$s</string>
+    <string name="grocery_shopping_complete">Everything purchased ✓</string>
     <string name="grocery_purchase_saved">Purchase saved in this month’s Grocery report</string>
     <string name="grocery_export_pdf">PDF</string>
     <string name="grocery_export_excel">Excel</string>

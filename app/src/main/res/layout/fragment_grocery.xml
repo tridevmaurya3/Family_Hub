@@ -253,6 +253,14 @@
                 android:layout_height="@dimen/touch_target_min"
                 android:text="@string/grocery_suggestions"
                 android:textColor="@color/fh_module_grocery" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_shopping_mode_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="@string/grocery_shopping_mode"
+                android:textColor="@color/fh_success"
+                app:icon="@drawable/ic_grocery" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_pdf_button"
