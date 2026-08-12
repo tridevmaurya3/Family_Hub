@@ -14,6 +14,7 @@ public class GroceryPurchase {
     @NonNull public String itemName = "";
     @NonNull public String category = "";
     @NonNull public String quantity = "";
+    @NonNull public String storeName = "";
     public double actualCost;
     public long purchasedAt;
 }
