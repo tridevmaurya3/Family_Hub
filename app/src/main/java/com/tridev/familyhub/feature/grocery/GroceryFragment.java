@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.PopupMenu;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -169,9 +170,6 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.emptyAddGroceryButton.setOnClickListener(
                 clickedView -> showEditor(null)
         );
-        binding.groceryAddButton.setOnClickListener(
-                clickedView -> showEditor(null)
-        );
         binding.clearPurchasedButton.setOnClickListener(
                 clickedView -> confirmClearPurchased()
         );
@@ -193,6 +191,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryPdfButton.setOnClickListener(v -> exportMonthly(true, false));
         binding.groceryExcelButton.setOnClickListener(v -> exportMonthly(false, false));
         binding.groceryShareButton.setOnClickListener(v -> exportMonthly(true, true));
+        binding.groceryFilterButton.setOnClickListener(this::showFilterMenu);
+        binding.groceryExportButton.setOnClickListener(this::showExportMenu);
         binding.grocerySearchInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override
@@ -235,6 +235,39 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 loadItems(currentQuery());
             }
         });
+    }
+
+    private void showFilterMenu(@NonNull View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.getMenu().setGroupCheckable(1, true, true);
+        popup.getMenu().add(1, R.id.filter_all, 0, R.string.grocery_filter_all);
+        popup.getMenu().add(1, R.id.filter_daily, 1, R.string.grocery_filter_daily);
+        popup.getMenu().add(1, R.id.filter_monthly, 2, R.string.grocery_filter_monthly);
+        popup.getMenu().add(1, R.id.filter_pending, 3, R.string.grocery_filter_pending);
+        popup.getMenu().add(1, R.id.filter_purchased, 4, R.string.grocery_filter_purchased);
+        android.view.MenuItem selected = popup.getMenu().findItem(activeFilterId);
+        if (selected != null) selected.setChecked(true);
+        popup.setOnMenuItemClickListener(item -> {
+            activeFilterId = item.getItemId();
+            item.setChecked(true);
+            loadItems(currentQuery());
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showExportMenu(@NonNull View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.getMenu().add(0, 1, 0, R.string.grocery_export_pdf);
+        popup.getMenu().add(0, 2, 1, R.string.grocery_export_excel);
+        popup.getMenu().add(0, 3, 2, R.string.grocery_share_report);
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) exportMonthly(true, false);
+            else if (item.getItemId() == 2) exportMonthly(false, false);
+            else exportMonthly(true, true);
+            return true;
+        });
+        popup.show();
     }
 
     @Override
