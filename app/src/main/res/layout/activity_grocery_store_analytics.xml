@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_page_three_tone"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="32dp">
+
+        <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
+            android:id="@+id/store_analytics_overview"
+            android:layout_width="match_parent"
+            android:layout_height="76dp"
+            app:overviewAccentColor="@color/fh_module_grocery"
+            app:overviewContainerColor="@color/fh_module_grocery_container"
+            app:overviewDetail="@string/grocery_store_analytics_subtitle"
+            app:overviewIcon="@drawable/ic_arrow_back"
+            app:overviewTitle="@string/grocery_store_analytics" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="70dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_primary_container">
+                <TextView android:id="@+id/store_analytics_spend" style="@style/TextAppearance.FamilyHub.Body" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:padding="6dp" android:textAlignment="center" android:textColor="@color/fh_primary" />
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="70dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_success_container">
+                <TextView android:id="@+id/store_analytics_saving" style="@style/TextAppearance.FamilyHub.Body" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:padding="6dp" android:textAlignment="center" android:textColor="@color/fh_success" />
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="0dp"
+                android:layout_height="70dp"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@color/fh_warning_container">
+                <TextView android:id="@+id/store_analytics_best" style="@style/TextAppearance.FamilyHub.Body" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:padding="6dp" android:textAlignment="center" android:textColor="@color/fh_warning" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.Form.Dropdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:hint="@string/grocery_category">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/store_analytics_category_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.FamilyHub.Form.Dropdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:hint="@string/grocery_store_name">
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/store_analytics_store_filter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:gravity="end|center_vertical"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/store_analytics_pdf" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/grocery_export_pdf" app:icon="@drawable/ic_file_pdf" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/store_analytics_excel" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/grocery_export_excel" app:icon="@drawable/ic_file_excel" />
+        </LinearLayout>
+
+        <TextView style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/grocery_store_breakdown" />
+        <LinearLayout android:id="@+id/store_analytics_cards" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="vertical" />
+
+        <TextView style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/grocery_price_trends" />
+        <LinearLayout android:id="@+id/store_analytics_trends" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="vertical" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
