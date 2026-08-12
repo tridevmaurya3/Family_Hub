@@ -66,6 +66,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private GroceryAdapter adapter;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private int activeFilterId = R.id.filter_all;
+    @NonNull private String activeCategoryFilter = "";
     @Nullable private android.widget.EditText activeDialogVoiceInput;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -251,10 +252,30 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         popup.getMenu().add(1, R.id.filter_monthly, 2, R.string.grocery_filter_monthly);
         popup.getMenu().add(1, R.id.filter_pending, 3, R.string.grocery_filter_pending);
         popup.getMenu().add(1, R.id.filter_purchased, 4, R.string.grocery_filter_purchased);
+        popup.getMenu().add(0, View.generateViewId(), 5,
+                R.string.grocery_filter_category_heading).setEnabled(false);
+        popup.getMenu().setGroupCheckable(2, true, true);
+        android.view.MenuItem allCategories = popup.getMenu().add(
+                2, 10_000, 6, R.string.grocery_filter_all_categories);
+        allCategories.setChecked(activeCategoryFilter.isEmpty());
+        String[] categories = getResources().getStringArray(
+                R.array.grocery_category_labels);
+        for (int index = 1; index < categories.length; index++) {
+            android.view.MenuItem categoryItem = popup.getMenu().add(
+                    2, 10_000 + index, 6 + index, categories[index]);
+            categoryItem.setChecked(categories[index]
+                    .equalsIgnoreCase(activeCategoryFilter));
+        }
         android.view.MenuItem selected = popup.getMenu().findItem(activeFilterId);
         if (selected != null) selected.setChecked(true);
         popup.setOnMenuItemClickListener(item -> {
-            activeFilterId = item.getItemId();
+            if (item.getGroupId() == 1) {
+                activeFilterId = item.getItemId();
+            } else if (item.getGroupId() == 2) {
+                int categoryIndex = item.getItemId() - 10_000;
+                activeCategoryFilter = categoryIndex <= 0
+                        ? "" : categories[categoryIndex];
+            }
             item.setChecked(true);
             loadItems(currentQuery());
             return true;
@@ -867,6 +888,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 include = item.isPurchased;
             } else {
                 include = true;
+            }
+            if (include && !activeCategoryFilter.isEmpty()) {
+                include = activeCategoryFilter.equalsIgnoreCase(
+                        item.category == null ? "" : item.category.trim());
             }
             if (include) {
                 filtered.add(item);
