@@ -486,10 +486,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             : item.assignedMemberName,
                     false
             );
-            repository.loadLatestPurchase(item.name, history -> {
+            repository.loadStoreComparison(item.name, item.quantity,
+                    (history, cheapest) -> {
                 if (history == null || !isAdded()) return;
-                applyPurchaseHistory(form, item, history, quantityUnits,
-                        categoryLabels, completeAfterSave);
+                applyPurchaseHistory(form, item, history, cheapest,
+                        quantityUnits, categoryLabels, completeAfterSave);
             });
         }
 
@@ -635,6 +636,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             @NonNull DialogGroceryBinding form,
             @NonNull GroceryItem item,
             @NonNull GroceryPurchase history,
+            @Nullable GroceryPurchase cheapest,
             @NonNull String[] units,
             @NonNull String[] categories,
             boolean autoFill
@@ -655,17 +657,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             }
         }
         form.groceryPriceComparison.setVisibility(View.VISIBLE);
-        form.groceryPriceComparison.setText(getString(
-                R.string.grocery_previous_purchase,
-                history.quantity.isEmpty()
-                        ? getString(R.string.grocery_quantity_not_added)
-                        : history.quantity,
-                history.category.isEmpty()
-                        ? getString(R.string.grocery_uncategorized)
-                        : history.category,
-                currencyFormat.format(history.actualCost))
-                + (history.storeName.isEmpty() ? "" : "\n" + getString(
-                        R.string.grocery_previous_store, history.storeName)));
+        form.groceryPriceComparison.setText(storeComparisonText(history,
+                cheapest, history.actualCost));
         form.groceryActualCostInput.addTextChangedListener(
                 new android.text.TextWatcher() {
                     @Override public void beforeTextChanged(
@@ -673,17 +666,48 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     @Override public void onTextChanged(
                             CharSequence s, int start, int before, int count) {
                         double current = parseAmount(s == null ? "" : s.toString());
-                        if (current <= 0D || history.actualCost <= 0D) return;
-                        double percent = (current - history.actualCost)
-                                / history.actualCost * 100D;
-                        form.groceryPriceComparison.setText(Math.abs(percent) < 0.05D
-                                ? getString(R.string.grocery_price_same)
-                                : getString(R.string.grocery_price_change,
-                                        history.actualCost, current, percent));
+                        form.groceryPriceComparison.setText(storeComparisonText(
+                                history, cheapest, current));
                     }
                     @Override public void afterTextChanged(
                             android.text.Editable s) { }
                 });
+    }
+
+    @NonNull
+    private String storeComparisonText(
+            @NonNull GroceryPurchase history,
+            @Nullable GroceryPurchase cheapest,
+            double current
+    ) {
+        StringBuilder text = new StringBuilder(getString(
+                R.string.grocery_previous_purchase,
+                history.quantity.isEmpty()
+                        ? getString(R.string.grocery_quantity_not_added)
+                        : history.quantity,
+                history.category.isEmpty()
+                        ? getString(R.string.grocery_uncategorized)
+                        : history.category,
+                currencyFormat.format(history.actualCost)));
+        if (!history.storeName.isEmpty()) text.append('\n').append(getString(
+                R.string.grocery_previous_store, history.storeName));
+        if (cheapest != null && !cheapest.storeName.isEmpty()) {
+            text.append('\n').append(getString(R.string.grocery_cheapest_store,
+                    cheapest.storeName, cheapest.actualCost));
+            if (current > cheapest.actualCost) {
+                text.append('\n').append(getString(R.string.grocery_possible_saving,
+                        current - cheapest.actualCost));
+            }
+        }
+        if (current > 0D && history.actualCost > 0D) {
+            double percent = (current - history.actualCost)
+                    / history.actualCost * 100D;
+            text.append('\n').append(Math.abs(percent) < 0.05D
+                    ? getString(R.string.grocery_price_same)
+                    : getString(R.string.grocery_price_change,
+                            history.actualCost, current, percent));
+        }
+        return text.toString();
     }
 
     private int findPriorityIndex(
