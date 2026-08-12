@@ -83,6 +83,7 @@ public class GroceryOverlayService extends Service {
     private String visibleListType = GroceryItem.LIST_DAILY;
     private String pendingVoiceText = "";
     private String overlaySearchQuery = "";
+    private String overlayCategoryFilter = "";
     private boolean collapseAllCategories;
     private final Set<String> collapsedCategories = new HashSet<>();
     private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
@@ -437,6 +438,40 @@ public class GroceryOverlayService extends Service {
             refreshPanel();
         });
 
+        String[] categoryLabels = getResources().getStringArray(
+                R.array.grocery_category_labels);
+        String[] categoryFilters = new String[categoryLabels.length];
+        categoryFilters[0] = getString(R.string.grocery_filter_all_categories);
+        System.arraycopy(categoryLabels, 1, categoryFilters, 1,
+                categoryLabels.length - 1);
+        Spinner categoryFilter = compactSpinner(categoryFilters);
+        selectSpinner(categoryFilter, categoryFilters, overlayCategoryFilter.isEmpty()
+                ? categoryFilters[0] : overlayCategoryFilter);
+        categoryFilter.setOnItemSelectedListener(
+                new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override public void onItemSelected(
+                            android.widget.AdapterView<?> parent, View view,
+                            int position, long id) {
+                        String selected = String.valueOf(
+                                parent.getItemAtPosition(position));
+                        String nextFilter = position == 0 ? "" : selected;
+                        if (!nextFilter.equalsIgnoreCase(overlayCategoryFilter)) {
+                            overlayCategoryFilter = nextFilter;
+                            refreshPanel();
+                        }
+                    }
+
+                    @Override public void onNothingSelected(
+                            android.widget.AdapterView<?> parent) { }
+                });
+        LinearLayout categoryFilterBlock = labelledField(
+                getString(R.string.grocery_filter_by_category), categoryFilter);
+        LinearLayout.LayoutParams categoryFilterParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(58));
+        categoryFilterParams.topMargin = dp(2);
+        root.addView(categoryFilterBlock, categoryFilterParams);
+
         itemContainer = new LinearLayout(this);
         itemContainer.setOrientation(LinearLayout.VERTICAL);
         overlayItemScroll = new ScrollView(this);
@@ -584,7 +619,7 @@ public class GroceryOverlayService extends Service {
         int count = 0;
         for (GroceryItem item : items) {
             if (!item.isPurchased && listType.equals(item.listType)
-                    && matchesOverlaySearch(item)) count++;
+                    && matchesOverlayFilters(item)) count++;
         }
         TextView sectionTitle = text(heading + "  (" + count + ")", 12, true);
         sectionTitle.setTextColor(GroceryItem.LIST_MONTHLY.equals(listType)
@@ -597,7 +632,7 @@ public class GroceryOverlayService extends Service {
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : items) {
             if (item.isPurchased || !listType.equals(item.listType)
-                    || !matchesOverlaySearch(item)) {
+                    || !matchesOverlayFilters(item)) {
                 continue;
             }
             String category = item.category.isEmpty()
@@ -678,6 +713,13 @@ public class GroceryOverlayService extends Service {
                 || item.category.toLowerCase(java.util.Locale.ENGLISH).contains(query)
                 || item.quantity.toLowerCase(java.util.Locale.ENGLISH).contains(query)
                 || item.assignedMemberName.toLowerCase(java.util.Locale.ENGLISH).contains(query);
+    }
+
+    private boolean matchesOverlayFilters(GroceryItem item) {
+        boolean categoryMatches = overlayCategoryFilter.isEmpty()
+                || overlayCategoryFilter.equalsIgnoreCase(
+                        item.category == null ? "" : item.category.trim());
+        return categoryMatches && matchesOverlaySearch(item);
     }
 
     /** Keeps purchase completion entirely inside the floating surface. */
