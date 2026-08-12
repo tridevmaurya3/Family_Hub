@@ -1221,6 +1221,9 @@ Sharing: %12$s</string>
     <string name="grocery_overlay_price_hint">₹ amount</string>
     <string name="grocery_invalid_cost">Enter a valid price amount</string>
     <string name="grocery_paid_price">Paid price (optional)</string>
+    <string name="grocery_store_name">Store / Shop (optional)</string>
+    <string name="grocery_store_hint">e.g. Reliance Smart, Local Market</string>
+    <string name="grocery_previous_store">Last store: %1$s</string>
     <string-array name="grocery_quantity_units">
         <item>pcs</item>
         <item>packet</item>
