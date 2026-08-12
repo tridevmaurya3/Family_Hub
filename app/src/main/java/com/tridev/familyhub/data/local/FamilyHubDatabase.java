@@ -66,7 +66,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 21,
+        version = 22,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -241,6 +241,14 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_purchases_purchasedAt` ON `grocery_purchases` (`purchasedAt`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_purchases_category` ON `grocery_purchases` (`category`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_grocery_purchases_itemName` ON `grocery_purchases` (`itemName`)");
+        }
+    };
+
+    /** Adds store identity to active items and immutable purchase history. */
+    private static final Migration MIGRATION_21_22 = new Migration(21, 22) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `grocery_items` ADD COLUMN `storeName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `grocery_purchases` ADD COLUMN `storeName` TEXT NOT NULL DEFAULT ''");
         }
     };
 
@@ -750,7 +758,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_17_18,
                                     MIGRATION_18_19,
                                     MIGRATION_19_20,
-                                    MIGRATION_20_21
+                                    MIGRATION_20_21,
+                                    MIGRATION_21_22
                             )
                             .build();
                 }
