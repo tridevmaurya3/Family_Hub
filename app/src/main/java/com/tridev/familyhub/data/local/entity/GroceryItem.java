@@ -52,6 +52,10 @@ public class GroceryItem {
 
     @ColumnInfo(defaultValue = "0") public double actualCost;
 
+    /** Shop or store selected for the current purchase cycle. */
+    @NonNull
+    @ColumnInfo(defaultValue = "''") public String storeName = "";
+
     @ColumnInfo(defaultValue = "1") public boolean autoPriceEnabled = true;
 
     @NonNull
