@@ -41,8 +41,6 @@ import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
-import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
-import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetPurchaseActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -578,13 +576,7 @@ public class GroceryOverlayService extends Service {
             row.setOnCheckedChangeListener((button, checked) -> {
                 if (checked) {
                     button.setChecked(false);
-                    closePanel();
-                    Intent purchase = new Intent(this,
-                            GroceryWidgetPurchaseActivity.class)
-                            .putExtra(GroceryWidgetProvider.EXTRA_ITEM_ID, item.id)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    startActivity(purchase);
+                    showInlinePurchaseEditor(item);
                 }
             });
             LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
@@ -605,6 +597,135 @@ public class GroceryOverlayService extends Service {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         }
         return alreadyShown + shownHere;
+    }
+
+    /** Keeps purchase completion entirely inside the floating surface. */
+    private void showInlinePurchaseEditor(GroceryItem item) {
+        if (itemContainer == null) return;
+        itemContainer.removeAllViews();
+        setOverlayFormCollapsed(true);
+
+        TextView title = text(getString(R.string.grocery_complete_title), 14, true);
+        title.setTextColor(Color.rgb(15, 108, 89));
+        itemContainer.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
+        TextView itemName = text(item.name, 12, true);
+        itemName.setPadding(dp(10), 0, dp(10), 0);
+        itemName.setBackground(roundedFill(Color.rgb(226, 244, 238), 9));
+        itemContainer.addView(itemName, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
+
+        EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
+        price.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        double savedPrice = item.actualCost > 0D
+                ? item.actualCost : item.estimatedCost;
+        if (savedPrice > 0D) price.setText(String.valueOf(savedPrice));
+        itemContainer.addView(labelledField(
+                getString(R.string.grocery_actual_cost), price), fullEditorField());
+
+        LinearLayout quantityRow = new LinearLayout(this);
+        quantityRow.setOrientation(LinearLayout.HORIZONTAL);
+        EditText quantity = compactInput(
+                getString(R.string.grocery_quantity_amount_hint));
+        quantity.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        String[] parts = item.quantity.trim().split("\\s+", 2);
+        if (parts.length > 0) quantity.setText(parts[0]);
+        quantityRow.addView(labelledField(
+                getString(R.string.grocery_quantity_amount), quantity), weightedField());
+        String[] units = getResources().getStringArray(R.array.grocery_quantity_units);
+        Spinner unit = compactSpinner(units);
+        if (parts.length > 1) selectSpinner(unit, units, parts[1]);
+        LinearLayout.LayoutParams unitParams = weightedField();
+        unitParams.setMarginStart(dp(8));
+        quantityRow.addView(labelledField(
+                getString(R.string.grocery_quantity_unit), unit), unitParams);
+        itemContainer.addView(quantityRow);
+
+        String[] categories = getResources().getStringArray(
+                R.array.grocery_category_labels);
+        Spinner category = compactSpinner(categories);
+        selectSpinner(category, categories, item.category);
+        itemContainer.addView(labelledField(
+                getString(R.string.grocery_category), category), fullEditorField());
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        Button cancel = compactAction(getString(R.string.cancel),
+                Color.rgb(91, 101, 114), Color.rgb(242, 244, 247));
+        Button skip = compactAction(getString(R.string.grocery_skip_and_complete),
+                Color.rgb(168, 93, 0), Color.rgb(255, 244, 222));
+        Button save = compactAction(getString(R.string.save),
+                Color.WHITE, Color.rgb(15, 108, 89));
+        actions.addView(cancel, actionParams());
+        actions.addView(skip, actionParams());
+        actions.addView(save, actionParams());
+        LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(46));
+        actionsParams.topMargin = dp(8);
+        itemContainer.addView(actions, actionsParams);
+
+        cancel.setOnClickListener(v -> refreshPanel());
+        skip.setOnClickListener(v -> repository.setPurchased(
+                item, true, this::refreshPanel));
+        save.setOnClickListener(v -> {
+            String priceText = price.getText().toString().trim();
+            if (!priceText.isEmpty()) {
+                try { item.actualCost = Double.parseDouble(priceText); }
+                catch (NumberFormatException error) {
+                    price.setError(getString(R.string.grocery_invalid_cost));
+                    return;
+                }
+            }
+            String amount = quantity.getText().toString().trim();
+            item.quantity = amount.isEmpty() ? "" : amount + " "
+                    + String.valueOf(unit.getSelectedItem());
+            if (category.getSelectedItemPosition() <= 0) {
+                android.widget.Toast.makeText(this,
+                        R.string.grocery_category_required,
+                        android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            item.category = String.valueOf(category.getSelectedItem());
+            repository.setPurchased(item, true, this::refreshPanel);
+        });
+    }
+
+    private void selectSpinner(Spinner spinner, String[] values, String wanted) {
+        for (int index = 0; index < values.length; index++) {
+            if (values[index].equalsIgnoreCase(wanted)) {
+                spinner.setSelection(index);
+                return;
+            }
+        }
+    }
+
+    private LinearLayout.LayoutParams fullEditorField() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(66));
+        params.topMargin = dp(5);
+        return params;
+    }
+
+    private Button compactAction(String label, int textColor, int fillColor) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setTextSize(11f);
+        button.setTextColor(textColor);
+        button.setAllCaps(false);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(dp(7), 0, dp(7), 0);
+        button.setBackground(roundedFill(fillColor, 16));
+        return button;
+    }
+
+    private LinearLayout.LayoutParams actionParams() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, dp(38), 1f);
+        params.setMarginStart(dp(4));
+        return params;
     }
 
     private void closePanel() {
