@@ -47,6 +47,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 /** Draggable, adjustable quick-grocery surface shown over other phone screens. */
 public class GroceryOverlayService extends Service {
@@ -76,6 +78,9 @@ public class GroceryOverlayService extends Service {
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private String visibleListType = GroceryItem.LIST_DAILY;
     private String pendingVoiceText = "";
+    private String overlaySearchQuery = "";
+    private boolean collapseAllCategories;
+    private final Set<String> collapsedCategories = new HashSet<>();
     private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             if (intent == null) return;
@@ -380,6 +385,38 @@ public class GroceryOverlayService extends Service {
         quickAdd.addView(add, addParams);
         root.addView(quickAdd);
 
+        LinearLayout listTools = new LinearLayout(this);
+        listTools.setGravity(Gravity.CENTER_VERTICAL);
+        EditText search = compactInput(getString(R.string.grocery_search_hint));
+        search.setInputType(InputType.TYPE_CLASS_TEXT);
+        search.setText(overlaySearchQuery);
+        search.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
+                overlaySearchQuery = s == null ? "" : s.toString().trim();
+                refreshPanel();
+            }
+            @Override public void afterTextChanged(android.text.Editable s) { }
+        });
+        listTools.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        Button collapse = compactAction(getString(R.string.grocery_collapse_all),
+                Color.rgb(15, 108, 89), Color.rgb(226, 244, 238));
+        LinearLayout.LayoutParams collapseParams = new LinearLayout.LayoutParams(
+                dp(94), dp(38));
+        collapseParams.setMarginStart(dp(6));
+        listTools.addView(collapse, collapseParams);
+        LinearLayout.LayoutParams toolsParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+        toolsParams.topMargin = dp(6);
+        root.addView(listTools, toolsParams);
+        collapse.setOnClickListener(v -> {
+            collapseAllCategories = !collapseAllCategories;
+            collapsedCategories.clear();
+            collapse.setText(collapseAllCategories
+                    ? R.string.grocery_expand_all : R.string.grocery_collapse_all);
+            refreshPanel();
+        });
+
         itemContainer = new LinearLayout(this);
         itemContainer.setOrientation(LinearLayout.VERTICAL);
         overlayItemScroll = new ScrollView(this);
@@ -526,7 +563,8 @@ public class GroceryOverlayService extends Service {
                               String heading, int alreadyShown) {
         int count = 0;
         for (GroceryItem item : items) {
-            if (!item.isPurchased && listType.equals(item.listType)) count++;
+            if (!item.isPurchased && listType.equals(item.listType)
+                    && matchesOverlaySearch(item)) count++;
         }
         TextView sectionTitle = text(heading + "  (" + count + ")", 12, true);
         sectionTitle.setTextColor(GroceryItem.LIST_MONTHLY.equals(listType)
@@ -538,7 +576,8 @@ public class GroceryOverlayService extends Service {
 
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : items) {
-            if (item.isPurchased || !listType.equals(item.listType)) {
+            if (item.isPurchased || !listType.equals(item.listType)
+                    || !matchesOverlaySearch(item)) {
                 continue;
             }
             String category = item.category.isEmpty()
@@ -547,7 +586,11 @@ public class GroceryOverlayService extends Service {
         }
         int shownHere = 0;
         for (Map.Entry<String, List<GroceryItem>> group : grouped.entrySet()) {
-            TextView category = text(group.getKey() + "  ("
+            String collapseKey = listType + "|"
+                    + group.getKey().toLowerCase(java.util.Locale.ENGLISH);
+            boolean collapsed = collapseAllCategories
+                    || collapsedCategories.contains(collapseKey);
+            TextView category = text((collapsed ? "▸  " : "▾  ") + group.getKey() + "  ("
                     + group.getValue().size() + ")", 11, true);
             category.setTextColor(Color.rgb(15, 108, 89));
             category.setGravity(Gravity.CENTER_VERTICAL);
@@ -558,6 +601,14 @@ public class GroceryOverlayService extends Service {
             categoryParams.topMargin = shownHere == 0 ? 0 : dp(4);
             categoryParams.bottomMargin = dp(3);
             itemContainer.addView(category, categoryParams);
+            category.setOnClickListener(v -> {
+                collapseAllCategories = false;
+                if (!collapsedCategories.add(collapseKey)) {
+                    collapsedCategories.remove(collapseKey);
+                }
+                refreshPanel();
+            });
+            if (collapsed) continue;
             for (GroceryItem item : group.getValue()) {
             CheckBox row = new CheckBox(this);
             String detail = (shownHere + 1) + ".  " + item.name;
@@ -598,6 +649,15 @@ public class GroceryOverlayService extends Service {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         }
         return alreadyShown + shownHere;
+    }
+
+    private boolean matchesOverlaySearch(GroceryItem item) {
+        if (overlaySearchQuery.isEmpty()) return true;
+        String query = overlaySearchQuery.toLowerCase(java.util.Locale.ENGLISH);
+        return item.name.toLowerCase(java.util.Locale.ENGLISH).contains(query)
+                || item.category.toLowerCase(java.util.Locale.ENGLISH).contains(query)
+                || item.quantity.toLowerCase(java.util.Locale.ENGLISH).contains(query)
+                || item.assignedMemberName.toLowerCase(java.util.Locale.ENGLISH).contains(query);
     }
 
     /** Keeps purchase completion entirely inside the floating surface. */

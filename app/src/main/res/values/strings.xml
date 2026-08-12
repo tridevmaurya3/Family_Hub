@@ -591,6 +591,8 @@
     <string name="grocery_overall_budget">Overall monthly budget</string>
     <string name="grocery_category_budget">%1$s monthly budget</string>
     <string name="grocery_budget_progress">%1$s / %2$s • %3$d%%</string>
+    <string name="grocery_collapse_all">Collapse all</string>
+    <string name="grocery_expand_all">Expand all</string>
     <string name="grocery_purchase_saved">Purchase saved in this month’s Grocery report</string>
     <string name="grocery_export_pdf">PDF</string>
     <string name="grocery_export_excel">Excel</string>
