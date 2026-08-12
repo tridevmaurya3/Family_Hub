@@ -122,30 +122,35 @@ final class GroceryReportExporter {
         Map<String, GroceryPurchase> totals = new LinkedHashMap<>();
         for (GroceryPurchase purchase : source) {
             String[] quantity = purchase.quantity.trim().split("\\s+", 2);
-            double amount = number(quantity.length == 0 ? "" : quantity[0]);
             String unit = quantity.length > 1 ? quantity[1] : "";
             String key = purchase.category.toLowerCase(Locale.ENGLISH) + "|"
                     + purchase.itemName.toLowerCase(Locale.ENGLISH) + "|"
-                    + unit.toLowerCase(Locale.ENGLISH);
+                    + quantityFamily(unit);
             GroceryPurchase total = totals.get(key);
             if (total == null) {
                 total = new GroceryPurchase();
                 total.category = purchase.category;
                 total.itemName = purchase.itemName;
-                total.quantity = amount > 0 ? clean(amount) + " " + unit
-                        : purchase.quantity;
+                total.quantity = purchase.quantity;
                 total.actualCost = purchase.actualCost;
                 total.purchasedAt = purchase.purchasedAt;
                 totals.put(key, total);
             } else {
-                double existing = number(total.quantity.split("\\s+", 2)[0]);
-                total.quantity = amount > 0 ? clean(existing + amount) + " " + unit
-                        : total.quantity;
+                total.quantity = GroceryQuantityCalculator.add(
+                        total.quantity, purchase.quantity);
                 total.actualCost += purchase.actualCost;
                 total.purchasedAt = Math.max(total.purchasedAt, purchase.purchasedAt);
             }
         }
         return new ArrayList<>(totals.values());
+    }
+
+    private static String quantityFamily(String unit) {
+        String value = unit.toLowerCase(Locale.ENGLISH);
+        if (value.equals("g") || value.equals("kg") || value.startsWith("gram")) return "mass";
+        if (value.equals("ml") || value.equals("l") || value.startsWith("lit")) return "volume";
+        if (value.equals("dozen") || value.equals("pcs") || value.startsWith("piece")) return "count";
+        return value;
     }
 
     private static double number(String value) {
