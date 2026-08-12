@@ -17,6 +17,12 @@ public interface GroceryPurchaseDao {
             + "ORDER BY purchasedAt DESC LIMIT 1")
     GroceryPurchase getLatestForItem(String itemName);
 
+    @Query("SELECT * FROM grocery_purchases WHERE itemName = :itemName COLLATE NOCASE "
+            + "AND actualCost > 0 AND storeName <> '' "
+            + "AND (:quantity = '' OR quantity = :quantity COLLATE NOCASE) "
+            + "ORDER BY actualCost ASC, purchasedAt DESC LIMIT 1")
+    GroceryPurchase getCheapestStoreForItem(String itemName, String quantity);
+
     @Query("DELETE FROM grocery_purchases WHERE sourceItemId = :sourceItemId "
             + "AND purchasedAt = :purchasedAt")
     int deletePurchase(long sourceItemId, long purchasedAt);
