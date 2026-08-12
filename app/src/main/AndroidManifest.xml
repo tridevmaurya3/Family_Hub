@@ -171,6 +171,9 @@
             android:name=".feature.grocery.ShoppingModeActivity"
             android:exported="false" />
         <activity
+            android:name=".feature.grocery.GroceryStoreAnalyticsActivity"
+            android:exported="false" />
+        <activity
             android:name=".feature.grocery.overlay.GroceryVoiceCaptureActivity"
             android:exported="false"
             android:theme="@style/Theme.FamilyHub.VoiceCapture" />
