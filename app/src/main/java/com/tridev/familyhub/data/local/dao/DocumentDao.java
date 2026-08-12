@@ -15,19 +15,25 @@ import java.util.List;
 @Dao
 public interface DocumentDao {
 
-    @Query("SELECT * FROM documents ORDER BY createdAt DESC")
+    @Query("SELECT * FROM documents WHERE deletedAt = 0 ORDER BY updatedAt DESC, createdAt DESC")
     @NonNull
     List<DocumentEntry> getAll();
 
     @Query("SELECT * FROM documents "
-            + "WHERE title LIKE '%' || :query || '%' "
+            + "WHERE deletedAt = 0 AND (title LIKE '%' || :query || '%' "
             + "OR category LIKE '%' || :query || '%' "
-            + "ORDER BY createdAt DESC")
+            + "OR documentNumber LIKE '%' || :query || '%' "
+            + "OR issuer LIKE '%' || :query || '%' "
+            + "OR memberName LIKE '%' || :query || '%' "
+            + "OR tags LIKE '%' || :query || '%' "
+            + "OR notes LIKE '%' || :query || '%' "
+            + "OR searchableText LIKE '%' || :query || '%') "
+            + "ORDER BY updatedAt DESC, createdAt DESC")
     @NonNull
     List<DocumentEntry> search(@NonNull String query);
 
     @Query("SELECT * FROM documents "
-            + "WHERE expiryAt > 0 "
+            + "WHERE deletedAt = 0 AND expiryAt > 0 "
             + "ORDER BY expiryAt ASC")
     @NonNull
     List<DocumentEntry> getExpiryCandidates();
@@ -35,20 +41,20 @@ public interface DocumentDao {
     @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
     DocumentEntry getById(long documentId);
 
-    @Query("SELECT COUNT(*) FROM documents")
+    @Query("SELECT COUNT(*) FROM documents WHERE deletedAt = 0")
     int count();
 
     /** Compatibility query used by the Dashboard's upcoming-expiry summary. */
     @Query("SELECT COUNT(*) FROM documents "
-            + "WHERE expiryAt > 0 AND expiryAt <= :deadline")
+            + "WHERE deletedAt = 0 AND expiryAt > 0 AND expiryAt <= :deadline")
     int countExpiringBy(long deadline);
 
     @Query("SELECT COUNT(*) FROM documents "
-            + "WHERE expiryAt > 0 AND expiryAt < :startOfToday")
+            + "WHERE deletedAt = 0 AND expiryAt > 0 AND expiryAt < :startOfToday")
     int countExpired(long startOfToday);
 
     @Query("SELECT COUNT(*) FROM documents "
-            + "WHERE expiryAt >= :startOfToday AND expiryAt <= :deadline")
+            + "WHERE deletedAt = 0 AND expiryAt >= :startOfToday AND expiryAt <= :deadline")
     int countExpiringBetween(long startOfToday, long deadline);
 
     @Query("SELECT COUNT(*) FROM documents WHERE contentUri = :contentUri")
@@ -60,6 +66,19 @@ public interface DocumentDao {
             @NonNull String contentUri,
             long excludedId
     );
+
+    @Query("SELECT COUNT(*) FROM documents WHERE deletedAt = 0 AND fingerprint = :fingerprint AND fingerprint != '' AND id != :excludedId")
+    int countOtherByFingerprint(@NonNull String fingerprint, long excludedId);
+
+    @Query("SELECT * FROM documents WHERE deletedAt > 0 ORDER BY deletedAt DESC")
+    @NonNull
+    List<DocumentEntry> getTrash();
+
+    @Query("UPDATE documents SET deletedAt = :deletedAt, updatedAt = :deletedAt WHERE id = :documentId")
+    int moveToTrash(long documentId, long deletedAt);
+
+    @Query("UPDATE documents SET deletedAt = 0, updatedAt = :updatedAt WHERE id = :documentId")
+    int restore(long documentId, long updatedAt);
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(@NonNull DocumentEntry entry);
