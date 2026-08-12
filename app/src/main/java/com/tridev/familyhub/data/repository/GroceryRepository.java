@@ -197,6 +197,7 @@ public class GroceryRepository {
             purchase.itemName = item.name;
             purchase.category = item.category;
             purchase.quantity = item.quantity;
+            purchase.storeName = item.storeName;
             purchase.actualCost = item.actualCost > 0D
                     ? item.actualCost : item.estimatedCost;
             purchase.purchasedAt = item.purchasedAt;
@@ -512,6 +513,7 @@ public class GroceryRepository {
         values.put("quantity", item.quantity);
         values.put("estimatedCost", item.estimatedCost);
         values.put("actualCost", item.actualCost);
+        values.put("storeName", item.storeName);
         values.put("autoPriceEnabled", item.autoPriceEnabled);
         values.put("priceLocationKey", item.priceLocationKey);
         values.put("priceConfidence", item.priceConfidence);
@@ -553,6 +555,7 @@ public class GroceryRepository {
         item.quantity = stringValue(snapshot.child("quantity"));
         item.estimatedCost = doubleValue(snapshot.child("estimatedCost"));
         item.actualCost = doubleValue(snapshot.child("actualCost"));
+        item.storeName = stringValue(snapshot.child("storeName"));
         item.autoPriceEnabled = booleanValue(snapshot.child("autoPriceEnabled"), true);
         item.priceLocationKey = stringValue(snapshot.child("priceLocationKey"));
         item.priceConfidence = intValue(snapshot.child("priceConfidence"));
