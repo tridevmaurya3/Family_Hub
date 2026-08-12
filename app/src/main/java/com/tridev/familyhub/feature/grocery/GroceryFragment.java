@@ -150,7 +150,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.groceryRecyclerView.setAdapter(adapter);
-        binding.groceryBackButton.setOnClickListener(v -> {
+        binding.groceryOverview.setNavigationAction(
+                R.drawable.ic_arrow_back,
+                R.string.back,
+                v -> {
             if (requireActivity() instanceof MainActivity) {
                 ((MainActivity) requireActivity()).openHome();
             } else {
