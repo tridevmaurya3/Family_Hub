@@ -1227,6 +1227,16 @@ Sharing: %12$s</string>
     <string name="grocery_cheapest_store">Best recorded: %1$s • ₹%2$.2f</string>
     <string name="grocery_possible_saving">You can save ₹%1$.2f compared with this price</string>
     <string name="grocery_report_saving">Possible saving</string>
+    <string name="grocery_store_analytics">Store Analytics</string>
+    <string name="grocery_store_analytics_subtitle">Monthly spend, best-price stores and savings</string>
+    <string name="grocery_store_breakdown">Store-wise breakdown</string>
+    <string name="grocery_price_trends">Item price trends</string>
+    <string name="grocery_store_not_specified">Not specified</string>
+    <string name="grocery_store_analytics_empty">No purchases match these filters.</string>
+    <string name="grocery_price_trends_empty">Purchase an item more than once to see its price trend.</string>
+    <string name="grocery_analytics_spend">Spend\n%1$s\n%2$d purchases</string>
+    <string name="grocery_analytics_saving">Possible saving\n%1$s</string>
+    <string name="grocery_analytics_best">Best store\n%1$s\n%2$d wins</string>
     <string-array name="grocery_quantity_units">
         <item>pcs</item>
         <item>packet</item>
