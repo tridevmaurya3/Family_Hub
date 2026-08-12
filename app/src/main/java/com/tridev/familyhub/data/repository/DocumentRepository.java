@@ -13,6 +13,8 @@ import com.tridev.familyhub.feature.documents.DocumentExpiryPolicy;
 import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
 
 import java.util.List;
+import java.io.InputStream;
+import java.security.MessageDigest;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +73,13 @@ public class DocumentRepository {
         });
     }
 
+    public void loadTrash(@NonNull DocumentsCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<DocumentEntry> documents = documentDao.getTrash();
+            mainHandler.post(() -> callback.onDocumentsLoaded(documents));
+        });
+    }
+
     public void loadStats(
             int reminderDays,
             @NonNull StatsCallback callback
@@ -120,6 +129,15 @@ public class DocumentRepository {
                 if (document.createdAt == 0L) {
                     document.createdAt = System.currentTimeMillis();
                 }
+                document.updatedAt = System.currentTimeMillis();
+                if (document.fingerprint.isEmpty() && !document.contentUri.isEmpty()) {
+                    document.fingerprint = fingerprint(document.contentUri);
+                }
+                if (!document.fingerprint.isEmpty()
+                        && documentDao.countOtherByFingerprint(
+                        document.fingerprint, document.id) > 0) {
+                    throw new IllegalStateException("Duplicate document content");
+                }
 
                 long documentId;
                 if (document.id == 0L) {
@@ -150,7 +168,8 @@ public class DocumentRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             try {
-                int deleted = documentDao.delete(document);
+                int deleted = documentDao.moveToTrash(
+                        document.id, System.currentTimeMillis());
                 if (deleted != 1) {
                     throw new IllegalStateException(
                             "Document could not be removed"
@@ -162,5 +181,45 @@ public class DocumentRepository {
                 mainHandler.post(() -> callback.onError(error));
             }
         });
+    }
+
+    public void restore(
+            @NonNull DocumentEntry document,
+            @NonNull ActionCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            try {
+                int restored = documentDao.restore(
+                        document.id, System.currentTimeMillis());
+                if (restored != 1) {
+                    throw new IllegalStateException("Document could not be restored");
+                }
+                DocumentExpiryScheduler.sync(appContext);
+                mainHandler.post(callback::onComplete);
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    @NonNull
+    private String fingerprint(@NonNull String contentUri) {
+        try (InputStream input = appContext.getContentResolver()
+                .openInputStream(android.net.Uri.parse(contentUri))) {
+            if (input == null) return "";
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = input.read(buffer)) >= 0) {
+                if (read > 0) digest.update(buffer, 0, read);
+            }
+            StringBuilder value = new StringBuilder(64);
+            for (byte part : digest.digest()) {
+                value.append(String.format(java.util.Locale.ENGLISH, "%02x", part));
+            }
+            return value.toString();
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 }
