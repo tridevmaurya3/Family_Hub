@@ -104,4 +104,12 @@
         <item>@string/documents_vault_days_60</item>
     </string-array>
 
+    <string name="documents_vault_document_number">Document number</string>
+    <string name="documents_vault_issuer">Issuer / authority</string>
+    <string name="documents_vault_family_member">Family member</string>
+    <string name="documents_vault_tags">Smart tags</string>
+    <string name="documents_vault_tags_help">Comma-separated tags improve vault search</string>
+    <string name="documents_vault_notes">Private notes</string>
+    <string name="documents_vault_emergency_access">Include in Emergency Documents</string>
+    <string name="documents_vault_moved_to_trash">Document moved safely to Trash</string>
 </resources>
