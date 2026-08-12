@@ -55,10 +55,6 @@ public class GroceryOverlayService extends Service {
 
     public static final String ACTION_STOP =
             "com.tridev.familyhub.action.STOP_GROCERY_OVERLAY";
-    public static final String ACTION_HIDE =
-            "com.tridev.familyhub.action.HIDE_GROCERY_OVERLAY";
-    public static final String ACTION_SHOW =
-            "com.tridev.familyhub.action.SHOW_GROCERY_OVERLAY";
     public static final String PREFS = "grocery_overlay";
     public static final String KEY_ENABLED = "enabled";
     public static final String KEY_REQUESTED = "permission_requested";
@@ -125,16 +121,6 @@ public class GroceryOverlayService extends Service {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             stopSelf();
             return START_NOT_STICKY;
-        }
-        if (intent != null && ACTION_HIDE.equals(intent.getAction())) {
-            closePanel();
-            if (stripView != null) stripView.setVisibility(View.GONE);
-            return START_STICKY;
-        }
-        if (intent != null && ACTION_SHOW.equals(intent.getAction())) {
-            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
-            if (stripView != null) stripView.setVisibility(View.VISIBLE);
-            return START_STICKY;
         }
         return START_STICKY;
     }
@@ -699,6 +685,13 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(labelledField(
                 getString(R.string.grocery_actual_cost), price), fullEditorField());
 
+        EditText store = compactInput(getString(R.string.grocery_store_hint));
+        store.setInputType(InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        store.setText(item.storeName);
+        itemContainer.addView(labelledField(
+                getString(R.string.grocery_store_name), store), fullEditorField());
+
         LinearLayout quantityRow = new LinearLayout(this);
         quantityRow.setOrientation(LinearLayout.HORIZONTAL);
         EditText quantity = compactInput(
@@ -734,7 +727,7 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         repository.loadLatestPurchase(item.name, history -> {
             if (history == null || itemContainer == null) return;
-            applyInlineHistory(history, price, quantity, unit, units,
+            applyInlineHistory(history, price, store, quantity, unit, units,
                     category, categories, historyInsight);
         });
 
@@ -776,6 +769,7 @@ public class GroceryOverlayService extends Service {
                 return;
             }
             item.category = String.valueOf(category.getSelectedItem());
+            item.storeName = store.getText().toString().trim();
             repository.setPurchased(item, true, () -> showFloatingUndo(item));
         });
     }
@@ -817,6 +811,7 @@ public class GroceryOverlayService extends Service {
     private void applyInlineHistory(
             GroceryPurchase history,
             EditText price,
+            EditText store,
             EditText quantity,
             Spinner unit,
             String[] units,
@@ -833,6 +828,7 @@ public class GroceryOverlayService extends Service {
         if (history.actualCost > 0D) {
             price.setText(String.valueOf(history.actualCost));
         }
+        if (!history.storeName.isEmpty()) store.setText(history.storeName);
         insight.setVisibility(View.VISIBLE);
         insight.setText(getString(R.string.grocery_previous_purchase,
                 history.quantity.isEmpty()
@@ -842,7 +838,9 @@ public class GroceryOverlayService extends Service {
                         ? getString(R.string.grocery_uncategorized)
                         : history.category,
                 String.format(java.util.Locale.ENGLISH, "₹%.2f",
-                        history.actualCost)));
+                        history.actualCost))
+                + (history.storeName.isEmpty() ? "" : "\n" + getString(
+                        R.string.grocery_previous_store, history.storeName)));
         price.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(
                     CharSequence s, int start, int count, int after) { }
