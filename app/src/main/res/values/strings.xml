@@ -587,6 +587,10 @@
     <string name="grocery_price_same">Same as previous price</string>
     <string name="grocery_price_change">Previous ₹%1$.2f → New ₹%2$.2f (%3$+.1f%%)</string>
     <string name="grocery_history_autofilled">Previous purchase details auto-filled</string>
+    <string name="grocery_budget_choose">Choose budget type</string>
+    <string name="grocery_overall_budget">Overall monthly budget</string>
+    <string name="grocery_category_budget">%1$s monthly budget</string>
+    <string name="grocery_budget_progress">%1$s / %2$s • %3$d%%</string>
     <string name="grocery_purchase_saved">Purchase saved in this month’s Grocery report</string>
     <string name="grocery_export_pdf">PDF</string>
     <string name="grocery_export_excel">Excel</string>

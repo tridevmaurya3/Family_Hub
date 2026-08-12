@@ -47,6 +47,8 @@ import java.util.Locale;
 import java.io.File;
 import java.util.Calendar;
 import java.util.concurrent.Executors;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /** Offline-first family Grocery and Shopping List screen. */
 public class GroceryFragment extends Fragment implements AddActionHost {
@@ -716,7 +718,21 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 return;
             }
             List<GroceryItem> visibleItems = applyFilter(items);
-            adapter.submitList(visibleItems);
+            repository.loadCurrentMonthPurchases(purchases -> {
+                if (binding == null) return;
+                Map<String, Double> spent = new LinkedHashMap<>();
+                for (GroceryPurchase purchase : purchases) {
+                    String key = purchase.category.toLowerCase(Locale.ENGLISH);
+                    spent.put(key, spent.getOrDefault(key, 0D)
+                            + Math.max(0D, purchase.actualCost));
+                }
+                Map<String, Double> budgets = new LinkedHashMap<>();
+                for (GroceryItem grocery : visibleItems) {
+                    String key = grocery.category.toLowerCase(Locale.ENGLISH);
+                    budgets.put(key, repository.getCategoryBudget(grocery.category));
+                }
+                adapter.submitList(visibleItems, spent, budgets);
+            });
             renderSummary(items);
             boolean isEmpty = visibleItems.isEmpty();
             binding.groceryRecyclerView.setVisibility(
@@ -776,16 +792,35 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void showBudgetEditor() {
+        String[] categories = getResources().getStringArray(
+                R.array.grocery_category_labels);
+        String[] choices = new String[categories.length];
+        choices[0] = getString(R.string.grocery_overall_budget);
+        System.arraycopy(categories, 1, choices, 1, categories.length - 1);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.grocery_budget_choose)
+                .setItems(choices, (dialog, which) ->
+                        showBudgetAmount(which == 0 ? null : categories[which]))
+                .setNegativeButton(R.string.cancel, null).show();
+    }
+
+    private void showBudgetAmount(@Nullable String category) {
         android.widget.EditText input = new android.widget.EditText(requireContext());
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
                 | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         input.setHint(R.string.grocery_budget_hint);
+        double current = category == null ? repository.getMonthlyBudget()
+                : repository.getCategoryBudget(category);
+        if (current > 0D) input.setText(String.valueOf(current));
         new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.grocery_budget)
+                .setTitle(category == null ? getString(R.string.grocery_budget)
+                        : getString(R.string.grocery_category_budget, category))
                 .setView(input)
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.grocery_save_item, (dialog, which) -> {
-                    repository.setMonthlyBudget(parseAmount(textOf(input)));
+                    double value = parseAmount(textOf(input));
+                    if (category == null) repository.setMonthlyBudget(value);
+                    else repository.setCategoryBudget(category, value);
                     loadItems(currentQuery());
                 }).show();
     }

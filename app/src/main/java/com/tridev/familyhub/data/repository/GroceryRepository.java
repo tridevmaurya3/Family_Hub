@@ -50,6 +50,9 @@ public class GroceryRepository {
     public interface PurchaseHistoryCallback {
         void onLoaded(@Nullable GroceryPurchase purchase);
     }
+    public interface PurchasesCallback {
+        void onLoaded(@NonNull List<GroceryPurchase> purchases);
+    }
 
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
@@ -271,6 +274,37 @@ public class GroceryRepository {
         appContext.getSharedPreferences("grocery_budget", Context.MODE_PRIVATE)
                 .edit().putLong(currentMonth(),
                         Double.doubleToRawLongBits(Math.max(0D, budget))).apply();
+    }
+
+    public double getCategoryBudget(@NonNull String category) {
+        return Double.longBitsToDouble(appContext.getSharedPreferences(
+                "grocery_category_budgets", Context.MODE_PRIVATE)
+                .getLong(currentMonth() + "|" + category.toLowerCase(Locale.ENGLISH),
+                        Double.doubleToRawLongBits(0D)));
+    }
+
+    public void setCategoryBudget(@NonNull String category, double budget) {
+        appContext.getSharedPreferences("grocery_category_budgets",
+                Context.MODE_PRIVATE).edit().putLong(
+                currentMonth() + "|" + category.toLowerCase(Locale.ENGLISH),
+                Double.doubleToRawLongBits(Math.max(0D, budget))).apply();
+    }
+
+    public void loadCurrentMonthPurchases(@NonNull PurchasesCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            java.util.Calendar start = java.util.Calendar.getInstance();
+            start.set(java.util.Calendar.DAY_OF_MONTH, 1);
+            start.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            start.set(java.util.Calendar.MINUTE, 0);
+            start.set(java.util.Calendar.SECOND, 0);
+            start.set(java.util.Calendar.MILLISECOND, 0);
+            java.util.Calendar end = (java.util.Calendar) start.clone();
+            end.add(java.util.Calendar.MONTH, 1);
+            List<GroceryPurchase> purchases = FamilyHubDatabase
+                    .getInstance(appContext).groceryPurchaseDao()
+                    .getForPeriod(start.getTimeInMillis(), end.getTimeInMillis());
+            mainHandler.post(() -> callback.onLoaded(purchases));
+        });
     }
 
     public void delete(

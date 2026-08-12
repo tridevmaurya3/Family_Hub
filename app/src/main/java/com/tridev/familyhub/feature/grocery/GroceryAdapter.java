@@ -51,7 +51,9 @@ public class GroceryAdapter
         this.listener = listener;
     }
 
-    public void submitList(@NonNull List<GroceryItem> updated) {
+    public void submitList(@NonNull List<GroceryItem> updated,
+                           @NonNull Map<String, Double> spent,
+                           @NonNull Map<String, Double> budgets) {
         rows.clear();
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : updated) {
@@ -59,7 +61,18 @@ public class GroceryAdapter
             grouped.computeIfAbsent(category, key -> new ArrayList<>()).add(item);
         }
         for (Map.Entry<String, List<GroceryItem>> group : grouped.entrySet()) {
-            rows.add(new Row(group.getKey() + "  (" + group.getValue().size() + ")", null));
+            String key = group.getKey().toLowerCase(Locale.ENGLISH);
+            double used = spent.containsKey(key) ? spent.get(key) : 0D;
+            double budget = budgets.containsKey(key) ? budgets.get(key) : 0D;
+            String header = group.getKey() + "  (" + group.getValue().size() + ")";
+            if (budget > 0D) {
+                int percent = (int) Math.round(used / budget * 100D);
+                header += "  •  " + currencyFormat.format(used) + " / "
+                        + currencyFormat.format(budget) + "  •  " + percent + "%";
+            } else if (used > 0D) {
+                header += "  •  " + currencyFormat.format(used);
+            }
+            rows.add(new Row(header, null));
             for (GroceryItem item : group.getValue()) rows.add(new Row(null, item));
         }
         notifyDataSetChanged();
