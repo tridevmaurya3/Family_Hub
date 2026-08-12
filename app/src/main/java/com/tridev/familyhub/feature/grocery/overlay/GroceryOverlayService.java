@@ -745,10 +745,11 @@ public class GroceryOverlayService extends Service {
         historyInsight.setVisibility(View.GONE);
         itemContainer.addView(historyInsight, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
-        repository.loadLatestPurchase(item.name, history -> {
+        repository.loadStoreComparison(item.name, item.quantity,
+                (history, cheapest) -> {
             if (history == null || itemContainer == null) return;
-            applyInlineHistory(history, price, store, quantity, unit, units,
-                    category, categories, historyInsight);
+            applyInlineHistory(history, cheapest, price, store, quantity,
+                    unit, units, category, categories, historyInsight);
         });
 
         LinearLayout actions = new LinearLayout(this);
@@ -830,6 +831,7 @@ public class GroceryOverlayService extends Service {
 
     private void applyInlineHistory(
             GroceryPurchase history,
+            GroceryPurchase cheapest,
             EditText price,
             EditText store,
             EditText quantity,
@@ -850,7 +852,28 @@ public class GroceryOverlayService extends Service {
         }
         if (!history.storeName.isEmpty()) store.setText(history.storeName);
         insight.setVisibility(View.VISIBLE);
-        insight.setText(getString(R.string.grocery_previous_purchase,
+        insight.setText(inlineComparisonText(history, cheapest,
+                history.actualCost));
+        price.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(
+                    CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(
+                    CharSequence s, int start, int before, int count) {
+                double current = 0D;
+                try { current = Double.parseDouble(s == null
+                        ? "" : s.toString().trim()); }
+                catch (NumberFormatException ignored) { }
+                insight.setText(inlineComparisonText(history, cheapest, current));
+            }
+            @Override public void afterTextChanged(android.text.Editable s) { }
+        });
+    }
+
+    private String inlineComparisonText(GroceryPurchase history,
+                                        GroceryPurchase cheapest,
+                                        double current) {
+        StringBuilder value = new StringBuilder(getString(
+                R.string.grocery_previous_purchase,
                 history.quantity.isEmpty()
                         ? getString(R.string.grocery_quantity_not_added)
                         : history.quantity,
@@ -858,27 +881,25 @@ public class GroceryOverlayService extends Service {
                         ? getString(R.string.grocery_uncategorized)
                         : history.category,
                 String.format(java.util.Locale.ENGLISH, "₹%.2f",
-                        history.actualCost))
-                + (history.storeName.isEmpty() ? "" : "\n" + getString(
-                        R.string.grocery_previous_store, history.storeName)));
-        price.addTextChangedListener(new android.text.TextWatcher() {
-            @Override public void beforeTextChanged(
-                    CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(
-                    CharSequence s, int start, int before, int count) {
-                if (history.actualCost <= 0D || s == null) return;
-                try {
-                    double current = Double.parseDouble(s.toString().trim());
-                    double percent = (current - history.actualCost)
-                            / history.actualCost * 100D;
-                    insight.setText(Math.abs(percent) < 0.05D
-                            ? getString(R.string.grocery_price_same)
-                            : getString(R.string.grocery_price_change,
-                                    history.actualCost, current, percent));
-                } catch (NumberFormatException ignored) { }
-            }
-            @Override public void afterTextChanged(android.text.Editable s) { }
-        });
+                        history.actualCost)));
+        if (!history.storeName.isEmpty()) value.append('\n').append(getString(
+                R.string.grocery_previous_store, history.storeName));
+        if (cheapest != null && !cheapest.storeName.isEmpty()) {
+            value.append('\n').append(getString(R.string.grocery_cheapest_store,
+                    cheapest.storeName, cheapest.actualCost));
+            if (current > cheapest.actualCost) value.append('\n').append(getString(
+                    R.string.grocery_possible_saving,
+                    current - cheapest.actualCost));
+        }
+        if (current > 0D && history.actualCost > 0D) {
+            double percent = (current - history.actualCost)
+                    / history.actualCost * 100D;
+            value.append('\n').append(Math.abs(percent) < 0.05D
+                    ? getString(R.string.grocery_price_same)
+                    : getString(R.string.grocery_price_change,
+                            history.actualCost, current, percent));
+        }
+        return value.toString();
     }
 
     private LinearLayout.LayoutParams fullEditorField() {
