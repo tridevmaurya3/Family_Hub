@@ -169,6 +169,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.emptyAddGroceryButton.setOnClickListener(
                 clickedView -> showEditor(null)
         );
+        binding.groceryAddButton.setOnClickListener(
+                clickedView -> showEditor(null)
+        );
         binding.clearPurchasedButton.setOnClickListener(
                 clickedView -> confirmClearPurchased()
         );
@@ -250,7 +253,26 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             ).edit().putBoolean(GroceryOverlayService.KEY_REQUESTED, false).apply();
             startFloatingStrip();
         }
+        setFloatingStripVisible(false);
         updateFloatingButton();
+    }
+
+    @Override
+    public void onPause() {
+        setFloatingStripVisible(true);
+        super.onPause();
+    }
+
+    private void setFloatingStripVisible(boolean visible) {
+        boolean enabled = requireContext().getSharedPreferences(
+                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
+        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
+        if (!enabled) return;
+        Intent intent = new Intent(requireContext(), GroceryOverlayService.class);
+        intent.setAction(visible
+                ? GroceryOverlayService.ACTION_SHOW
+                : GroceryOverlayService.ACTION_HIDE);
+        requireContext().startService(intent);
     }
 
     private void toggleFloatingStrip() {
@@ -306,8 +328,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void startFloatingStrip() {
-        ContextCompat.startForegroundService(requireContext(),
-                new Intent(requireContext(), GroceryOverlayService.class));
+        Intent intent = new Intent(requireContext(), GroceryOverlayService.class);
+        intent.setAction(GroceryOverlayService.ACTION_HIDE);
+        ContextCompat.startForegroundService(requireContext(), intent);
         binding.floatingGroceryButton.postDelayed(
                 this::updateFloatingButton, 250L);
     }
