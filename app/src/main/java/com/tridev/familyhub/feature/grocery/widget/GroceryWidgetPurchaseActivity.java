@@ -2,7 +2,6 @@ package com.tridev.familyhub.feature.grocery.widget;
 
 import android.os.Bundle;
 import android.text.InputType;
-import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -39,82 +38,58 @@ public class GroceryWidgetPurchaseActivity extends AppCompatActivity {
     }
 
     private void showCheckpoint(GroceryItem item) {
-        String[] actions = {
-                getString(R.string.grocery_update_price),
-                getString(R.string.grocery_update_category),
-                getString(R.string.grocery_update_quantity)
-        };
+        int pad = (int) (20 * getResources().getDisplayMetrics().density);
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(pad, 0, pad, 0);
+
+        EditText price = new EditText(this);
+        price.setHint(R.string.grocery_actual_cost);
+        price.setSingleLine(true);
+        price.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        if (item.actualCost > 0D) price.setText(String.valueOf(item.actualCost));
+        form.addView(price);
+
+        EditText quantity = new EditText(this);
+        quantity.setHint(R.string.grocery_quantity);
+        quantity.setSingleLine(true);
+        quantity.setInputType(InputType.TYPE_CLASS_TEXT);
+        quantity.setText(item.quantity);
+        form.addView(quantity);
+
+        Spinner category = new Spinner(this);
+        String[] categories = getResources().getStringArray(
+                R.array.grocery_category_labels);
+        category.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, categories));
+        for (int i = 1; i < categories.length; i++) {
+            if (categories[i].equalsIgnoreCase(item.category)) category.setSelection(i);
+        }
+        form.addView(category);
+
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.grocery_complete_title)
                 .setMessage(getString(R.string.grocery_complete_message,
                         item.name))
-                .setItems(actions, (dialog, which) -> showFieldEditor(item, which))
+                .setView(form)
                 .setNegativeButton(R.string.cancel, (d, w) -> finish())
-                .setPositiveButton(R.string.grocery_skip_and_complete,
+                .setNeutralButton(R.string.grocery_skip_and_complete,
                         (d, w) -> complete(item))
-                .setOnCancelListener(d -> finish())
-                .show();
-    }
-
-    private void showFieldEditor(GroceryItem item, int action) {
-        View editor;
-        if (action == 1) {
-            Spinner spinner = new Spinner(this);
-            String[] categories = getResources().getStringArray(
-                    R.array.grocery_category_labels);
-            spinner.setAdapter(new ArrayAdapter<>(this,
-                    android.R.layout.simple_spinner_dropdown_item, categories));
-            int selected = 0;
-            for (int i = 1; i < categories.length; i++) {
-                if (categories[i].equalsIgnoreCase(item.category)) selected = i;
-            }
-            spinner.setSelection(selected);
-            editor = spinner;
-        } else {
-            EditText input = new EditText(this);
-            input.setSingleLine(true);
-            input.setHint(action == 0 ? R.string.grocery_actual_cost
-                    : R.string.grocery_quantity);
-            input.setText(action == 0 && item.actualCost > 0
-                    ? String.valueOf(item.actualCost) : item.quantity);
-            input.setInputType(action == 0
-                    ? InputType.TYPE_CLASS_NUMBER
-                            | InputType.TYPE_NUMBER_FLAG_DECIMAL
-                    : InputType.TYPE_CLASS_TEXT);
-            editor = input;
-        }
-        int pad = (int) (20 * getResources().getDisplayMetrics().density);
-        LinearLayout shell = new LinearLayout(this);
-        shell.setPadding(pad, 0, pad, 0);
-        shell.addView(editor, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(actionsTitle(action))
-                .setView(shell)
-                .setNegativeButton(R.string.cancel, (d, w) -> finish())
                 .setPositiveButton(R.string.save, (d, w) -> {
-                    if (editor instanceof Spinner) {
-                        int position = ((Spinner) editor).getSelectedItemPosition();
-                        if (position <= 0) { showFieldEditor(item, action); return; }
-                        item.category = String.valueOf(
-                                ((Spinner) editor).getSelectedItem());
-                    } else if (action == 0) {
-                        try {
-                            item.actualCost = Double.parseDouble(
-                                    ((EditText) editor).getText().toString().trim());
-                        } catch (NumberFormatException ignored) { item.actualCost = 0D; }
-                    } else {
-                        item.quantity = ((EditText) editor).getText().toString().trim();
+                    String priceValue = price.getText().toString().trim();
+                    if (!priceValue.isEmpty()) {
+                        try { item.actualCost = Double.parseDouble(priceValue); }
+                        catch (NumberFormatException ignored) { item.actualCost = 0D; }
+                    }
+                    item.quantity = quantity.getText().toString().trim();
+                    if (category.getSelectedItemPosition() > 0) {
+                        item.category = String.valueOf(category.getSelectedItem());
                     }
                     complete(item);
-                }).show();
-    }
-
-    private int actionsTitle(int action) {
-        return action == 0 ? R.string.grocery_update_price
-                : action == 1 ? R.string.grocery_update_category
-                : R.string.grocery_update_quantity;
+                })
+                .setOnCancelListener(d -> finish())
+                .show();
     }
 
     private void complete(GroceryItem item) {

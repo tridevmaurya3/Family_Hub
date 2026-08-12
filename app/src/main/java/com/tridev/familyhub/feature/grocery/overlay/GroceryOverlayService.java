@@ -41,9 +41,13 @@ import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
+import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
+import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetPurchaseActivity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /** Draggable, adjustable quick-grocery surface shown over other phone screens. */
 public class GroceryOverlayService extends Service {
@@ -533,37 +537,62 @@ public class GroceryOverlayService extends Service {
         titleParams.topMargin = alreadyShown == 0 ? 0 : dp(6);
         itemContainer.addView(sectionTitle, titleParams);
 
-        int shownHere = 0;
+        Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : items) {
             if (item.isPurchased || !listType.equals(item.listType)) {
                 continue;
             }
+            String category = item.category.isEmpty()
+                    ? getString(R.string.grocery_uncategorized) : item.category;
+            grouped.computeIfAbsent(category, key -> new ArrayList<>()).add(item);
+        }
+        int shownHere = 0;
+        for (Map.Entry<String, List<GroceryItem>> group : grouped.entrySet()) {
+            TextView category = text(group.getKey() + "  ("
+                    + group.getValue().size() + ")", 11, true);
+            category.setTextColor(Color.rgb(15, 108, 89));
+            category.setGravity(Gravity.CENTER_VERTICAL);
+            category.setPadding(dp(9), 0, dp(9), 0);
+            category.setBackground(roundedFill(Color.rgb(226, 244, 238), 8));
+            LinearLayout.LayoutParams categoryParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(30));
+            categoryParams.topMargin = shownHere == 0 ? 0 : dp(4);
+            categoryParams.bottomMargin = dp(3);
+            itemContainer.addView(category, categoryParams);
+            for (GroceryItem item : group.getValue()) {
             CheckBox row = new CheckBox(this);
             String detail = (shownHere + 1) + ".  " + item.name;
             if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
-            if (!item.category.isEmpty()) detail += "  •  " + item.category;
             if (!item.assignedMemberName.isEmpty()) {
                 detail += "  •  " + item.assignedMemberName;
             }
             row.setText(detail);
             row.setTextSize(13f);
             row.setTextColor(Color.rgb(36, 36, 36));
-            row.setMinHeight(dp(42));
-            row.setPadding(dp(8), 0, dp(8), 0);
+            row.setMinHeight(dp(38));
+            row.setPadding(dp(6), 0, dp(6), 0);
             row.setBackground(roundedFill(
                     GroceryItem.LIST_MONTHLY.equals(listType)
                             ? Color.rgb(246, 241, 252)
                             : Color.rgb(237, 249, 243), 10));
             row.setOnCheckedChangeListener((button, checked) -> {
                 if (checked) {
-                    repository.setPurchased(item, true, this::refreshPanel);
+                    button.setChecked(false);
+                    closePanel();
+                    Intent purchase = new Intent(this,
+                            GroceryWidgetPurchaseActivity.class)
+                            .putExtra(GroceryWidgetProvider.EXTRA_ITEM_ID, item.id)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(purchase);
                 }
             });
             LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-            rowParams.bottomMargin = dp(4);
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
+            rowParams.bottomMargin = dp(3);
             itemContainer.addView(row, rowParams);
             shownHere++;
+            }
         }
         if (count == 0) {
             TextView empty = text(getString(

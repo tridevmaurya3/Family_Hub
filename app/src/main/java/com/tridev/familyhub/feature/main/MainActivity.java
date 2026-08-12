@@ -231,6 +231,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** Returns a secondary module to the primary Home dashboard. */
+    public void openHome() {
+        if (binding != null) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
+        }
+    }
+
     public void openFeature(@NonNull Fragment fragment) {
         getSupportFragmentManager()
                 .beginTransaction()

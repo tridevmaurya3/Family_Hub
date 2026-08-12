@@ -582,6 +582,7 @@
     <string name="grocery_update_category">Category update</string>
     <string name="grocery_update_quantity">Quantity / unit update</string>
     <string name="grocery_skip_and_complete">Skip</string>
+    <string name="grocery_update_details">Update details</string>
     <string name="grocery_purchase_saved">Purchase saved in this month’s Grocery report</string>
     <string name="grocery_export_pdf">PDF</string>
     <string name="grocery_export_excel">Excel</string>

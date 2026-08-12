@@ -36,6 +36,7 @@ import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.databinding.DialogGroceryBinding;
 import com.tridev.familyhub.databinding.FragmentGroceryBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
 
 import java.text.NumberFormat;
@@ -115,7 +116,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             boolean purchased
                     ) {
                         if (purchased) {
-                            showPurchaseOptions(item);
+                            loadItems(currentQuery());
+                            showEditor(item, true);
                         } else {
                             repository.setPurchased(item, false,
                                     () -> loadItems(currentQuery()));
@@ -144,6 +146,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.groceryRecyclerView.setAdapter(adapter);
+        binding.groceryBackButton.setOnClickListener(v -> {
+            if (requireActivity() instanceof MainActivity) {
+                ((MainActivity) requireActivity()).openHome();
+            } else {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
         binding.groceryRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -419,6 +428,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         form.cancelGroceryButton.setOnClickListener(
                 clickedView -> dialog.dismiss()
         );
+        form.skipGroceryButton.setVisibility(
+                completeAfterSave ? View.VISIBLE : View.GONE);
+        form.skipGroceryButton.setOnClickListener(clickedView ->
+                repository.setPurchased(item, true, () -> {
+                    dialog.dismiss();
+                    if (binding != null) loadItems(currentQuery());
+                }));
         form.saveGroceryButton.setOnClickListener(clickedView -> {
             String name = textOf(form.groceryNameInput);
             int priorityIndex = findPriorityIndex(
@@ -593,26 +609,6 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             }
                         })
                 )
-                .show();
-    }
-
-    private void showPurchaseOptions(@NonNull GroceryItem item) {
-        loadItems(currentQuery());
-        String[] actions = {
-                getString(R.string.grocery_update_price),
-                getString(R.string.grocery_update_category),
-                getString(R.string.grocery_update_quantity)
-        };
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.grocery_complete_title)
-                .setMessage(getString(R.string.grocery_complete_message,
-                        item.name))
-                .setItems(actions, (dialog, which) ->
-                        showEditor(item, true))
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.grocery_skip_and_complete,
-                        (dialog, which) -> repository.setPurchased(item, true,
-                                () -> loadItems(currentQuery())))
                 .show();
     }
 

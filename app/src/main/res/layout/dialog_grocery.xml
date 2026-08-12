@@ -227,12 +227,22 @@
                 android:layout_weight="1"
                 android:text="@string/cancel" />
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/skip_grocery_button"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="0.8"
+                android:text="@string/grocery_skip_and_complete"
+                android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_grocery_button"
                 style="@style/Widget.FamilyHub.Button.Primary"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1.25"
+                android:layout_weight="1.1"
                 android:text="@string/grocery_save_item"
                 app:icon="@drawable/ic_grocery" />
         </LinearLayout>
