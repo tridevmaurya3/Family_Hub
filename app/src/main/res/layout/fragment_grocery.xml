@@ -198,6 +198,7 @@
             android:id="@+id/grocery_filter_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingEnd="16dp"
             app:chipSpacingHorizontal="@dimen/space_8"
             app:selectionRequired="true"
             app:singleSelection="true">
@@ -218,7 +219,17 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/grocery_filter_scroll">
-      <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+      <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingEnd="16dp">
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/grocery_add_button"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/touch_target_min"
+        android:text="@string/grocery_add_item"
+        android:textColor="@color/fh_module_grocery"
+        app:icon="@drawable/ic_add"
+        app:iconTint="@color/fh_module_grocery" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/grocery_voice_button"
         style="@style/Widget.Material3.Button.IconButton"
@@ -308,7 +319,7 @@
         android:layout_height="0dp"
         android:clipToPadding="false"
         android:paddingTop="@dimen/space_8"
-        android:paddingBottom="88dp"
+        android:paddingBottom="32dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -324,7 +335,7 @@
         app:cardBackgroundColor="@color/fh_success_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/clear_purchased_button"
+        app:layout_constraintTop_toBottomOf="@id/grocery_action_scroll"
         app:strokeColor="@color/fh_success">
         <LinearLayout
             android:layout_width="match_parent"
