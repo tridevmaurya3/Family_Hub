@@ -1,6 +1,7 @@
 package com.tridev.familyhub.feature.main;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -89,10 +90,19 @@ public class MainActivity extends AppCompatActivity {
                         if (binding != null) {
                             binding.fabAdd.setVisibility(
                                     fragment instanceof AddActionHost
-                                            && !(fragment instanceof GroceryFragment)
                                             ? View.VISIBLE
                                             : View.GONE
                             );
+                            boolean grocery = fragment instanceof GroceryFragment;
+                            binding.fabAdd.setBackgroundTintList(ColorStateList.valueOf(
+                                    getColor(grocery
+                                            ? R.color.fh_module_grocery_container
+                                            : R.color.fh_primary)));
+                            binding.fabAdd.setImageTintList(ColorStateList.valueOf(
+                                    getColor(grocery
+                                            ? R.color.fh_module_grocery
+                                            : R.color.fh_on_primary)));
+                            binding.fabAdd.setCompatElevation(grocery ? 3f : 6f);
                         }
                     }
                 },
