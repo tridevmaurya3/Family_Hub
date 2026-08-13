@@ -210,6 +210,10 @@
         </receiver>
 
         <receiver
+            android:name=".location.LocationSharingExtendReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".core.reminders.ReminderReceiver"
             android:exported="false" />
 

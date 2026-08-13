@@ -129,7 +129,14 @@ public final class LocationRecoveryNotifier {
                 ))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
-                .setContentIntent(openAppPendingIntent(appContext));
+                .setContentIntent(openAppPendingIntent(appContext))
+                .addAction(
+                        R.drawable.ic_add,
+                        appContext.getString(
+                                R.string.family_live_extend_one_hour_action
+                        ),
+                        extendSharingPendingIntent(appContext)
+                );
         notifySafely(appContext, EXPIRY_WARNING_NOTIFICATION_ID, builder);
     }
 
@@ -260,6 +267,23 @@ public final class LocationRecoveryNotifier {
         return PendingIntent.getActivity(
                 context,
                 4123,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+                        | PendingIntent.FLAG_IMMUTABLE
+        );
+    }
+
+    @NonNull
+    private static PendingIntent extendSharingPendingIntent(
+            @NonNull Context context
+    ) {
+        Intent intent = new Intent(
+                context,
+                LocationSharingExtendReceiver.class
+        );
+        return PendingIntent.getBroadcast(
+                context,
+                4124,
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT
                         | PendingIntent.FLAG_IMMUTABLE

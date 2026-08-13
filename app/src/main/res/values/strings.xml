@@ -1025,6 +1025,7 @@
     <string name="family_live_sharing_extended">Sharing extended by 1 hour.</string>
     <string name="family_live_expiry_warning_title">Location sharing ends soon</string>
     <string name="family_live_expiry_warning_detail">Your Family Live session ends in about 15 minutes. Open the app to extend it.</string>
+    <string name="family_live_extend_one_hour_action">Extend 1 hour</string>
     <string name="family_live_sharing_starting">Starting secure sharing…</string>
     <string name="family_live_sharing_duration_title">Share location for</string>
     <string name="family_live_manage_viewers">Viewers</string>
