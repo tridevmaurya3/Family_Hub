@@ -16,6 +16,12 @@ public final class LocationSharingStore {
     private static final String KEY_SHARING_ENABLED_AT = "sharing_enabled_at";
     private static final String KEY_SHARING_EXPIRES_AT = "sharing_expires_at";
     private static final String KEY_REQUESTED_DURATION = "requested_duration";
+    private static final String KEY_LAST_STARTED_AT = "last_started_at";
+    private static final String KEY_LAST_ENDED_AT = "last_ended_at";
+    private static final String KEY_LAST_END_REASON = "last_end_reason";
+    public static final int END_REASON_NONE = 0;
+    public static final int END_REASON_STOPPED = 1;
+    public static final int END_REASON_EXPIRED = 2;
 
     private LocationSharingStore() {
     }
@@ -26,7 +32,7 @@ public final class LocationSharingStore {
         long expiresAt = preferences.getLong(KEY_SHARING_EXPIRES_AT, 0L);
         if (enabled && expiresAt > 0L
                 && System.currentTimeMillis() >= expiresAt) {
-            setSharingEnabled(context, false);
+            setSharingEnabled(context, false, END_REASON_EXPIRED);
             return false;
         }
         return enabled;
@@ -38,6 +44,21 @@ public final class LocationSharingStore {
 
     public static long sharingExpiresAt(@NonNull Context context) {
         return preferences(context).getLong(KEY_SHARING_EXPIRES_AT, 0L);
+    }
+
+    public static long lastSharingStartedAt(@NonNull Context context) {
+        return preferences(context).getLong(KEY_LAST_STARTED_AT, 0L);
+    }
+
+    public static long lastSharingEndedAt(@NonNull Context context) {
+        return preferences(context).getLong(KEY_LAST_ENDED_AT, 0L);
+    }
+
+    public static int lastSharingEndReason(@NonNull Context context) {
+        return preferences(context).getInt(
+                KEY_LAST_END_REASON,
+                END_REASON_NONE
+        );
     }
 
     public static void prepareSharingDuration(
@@ -53,6 +74,14 @@ public final class LocationSharingStore {
             @NonNull Context context,
             boolean enabled
     ) {
+        setSharingEnabled(context, enabled, END_REASON_STOPPED);
+    }
+
+    private static void setSharingEnabled(
+            @NonNull Context context,
+            boolean enabled,
+            int endReason
+    ) {
         Context appContext = context.getApplicationContext();
         SharedPreferences preferences = preferences(appContext);
         boolean wasEnabled = preferences.getBoolean(
@@ -63,7 +92,10 @@ public final class LocationSharingStore {
         SharedPreferences.Editor editor = preferences.edit()
                 .putBoolean(KEY_SHARING_ENABLED, enabled);
         if (enabled && !wasEnabled) {
-            editor.putLong(KEY_SHARING_ENABLED_AT, System.currentTimeMillis());
+            long startedAt = System.currentTimeMillis();
+            editor.putLong(KEY_SHARING_ENABLED_AT, startedAt)
+                    .putLong(KEY_LAST_STARTED_AT, startedAt)
+                    .putInt(KEY_LAST_END_REASON, END_REASON_NONE);
             long duration = preferences.getLong(KEY_REQUESTED_DURATION, 0L);
             if (duration > 0L) {
                 editor.putLong(
@@ -75,6 +107,12 @@ public final class LocationSharingStore {
             }
             editor.remove(KEY_REQUESTED_DURATION);
         } else if (!enabled) {
+            if (wasEnabled) {
+                editor.putLong(
+                        KEY_LAST_ENDED_AT,
+                        System.currentTimeMillis()
+                ).putInt(KEY_LAST_END_REASON, endReason);
+            }
             editor.remove(KEY_SHARING_ENABLED_AT)
                     .remove(KEY_SHARING_EXPIRES_AT)
                     .remove(KEY_REQUESTED_DURATION);

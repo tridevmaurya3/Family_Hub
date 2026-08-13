@@ -1017,6 +1017,10 @@
     <string name="family_live_sharing_until_stopped_detail">Active until you stop it • authorised viewers only.</string>
     <string name="family_live_sharing_remaining_hours">%1$d h %2$d min remaining • authorised viewers only.</string>
     <string name="family_live_sharing_remaining_minutes">%1$d min remaining • authorised viewers only.</string>
+    <string name="family_live_sharing_activity_none">No recent sharing activity on this device.</string>
+    <string name="family_live_sharing_activity_started">Started %1$s</string>
+    <string name="family_live_sharing_activity_stopped">Last session stopped %1$s</string>
+    <string name="family_live_sharing_activity_expired">Last session expired %1$s</string>
     <string name="family_live_sharing_starting">Starting secure sharing…</string>
     <string name="family_live_sharing_duration_title">Share location for</string>
     <string name="family_live_manage_viewers">Viewers</string>

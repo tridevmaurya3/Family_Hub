@@ -1370,6 +1370,39 @@ public class FamilyLiveFragment extends Fragment {
         binding.buttonLocationSharing.setText(enabled
                 ? R.string.family_live_stop_sharing
                 : R.string.family_live_start_sharing);
+        updateSharingActivity(enabled);
+    }
+
+    private void updateSharingActivity(boolean enabled) {
+        long eventAt = enabled
+                ? LocationSharingStore.lastSharingStartedAt(requireContext())
+                : LocationSharingStore.lastSharingEndedAt(requireContext());
+        if (eventAt <= 0L) {
+            binding.tvSharingActivity.setText(
+                    R.string.family_live_sharing_activity_none
+            );
+            return;
+        }
+        String eventTime = DateFormat.getDateTimeInstance(
+                DateFormat.SHORT,
+                DateFormat.SHORT
+        ).format(new Date(eventAt));
+        if (enabled) {
+            binding.tvSharingActivity.setText(getString(
+                    R.string.family_live_sharing_activity_started,
+                    eventTime
+            ));
+            return;
+        }
+        int reason = LocationSharingStore.lastSharingEndReason(
+                requireContext()
+        );
+        binding.tvSharingActivity.setText(getString(
+                reason == LocationSharingStore.END_REASON_EXPIRED
+                        ? R.string.family_live_sharing_activity_expired
+                        : R.string.family_live_sharing_activity_stopped,
+                eventTime
+        ));
     }
 
     private void scheduleSharingStatusRefresh() {
