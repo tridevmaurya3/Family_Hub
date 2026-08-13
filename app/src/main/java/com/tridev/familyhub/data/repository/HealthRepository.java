@@ -18,6 +18,7 @@ import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.HealthRecordWithMember;
 import com.tridev.familyhub.data.model.FamilyRoles;
+import com.tridev.familyhub.feature.health.HealthReminderScheduler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,9 +60,11 @@ public class HealthRepository {
     private final FamilyAccountRepository familyAccountRepository =
             new FamilyAccountRepository();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Context appContext;
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public HealthRepository(@NonNull Context context) {
+        appContext = context.getApplicationContext();
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         healthRecordDao = database.healthRecordDao();
         familyMemberDao = database.familyMemberDao();
@@ -293,6 +296,7 @@ public class HealthRepository {
                 healthRecordDao.update(record);
                 FamilyCollaborationPublisher.remove("health", oldFamilyId, oldCloudId);
             }
+            HealthReminderScheduler.sync(appContext, record);
             mainHandler.post(callback::onComplete);
         });
     }
@@ -352,6 +356,7 @@ public class HealthRepository {
             record.updatedByUid = text(snapshot, "updatedByUid");
             if (insert) record.id = healthRecordDao.insert(record);
             else healthRecordDao.update(record);
+            HealthReminderScheduler.sync(appContext, record);
             HealthRecord changed = record;
             mainHandler.post(() -> callback.onChanged(changed));
         });
@@ -377,6 +382,7 @@ public class HealthRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             FamilyCollaborationPublisher.remove("health", record.familyId, record.cloudId);
+            HealthReminderScheduler.cancel(appContext, record.id);
             healthRecordDao.delete(record);
             mainHandler.post(callback::onComplete);
         });

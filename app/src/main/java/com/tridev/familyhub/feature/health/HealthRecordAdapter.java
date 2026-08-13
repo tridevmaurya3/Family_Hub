@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.health;
 
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -85,6 +86,16 @@ public class HealthRecordAdapter
             binding.healthRecordDate.setText(dateFormat.format(
                     new Date(record.recordedAt)
             ));
+            boolean hasDocument = !record.linkedDocumentTitle.isEmpty();
+            binding.healthRecordDocument.setVisibility(
+                    hasDocument ? View.VISIBLE : View.GONE
+            );
+            if (hasDocument) {
+                binding.healthRecordDocument.setText(record.linkedDocumentTitle);
+            }
+            binding.healthRecordSharing.setText(record.isShared
+                    ? R.string.health_shared_status
+                    : R.string.health_private_status);
 
             boolean hasValue = !record.value.isEmpty();
             binding.healthRecordValue.setText(
