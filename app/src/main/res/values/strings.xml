@@ -1346,6 +1346,7 @@ Sharing: %12$s</string>
     <string name="global_search_urgent">Urgent</string>
     <string name="back">Back</string>
     <string name="dashboard_priority_title">Family priorities</string>
+    <string name="dashboard_priority_family_scope">Whole-family summary • tap a card to open its records</string>
     <string name="dashboard_pending">Pending</string>
     <string name="dashboard_upcoming">Upcoming</string>
     <string name="dashboard_urgent">Urgent</string>
