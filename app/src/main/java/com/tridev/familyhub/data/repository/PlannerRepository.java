@@ -5,6 +5,9 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.google.firebase.database.DataSnapshot;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.PlannerItemDao;
@@ -31,16 +34,49 @@ public class PlannerRepository {
         void onComplete();
     }
 
+    public interface RealtimeCallback {
+        void onChanged(@NonNull PlannerItem item);
+        void onRemoved(long localId);
+    }
+
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
 
     private final PlannerItemDao plannerItemDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public PlannerRepository(@NonNull Context context) {
         plannerItemDao = FamilyHubDatabase
                 .getInstance(context)
                 .plannerItemDao();
+    }
+
+    public void startRealtimeSync(@NonNull RealtimeCallback callback) {
+        stopRealtimeSync();
+        subscriber = new FamilyCollaborationSubscriber("planner",
+                new FamilyCollaborationSubscriber.Callback() {
+                    @Override public void onChanged(@NonNull String familyId,
+                                                    @NonNull DataSnapshot snapshot) {
+                        mergeRemote(familyId, snapshot, callback);
+                    }
+                    @Override public void onRemoved(@NonNull String familyId,
+                                                    @NonNull String cloudId) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            PlannerItem local = plannerItemDao.getByCloudId(cloudId);
+                            if (local == null) return;
+                            long id = local.id;
+                            plannerItemDao.delete(local);
+                            mainHandler.post(() -> callback.onRemoved(id));
+                        });
+                    }
+                });
+        subscriber.start();
+    }
+
+    public void stopRealtimeSync() {
+        if (subscriber != null) subscriber.stop();
+        subscriber = null;
     }
 
     public void loadAll(
@@ -126,6 +162,13 @@ public class PlannerRepository {
         values.put("assignedMemberId", item.assignedMemberId == null ? "" : String.valueOf(item.assignedMemberId));
         values.put("assignedMemberName", item.assignedMemberName);
         values.put("collaborationStatus", item.collaborationStatus);
+        values.put("allDay", item.isAllDay);
+        values.put("repeatType", item.repeatType);
+        values.put("completed", item.isCompleted);
+        values.put("reminderEnabled", item.isReminderEnabled);
+        values.put("reminderMinutesBefore", item.reminderMinutesBefore);
+        values.put("shared", true);
+        values.put("createdAt", item.createdAt);
         FamilyCollaborationPublisher.publish("planner", item.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
                     item.cloudId = cloudId;
@@ -134,6 +177,46 @@ public class PlannerRepository {
                     plannerItemDao.update(item);
                 }));
     }
+
+    private void mergeRemote(@NonNull String familyId, @NonNull DataSnapshot s,
+                             @NonNull RealtimeCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            String cloudId = text(s, "cloudId");
+            if (cloudId.isEmpty()) return;
+            long updatedAt = number(s, "updatedAt");
+            PlannerItem item = plannerItemDao.getByCloudId(cloudId);
+            if (item != null && item.updatedAt > updatedAt) return;
+            boolean insert = item == null;
+            if (insert) item = new PlannerItem();
+            item.cloudId = cloudId; item.familyId = familyId;
+            item.title = text(s, "title"); item.notes = text(s, "notes");
+            item.location = text(s, "location");
+            item.itemType = fallback(text(s, "itemType"), PlannerItem.TYPE_EVENT);
+            item.priority = fallback(text(s, "priority"), PlannerItem.PRIORITY_NORMAL);
+            item.startAt = number(s, "startAt"); item.endAt = number(s, "endAt");
+            item.isAllDay = bool(s, "allDay");
+            long memberId = parseLong(text(s, "assignedMemberId"));
+            item.assignedMemberId = memberId == 0L ? null : memberId;
+            item.assignedMemberName = text(s, "assignedMemberName");
+            item.collaborationStatus = fallback(text(s, "collaborationStatus"), "PENDING");
+            item.repeatType = fallback(text(s, "repeatType"), PlannerItem.REPEAT_NONE);
+            item.isCompleted = bool(s, "completed");
+            item.isReminderEnabled = bool(s, "reminderEnabled");
+            item.reminderMinutesBefore = (int) number(s, "reminderMinutesBefore");
+            item.isShared = true; item.createdAt = number(s, "createdAt");
+            if (item.createdAt == 0L) item.createdAt = updatedAt;
+            item.updatedAt = updatedAt; item.updatedByUid = text(s, "updatedByUid");
+            if (insert) item.id = plannerItemDao.insert(item); else plannerItemDao.update(item);
+            PlannerItem changed = item;
+            mainHandler.post(() -> callback.onChanged(changed));
+        });
+    }
+
+    @NonNull private static String text(DataSnapshot s, String key) { String v=s.child(key).getValue(String.class); return v==null?"":v; }
+    private static long number(DataSnapshot s,String key){Number v=s.child(key).getValue(Number.class);return v==null?0L:v.longValue();}
+    private static boolean bool(DataSnapshot s,String key){Boolean v=s.child(key).getValue(Boolean.class);return v!=null&&v;}
+    private static long parseLong(String v){try{return Long.parseLong(v);}catch(NumberFormatException e){return 0L;}}
+    @NonNull private static String fallback(String v,String fallback){return v.isEmpty()?fallback:v;}
 
     public void setCompleted(
             @NonNull PlannerItem item,

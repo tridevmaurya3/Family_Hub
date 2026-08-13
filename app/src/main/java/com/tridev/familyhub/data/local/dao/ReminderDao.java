@@ -30,6 +30,9 @@ public interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE id = :reminderId LIMIT 1")
     Reminder getById(long reminderId);
 
+    @Query("SELECT * FROM reminders WHERE cloudId = :cloudId LIMIT 1")
+    Reminder getByCloudId(String cloudId);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(Reminder reminder);
 

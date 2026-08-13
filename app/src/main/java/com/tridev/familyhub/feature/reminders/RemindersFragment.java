@@ -76,6 +76,23 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
 
         binding.reminderRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.reminderRecyclerView.setAdapter(reminderAdapter);
+        repository.startRealtimeSync(new ReminderRepository.RealtimeCallback() {
+            @Override public void onChanged(@NonNull Reminder reminder) {
+                if (binding == null || !isAdded()) return;
+                if (reminder.isEnabled) {
+                    ReminderScheduler.schedule(requireContext(), reminder);
+                } else {
+                    ReminderScheduler.cancel(requireContext(), reminder.id);
+                }
+                loadReminders(binding.reminderSearchInput.getText().toString());
+            }
+
+            @Override public void onRemoved(long localId) {
+                if (binding == null || !isAdded()) return;
+                ReminderScheduler.cancel(requireContext(), localId);
+                loadReminders(binding.reminderSearchInput.getText().toString());
+            }
+        });
         binding.emptyAddReminderButton.setOnClickListener(v -> showReminderEditor(null));
         binding.reminderSearchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -309,6 +326,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
         binding = null;
         super.onDestroyView();
     }

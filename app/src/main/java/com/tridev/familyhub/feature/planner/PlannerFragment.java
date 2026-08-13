@@ -109,6 +109,23 @@ public class PlannerFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.plannerRecyclerView.setAdapter(adapter);
+        repository.startRealtimeSync(new PlannerRepository.RealtimeCallback() {
+            @Override public void onChanged(@NonNull PlannerItem item) {
+                if (binding == null || !isAdded()) return;
+                if (item.isReminderEnabled && !item.isCompleted) {
+                    PlannerScheduler.schedule(requireContext(), item);
+                } else {
+                    PlannerScheduler.cancel(requireContext(), item.id);
+                }
+                reload();
+            }
+
+            @Override public void onRemoved(long localId) {
+                if (binding == null || !isAdded()) return;
+                PlannerScheduler.cancel(requireContext(), localId);
+                reload();
+            }
+        });
         binding.emptyAddPlannerButton.setOnClickListener(
                 viewClicked -> prepareEditor(null)
         );
@@ -436,6 +453,7 @@ public class PlannerFragment extends Fragment implements AddActionHost {
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
         binding.plannerRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();
