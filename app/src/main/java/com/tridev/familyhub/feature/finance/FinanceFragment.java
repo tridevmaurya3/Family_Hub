@@ -37,6 +37,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Complete local income and expense feature. */
@@ -51,6 +55,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     private FinanceEntryAdapter entryAdapter;
     private FinanceRepository repository;
     private FinanceSummary latestSummary = new FinanceSummary();
+    @NonNull private List<FinanceEntry> latestEntries = new ArrayList<>();
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
     @Nullable
@@ -125,6 +130,10 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                 return;
             }
             entryAdapter.submitList(entries);
+            if (query.trim().isEmpty()) {
+                latestEntries = new ArrayList<>(entries);
+                updateSmartInsights();
+            }
             boolean isEmpty = entries.isEmpty();
             binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
             binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
@@ -155,7 +164,104 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                     binding.monthBalanceValue,
                     safeSummary.income - safeSummary.expense
             );
+            updateSmartInsights();
         });
+    }
+
+    private void updateSmartInsights() {
+        if (binding == null) {
+            return;
+        }
+        double budget = monthlyBudget();
+        double expense = latestSummary.expense;
+        int budgetPercent = budget <= 0D ? 0 : (int) Math.round(
+                (expense / budget) * 100D
+        );
+        binding.financeBudgetProgress.setProgressCompat(
+                Math.min(100, Math.max(0, budgetPercent)),
+                true
+        );
+
+        if (budget <= 0D) {
+            binding.financeBudgetHealthTitle.setText(
+                    R.string.finance_health_no_budget
+            );
+            binding.financeBudgetHealthDetail.setText(
+                    R.string.finance_health_no_budget_detail
+            );
+        } else {
+            int title;
+            if (expense > budget) {
+                title = R.string.finance_health_over_budget;
+            } else if (budgetPercent >= 90) {
+                title = R.string.finance_health_critical;
+            } else if (budgetPercent >= 70) {
+                title = R.string.finance_health_watch;
+            } else {
+                title = R.string.finance_health_good;
+            }
+            binding.financeBudgetHealthTitle.setText(title);
+            binding.financeBudgetHealthDetail.setText(getString(
+                    R.string.finance_health_budget_detail,
+                    budgetPercent,
+                    currencyFormatter.format(Math.max(0D, budget - expense))
+            ));
+        }
+
+        String monthPrefix = new SimpleDateFormat(
+                "yyyy-MM",
+                Locale.US
+        ).format(new Date());
+        Map<String, Double> categoryExpense = new HashMap<>();
+        Set<String> accounts = new LinkedHashSet<>();
+        int recurringCount = 0;
+        int sharedCount = 0;
+        int monthTransactions = 0;
+        for (FinanceEntry entry : latestEntries) {
+            if (!entry.transactionDate.startsWith(monthPrefix)) {
+                continue;
+            }
+            monthTransactions++;
+            accounts.add(entry.accountName);
+            if (entry.isRecurring) {
+                recurringCount++;
+            }
+            if (entry.isShared) {
+                sharedCount++;
+            }
+            if (FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)) {
+                categoryExpense.put(
+                        entry.category,
+                        categoryExpense.getOrDefault(entry.category, 0D)
+                                + entry.amount
+                );
+            }
+        }
+        String topCategory = getString(R.string.finance_insight_none);
+        double topAmount = 0D;
+        for (Map.Entry<String, Double> item : categoryExpense.entrySet()) {
+            if (item.getValue() > topAmount) {
+                topCategory = item.getKey();
+                topAmount = item.getValue();
+            }
+        }
+        Calendar calendar = Calendar.getInstance();
+        int day = Math.max(1, calendar.get(Calendar.DAY_OF_MONTH));
+        int daysInMonth = calendar.getActualMaximum(
+                Calendar.DAY_OF_MONTH
+        );
+        double projectedExpense = expense <= 0D
+                ? 0D : (expense / day) * daysInMonth;
+        binding.financeSmartInsightDetail.setText(getString(
+                R.string.finance_smart_insight_detail,
+                monthTransactions,
+                topCategory,
+                currencyFormatter.format(topAmount),
+                recurringCount,
+                sharedCount,
+                accounts.size(),
+                currencyFormatter.format(projectedExpense)
+        ));
     }
 
     private void showEntryEditor(@Nullable FinanceEntry existingEntry) {
@@ -359,6 +465,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                                 KEY_MONTHLY_BUDGET, Double.doubleToRawLongBits(value)
                         ).apply();
                         dialog.dismiss();
+                        updateSmartInsights();
                         Snackbar.make(binding.getRoot(), R.string.finance_budget_saved, Snackbar.LENGTH_SHORT).show();
                     } catch (NumberFormatException exception) {
                         input.setError(getString(R.string.finance_budget_invalid));
