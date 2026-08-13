@@ -34,6 +34,8 @@ public interface VehicleDao {
 
     @Query("SELECT COUNT(*) FROM vehicles")
     int count();
+    @Query("SELECT * FROM vehicles WHERE cloudId = :cloudId LIMIT 1")
+    Vehicle getByCloudId(String cloudId);
 
     @Query("SELECT COUNT(*) FROM vehicles WHERE "
             + "(insuranceExpiryAt > 0 AND insuranceExpiryAt <= :deadline) OR "

@@ -137,6 +137,9 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 }
         );
         loadVehicles("");
+        repository.startRealtimeSync(() -> {
+            if (binding != null) loadVehicles(currentQuery());
+        });
     }
 
     @Override
@@ -246,6 +249,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                     false
             );
             form.vehicleTimelineNoteInput.setText(vehicle.timelineNote);
+            form.vehicleSharedSwitch.setChecked(vehicle.isShared);
         }
 
         bindDateField(
@@ -317,6 +321,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             form.vehicleRegistrationLayout.setError(null);
 
             vehicle.ownerMemberId = owner.id;
+            vehicle.assignedOwnerName = owner.name;
             vehicle.vehicleType = VEHICLE_TYPES[typeIndex];
             vehicle.displayName = displayName;
             vehicle.registrationNumber = registration;
@@ -335,6 +340,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             vehicle.linkedDocumentId = document == null ? 0L : document.id;
             vehicle.linkedDocumentTitle = document == null ? "" : document.title;
             vehicle.timelineNote = textOf(form.vehicleTimelineNoteInput);
+            vehicle.isShared = form.vehicleSharedSwitch.isChecked();
             vehicle.updatedAt = System.currentTimeMillis();
 
             repository.save(vehicle, successful -> {
@@ -602,6 +608,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
         binding.vehicleRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();

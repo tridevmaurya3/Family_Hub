@@ -21,6 +21,7 @@ import androidx.room.PrimaryKey;
                 @Index(value = "registrationNumber", unique = true),
                 @Index("insuranceExpiryAt"),
                 @Index("serviceDueAt")
+                ,@Index("cloudId"), @Index("familyId")
         }
 )
 public class Vehicle {
@@ -71,4 +72,9 @@ public class Vehicle {
     @NonNull public String linkedDocumentTitle = "";
     @NonNull public String timelineNote = "";
     public long updatedAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    @NonNull public String assignedOwnerName = "";
+    @NonNull public String updatedByUid = "";
+    public boolean isShared;
 }

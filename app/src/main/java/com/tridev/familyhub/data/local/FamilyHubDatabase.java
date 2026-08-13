@@ -69,7 +69,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 29,
+        version = 30,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -339,6 +339,17 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     private static final Migration MIGRATION_28_29 = new Migration(28, 29) {
         @Override public void migrate(SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE `health_records` ADD COLUMN `reminderMinutesBefore` INTEGER NOT NULL DEFAULT 1440");
+        }
+    };
+    private static final Migration MIGRATION_29_30 = new Migration(29, 30) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `vehicles` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `vehicles` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `vehicles` ADD COLUMN `assignedOwnerName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `vehicles` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `vehicles` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicles_cloudId` ON `vehicles` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicles_familyId` ON `vehicles` (`familyId`)");
         }
     };
 
@@ -856,7 +867,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_25_26,
                                     MIGRATION_26_27,
                                     MIGRATION_27_28,
-                                    MIGRATION_28_29
+                                    MIGRATION_28_29,
+                                    MIGRATION_29_30
                             )
                             .build();
                 }
