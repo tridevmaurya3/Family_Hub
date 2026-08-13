@@ -956,6 +956,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             @Nullable String replacedContentUri,
             boolean isNew
     ) {
+        android.content.Context appContext = requireContext().getApplicationContext();
         DocumentRepository.SaveCallback callback = new DocumentRepository.SaveCallback() {
             @Override
             public void onSaved(long documentId) {
@@ -975,12 +976,14 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             public void onError(@NonNull Exception error) {
                 if (isNew || fileReplaced) {
                     DocumentCaptureStorage.deleteIfOwned(
-                            requireContext(),
+                            appContext,
                             document.contentUri
                     );
-                    releasePermission(document.contentUri);
+                    releasePermission(appContext, document.contentUri);
                 }
-                showMessage(R.string.backup_error_generic);
+                if (binding != null) {
+                    showMessage(R.string.backup_error_generic);
+                }
             }
         };
         if (fileReplaced && replacedContentUri != null && document.id > 0L) {
@@ -999,10 +1002,12 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             @Nullable String replacedContentUri,
             boolean isNew
     ) {
-        DocumentOcrProcessor.enrich(requireContext(), document, detected -> {
-            if (binding == null) return;
+        android.content.Context appContext = requireContext().getApplicationContext();
+        DocumentOcrProcessor.enrich(appContext, document, detected -> {
             saveDocument(document, fileReplaced, replacedContentUri, isNew);
-            if (detected) showMessage(R.string.documents_vault_ocr_complete);
+            if (detected && binding != null) {
+                showMessage(R.string.documents_vault_ocr_complete);
+            }
         });
     }
 
@@ -1237,8 +1242,16 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     }
 
     private void releasePermission(@NonNull String uriValue) {
+        if (getContext() == null) return;
+        releasePermission(requireContext(), uriValue);
+    }
+
+    private static void releasePermission(
+            @NonNull android.content.Context context,
+            @NonNull String uriValue
+    ) {
         try {
-            requireContext().getContentResolver()
+            context.getContentResolver()
                     .releasePersistableUriPermission(
                             Uri.parse(uriValue),
                             Intent.FLAG_GRANT_READ_URI_PERMISSION

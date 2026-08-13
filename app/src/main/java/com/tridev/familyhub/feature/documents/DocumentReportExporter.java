@@ -21,6 +21,16 @@ final class DocumentReportExporter {
     static void pdf(@NonNull File file, @NonNull List<DocumentEntry> rows) throws IOException {
         PdfDocument pdf = new PdfDocument(); Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         PdfDocument.Page page = null; Canvas canvas = null; int y = 0, number = 0;
+        if (rows.isEmpty()) {
+            page = pdf.startPage(new PdfDocument.PageInfo.Builder(595, 842, 1).create());
+            canvas = page.getCanvas(); canvas.drawColor(Color.WHITE);
+            paint.setColor(Color.rgb(68,45,130)); paint.setTextSize(18);
+            paint.setFakeBoldText(true);
+            canvas.drawText("FAMILY HUB • DOCUMENTS INVENTORY", 32, 40, paint);
+            paint.setColor(Color.DKGRAY); paint.setTextSize(11);
+            paint.setFakeBoldText(false);
+            canvas.drawText("No active documents found.", 32, 72, paint);
+        }
         for (DocumentEntry row : rows) {
             if (page == null || y > 790) {
                 if (page != null) pdf.finishPage(page);

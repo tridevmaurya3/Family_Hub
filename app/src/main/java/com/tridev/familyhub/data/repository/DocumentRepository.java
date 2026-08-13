@@ -191,6 +191,13 @@ public class DocumentRepository {
                 }
                 version.updatedAt = System.currentTimeMillis();
                 renewed.fingerprint = fingerprint(renewed.contentUri);
+                if (renewed.fingerprint.isEmpty()) {
+                    throw new IllegalStateException("Renewed document file is unavailable");
+                }
+                if (documentDao.countOtherByFingerprint(
+                        renewed.fingerprint, renewed.id) > 0) {
+                    throw new IllegalStateException("Duplicate document content");
+                }
                 renewed.updatedAt = System.currentTimeMillis();
                 documentDao.renewWithVersion(version, renewed);
                 DocumentExpiryScheduler.sync(appContext);
