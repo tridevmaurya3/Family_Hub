@@ -17,19 +17,6 @@
         android:paddingEnd="@dimen/screen_padding_horizontal"
         android:paddingBottom="88dp">
 
-        <TextView
-            style="@style/TextAppearance.FamilyHub.Heading"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/more_title" />
-
-        <TextView
-            style="@style/TextAppearance.FamilyHub.Body"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_4"
-            android:text="@string/more_description" />
-
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_vehicle"
             style="@style/Widget.FamilyHub.Card.Flat"

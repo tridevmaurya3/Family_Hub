@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,7 +26,7 @@ import com.tridev.familyhub.backup.BackupRestoreActivity;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
-import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
+import com.tridev.familyhub.MainActivity;
 
 /** Compact account, settings, encrypted backup and privacy page. */
 public class MoreFragment extends Fragment {
@@ -52,7 +51,6 @@ public class MoreFragment extends Fragment {
     ) {
         super.onViewCreated(view, savedInstanceState);
 
-        retitlePage();
         hideModuleCards();
         addProfileEntry();
         styleSettingsCards();
@@ -93,24 +91,6 @@ public class MoreFragment extends Fragment {
                         FamilyManagementActivity.class
                 )));
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
-    }
-
-    private void retitlePage() {
-        View rootChild = binding.getRoot().getChildAt(0);
-        if (!(rootChild instanceof LinearLayout)) {
-            return;
-        }
-        LinearLayout content = (LinearLayout) rootChild;
-        if (content.getChildCount() > 0
-                && content.getChildAt(0) instanceof TextView) {
-            ((TextView) content.getChildAt(0)).setText(R.string.profile_title);
-        }
-        if (content.getChildCount() > 1
-                && content.getChildAt(1) instanceof TextView) {
-            ((TextView) content.getChildAt(1)).setText(
-                    R.string.profile_subtitle
-            );
-        }
     }
 
     /** Removes feature duplicates; modules are available from the hamburger. */
@@ -157,7 +137,6 @@ public class MoreFragment extends Fragment {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(68)
         );
-        params.topMargin = dp(14);
         params.bottomMargin = dp(4);
         profile.setLayoutParams(params);
         profile.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
@@ -168,7 +147,7 @@ public class MoreFragment extends Fragment {
         profile.setTextSize(14F);
         profile.setAllCaps(false);
         profile.setMaxLines(2);
-        profile.setIconResource(R.drawable.ic_profile_person);
+        profile.setIconResource(R.drawable.ic_arrow_back);
         profile.setIconTintResource(R.color.fh_primary);
         profile.setIconSize(dp(24));
         profile.setIconPadding(dp(12));
@@ -187,11 +166,14 @@ public class MoreFragment extends Fragment {
         ));
         profile.setStrokeWidth(dp(1));
         profile.setCornerRadius(dp(20));
-        profile.setOnClickListener(v -> startActivity(new Intent(
-                requireContext(),
-                ProfileSettingsActivity.class
-        )));
-        content.addView(profile, Math.min(2, content.getChildCount()));
+        profile.setOnClickListener(v -> {
+            if (requireActivity() instanceof MainActivity) {
+                ((MainActivity) requireActivity()).openHome();
+            } else {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
+        content.addView(profile, 0);
     }
 
     private void styleSettingsCards() {
