@@ -66,7 +66,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 25,
+        version = 26,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -297,6 +297,17 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `recurrenceDay` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_recurrenceSeriesId` ON `finance_entries` (`recurrenceSeriesId`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_recurrenceMonth` ON `finance_entries` (`recurrenceMonth`)");
+        }
+    };
+
+    /** Adds family expense split and settlement metadata. */
+    private static final Migration MIGRATION_25_26 = new Migration(25, 26) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `paidByName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `splitType` TEXT NOT NULL DEFAULT 'NONE'");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `participantNames` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `splitAmounts` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `settlementStatus` TEXT NOT NULL DEFAULT 'NOT_APPLICABLE'");
         }
     };
 
@@ -810,7 +821,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_21_22,
                                     MIGRATION_22_23,
                                     MIGRATION_23_24,
-                                    MIGRATION_24_25
+                                    MIGRATION_24_25,
+                                    MIGRATION_25_26
                             )
                             .build();
                 }

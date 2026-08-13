@@ -173,6 +173,78 @@
             android:text="@string/finance_share_summary" />
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_paid_by_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_paid_by">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/finance_paid_by_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_split_type_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_split_type">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/finance_split_type_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_participants_layout"
+            style="@style/Widget.FamilyHub.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_participants">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/finance_participants_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
+                android:maxLines="2" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_split_amounts_layout"
+            style="@style/Widget.FamilyHub.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_custom_amounts">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/finance_split_amounts_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:maxLines="2" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/finance_settlement_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/finance_settlement_status">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/finance_settlement_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/finance_entry_date_layout"
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"

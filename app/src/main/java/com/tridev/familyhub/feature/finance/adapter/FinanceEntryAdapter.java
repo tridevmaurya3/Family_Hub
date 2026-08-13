@@ -111,6 +111,11 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
                     detail.append(" by ").append(entry.updatedByName);
                 }
             }
+            if (!"NONE".equals(entry.splitType) && !TextUtils.isEmpty(entry.participantNames)) {
+                detail.append(" · ").append(entry.splitType.equals("EQUAL") ? "Equal split" : "Custom split")
+                        .append(" · ").append(entry.settlementStatus.replace('_', ' '));
+                if (!TextUtils.isEmpty(entry.paidByName)) detail.append(" · Paid by ").append(entry.paidByName);
+            }
             if (!TextUtils.isEmpty(entry.note)) {
                 detail.append(" · ").append(entry.note);
             }

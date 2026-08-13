@@ -1369,6 +1369,13 @@ Sharing: %12$s</string>
     <string name="finance_payment_method">Payment method</string>
     <string name="finance_recurring">Repeat this entry every month</string>
     <string name="finance_share_summary">Share entry summary with family</string>
+    <string name="finance_paid_by">Paid by family member</string>
+    <string name="finance_split_type">Expense split</string>
+    <string name="finance_participants">Participants (comma separated)</string>
+    <string name="finance_custom_amounts">Custom shares (e.g. Tridev:500, Bharati:300)</string>
+    <string name="finance_settlement_status">Settlement status</string>
+    <string-array name="finance_split_type_labels"><item>NONE</item><item>EQUAL</item><item>CUSTOM</item></string-array>
+    <string-array name="finance_settlement_labels"><item>NOT_APPLICABLE</item><item>PENDING</item><item>PARTIALLY_SETTLED</item><item>SETTLED</item></string-array>
     <string name="finance_budget">Monthly budget</string>
     <string name="finance_monthly_report">Monthly report</string>
     <string name="finance_budget_prompt">Set the maximum planned expense for this month.</string>

@@ -248,6 +248,9 @@ public class FinanceRepository {
         values.put("recurrenceMonth", entry.recurrenceMonth);
         values.put("recurrenceStatus", entry.recurrenceStatus);
         values.put("recurrenceDay", entry.recurrenceDay);
+        values.put("paidByName", entry.paidByName); values.put("splitType", entry.splitType);
+        values.put("participantNames", entry.participantNames); values.put("splitAmounts", entry.splitAmounts);
+        values.put("settlementStatus", entry.settlementStatus);
         return values;
     }
 
@@ -269,6 +272,9 @@ public class FinanceRepository {
         entry.recurrenceMonth = text(value, "recurrenceMonth");
         entry.recurrenceStatus = text(value, "recurrenceStatus");
         entry.recurrenceDay = integer(value, "recurrenceDay");
+        entry.paidByName = text(value, "paidByName"); entry.splitType = text(value, "splitType");
+        entry.participantNames = text(value, "participantNames"); entry.splitAmounts = text(value, "splitAmounts");
+        entry.settlementStatus = text(value, "settlementStatus");
         return entry;
     }
 
@@ -299,6 +305,9 @@ public class FinanceRepository {
         copy.recurrenceSeriesId = source.recurrenceSeriesId; copy.recurrenceMonth = month;
         copy.recurrenceStatus = dueStatus(copy.transactionDate, today);
         copy.createdAt = System.currentTimeMillis(); copy.updatedAt = copy.createdAt;
+        copy.paidByName = source.paidByName; copy.splitType = source.splitType;
+        copy.participantNames = source.participantNames; copy.splitAmounts = source.splitAmounts;
+        copy.settlementStatus = source.settlementStatus;
         if (copy.isShared) {
             // Deterministic identity prevents two family devices creating duplicates.
             copy.cloudId = "rec_" + source.recurrenceSeriesId + "_" + month;

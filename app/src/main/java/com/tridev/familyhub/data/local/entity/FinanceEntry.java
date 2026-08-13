@@ -51,4 +51,9 @@ public class FinanceEntry {
     @NonNull public String recurrenceMonth = "";
     @NonNull public String recurrenceStatus = "";
     public int recurrenceDay;
+    @NonNull public String paidByName = "";
+    @NonNull public String splitType = "NONE";
+    @NonNull public String participantNames = "";
+    @NonNull public String splitAmounts = "";
+    @NonNull public String settlementStatus = "NOT_APPLICABLE";
 }

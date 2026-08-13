@@ -26,6 +26,7 @@ import com.tridev.familyhub.core.ui.SemanticValueStyler;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.tridev.familyhub.data.repository.FinanceRepository;
+import com.tridev.familyhub.data.repository.FamilyAccountRepository;
 import com.tridev.familyhub.databinding.DialogFinanceEntryBinding;
 import com.tridev.familyhub.databinding.FragmentFinanceBinding;
 import com.tridev.familyhub.feature.finance.adapter.FinanceEntryAdapter;
@@ -294,6 +295,27 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                 requireContext(), android.R.layout.simple_dropdown_item_1line,
                 getResources().getStringArray(R.array.finance_payment_method_labels)
         ));
+        dialogBinding.financeSplitTypeInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                getResources().getStringArray(R.array.finance_split_type_labels)));
+        dialogBinding.financeSettlementInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                getResources().getStringArray(R.array.finance_settlement_labels)));
+        dialogBinding.financeSplitTypeInput.setText("NONE", false);
+        dialogBinding.financeSettlementInput.setText("NOT_APPLICABLE", false);
+        new FamilyAccountRepository().loadAuthorisedMembers(
+                new FamilyAccountRepository.ResultCallback<List<FamilyAccountRepository.Member>>() {
+                    @Override public void onSuccess(@Nullable List<FamilyAccountRepository.Member> members) {
+                        if (binding == null || members == null) return;
+                        List<String> names = new ArrayList<>();
+                        for (FamilyAccountRepository.Member member : members) {
+                            if (!member.displayName.trim().isEmpty()) names.add(member.displayName);
+                        }
+                        dialogBinding.financePaidByInput.setAdapter(new ArrayAdapter<>(requireContext(),
+                                android.R.layout.simple_dropdown_item_1line, names));
+                    }
+                    @Override public void onError(@NonNull Exception error) { }
+                });
         dialogBinding.financeAccountInput.setText(isNewEntry ? "Cash" : existingEntry.accountName, false);
         dialogBinding.financePaymentMethodInput.setText(
                 isNewEntry ? "Cash" : existingEntry.paymentMethod, false
@@ -313,6 +335,11 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             dialogBinding.financeNoteInput.setText(existingEntry.note);
             dialogBinding.financeRecurringSwitch.setChecked(existingEntry.isRecurring);
             dialogBinding.financeSharedSwitch.setChecked(existingEntry.isShared);
+            dialogBinding.financePaidByInput.setText(existingEntry.paidByName, false);
+            dialogBinding.financeSplitTypeInput.setText(existingEntry.splitType, false);
+            dialogBinding.financeParticipantsInput.setText(existingEntry.participantNames);
+            dialogBinding.financeSplitAmountsInput.setText(existingEntry.splitAmounts);
+            dialogBinding.financeSettlementInput.setText(existingEntry.settlementStatus, false);
             dialogBinding.financeTypeGroup.check(FinanceEntry.TYPE_INCOME.equals(existingEntry.entryType)
                     ? R.id.type_income_button
                     : R.id.type_expense_button);
@@ -353,6 +380,12 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             entry.paymentMethod = dialogBinding.financePaymentMethodInput.getText().toString().trim();
             entry.isRecurring = dialogBinding.financeRecurringSwitch.isChecked();
             entry.isShared = dialogBinding.financeSharedSwitch.isChecked();
+            entry.paidByName = dialogBinding.financePaidByInput.getText().toString().trim();
+            entry.splitType = dialogBinding.financeSplitTypeInput.getText().toString().trim();
+            entry.participantNames = dialogBinding.financeParticipantsInput.getText().toString().trim();
+            entry.splitAmounts = dialogBinding.financeSplitAmountsInput.getText().toString().trim();
+            entry.settlementStatus = dialogBinding.financeSettlementInput.getText().toString().trim();
+            if (!"NONE".equals(entry.splitType)) entry.isShared = true;
             rememberAccount(entry.accountName);
 
             repository.save(entry, () -> {
