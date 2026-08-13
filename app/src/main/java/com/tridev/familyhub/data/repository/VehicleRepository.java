@@ -16,6 +16,7 @@ import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.VehicleWithOwner;
+import com.tridev.familyhub.feature.vehicle.VehicleReminderScheduler;
 
 import java.util.List;
 import java.util.HashMap;
@@ -49,9 +50,11 @@ public class VehicleRepository {
     private final FamilyMemberDao familyMemberDao;
     private final HealthRepository authorisedMemberSource;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Context appContext;
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public VehicleRepository(@NonNull Context context) {
+        appContext = context.getApplicationContext();
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         vehicleDao = database.vehicleDao();
         documentDao = database.documentDao();
@@ -135,6 +138,7 @@ public class VehicleRepository {
                     vehicleDao.update(vehicle);
                     FamilyCollaborationPublisher.remove("vehicles", familyId, cloudId);
                 }
+                VehicleReminderScheduler.sync(appContext, vehicle);
             } catch (RuntimeException exception) {
                 successful = false;
             }
@@ -205,6 +209,7 @@ public class VehicleRepository {
             try {
                 if (insert) vehicle.id = vehicleDao.insert(vehicle);
                 else vehicleDao.update(vehicle);
+                VehicleReminderScheduler.sync(appContext, vehicle);
                 mainHandler.post(onChanged);
             } catch (RuntimeException ignored) { }
         });
@@ -230,6 +235,7 @@ public class VehicleRepository {
             boolean successful = true;
             try {
                 FamilyCollaborationPublisher.remove("vehicles", vehicle.familyId, vehicle.cloudId);
+                VehicleReminderScheduler.cancelAll(appContext, vehicle.id);
                 vehicleDao.delete(vehicle);
             } catch (RuntimeException exception) {
                 successful = false;

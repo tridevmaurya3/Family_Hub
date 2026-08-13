@@ -457,6 +457,12 @@
     <string name="vehicle_add">Add vehicle</string>
     <string name="vehicle_no_linked_document">No linked document</string>
     <string name="vehicle_share_with_family">Share this vehicle with authorised family members</string>
+    <string name="vehicle_shared_status">Shared with family</string>
+    <string name="vehicle_private_status">Private</string>
+    <string name="vehicle_reminder_channel">Vehicle reminders</string>
+    <string name="vehicle_reminder_channel_detail">Insurance, pollution certificate and service due reminders</string>
+    <string name="vehicle_reminder_title">Vehicle due reminder</string>
+    <string name="vehicle_reminder_message">%1$s • %2$s is due on %3$s</string>
     <string name="vehicle_edit">Edit vehicle</string>
     <string name="vehicle_save">Save vehicle</string>
     <string name="vehicle_owner">Owner</string>

@@ -108,6 +108,14 @@ public class VehicleAdapter
             } else {
                 binding.vehicleDueDate.setVisibility(View.GONE);
             }
+            boolean hasDocument = !vehicle.linkedDocumentTitle.isEmpty();
+            binding.vehicleDocument.setVisibility(
+                    hasDocument ? View.VISIBLE : View.GONE);
+            if (hasDocument) binding.vehicleDocument.setText(
+                    vehicle.linkedDocumentTitle);
+            binding.vehicleSharing.setText(vehicle.isShared
+                    ? R.string.vehicle_shared_status
+                    : R.string.vehicle_private_status);
 
             binding.getRoot().setOnClickListener(
                     view -> listener.onEdit(item)
