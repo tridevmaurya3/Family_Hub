@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.tridev.familyhub.R;
@@ -192,11 +193,15 @@ public class GroceryAdapter
 
             int flags = binding.groceryName.getPaintFlags();
             if (item.isPurchased) {
+                binding.groceryName.setTextColor(ContextCompat.getColor(
+                        binding.getRoot().getContext(), R.color.fh_error));
                 binding.groceryName.setPaintFlags(
                         flags | Paint.STRIKE_THRU_TEXT_FLAG
                 );
                 binding.getRoot().setAlpha(0.65f);
             } else {
+                binding.groceryName.setTextColor(ContextCompat.getColor(
+                        binding.getRoot().getContext(), R.color.fh_on_surface));
                 binding.groceryName.setPaintFlags(
                         flags & ~Paint.STRIKE_THRU_TEXT_FLAG
                 );
