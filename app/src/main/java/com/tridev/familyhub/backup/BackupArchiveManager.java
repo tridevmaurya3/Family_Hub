@@ -63,7 +63,7 @@ public final class BackupArchiveManager {
     public static final String FILE_EXTENSION = ".fhbackup";
     public static final String MIME_TYPE = "application/octet-stream";
     public static final int ARCHIVE_VERSION = 1;
-    public static final int CURRENT_DATABASE_VERSION = 16;
+    public static final int CURRENT_DATABASE_VERSION = 31;
 
     private static final String ENTRY_MANIFEST = "manifest.json";
     private static final String ENTRY_DATA = "data.json";
@@ -80,6 +80,7 @@ public final class BackupArchiveManager {
     private static final List<String> TABLES = Collections.unmodifiableList(
             Arrays.asList(
                     "family_members",
+                    "finance_accounts",
                     "finance_entries",
                     "reminders",
                     "family_live_status",
@@ -89,6 +90,7 @@ public final class BackupArchiveManager {
                     "vehicles",
                     "properties",
                     "grocery_items",
+                    "grocery_purchases",
                     "notes",
                     "planner_items",
                     "safe_places",
@@ -196,7 +198,14 @@ public final class BackupArchiveManager {
             JSONObject manifest = readJsonEntry(plainArchive, ENTRY_MANIFEST);
             validateManifest(manifest);
             BackupPreview preview = BackupPreview.fromManifest(manifest);
-            if (preview.databaseVersion > CURRENT_DATABASE_VERSION) {
+            SupportSQLiteDatabase installedDatabase = FamilyHubDatabase
+                    .getInstance(appContext)
+                    .getOpenHelper()
+                    .getWritableDatabase();
+            int installedDatabaseVersion = currentDatabaseVersion(
+                    installedDatabase
+            );
+            if (preview.databaseVersion > installedDatabaseVersion) {
                 throw new BackupException("BACKUP_FROM_NEWER_APP");
             }
 
