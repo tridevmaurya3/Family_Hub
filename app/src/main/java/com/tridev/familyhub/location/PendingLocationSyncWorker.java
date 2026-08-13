@@ -165,6 +165,7 @@ public final class PendingLocationSyncWorker extends Worker {
                     )
             );
             values.put("updatedAt", queuedTimestamp);
+            values.put("locationUpdatedAt", queuedTimestamp);
             values.put("syncedAt", ServerValue.TIMESTAMP);
 
             if (!LocationSharingStore.isSharingEnabled(context)) {

@@ -175,6 +175,7 @@
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
         ".indexOn": [
+          "locationUpdatedAt",
           "updatedAt",
           "serviceHeartbeatAt"
         ],

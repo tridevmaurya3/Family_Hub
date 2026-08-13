@@ -6,6 +6,7 @@ import androidx.annotation.StringRes;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.location.LocationHeartbeatPolicy;
+import com.tridev.familyhub.location.LocationFreshnessPolicy;
 
 import java.util.Locale;
 
@@ -74,8 +75,11 @@ public final class FamilyLiveAvailability {
             return TRACKING_STALLED;
         }
 
-        if (member.updatedAt <= 0L
-                || now - member.updatedAt > freshnessMs) {
+        if (LocationFreshnessPolicy.isStale(
+                member.updatedAt,
+                now,
+                freshnessMs
+        )) {
             return NO_RECENT_UPDATE;
         }
 

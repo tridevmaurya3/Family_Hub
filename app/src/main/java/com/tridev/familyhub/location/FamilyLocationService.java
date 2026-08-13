@@ -961,6 +961,7 @@ public class FamilyLocationService extends Service {
                 )
         );
         values.put("updatedAt", ServerValue.TIMESTAMP);
+        values.put("locationUpdatedAt", ServerValue.TIMESTAMP);
 
         if (LocationDeviceHealth.shouldQueueOffline(currentDeviceHealth)
                 || !networkAvailable) {
@@ -1051,6 +1052,7 @@ public class FamilyLocationService extends Service {
     ) {
         Map<String, Object> queueValues = new HashMap<>(sourceValues);
         queueValues.remove("updatedAt");
+        queueValues.remove("locationUpdatedAt");
 
         executeQueueTask(() -> {
             PendingLocationUpload pending = new PendingLocationUpload();

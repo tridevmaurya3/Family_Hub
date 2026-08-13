@@ -46,6 +46,7 @@ import com.tridev.familyhub.data.local.entity.SafePlace;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.repository.FamilyLiveRepository;
 import com.tridev.familyhub.data.repository.SafePlaceRepository;
+import com.tridev.familyhub.location.LocationFreshnessPolicy;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -1203,9 +1204,11 @@ public final class FamilyMapActivity extends AppCompatActivity {
     }
 
     private boolean isStale(@NonNull FamilyLiveCloudMember member) {
-        return member.updatedAt <= 0L
-                || System.currentTimeMillis() - member.updatedAt
-                > LIVE_FRESHNESS_MS;
+        return LocationFreshnessPolicy.isStale(
+                member.updatedAt,
+                System.currentTimeMillis(),
+                LIVE_FRESHNESS_MS
+        );
     }
 
     private float normalMarkerHue(

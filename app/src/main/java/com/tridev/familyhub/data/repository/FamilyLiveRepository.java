@@ -215,6 +215,12 @@ public class FamilyLiveRepository {
                             .getValue(String.class);
                     Long updatedAt =
                             child.child("updatedAt").getValue(Long.class);
+                    Long locationUpdatedAt = child
+                            .child("locationUpdatedAt")
+                            .getValue(Long.class);
+                    Long clientTimestamp = child
+                            .child("clientTimestamp")
+                            .getValue(Long.class);
                     String serviceState = child
                             .child("serviceState")
                             .getValue(String.class);
@@ -251,7 +257,11 @@ public class FamilyLiveRepository {
                             availabilityReason == null
                                     ? ""
                                     : availabilityReason,
-                            updatedAt == null ? 0L : updatedAt,
+                            firstPositiveTimestamp(
+                                    locationUpdatedAt,
+                                    clientTimestamp,
+                                    updatedAt
+                            ),
                             serviceState == null ? "" : serviceState,
                             serviceHeartbeatAt == null
                                     ? 0L
@@ -466,6 +476,20 @@ public class FamilyLiveRepository {
         return value > Integer.MAX_VALUE
                 ? Integer.MAX_VALUE
                 : value.intValue();
+    }
+
+    private static long firstPositiveTimestamp(
+            @Nullable Long preferred,
+            @Nullable Long fallback,
+            @Nullable Long legacyFallback
+    ) {
+        if (preferred != null && preferred > 0L) {
+            return preferred;
+        }
+        if (fallback != null && fallback > 0L) {
+            return fallback;
+        }
+        return legacyFallback == null ? 0L : Math.max(0L, legacyFallback);
     }
 
     private static final class MemberProfile {

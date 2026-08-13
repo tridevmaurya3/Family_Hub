@@ -44,6 +44,7 @@ import com.tridev.familyhub.databinding.FragmentFamilyLiveBinding;
 import com.tridev.familyhub.feature.familylive.adapter.FamilyLiveAdapter;
 import com.tridev.familyhub.feature.familylive.model.FamilyLiveMemberUiModel;
 import com.tridev.familyhub.location.FamilyLocationService;
+import com.tridev.familyhub.location.LocationFreshnessPolicy;
 import com.tridev.familyhub.location.LocationSharingStore;
 
 import java.text.DateFormat;
@@ -519,8 +520,11 @@ public class FamilyLiveFragment extends Fragment {
         if (!member.hasInternet) {
             return FamilyLiveAvailability.INTERNET_UNAVAILABLE;
         }
-        if (member.lastUpdatedAt <= 0L
-                || now - member.lastUpdatedAt > LIVE_FRESHNESS_MS) {
+        if (LocationFreshnessPolicy.isStale(
+                member.lastUpdatedAt,
+                now,
+                LIVE_FRESHNESS_MS
+        )) {
             return FamilyLiveAvailability.NO_RECENT_UPDATE;
         }
         if (!member.hasLocation) {
@@ -877,8 +881,11 @@ public class FamilyLiveFragment extends Fragment {
             if (!member.sharingEnabled || !member.hasLocation) {
                 continue;
             }
-            boolean stale = member.updatedAt <= 0L
-                    || now - member.updatedAt > LIVE_FRESHNESS_MS;
+            boolean stale = LocationFreshnessPolicy.isStale(
+                    member.updatedAt,
+                    now,
+                    LIVE_FRESHNESS_MS
+            );
             LatLng position = new LatLng(
                     member.latitude,
                     member.longitude
