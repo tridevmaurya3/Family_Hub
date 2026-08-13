@@ -234,7 +234,7 @@
             style="@style/TextAppearance.FamilyHub.SectionTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
+            android:layout_marginTop="@dimen/space_16"
             android:text="@string/dashboard_action_center"
             android:textColor="@color/fh_on_surface"
             android:textSize="16sp" />
@@ -249,7 +249,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="104dp"
+            android:layout_height="96dp"
             android:layout_marginTop="@dimen/space_8"
             android:orientation="horizontal">
 
@@ -270,7 +270,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="104dp"
+            android:layout_height="96dp"
             android:layout_marginTop="@dimen/space_8"
             android:orientation="horizontal">
 
@@ -291,7 +291,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="104dp"
+            android:layout_height="96dp"
             android:layout_marginTop="@dimen/space_8"
             android:orientation="horizontal">
 
