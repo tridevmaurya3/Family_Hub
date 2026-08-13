@@ -108,6 +108,13 @@ public class NotesAdapter
             binding.notePinned.setVisibility(
                     note.isPinned ? View.VISIBLE : View.GONE
             );
+            boolean assigned = !note.assignedMemberName.isEmpty();
+            binding.noteAssignment.setVisibility(assigned ? View.VISIBLE : View.GONE);
+            if (assigned) binding.noteAssignment.setText(
+                    binding.getRoot().getContext().getString(
+                            R.string.notes_assigned_to, note.assignedMemberName));
+            binding.noteSharing.setText(note.isShared
+                    ? R.string.notes_shared_status : R.string.notes_private_status);
             binding.pinNoteButton.setText(
                     note.isPinned ? R.string.notes_unpin : R.string.notes_pin
             );

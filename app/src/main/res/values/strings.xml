@@ -735,6 +735,9 @@
     <string name="notes_delete_title">Delete note permanently?</string>
     <string name="notes_delete_message">This permanently removes “%1$s” from this device.</string>
     <string name="notes_no_content">No content added</string>
+    <string name="notes_assigned_to">Assigned to %1$s</string>
+    <string name="notes_shared_status">Shared with family</string>
+    <string name="notes_private_status">Private</string>
     <string name="notes_uncategorized">Uncategorized</string>
     <string name="notes_type_text">Text note</string>
     <string name="notes_type_checklist">Checklist</string>

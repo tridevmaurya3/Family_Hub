@@ -11,7 +11,9 @@ import com.google.firebase.database.DataSnapshot;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.NoteDao;
+import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 
 import java.util.List;
 import java.util.HashMap;
@@ -34,11 +36,14 @@ public class NotesRepository {
             Executors.newSingleThreadExecutor();
 
     private final NoteDao noteDao;
+    private final FamilyMemberDao familyMemberDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public NotesRepository(@NonNull Context context) {
-        noteDao = FamilyHubDatabase.getInstance(context).noteDao();
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
+        noteDao = database.noteDao();
+        familyMemberDao = database.familyMemberDao();
     }
 
     /** Starts family-scoped inbound sync and refreshes the visible page on changes. */
@@ -165,8 +170,10 @@ public class NotesRepository {
             note.category = stringValue(snapshot, "category");
             note.noteType = fallback(stringValue(snapshot, "noteType"), NoteEntry.TYPE_TEXT);
             note.colorKey = fallback(stringValue(snapshot, "colorKey"), "BLUE");
-            note.assignedMemberId = parseLong(stringValue(snapshot, "assignedMemberId"));
             note.assignedMemberName = stringValue(snapshot, "assignedMemberName");
+            FamilyMember assigned = note.assignedMemberName.isEmpty()
+                    ? null : familyMemberDao.getByName(note.assignedMemberName);
+            note.assignedMemberId = assigned == null ? 0L : assigned.id;
             note.collaborationStatus = fallback(
                     stringValue(snapshot, "collaborationStatus"), "DRAFT");
             note.reminderAt = longValue(snapshot, "reminderAt");
