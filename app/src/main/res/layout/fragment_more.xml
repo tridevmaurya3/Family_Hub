@@ -15,7 +15,7 @@
         android:paddingStart="@dimen/screen_padding_horizontal"
         android:paddingTop="@dimen/compact_page_top_padding"
         android:paddingEnd="@dimen/screen_padding_horizontal"
-        android:paddingBottom="88dp">
+        android:paddingBottom="72dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_vehicle"

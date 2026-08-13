@@ -136,22 +136,22 @@ public class MoreFragment extends Fragment {
         );
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(68)
+                dp(56)
         );
         params.bottomMargin = dp(4);
         profile.setLayoutParams(params);
         profile.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
         profile.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
-        profile.setPadding(dp(18), 0, dp(18), 0);
+        profile.setPadding(dp(14), 0, dp(14), 0);
         profile.setText(getString(R.string.more_profile_title)
                 + "\n" + getString(R.string.more_profile_detail));
-        profile.setTextSize(14F);
+        profile.setTextSize(12.5F);
         profile.setAllCaps(false);
         profile.setMaxLines(2);
         profile.setIconResource(R.drawable.ic_profile_person);
         profile.setIconTintResource(R.color.fh_primary);
-        profile.setIconSize(dp(24));
-        profile.setIconPadding(dp(12));
+        profile.setIconSize(dp(20));
+        profile.setIconPadding(dp(10));
         profile.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         profile.setTextColor(ContextCompat.getColor(
                 requireContext(),
@@ -166,7 +166,7 @@ public class MoreFragment extends Fragment {
                 R.color.fh_primary
         ));
         profile.setStrokeWidth(dp(1));
-        profile.setCornerRadius(dp(20));
+        profile.setCornerRadius(dp(16));
         profile.setOnClickListener(v -> startActivity(new Intent(
                 requireContext(), ProfileSettingsActivity.class)));
         content.addView(profile, 0);
