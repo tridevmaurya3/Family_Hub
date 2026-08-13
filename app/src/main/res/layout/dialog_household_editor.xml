@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:background="@drawable/bg_form_three_tone"
     android:orientation="vertical"
-    android:padding="@dimen/space_20">
+    android:padding="@dimen/space_16">
 
     <TextView
         style="@style/TextAppearance.FamilyHub.SectionTitle"
