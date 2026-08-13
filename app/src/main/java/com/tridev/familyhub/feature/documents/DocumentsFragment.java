@@ -34,6 +34,7 @@ import com.tridev.familyhub.data.repository.DocumentRepository;
 import com.tridev.familyhub.databinding.DialogDocumentEditorBinding;
 import com.tridev.familyhub.databinding.FragmentDocumentsBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -205,6 +206,13 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             preferences.lockNow();
             renderLockState();
         });
+        binding.documentsBackButton.setOnClickListener(clickedView -> {
+            if (requireActivity() instanceof MainActivity) {
+                ((MainActivity) requireActivity()).openHome();
+            } else {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
         binding.buttonMissingDocumentsChecklist.setOnClickListener(
                 clickedView -> runProtected(this::showMissingDocumentsChecklist));
         binding.buttonDocumentsPdf.setOnClickListener(v -> runProtected(() -> exportInventory(true)));
@@ -375,7 +383,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         );
         binding.documentReminderDaysInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_compact_dropdown,
                 labels
         ));
         binding.documentReminderDaysInput.setText(
@@ -439,7 +447,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         )));
         binding.documentCategoryFilterInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_compact_dropdown,
                 categories
         ));
         binding.documentCategoryFilterInput.setText(categories.get(0), false);
@@ -637,14 +645,14 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         );
         dialogBinding.documentCategoryInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_compact_dropdown,
                 categories
         ));
         String[] moduleLabels = getResources().getStringArray(
                 R.array.documents_vault_module_labels);
         dialogBinding.documentLinkedModuleInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_compact_dropdown,
                 moduleLabels
         ));
 

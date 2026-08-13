@@ -27,6 +27,17 @@
             android:orientation="horizontal"
             android:padding="7dp">
 
+            <ImageButton
+                android:id="@+id/documents_back_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="@dimen/space_6"
+                android:background="@drawable/bg_icon_button"
+                android:contentDescription="@string/back"
+                android:padding="9dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/fh_module_documents" />
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="32dp"
                 android:layout_height="32dp"
@@ -382,7 +393,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:maxLines="1" />
+                        android:maxLines="1"
+                        android:textSize="11sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
@@ -447,7 +459,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="none"
-                            android:maxLines="1" />
+                            android:maxLines="1"
+                            android:textSize="11sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <HorizontalScrollView
