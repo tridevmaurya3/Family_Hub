@@ -49,6 +49,9 @@ public interface FamilyMemberDao {
             + "WHERE cloudProfileId = :cloudProfileId LIMIT 1")
     FamilyMember getByCloudProfileId(String cloudProfileId);
 
+    @Query("SELECT * FROM family_members WHERE name = :name COLLATE NOCASE LIMIT 1")
+    FamilyMember getByName(String name);
+
     @Query("SELECT COUNT(*) FROM family_members")
     int count();
 

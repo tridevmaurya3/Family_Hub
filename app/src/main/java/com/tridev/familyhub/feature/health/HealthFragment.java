@@ -141,6 +141,15 @@ public class HealthFragment extends Fragment implements AddActionHost {
         );
 
         loadRecords("");
+        repository.startRealtimeSync(new HealthRepository.RealtimeCallback() {
+            @Override public void onChanged(@NonNull HealthRecord record) {
+                if (binding != null) loadRecords(currentQuery());
+            }
+
+            @Override public void onRemoved(long localId) {
+                if (binding != null) loadRecords(currentQuery());
+            }
+        });
     }
 
     @Override
@@ -212,6 +221,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
             dialogBinding.healthNotesInput.setText(record.notes);
             dialogBinding.healthLinkedDocumentInput.setText(record.linkedDocumentTitle);
             dialogBinding.healthTimelineNoteInput.setText(record.timelineNote);
+            dialogBinding.healthSharedSwitch.setChecked(record.isShared);
             selectedDate.setTimeInMillis(record.recordedAt);
         } else {
             dialogBinding.healthMemberInput.setText(
@@ -283,6 +293,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
             dialogBinding.healthTitleLayout.setError(null);
 
             record.familyMemberId = selectedMember.id;
+            record.assignedMemberName = selectedMember.name;
             record.recordType = RECORD_TYPES[selectedType];
             record.title = title;
             record.value = textOf(dialogBinding.healthValueInput);
@@ -290,6 +301,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
             record.recordedAt = selectedDate.getTimeInMillis();
             record.linkedDocumentTitle = textOf(dialogBinding.healthLinkedDocumentInput);
             record.timelineNote = textOf(dialogBinding.healthTimelineNoteInput);
+            record.isShared = dialogBinding.healthSharedSwitch.isChecked();
             record.updatedAt = System.currentTimeMillis();
 
             repository.save(record, () -> {
@@ -458,6 +470,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
         binding.healthRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();

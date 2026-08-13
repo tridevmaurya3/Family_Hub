@@ -388,6 +388,7 @@
     <string name="health_record_date">Date</string>
     <string name="health_notes">Notes (optional)</string>
     <string name="health_save_record">Save record</string>
+    <string name="health_share_with_family">Share this record with authorised family members</string>
     <string name="health_member_required">Select a family member</string>
     <string name="health_type_required">Select a record type</string>
     <string name="health_title_required">Enter a title</string>

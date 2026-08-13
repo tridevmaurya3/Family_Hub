@@ -36,6 +36,9 @@ public interface HealthRecordDao {
     @Query("SELECT COUNT(*) FROM health_records")
     int count();
 
+    @Query("SELECT * FROM health_records WHERE cloudId = :cloudId LIMIT 1")
+    HealthRecord getByCloudId(String cloudId);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(HealthRecord record);
 

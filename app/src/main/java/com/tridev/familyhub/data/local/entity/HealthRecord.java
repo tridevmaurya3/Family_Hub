@@ -19,7 +19,9 @@ import androidx.room.PrimaryKey;
         indices = {
                 @Index("familyMemberId"),
                 @Index("recordType"),
-                @Index("recordedAt")
+                @Index("recordedAt"),
+                @Index("cloudId"),
+                @Index("familyId")
         }
 )
 public class HealthRecord {
@@ -59,4 +61,8 @@ public class HealthRecord {
     @NonNull public String timelineNote = "";
     public boolean isShared;
     public long updatedAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    @NonNull public String assignedMemberName = "";
+    @NonNull public String updatedByUid = "";
 }
