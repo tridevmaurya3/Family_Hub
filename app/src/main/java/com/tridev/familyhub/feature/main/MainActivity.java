@@ -118,9 +118,38 @@ public class MainActivity extends AppCompatActivity {
         if (savedInstanceState == null) {
             if (!handleLaunchIntent(getIntent())) {
                 binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
-                showDestination(R.id.nav_home);
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.main_content, new DashboardFragment())
+                        .commitNow();
             }
+        } else if (getSupportFragmentManager()
+                .findFragmentById(R.id.main_content) == null) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.main_content, new DashboardFragment())
+                    .commitNow();
+        } else {
+            syncBottomNavigationWithRestoredFragment();
         }
+    }
+
+    /** Keeps restored content and navigation selection aligned after recreation. */
+    private void syncBottomNavigationWithRestoredFragment() {
+        Fragment restored = getSupportFragmentManager()
+                .findFragmentById(R.id.main_content);
+        int destinationId = R.id.nav_home;
+        if (restored instanceof FamilyFragment) {
+            destinationId = R.id.nav_family;
+        } else if (restored instanceof RemindersFragment) {
+            destinationId = R.id.nav_reminders;
+        } else if (restored instanceof FinanceFragment) {
+            destinationId = R.id.nav_finance;
+        } else if (restored instanceof MoreFragment) {
+            destinationId = R.id.nav_more;
+        }
+        binding.bottomNavigation.setSelectedItemId(destinationId);
     }
 
     private void applySystemBarInsets() {
