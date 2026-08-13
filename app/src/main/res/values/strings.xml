@@ -738,6 +738,10 @@
     <string name="notes_assigned_to">Assigned to %1$s</string>
     <string name="notes_shared_status">Shared with family</string>
     <string name="notes_private_status">Private</string>
+    <string name="notes_reminder_label">Reminder (optional)</string>
+    <string name="notes_reminder_channel">Note reminders</string>
+    <string name="notes_reminder_channel_detail">Scheduled Family Hub note reminders</string>
+    <string name="notes_reminder_title">Note reminder</string>
     <string name="notes_uncategorized">Uncategorized</string>
     <string name="notes_type_text">Text note</string>
     <string name="notes_type_checklist">Checklist</string>

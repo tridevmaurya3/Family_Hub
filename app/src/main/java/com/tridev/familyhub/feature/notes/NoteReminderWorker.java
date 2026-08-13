@@ -1,0 +1,8 @@
+package com.tridev.familyhub.feature.notes;
+import android.Manifest;import android.app.*;import android.content.*;import android.content.pm.PackageManager;import android.os.Build;
+import androidx.annotation.NonNull;import androidx.core.app.*;import androidx.core.content.ContextCompat;import androidx.work.*;
+import com.tridev.familyhub.R;import com.tridev.familyhub.feature.main.MainActivity;
+public final class NoteReminderWorker extends Worker{
+ public NoteReminderWorker(@NonNull Context c,@NonNull WorkerParameters p){super(c,p);}
+ @NonNull public Result doWork(){Context c=getApplicationContext();if(Build.VERSION.SDK_INT>=33&&ContextCompat.checkSelfPermission(c,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return Result.success();NotificationManager m=c.getSystemService(NotificationManager.class);if(Build.VERSION.SDK_INT>=26)m.createNotificationChannel(new NotificationChannel("note_reminders",c.getString(R.string.notes_reminder_channel),NotificationManager.IMPORTANCE_HIGH));String title=getInputData().getString("title");Intent i=new Intent(c,MainActivity.class).putExtra(MainActivity.EXTRA_OPEN_ROUTE,MainActivity.ROUTE_NOTES);PendingIntent p=PendingIntent.getActivity(c,991,i,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);NotificationCompat.Builder b=new NotificationCompat.Builder(c,"note_reminders").setSmallIcon(R.drawable.ic_note).setContentTitle(c.getString(R.string.notes_reminder_title)).setContentText(title).setAutoCancel(true).setContentIntent(p);NotificationManagerCompat.from(c).notify(("note"+getInputData().getLong("id",0)).hashCode(),b.build());return Result.success();}
+}

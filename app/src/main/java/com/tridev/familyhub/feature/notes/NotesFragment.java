@@ -1,6 +1,8 @@
 package com.tridev.familyhub.feature.notes;
 
 import android.os.Bundle;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +22,9 @@ import com.tridev.familyhub.data.repository.NotesRepository;
 import com.tridev.familyhub.databinding.DialogNoteBinding;
 import com.tridev.familyhub.databinding.FragmentNotesBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import java.text.DateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 /** Offline-first Fluent notes and checklists screen. */
 public class NotesFragment extends Fragment implements AddActionHost {
@@ -143,6 +148,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
     private void showEditor(@Nullable NoteEntry existing) {
         DialogNoteBinding form = DialogNoteBinding.inflate(getLayoutInflater());
         NoteEntry note = existing == null ? new NoteEntry() : existing;
+        final long[] reminderAt = {note.reminderAt};
         String[] typeLabels =
                 getResources().getStringArray(R.array.notes_type_labels);
         String[] colorLabels =
@@ -193,6 +199,20 @@ public class NotesFragment extends Fragment implements AddActionHost {
             form.noteSharedSwitch.setChecked(note.isShared);
             form.noteCollaborationStatusInput.setText(note.collaborationStatus, false);
         }
+        if (reminderAt[0] > 0L) form.noteReminderInput.setText(
+                DateFormat.getDateTimeInstance().format(new Date(reminderAt[0])));
+        form.noteReminderInput.setOnClickListener(v -> {
+            Calendar c = Calendar.getInstance();
+            if (reminderAt[0] > 0L) c.setTimeInMillis(reminderAt[0]);
+            new DatePickerDialog(requireContext(), (d,y,m,day) -> {
+                c.set(y,m,day);
+                new TimePickerDialog(requireContext(), (t,h,min) -> {
+                    c.set(Calendar.HOUR_OF_DAY,h); c.set(Calendar.MINUTE,min);
+                    c.set(Calendar.SECOND,0); reminderAt[0]=c.getTimeInMillis();
+                    form.noteReminderInput.setText(DateFormat.getDateTimeInstance().format(c.getTime()));
+                },c.get(Calendar.HOUR_OF_DAY),c.get(Calendar.MINUTE),false).show();
+            },c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();
+        });
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setView(form.getRoot())
@@ -221,6 +241,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
             note.colorKey = COLOR_KEYS[colorIndex];
             note.isShared = form.noteSharedSwitch.isChecked();
             note.collaborationStatus = textOf(form.noteCollaborationStatusInput);
+            note.reminderAt = reminderAt[0];
             repository.save(note, () -> {
                 if (binding == null) {
                     return;

@@ -38,9 +38,11 @@ public class NotesRepository {
     private final NoteDao noteDao;
     private final FamilyMemberDao familyMemberDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final Context appContext;
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public NotesRepository(@NonNull Context context) {
+        appContext = context.getApplicationContext();
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         noteDao = database.noteDao();
         familyMemberDao = database.familyMemberDao();
@@ -124,6 +126,7 @@ public class NotesRepository {
                 FamilyCollaborationPublisher.remove(
                         "notes", previousFamilyId, previousCloudId);
             }
+            com.tridev.familyhub.feature.notes.NoteReminderScheduler.sync(appContext, note);
             mainHandler.post(callback::onComplete);
         });
     }
@@ -242,6 +245,7 @@ public class NotesRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             FamilyCollaborationPublisher.remove("notes", note.familyId, note.cloudId);
+            com.tridev.familyhub.feature.notes.NoteReminderScheduler.cancel(appContext, note.id);
             noteDao.delete(note);
             mainHandler.post(callback::onComplete);
         });
