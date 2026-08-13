@@ -28,7 +28,8 @@ public interface FinanceEntryDao {
     @Query("SELECT "
             + "COALESCE(SUM(CASE WHEN entryType = 'INCOME' THEN amount ELSE 0 END), 0) AS income, "
             + "COALESCE(SUM(CASE WHEN entryType = 'EXPENSE' THEN amount ELSE 0 END), 0) AS expense "
-            + "FROM finance_entries WHERE transactionDate LIKE :monthPrefix || '%'")
+            + "FROM finance_entries WHERE transactionDate LIKE :monthPrefix || '%' "
+            + "AND recurrenceStatus != 'UPCOMING'")
     FinanceSummary getMonthSummary(String monthPrefix);
 
     @Query("SELECT * FROM finance_entries WHERE id = :id LIMIT 1")
@@ -39,6 +40,14 @@ public interface FinanceEntryDao {
 
     @Query("SELECT * FROM finance_entries WHERE isShared = 1 AND familyId = :familyId")
     List<FinanceEntry> getSharedForFamily(String familyId);
+
+    @Query("SELECT * FROM finance_entries WHERE isRecurring = 1 "
+            + "ORDER BY transactionDate ASC, createdAt ASC")
+    List<FinanceEntry> getRecurringEntries();
+
+    @Query("SELECT COUNT(*) FROM finance_entries "
+            + "WHERE recurrenceSeriesId = :seriesId AND recurrenceMonth = :month")
+    int countRecurringOccurrence(String seriesId, String month);
 
     @Query("DELETE FROM finance_entries WHERE id = :id")
     int deleteById(long id);

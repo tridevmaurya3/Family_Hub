@@ -20,6 +20,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,6 +78,7 @@ public class FinanceRepository {
     public void save(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             entry.updatedAt = System.currentTimeMillis();
+            prepareRecurrenceMetadata(entry);
             if (entry.isShared && entry.cloudId.trim().isEmpty()) {
                 entry.cloudId = UUID.randomUUID().toString();
             }
@@ -95,6 +97,49 @@ public class FinanceRepository {
                 entry.updatedByUid = "";
                 entry.updatedByName = "";
                 financeEntryDao.update(entry);
+            }
+            mainHandler.post(callback::onComplete);
+        });
+    }
+
+    /** Creates exactly one occurrence per recurring series for the current month. */
+    public void runRecurringAutomation(@NonNull ActionCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            Calendar today = Calendar.getInstance();
+            String currentMonth = new SimpleDateFormat("yyyy-MM", Locale.US)
+                    .format(today.getTime());
+            Map<String, FinanceEntry> series = new HashMap<>();
+            for (FinanceEntry entry : financeEntryDao.getRecurringEntries()) {
+                if (entry.recurrenceSeriesId.isEmpty()) {
+                    entry.recurrenceSeriesId = UUID.randomUUID().toString();
+                    entry.recurrenceMonth = monthOf(entry.transactionDate);
+                    entry.recurrenceDay = dayOf(entry.transactionDate);
+                    entry.recurrenceStatus = "POSTED";
+                    entry.updatedAt = System.currentTimeMillis();
+                    financeEntryDao.update(entry);
+                    if (entry.isShared) publishShared(entry);
+                }
+                FinanceEntry anchor = series.get(entry.recurrenceSeriesId);
+                if (anchor == null || entry.transactionDate.compareTo(anchor.transactionDate) < 0) {
+                    series.put(entry.recurrenceSeriesId, entry);
+                }
+                if (currentMonth.equals(entry.recurrenceMonth)) {
+                    String expected = dueStatus(entry.transactionDate, today);
+                    if (!expected.equals(entry.recurrenceStatus)) {
+                        entry.recurrenceStatus = expected;
+                        entry.updatedAt = System.currentTimeMillis();
+                        financeEntryDao.update(entry);
+                        if (entry.isShared) publishShared(entry);
+                    }
+                }
+            }
+            for (FinanceEntry anchor : series.values()) {
+                if (anchor.recurrenceMonth.compareTo(currentMonth) >= 0
+                        || financeEntryDao.countRecurringOccurrence(
+                        anchor.recurrenceSeriesId, currentMonth) > 0) continue;
+                FinanceEntry generated = recurringCopy(anchor, currentMonth, today);
+                generated.id = financeEntryDao.insert(generated);
+                if (generated.isShared) publishShared(generated);
             }
             mainHandler.post(callback::onComplete);
         });
@@ -199,6 +244,10 @@ public class FinanceRepository {
         values.put("recurring", entry.isRecurring); values.put("shared", true);
         values.put("createdAt", entry.createdAt); values.put("updatedAt", entry.updatedAt);
         values.put("updatedByUid", entry.updatedByUid); values.put("updatedByName", entry.updatedByName);
+        values.put("recurrenceSeriesId", entry.recurrenceSeriesId);
+        values.put("recurrenceMonth", entry.recurrenceMonth);
+        values.put("recurrenceStatus", entry.recurrenceStatus);
+        values.put("recurrenceDay", entry.recurrenceDay);
         return values;
     }
 
@@ -216,7 +265,59 @@ public class FinanceRepository {
         entry.isRecurring = Boolean.TRUE.equals(value.child("recurring").getValue(Boolean.class));
         entry.isShared = true; entry.createdAt = number(value, "createdAt"); entry.updatedAt = number(value, "updatedAt");
         entry.updatedByUid = text(value, "updatedByUid"); entry.updatedByName = text(value, "updatedByName");
+        entry.recurrenceSeriesId = text(value, "recurrenceSeriesId");
+        entry.recurrenceMonth = text(value, "recurrenceMonth");
+        entry.recurrenceStatus = text(value, "recurrenceStatus");
+        entry.recurrenceDay = integer(value, "recurrenceDay");
         return entry;
+    }
+
+    private static void prepareRecurrenceMetadata(FinanceEntry entry) {
+        if (!entry.isRecurring) {
+            entry.recurrenceSeriesId = ""; entry.recurrenceMonth = "";
+            entry.recurrenceStatus = ""; entry.recurrenceDay = 0;
+            return;
+        }
+        if (entry.recurrenceSeriesId.isEmpty()) entry.recurrenceSeriesId = UUID.randomUUID().toString();
+        entry.recurrenceMonth = monthOf(entry.transactionDate);
+        entry.recurrenceDay = dayOf(entry.transactionDate);
+        entry.recurrenceStatus = "POSTED";
+    }
+
+    private static FinanceEntry recurringCopy(FinanceEntry source, String month, Calendar today) {
+        FinanceEntry copy = new FinanceEntry();
+        copy.entryType = source.entryType; copy.amount = source.amount;
+        copy.category = source.category; copy.note = source.note;
+        copy.recurrenceDay = Math.max(1, source.recurrenceDay);
+        Calendar due = (Calendar) today.clone();
+        due.set(Calendar.DAY_OF_MONTH, Math.min(copy.recurrenceDay,
+                due.getActualMaximum(Calendar.DAY_OF_MONTH)));
+        copy.transactionDate = month + "-" + String.format(Locale.US, "%02d",
+                due.get(Calendar.DAY_OF_MONTH));
+        copy.accountName = source.accountName; copy.paymentMethod = source.paymentMethod;
+        copy.isRecurring = true; copy.isShared = source.isShared;
+        copy.recurrenceSeriesId = source.recurrenceSeriesId; copy.recurrenceMonth = month;
+        copy.recurrenceStatus = dueStatus(copy.transactionDate, today);
+        copy.createdAt = System.currentTimeMillis(); copy.updatedAt = copy.createdAt;
+        if (copy.isShared) {
+            // Deterministic identity prevents two family devices creating duplicates.
+            copy.cloudId = "rec_" + source.recurrenceSeriesId + "_" + month;
+        }
+        return copy;
+    }
+
+    private static String dueStatus(String date, Calendar today) {
+        String todayText = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(today.getTime());
+        return date.compareTo(todayText) > 0 ? "UPCOMING" : "POSTED";
+    }
+
+    private static String monthOf(String date) {
+        return date != null && date.length() >= 7 ? date.substring(0, 7) : "";
+    }
+
+    private static int dayOf(String date) {
+        try { return date != null && date.length() >= 10 ? Integer.parseInt(date.substring(8, 10)) : 1; }
+        catch (NumberFormatException ignored) { return 1; }
     }
 
     private static String text(DataSnapshot value, String key) {
@@ -225,6 +326,10 @@ public class FinanceRepository {
 
     private static long number(DataSnapshot value, String key) {
         Long number = value.child(key).getValue(Long.class); return number == null ? 0L : number;
+    }
+
+    private static int integer(DataSnapshot value, String key) {
+        Long number = value.child(key).getValue(Long.class); return number == null ? 0 : number.intValue();
     }
 
     private static void removeShared(String familyId, String cloudId) {

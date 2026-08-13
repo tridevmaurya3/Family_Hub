@@ -99,6 +99,11 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
                     .append(" · ").append(entry.paymentMethod);
             if (entry.isRecurring) {
                 detail.append(" · Monthly");
+                if ("UPCOMING".equals(entry.recurrenceStatus)) {
+                    detail.append(" · Upcoming");
+                } else if ("POSTED".equals(entry.recurrenceStatus)) {
+                    detail.append(" · Posted");
+                }
             }
             if (entry.isShared) {
                 detail.append(" · Shared");

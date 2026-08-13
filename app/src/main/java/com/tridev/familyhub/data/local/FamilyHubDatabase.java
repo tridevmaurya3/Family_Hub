@@ -66,7 +66,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 24,
+        version = 25,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -285,6 +285,18 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `serverUpdatedAt` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_cloudId` ON `finance_entries` (`cloudId`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_familyId` ON `finance_entries` (`familyId`)");
+        }
+    };
+
+    /** Adds duplicate-safe monthly recurrence tracking without changing old entries. */
+    private static final Migration MIGRATION_24_25 = new Migration(24, 25) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `recurrenceSeriesId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `recurrenceMonth` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `recurrenceStatus` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `recurrenceDay` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_recurrenceSeriesId` ON `finance_entries` (`recurrenceSeriesId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_recurrenceMonth` ON `finance_entries` (`recurrenceMonth`)");
         }
     };
 
@@ -797,7 +809,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_20_21,
                                     MIGRATION_21_22,
                                     MIGRATION_22_23,
-                                    MIGRATION_23_24
+                                    MIGRATION_23_24,
+                                    MIGRATION_24_25
                             )
                             .build();
                 }

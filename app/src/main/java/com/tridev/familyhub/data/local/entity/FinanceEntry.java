@@ -10,7 +10,8 @@ import androidx.room.PrimaryKey;
         tableName = "finance_entries",
         indices = {@Index(value = {"transactionDate"}), @Index(value = {"category"}),
                 @Index(value = {"accountName"}), @Index(value = {"isRecurring"}),
-                @Index(value = {"cloudId"}), @Index(value = {"familyId"})}
+                @Index(value = {"cloudId"}), @Index(value = {"familyId"}),
+                @Index(value = {"recurrenceSeriesId"}), @Index(value = {"recurrenceMonth"})}
 )
 public class FinanceEntry {
 
@@ -46,4 +47,8 @@ public class FinanceEntry {
     @NonNull public String updatedByUid = "";
     @NonNull public String updatedByName = "";
     public long serverUpdatedAt;
+    @NonNull public String recurrenceSeriesId = "";
+    @NonNull public String recurrenceMonth = "";
+    @NonNull public String recurrenceStatus = "";
+    public int recurrenceDay;
 }
