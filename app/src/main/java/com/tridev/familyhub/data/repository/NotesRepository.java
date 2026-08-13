@@ -55,7 +55,9 @@ public class NotesRepository {
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             NoteEntry local = noteDao.getByCloudId(cloudId);
-                            if (local != null) noteDao.delete(local);
+                            if (local != null && local.isShared) {
+                                noteDao.delete(local);
+                            }
                             mainHandler.post(onChanged::onComplete);
                         });
                     }
