@@ -28,6 +28,7 @@ public interface DocumentDao {
             + "OR memberName LIKE '%' || :query || '%' "
             + "OR tags LIKE '%' || :query || '%' "
             + "OR notes LIKE '%' || :query || '%' "
+            + "OR linkedModule LIKE '%' || :query || '%' "
             + "OR searchableText LIKE '%' || :query || '%') "
             + "ORDER BY updatedAt DESC, createdAt DESC")
     @NonNull

@@ -42,6 +42,22 @@
     <string name="documents_vault_share_5_minutes">5 minutes</string>
     <string name="documents_vault_share_15_minutes">15 minutes</string>
     <string name="documents_vault_share_60_minutes">60 minutes</string>
+    <string name="documents_vault_linked_module">Linked module</string>
+    <string name="documents_vault_no_link">Vault only</string>
+    <string name="documents_vault_filter_emergency">Emergency</string>
+    <string name="documents_vault_missing_checklist">Missing Documents Checklist</string>
+    <string name="documents_vault_missing_title">Family document readiness</string>
+    <string name="documents_vault_all_ready">All essential document categories are covered.</string>
+    <string name="documents_vault_add_members_first">Add family members to generate a personal checklist.</string>
+
+    <string-array name="documents_vault_module_labels">
+        <item>@string/documents_vault_no_link</item>
+        <item>Health</item>
+        <item>Vehicle</item>
+        <item>Property</item>
+        <item>Finance</item>
+        <item>Education</item>
+    </string-array>
     <string name="documents_vault_all_categories">All categories</string>
     <string name="documents_vault_category_filter">Category</string>
     <string name="documents_vault_no_results_title">No matching documents</string>

@@ -53,6 +53,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         EXPIRING,
         EXPIRED,
         FAVORITES,
+        EMERGENCY,
         TRASH
     }
 
@@ -204,6 +205,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             preferences.lockNow();
             renderLockState();
         });
+        binding.buttonMissingDocumentsChecklist.setOnClickListener(
+                clickedView -> runProtected(this::showMissingDocumentsChecklist));
 
         renderLockState();
         if (preferences.isUnlocked()) {
@@ -458,6 +461,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                         filterMode = FilterMode.EXPIRED;
                     } else if (checkedId == R.id.filter_favorites_chip) {
                         filterMode = FilterMode.FAVORITES;
+                    } else if (checkedId == R.id.filter_emergency_chip) {
+                        filterMode = FilterMode.EMERGENCY;
                     } else if (checkedId == R.id.filter_trash_chip) {
                         filterMode = FilterMode.TRASH;
                     } else {
@@ -569,6 +574,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     && !preferences.isFavorite(document.id)) {
                 continue;
             }
+            if (filterMode == FilterMode.EMERGENCY && !document.emergency) {
+                continue;
+            }
             visible.add(document);
         }
 
@@ -605,7 +613,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         String value = (document.title + " " + document.category + " "
                 + document.documentNumber + " " + document.issuer + " "
                 + document.memberName + " " + document.tags + " "
-                + document.notes + " " + document.searchableText)
+                + document.notes + " " + document.linkedModule + " "
+                + document.searchableText)
                 .toLowerCase(java.util.Locale.ENGLISH);
         return value.contains(needle);
     }
@@ -625,6 +634,13 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
                 categories
+        ));
+        String[] moduleLabels = getResources().getStringArray(
+                R.array.documents_vault_module_labels);
+        dialogBinding.documentLinkedModuleInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                moduleLabels
         ));
 
         boolean editing = existing != null;
@@ -647,6 +663,10 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 editing ? existing.issuer : "");
         dialogBinding.documentMemberInput.setText(
                 editing ? existing.memberName : "");
+        dialogBinding.documentLinkedModuleInput.setText(
+                editing && !existing.linkedModule.isEmpty()
+                        ? existing.linkedModule
+                        : getString(R.string.documents_vault_no_link), false);
         dialogBinding.documentTagsInput.setText(
                 editing ? existing.tags : "");
         dialogBinding.documentNotesInput.setText(
@@ -748,6 +768,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         draft.documentNumber = textOf(editorBinding.documentNumberInput);
         draft.issuer = textOf(editorBinding.documentIssuerInput);
         draft.memberName = textOf(editorBinding.documentMemberInput);
+        String linkedModule = textOf(editorBinding.documentLinkedModuleInput);
+        draft.linkedModule = linkedModule.equals(
+                getString(R.string.documents_vault_no_link)) ? "" : linkedModule;
         draft.tags = textOf(editorBinding.documentTagsInput);
         draft.notes = textOf(editorBinding.documentNotesInput);
         draft.emergency = editorBinding.documentEmergencySwitch.isChecked();
@@ -1064,6 +1087,30 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     .setTitle(R.string.documents_vault_version_history)
                     .setItems(labels, (dialog, which) -> openDocument(versions.get(which)))
                     .setNegativeButton(R.string.cancel, null)
+                    .show();
+        });
+    }
+
+    private void showMissingDocumentsChecklist() {
+        repository.loadMissingChecklist((missingItems, hasMembers) -> {
+            if (binding == null) return;
+            String message;
+            if (!hasMembers) {
+                message = getString(R.string.documents_vault_add_members_first);
+            } else if (missingItems.isEmpty()) {
+                message = getString(R.string.documents_vault_all_ready);
+            } else {
+                StringBuilder builder = new StringBuilder();
+                for (String item : missingItems) {
+                    if (builder.length() > 0) builder.append("\n");
+                    builder.append("• ").append(item);
+                }
+                message = builder.toString();
+            }
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.documents_vault_missing_title)
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.ok, null)
                     .show();
         });
     }

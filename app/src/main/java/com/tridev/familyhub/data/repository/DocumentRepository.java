@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.DocumentDao;
 import com.tridev.familyhub.data.local.entity.DocumentEntry;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.feature.documents.DocumentExpiryPolicy;
 import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
 import com.tridev.familyhub.feature.documents.DocumentCaptureStorage;
@@ -46,6 +47,10 @@ public class DocumentRepository {
 
     public interface StatsCallback {
         void onLoaded(int total, int expiring, int expired, int trash);
+    }
+
+    public interface ChecklistCallback {
+        void onLoaded(@NonNull List<String> missingItems, boolean hasMembers);
     }
 
     private static final ExecutorService DATABASE_EXECUTOR =
@@ -206,6 +211,44 @@ public class DocumentRepository {
             }
             mainHandler.post(() -> callback.onDocumentsLoaded(history));
         });
+    }
+
+    public void loadMissingChecklist(@NonNull ChecklistCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<FamilyMember> members = FamilyHubDatabase.getInstance(appContext)
+                    .familyMemberDao().getAll();
+            List<DocumentEntry> documents = documentDao.getAll();
+            List<String> missing = new ArrayList<>();
+            for (FamilyMember member : members) {
+                List<String> required = new ArrayList<>();
+                required.add("Identity");
+                required.add("Health");
+                if (FamilyMember.ROLE_CHILD.equals(member.familyRole)) {
+                    required.add("Education");
+                } else {
+                    required.add("Bank & Finance");
+                }
+                if (member.isGuardian) required.add("Property");
+                for (String category : required) {
+                    if (!hasDocument(documents, member.name, category)) {
+                        missing.add(member.name + " — " + category);
+                    }
+                }
+            }
+            mainHandler.post(() -> callback.onLoaded(missing, !members.isEmpty()));
+        });
+    }
+
+    private static boolean hasDocument(
+            @NonNull List<DocumentEntry> documents,
+            @NonNull String memberName,
+            @NonNull String category
+    ) {
+        for (DocumentEntry document : documents) {
+            if (document.memberName.trim().equalsIgnoreCase(memberName.trim())
+                    && document.category.trim().equalsIgnoreCase(category)) return true;
+        }
+        return false;
     }
 
     @NonNull

@@ -496,6 +496,14 @@
                                 android:text="@string/documents_vault_filter_favorites" />
 
                             <com.google.android.material.chip.Chip
+                                android:id="@+id/filter_emergency_chip"
+                                style="@style/Widget.FamilyHub.StatusChip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checkable="true"
+                                android:text="@string/documents_vault_filter_emergency" />
+
+                            <com.google.android.material.chip.Chip
                                 android:id="@+id/filter_trash_chip"
                                 style="@style/Widget.FamilyHub.StatusChip"
                                 android:layout_width="wrap_content"
@@ -507,6 +515,16 @@
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_missing_documents_checklist"
+            style="@style/Widget.FamilyHub.Button.Action"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/touch_target_min"
+            android:layout_marginTop="@dimen/space_6"
+            android:text="@string/documents_vault_missing_checklist"
+            app:icon="@drawable/ic_document"
+            app:iconGravity="textStart" />
 
         <FrameLayout
             android:layout_width="match_parent"

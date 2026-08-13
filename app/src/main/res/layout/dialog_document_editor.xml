@@ -156,6 +156,21 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/document_linked_module_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/documents_vault_linked_module">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/document_linked_module_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/document_tags_layout"
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"

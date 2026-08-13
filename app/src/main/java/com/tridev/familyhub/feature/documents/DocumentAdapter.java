@@ -122,7 +122,9 @@ public class DocumentAdapter
             );
 
             binding.documentTitle.setText(document.title);
-            binding.documentCategory.setText(document.category);
+            binding.documentCategory.setText(document.linkedModule.isEmpty()
+                    ? document.category
+                    : document.category + " • " + document.linkedModule);
             binding.documentDate.setText(context.getString(
                     R.string.documents_vault_created_on,
                     dateFormat.format(new Date(document.createdAt))
