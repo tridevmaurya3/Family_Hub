@@ -274,6 +274,7 @@ public class MainActivity extends AppCompatActivity {
     public void openTab(@IdRes int destinationId) {
         if (binding != null) {
             binding.bottomNavigation.setSelectedItemId(destinationId);
+            showDestination(destinationId);
         }
     }
 

@@ -5,6 +5,7 @@
     android:id="@+id/memberDetailRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="@drawable/bg_page_three_tone"
     android:clipToPadding="false"
     android:fillViewport="true">
@@ -34,11 +35,13 @@
                 app:icon="@drawable/ic_arrow_back"
                 app:iconPadding="0dp" />
 
-            <Space
+            <TextView
+                style="@style/TextAppearance.FamilyHub.SectionTitle"
                 android:layout_width="0dp"
-                android:layout_height="1dp"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_12"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:text="@string/family_member_detail_title" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonMemberDetailRetry"
