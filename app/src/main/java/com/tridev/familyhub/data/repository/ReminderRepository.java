@@ -100,7 +100,14 @@ public class ReminderRepository {
             if (reminder.isShared) {
                 publish(reminder);
             } else {
-                FamilyCollaborationPublisher.remove("reminders", reminder.familyId, reminder.cloudId);
+                String previousFamilyId = reminder.familyId;
+                String previousCloudId = reminder.cloudId;
+                reminder.familyId = "";
+                reminder.cloudId = "";
+                reminder.updatedByUid = "";
+                reminderDao.update(reminder);
+                FamilyCollaborationPublisher.remove(
+                        "reminders", previousFamilyId, previousCloudId);
             }
             mainHandler.post(() -> callback.onComplete(reminder));
         });

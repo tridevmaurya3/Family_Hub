@@ -144,7 +144,14 @@ public class PlannerRepository {
             if (item.isShared) {
                 publish(item);
             } else {
-                FamilyCollaborationPublisher.remove("planner", item.familyId, item.cloudId);
+                String previousFamilyId = item.familyId;
+                String previousCloudId = item.cloudId;
+                item.familyId = "";
+                item.cloudId = "";
+                item.updatedByUid = "";
+                plannerItemDao.update(item);
+                FamilyCollaborationPublisher.remove(
+                        "planner", previousFamilyId, previousCloudId);
             }
             mainHandler.post(callback::onComplete);
         });

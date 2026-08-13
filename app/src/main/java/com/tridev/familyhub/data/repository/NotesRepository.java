@@ -108,7 +108,14 @@ public class NotesRepository {
             if (note.isShared) {
                 publish(note);
             } else {
-                FamilyCollaborationPublisher.remove("notes", note.familyId, note.cloudId);
+                String previousFamilyId = note.familyId;
+                String previousCloudId = note.cloudId;
+                note.familyId = "";
+                note.cloudId = "";
+                note.updatedByUid = "";
+                noteDao.update(note);
+                FamilyCollaborationPublisher.remove(
+                        "notes", previousFamilyId, previousCloudId);
             }
             mainHandler.post(callback::onComplete);
         });
