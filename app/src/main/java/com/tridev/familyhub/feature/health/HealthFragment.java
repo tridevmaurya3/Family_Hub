@@ -202,7 +202,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
         }
         dialogBinding.healthMemberInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 memberNames
         ));
 
@@ -211,7 +211,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
         );
         dialogBinding.healthTypeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 typeLabels
         ));
 
@@ -222,7 +222,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
         }
         dialogBinding.healthLinkedDocumentInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 documentTitles
         ));
         String[] reminderLabels = getResources().getStringArray(
@@ -230,7 +230,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
         );
         dialogBinding.healthReminderInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 reminderLabels
         ));
 

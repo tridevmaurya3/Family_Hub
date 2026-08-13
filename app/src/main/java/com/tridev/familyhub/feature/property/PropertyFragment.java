@@ -183,7 +183,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
         }
         form.propertyOwnerInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 memberNames
         ));
         String[] typeLabels = getResources().getStringArray(
@@ -191,7 +191,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
         );
         form.propertyTypeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 typeLabels
         ));
         String[] stateLabels = getResources().getStringArray(
@@ -199,14 +199,14 @@ public class PropertyFragment extends Fragment implements AddActionHost {
         );
         form.propertyStateInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 stateLabels
         ));
         List<String> documentTitles = new ArrayList<>();
         documentTitles.add(getString(R.string.property_no_linked_document));
         for (DocumentEntry document : documents) documentTitles.add(document.title);
         form.propertyLinkedDocumentInput.setAdapter(new ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                requireContext(), R.layout.item_form_dropdown,
                 documentTitles));
 
         long[] purchaseDate = {property.purchaseDate};

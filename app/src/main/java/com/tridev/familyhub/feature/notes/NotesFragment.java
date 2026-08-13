@@ -3,6 +3,9 @@ package com.tridev.familyhub.feature.notes;
 import android.os.Bundle;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -157,24 +161,24 @@ public class NotesFragment extends Fragment implements AddActionHost {
                 getResources().getStringArray(R.array.notes_category_labels);
         form.noteCategoryInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 categoryLabels
         ));
         form.noteTypeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 typeLabels
         ));
         form.noteColorInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 colorLabels
         ));
         String[] collaborationLabels =
                 getResources().getStringArray(R.array.collaboration_status_labels);
         form.noteCollaborationStatusInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 collaborationLabels
         ));
 
@@ -247,6 +251,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
                     return;
                 }
                 dialog.dismiss();
+                requestNotificationPermissionIfNeeded();
                 reload();
                 Snackbar.make(
                         binding.getRoot(),
@@ -258,6 +263,15 @@ public class NotesFragment extends Fragment implements AddActionHost {
             });
         });
         dialog.show();
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5301);
+        }
     }
 
     private void confirmDelete(@NonNull NoteEntry note) {

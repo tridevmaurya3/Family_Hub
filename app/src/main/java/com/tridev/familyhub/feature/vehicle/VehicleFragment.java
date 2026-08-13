@@ -183,7 +183,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         }
         form.vehicleOwnerInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 memberNames
         ));
 
@@ -192,7 +192,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         );
         form.vehicleTypeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 typeLabels
         ));
         String[] fuelLabels = getResources().getStringArray(
@@ -200,7 +200,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         );
         form.vehicleFuelInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 fuelLabels
         ));
         List<String> documentTitles = new ArrayList<>();
@@ -208,7 +208,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         for (DocumentEntry document : documents) documentTitles.add(document.title);
         form.vehicleLinkedDocumentInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 documentTitles
         ));
 
