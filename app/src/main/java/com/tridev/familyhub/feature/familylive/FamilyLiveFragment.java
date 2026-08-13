@@ -60,6 +60,7 @@ public class FamilyLiveFragment extends Fragment {
 
     private static final long LIVE_FRESHNESS_MS = 3L * 60L * 1000L;
     private static final long CONTENT_ANIMATION_MS = 220L;
+    private static final long SHARING_STATUS_REFRESH_MS = 30L * 1000L;
     private static final String STATE_MEMBER_FILTER =
             "family_live_member_filter";
 
@@ -77,6 +78,16 @@ public class FamilyLiveFragment extends Fragment {
     private boolean fitMapOnNextRender = true;
     private boolean satelliteMap;
     private long selectedSharingDurationMs = 8L * 60L * 60L * 1000L;
+    private final Runnable sharingStatusRefresh = new Runnable() {
+        @Override
+        public void run() {
+            if (binding == null || !isAdded()) {
+                return;
+            }
+            updateSharingUi();
+            scheduleSharingStatusRefresh();
+        }
+    };
     private int selectedFilterId = R.id.chipFamilyLiveAll;
     private int lastRenderedCount = -1;
     @NonNull private String memberQuery = "";
@@ -270,6 +281,7 @@ public class FamilyLiveFragment extends Fragment {
     public void onResume() {
         super.onResume();
         updateSharingUi();
+        scheduleSharingStatusRefresh();
         if (retryStartOnResume) {
             retryStartOnResume = false;
             startAfterSettingsIfReady();
@@ -277,6 +289,12 @@ public class FamilyLiveFragment extends Fragment {
         if (repository != null) {
             loadLocalFamilyLiveMembers();
         }
+    }
+
+    @Override
+    public void onPause() {
+        cancelSharingStatusRefresh();
+        super.onPause();
     }
 
     @Override
@@ -1312,12 +1330,65 @@ public class FamilyLiveFragment extends Fragment {
         binding.tvSharingStatus.setText(enabled
                 ? R.string.family_live_sharing_on
                 : R.string.family_live_sharing_off);
-        binding.tvSharingDetail.setText(enabled
-                ? R.string.family_live_sharing_on_detail
-                : R.string.family_live_sharing_off_detail);
+        if (enabled) {
+            long expiresAt = LocationSharingStore.sharingExpiresAt(
+                    requireContext()
+            );
+            if (expiresAt <= 0L) {
+                binding.tvSharingDetail.setText(
+                        R.string.family_live_sharing_until_stopped_detail
+                );
+            } else {
+                long remainingMs = Math.max(
+                        0L,
+                        expiresAt - System.currentTimeMillis()
+                );
+                long remainingMinutes = Math.max(
+                        1L,
+                        (remainingMs + 59_999L) / 60_000L
+                );
+                if (remainingMinutes >= 60L) {
+                    long hours = remainingMinutes / 60L;
+                    long minutes = remainingMinutes % 60L;
+                    binding.tvSharingDetail.setText(getString(
+                            R.string.family_live_sharing_remaining_hours,
+                            hours,
+                            minutes
+                    ));
+                } else {
+                    binding.tvSharingDetail.setText(getString(
+                            R.string.family_live_sharing_remaining_minutes,
+                            remainingMinutes
+                    ));
+                }
+            }
+        } else {
+            binding.tvSharingDetail.setText(
+                    R.string.family_live_sharing_off_detail
+            );
+        }
         binding.buttonLocationSharing.setText(enabled
                 ? R.string.family_live_stop_sharing
                 : R.string.family_live_start_sharing);
+    }
+
+    private void scheduleSharingStatusRefresh() {
+        if (binding == null) {
+            return;
+        }
+        binding.getRoot().removeCallbacks(sharingStatusRefresh);
+        if (LocationSharingStore.isSharingEnabled(requireContext())) {
+            binding.getRoot().postDelayed(
+                    sharingStatusRefresh,
+                    SHARING_STATUS_REFRESH_MS
+            );
+        }
+    }
+
+    private void cancelSharingStatusRefresh() {
+        if (binding != null) {
+            binding.getRoot().removeCallbacks(sharingStatusRefresh);
+        }
     }
 
     private void loadLocalFamilyLiveMembers() {
@@ -1474,6 +1545,7 @@ public class FamilyLiveFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        cancelSharingStatusRefresh();
         if (repository != null) {
             repository.close();
             repository = null;

@@ -1014,6 +1014,9 @@
     <string name="family_live_sharing_off_detail">Only you can start sharing. Nothing is tracked secretly.</string>
     <string name="family_live_sharing_on">Location sharing is on</string>
     <string name="family_live_sharing_on_detail">Authorised members of your family can see your latest location.</string>
+    <string name="family_live_sharing_until_stopped_detail">Active until you stop it • authorised viewers only.</string>
+    <string name="family_live_sharing_remaining_hours">%1$d h %2$d min remaining • authorised viewers only.</string>
+    <string name="family_live_sharing_remaining_minutes">%1$d min remaining • authorised viewers only.</string>
     <string name="family_live_sharing_starting">Starting secure sharing…</string>
     <string name="family_live_sharing_duration_title">Share location for</string>
     <string name="family_live_manage_viewers">Viewers</string>
