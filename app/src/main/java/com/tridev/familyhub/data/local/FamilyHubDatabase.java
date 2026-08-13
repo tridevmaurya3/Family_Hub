@@ -66,7 +66,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 23,
+        version = 24,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -272,6 +272,19 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_documentNumber` ON `documents` (`documentNumber`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_deletedAt` ON `documents` (`deletedAt`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_documents_fingerprint` ON `documents` (`fingerprint`)");
+        }
+    };
+
+    /** Adds stable family-cloud identity and member attribution to Finance entries. */
+    private static final Migration MIGRATION_23_24 = new Migration(23, 24) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `updatedByName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `serverUpdatedAt` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_cloudId` ON `finance_entries` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_finance_entries_familyId` ON `finance_entries` (`familyId`)");
         }
     };
 
@@ -783,7 +796,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_19_20,
                                     MIGRATION_20_21,
                                     MIGRATION_21_22,
-                                    MIGRATION_22_23
+                                    MIGRATION_22_23,
+                                    MIGRATION_23_24
                             )
                             .build();
                 }

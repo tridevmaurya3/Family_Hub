@@ -34,8 +34,17 @@ public interface FinanceEntryDao {
     @Query("SELECT * FROM finance_entries WHERE id = :id LIMIT 1")
     FinanceEntry getById(long id);
 
+    @Query("SELECT * FROM finance_entries WHERE cloudId = :cloudId LIMIT 1")
+    FinanceEntry getByCloudId(String cloudId);
+
+    @Query("SELECT * FROM finance_entries WHERE isShared = 1 AND familyId = :familyId")
+    List<FinanceEntry> getSharedForFamily(String familyId);
+
     @Query("DELETE FROM finance_entries WHERE id = :id")
     int deleteById(long id);
+
+    @Query("DELETE FROM finance_entries WHERE cloudId = :cloudId")
+    int deleteByCloudId(String cloudId);
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(FinanceEntry entry);

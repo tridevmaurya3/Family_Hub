@@ -160,11 +160,11 @@
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
         "$module": {
-          ".validate": "$module.matches(/^(planner|reminders|notes)$/)",
+          ".validate": "$module.matches(/^(planner|reminders|notes|finance)$/)",
           ".indexOn": ["updatedAt", "assignedMemberId", "collaborationStatus"],
           "$itemId": {
             ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
-            ".validate": "!newData.exists() || (newData.child('cloudId').val() === $itemId && newData.child('familyId').val() === $familyId && newData.child('updatedByUid').val() === auth.uid && newData.child('updatedAt').isNumber() && newData.child('collaborationStatus').isString() && newData.child('collaborationStatus').val().length <= 24 && newData.child('assignedMemberId').isString() && newData.child('assignedMemberId').val().length <= 128 && newData.child('assignedMemberName').isString() && newData.child('assignedMemberName').val().length <= 100)"
+            ".validate": "!newData.exists() || (newData.child('cloudId').val() === $itemId && newData.child('familyId').val() === $familyId && newData.child('updatedByUid').val() === auth.uid && newData.child('updatedAt').isNumber() && (($module === 'finance' && newData.child('entryType').val().matches(/^(EXPENSE|INCOME)$/) && newData.child('amount').isNumber() && newData.child('amount').val() > 0 && newData.child('amount').val() <= 1000000000 && newData.child('category').isString() && newData.child('category').val().length >= 1 && newData.child('category').val().length <= 100 && newData.child('transactionDate').isString() && newData.child('transactionDate').val().matches(/^\\d{4}-\\d{2}-\\d{2}$/) && newData.child('accountName').isString() && newData.child('accountName').val().length <= 100 && newData.child('paymentMethod').isString() && newData.child('paymentMethod').val().length <= 40 && newData.child('recurring').isBoolean() && newData.child('shared').val() === true && newData.child('updatedByName').isString() && newData.child('updatedByName').val().length >= 1 && newData.child('updatedByName').val().length <= 100) || ($module !== 'finance' && newData.child('collaborationStatus').isString() && newData.child('collaborationStatus').val().length <= 24 && newData.child('assignedMemberId').isString() && newData.child('assignedMemberId').val().length <= 128 && newData.child('assignedMemberName').isString() && newData.child('assignedMemberName').val().length <= 100)))"
           }
         }
       }

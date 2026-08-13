@@ -115,8 +115,15 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     public void onResume() {
         super.onResume();
         if (binding != null) {
+            repository.startSharedSync(this::refreshData);
             refreshData();
         }
+    }
+
+    @Override
+    public void onPause() {
+        repository.stopSharedSync();
+        super.onPause();
     }
 
     private void refreshData() {

@@ -9,7 +9,8 @@ import androidx.room.PrimaryKey;
 @Entity(
         tableName = "finance_entries",
         indices = {@Index(value = {"transactionDate"}), @Index(value = {"category"}),
-                @Index(value = {"accountName"}), @Index(value = {"isRecurring"})}
+                @Index(value = {"accountName"}), @Index(value = {"isRecurring"}),
+                @Index(value = {"cloudId"}), @Index(value = {"familyId"})}
 )
 public class FinanceEntry {
 
@@ -40,4 +41,9 @@ public class FinanceEntry {
     public boolean isRecurring;
     public boolean isShared;
     public long updatedAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    @NonNull public String updatedByUid = "";
+    @NonNull public String updatedByName = "";
+    public long serverUpdatedAt;
 }

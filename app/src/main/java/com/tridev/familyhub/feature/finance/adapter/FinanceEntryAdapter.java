@@ -102,6 +102,9 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
             }
             if (entry.isShared) {
                 detail.append(" · Shared");
+                if (!TextUtils.isEmpty(entry.updatedByName)) {
+                    detail.append(" by ").append(entry.updatedByName);
+                }
             }
             if (!TextUtils.isEmpty(entry.note)) {
                 detail.append(" · ").append(entry.note);
