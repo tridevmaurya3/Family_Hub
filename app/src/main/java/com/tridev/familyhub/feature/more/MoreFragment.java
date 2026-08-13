@@ -27,7 +27,7 @@ import com.tridev.familyhub.backup.BackupRestoreActivity;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
-import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
 /** Compact account, settings, encrypted backup and privacy page. */
 public class MoreFragment extends Fragment {
@@ -148,7 +148,7 @@ public class MoreFragment extends Fragment {
         profile.setTextSize(14F);
         profile.setAllCaps(false);
         profile.setMaxLines(2);
-        profile.setIconResource(R.drawable.ic_arrow_back);
+        profile.setIconResource(R.drawable.ic_profile_person);
         profile.setIconTintResource(R.color.fh_primary);
         profile.setIconSize(dp(24));
         profile.setIconPadding(dp(12));
@@ -167,13 +167,8 @@ public class MoreFragment extends Fragment {
         ));
         profile.setStrokeWidth(dp(1));
         profile.setCornerRadius(dp(20));
-        profile.setOnClickListener(v -> {
-            if (requireActivity() instanceof MainActivity) {
-                ((MainActivity) requireActivity()).openHome();
-            } else {
-                requireActivity().getOnBackPressedDispatcher().onBackPressed();
-            }
-        });
+        profile.setOnClickListener(v -> startActivity(new Intent(
+                requireContext(), ProfileSettingsActivity.class)));
         content.addView(profile, 0);
     }
 

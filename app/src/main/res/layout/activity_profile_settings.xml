@@ -93,10 +93,10 @@
                 android:padding="@dimen/space_20">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:layout_width="104dp"
-                    android:layout_height="104dp"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
                     app:cardBackgroundColor="@color/fh_surface"
-                    app:cardCornerRadius="52dp"
+                    app:cardCornerRadius="40dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/fh_primary"
                     app:strokeWidth="2dp">
@@ -106,7 +106,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:contentDescription="@string/profile_photo_description"
-                        android:padding="24dp"
+                        android:padding="18dp"
                         android:scaleType="centerCrop"
                         android:src="@drawable/ic_profile_person" />
                 </com.google.android.material.card.MaterialCardView>
