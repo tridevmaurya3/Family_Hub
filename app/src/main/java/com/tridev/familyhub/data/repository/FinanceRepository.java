@@ -9,7 +9,9 @@ import androidx.annotation.Nullable;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FinanceEntryDao;
+import com.tridev.familyhub.data.local.dao.FinanceAccountDao;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
+import com.tridev.familyhub.data.local.entity.FinanceAccount;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -46,16 +48,19 @@ public class FinanceRepository {
     public interface ActionCallback {
         void onComplete();
     }
+    public interface AccountsCallback { void onLoaded(List<FinanceAccount> accounts); }
 
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private final FinanceEntryDao financeEntryDao;
+    private final FinanceAccountDao financeAccountDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private DatabaseReference sharedEntriesReference;
     @Nullable private ValueEventListener sharedEntriesListener;
 
     public FinanceRepository(Context context) {
         financeEntryDao = FamilyHubDatabase.getInstance(context).financeEntryDao();
+        financeAccountDao = FamilyHubDatabase.getInstance(context).financeAccountDao();
     }
 
     public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
@@ -78,6 +83,7 @@ public class FinanceRepository {
     public void save(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             entry.updatedAt = System.currentTimeMillis();
+            ensureAccount(entry.accountName);
             prepareRecurrenceMetadata(entry);
             if (entry.isShared && entry.cloudId.trim().isEmpty()) {
                 entry.cloudId = UUID.randomUUID().toString();
@@ -100,6 +106,30 @@ public class FinanceRepository {
             }
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    public void loadAccounts(@NonNull AccountsCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<FinanceAccount> accounts = financeAccountDao.getActiveWithBalances();
+            mainHandler.post(() -> callback.onLoaded(accounts));
+        });
+    }
+
+    public void saveAccount(@NonNull FinanceAccount account, @NonNull ActionCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            account.updatedAt = System.currentTimeMillis();
+            FinanceAccount existing = financeAccountDao.getByName(account.name);
+            if (existing == null) financeAccountDao.insert(account);
+            else { account.id = existing.id; financeAccountDao.update(account); }
+            mainHandler.post(callback::onComplete);
+        });
+    }
+
+    private void ensureAccount(String name) {
+        if (name == null || name.trim().isEmpty() || financeAccountDao.getByName(name.trim()) != null) return;
+        FinanceAccount account = new FinanceAccount(); account.name = name.trim();
+        account.accountType = "OTHER"; account.updatedAt = System.currentTimeMillis();
+        financeAccountDao.insert(account);
     }
 
     /** Creates exactly one occurrence per recurring series for the current month. */

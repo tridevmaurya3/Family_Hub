@@ -11,6 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyLiveStatusDao;
 import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
 import com.tridev.familyhub.data.local.dao.FinanceEntryDao;
+import com.tridev.familyhub.data.local.dao.FinanceAccountDao;
 import com.tridev.familyhub.data.local.dao.ReminderDao;
 import com.tridev.familyhub.data.local.dao.DocumentDao;
 import com.tridev.familyhub.data.local.dao.PasswordEntryDao;
@@ -27,6 +28,7 @@ import com.tridev.familyhub.data.local.dao.SafePlaceAlertDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
+import com.tridev.familyhub.data.local.entity.FinanceAccount;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.PasswordEntry;
@@ -51,6 +53,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
         entities = {
                 FamilyMember.class,
                 FinanceEntry.class,
+                FinanceAccount.class,
                 Reminder.class,
                 FamilyLiveStatus.class,
                 DocumentEntry.class,
@@ -66,7 +69,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 26,
+        version = 27,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -76,6 +79,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract FamilyMemberDao familyMemberDao();
 
     public abstract FinanceEntryDao financeEntryDao();
+    public abstract FinanceAccountDao financeAccountDao();
 
     public abstract ReminderDao reminderDao();
 
@@ -308,6 +312,15 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `participantNames` TEXT NOT NULL DEFAULT ''");
             database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `splitAmounts` TEXT NOT NULL DEFAULT ''");
             database.execSQL("ALTER TABLE `finance_entries` ADD COLUMN `settlementStatus` TEXT NOT NULL DEFAULT 'NOT_APPLICABLE'");
+        }
+    };
+
+    private static final Migration MIGRATION_26_27 = new Migration(26, 27) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `finance_accounts` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `accountType` TEXT NOT NULL, `openingBalance` REAL NOT NULL, `archived` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `currentBalance` REAL NOT NULL)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_finance_accounts_name` ON `finance_accounts` (`name`)");
+            database.execSQL("INSERT OR IGNORE INTO `finance_accounts` (`name`,`accountType`,`openingBalance`,`archived`,`updatedAt`,`currentBalance`) VALUES ('Cash','CASH',0,0,0,0)");
+            database.execSQL("INSERT OR IGNORE INTO `finance_accounts` (`name`,`accountType`,`openingBalance`,`archived`,`updatedAt`,`currentBalance`) SELECT DISTINCT `accountName`, 'OTHER', 0, 0, 0, 0 FROM `finance_entries` WHERE `accountName` != ''");
         }
     };
 
@@ -822,7 +835,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_22_23,
                                     MIGRATION_23_24,
                                     MIGRATION_24_25,
-                                    MIGRATION_25_26
+                                    MIGRATION_25_26,
+                                    MIGRATION_26_27
                             )
                             .build();
                 }

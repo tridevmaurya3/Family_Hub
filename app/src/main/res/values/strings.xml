@@ -1366,6 +1366,14 @@ Sharing: %12$s</string>
     <string name="diagnostics_ready">Required checks are ready</string>
     <string name="diagnostics_attention">One or more required checks need attention</string>
     <string name="finance_account">Account</string>
+    <string name="finance_linked_accounts">Linked accounts &amp; balances</string>
+    <string name="finance_accounts_loading">Calculating account balances…</string>
+    <string name="finance_account_summary">%1$d accounts • Current total: %2$s</string>
+    <string name="finance_account_name">Account name</string>
+    <string name="finance_account_type">Account type (Cash/Bank/UPI/Credit Card)</string>
+    <string name="finance_opening_balance">Opening balance</string>
+    <string name="finance_add_account">Add or update account</string>
+    <string name="manage">Manage</string>
     <string name="finance_payment_method">Payment method</string>
     <string name="finance_recurring">Repeat this entry every month</string>
     <string name="finance_share_summary">Share entry summary with family</string>

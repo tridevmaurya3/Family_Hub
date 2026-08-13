@@ -12,6 +12,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.text.InputType;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -24,6 +26,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.SemanticValueStyler;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
+import com.tridev.familyhub.data.local.entity.FinanceAccount;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.tridev.familyhub.data.repository.FinanceRepository;
 import com.tridev.familyhub.data.repository.FamilyAccountRepository;
@@ -88,6 +91,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         binding.emptyAddFinanceButton.setOnClickListener(v -> showEntryEditor(null));
         binding.financeBudgetButton.setOnClickListener(v -> showBudgetEditor());
         binding.financeReportButton.setOnClickListener(v -> showMonthlyReport());
+        binding.financeManageAccountsButton.setOnClickListener(v -> showAccountEditor());
         binding.financeSearchInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -130,6 +134,43 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     private void refreshData() {
         loadEntries(binding.financeSearchInput.getText().toString());
         loadSummary();
+        loadAccountSummary();
+    }
+
+    private void loadAccountSummary() {
+        repository.loadAccounts(accounts -> {
+            if (binding == null) return;
+            double total = 0D;
+            for (FinanceAccount account : accounts) total += account.currentBalance;
+            binding.financeAccountsSummary.setText(getString(
+                    R.string.finance_account_summary, accounts.size(), currencyFormatter.format(total)));
+        });
+    }
+
+    private void showAccountEditor() {
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        LinearLayout form = new LinearLayout(requireContext());
+        form.setOrientation(LinearLayout.VERTICAL); form.setPadding(padding, padding / 2, padding, 0);
+        EditText name = new EditText(requireContext()); name.setHint(R.string.finance_account_name);
+        EditText type = new EditText(requireContext()); type.setHint(R.string.finance_account_type);
+        EditText opening = new EditText(requireContext()); opening.setHint(R.string.finance_opening_balance);
+        opening.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
+                | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        form.addView(name); form.addView(type); form.addView(opening);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.finance_add_account).setView(form)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.save, (dialog, which) -> {
+                    String accountName = name.getText().toString().trim();
+                    if (accountName.isEmpty()) return;
+                    FinanceAccount account = new FinanceAccount(); account.name = accountName;
+                    account.accountType = type.getText().toString().trim().isEmpty()
+                            ? "OTHER" : type.getText().toString().trim().toUpperCase(Locale.ROOT);
+                    try { account.openingBalance = Double.parseDouble(opening.getText().toString().trim()); }
+                    catch (NumberFormatException ignored) { account.openingBalance = 0D; }
+                    rememberAccount(account.name);
+                    repository.saveAccount(account, this::refreshData);
+                }).show();
     }
 
     private void loadEntries(String query) {
