@@ -85,6 +85,7 @@ public class GroceryRepository {
 
     /** Starts one family-scoped realtime listener; safe to call repeatedly. */
     public void startRealtimeSync(@NonNull Runnable onChanged) {
+        stopListenerOnly();
         changeCallback = onChanged;
         accountRepository.loadSession(
                 new FamilyAccountRepository.ResultCallback<
@@ -227,6 +228,7 @@ public class GroceryRepository {
             if (item.purchaseCount > 0) item.purchaseCount--;
             linkFinance(item);
             item.updatedAt = System.currentTimeMillis();
+            markCurrentEditor(item);
             upsertLocal(item);
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
@@ -401,6 +403,7 @@ public class GroceryRepository {
         activeFamilyId = familyId;
         activeItemsReference = firebaseRoot.child("sharedShopping")
                 .child(familyId).child("items");
+        activeItemsReference.keepSynced(true);
         activeListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -487,7 +490,7 @@ public class GroceryRepository {
                             System.currentTimeMillis());
                 }
                 FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (item.updatedByUid.isEmpty() && user != null) {
+                if (user != null) {
                     item.updatedByUid = user.getUid();
                     item.updatedByName = displayName(user);
                 }
@@ -671,6 +674,7 @@ public class GroceryRepository {
             item.financeEntryId = 0L;
             item.buyingStatus = GroceryItem.STATUS_PENDING;
             item.updatedAt = System.currentTimeMillis();
+            markCurrentEditor(item);
             groceryItemDao.update(item);
             if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
                 firebaseRoot.child("sharedShopping").child(activeFamilyId)
@@ -719,6 +723,13 @@ public class GroceryRepository {
     @NonNull
     private static String currentMonth() {
         return new SimpleDateFormat("yyyy-MM", Locale.US).format(new Date());
+    }
+
+    /** Firebase rules require every mutation to identify the signed-in editor. */
+    private static void markCurrentEditor(@NonNull GroceryItem item) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        item.updatedByUid = user == null ? "" : user.getUid();
+        item.updatedByName = displayName(user);
     }
 
     @NonNull
