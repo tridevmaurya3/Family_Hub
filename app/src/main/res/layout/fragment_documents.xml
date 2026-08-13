@@ -42,6 +42,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginEnd="@dimen/space_8"
+                android:visibility="gone"
                 app:cardBackgroundColor="@color/fh_module_documents_container"
                 app:cardCornerRadius="@dimen/radius_12"
                 app:cardElevation="0dp">
@@ -55,32 +56,10 @@
                     app:tint="@color/fh_module_documents" />
             </com.google.android.material.card.MaterialCardView>
 
-            <LinearLayout
+            <Space
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/documents_title"
-                    style="@style/TextAppearance.FamilyHub.Heading"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/documents_vault_title"
-                    android:textColor="@color/fh_on_surface"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/documents_subtitle"
-                    style="@style/TextAppearance.FamilyHub.Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="1dp"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/documents_vault_subtitle"
-                    android:textSize="9sp" />
-            </LinearLayout>
+                android:layout_height="1dp"
+                android:layout_weight="1" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
