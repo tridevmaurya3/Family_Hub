@@ -17,6 +17,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.HealthRecordWithMember;
 import com.tridev.familyhub.data.repository.HealthRepository;
@@ -170,12 +171,15 @@ public class HealthFragment extends Fragment implements AddActionHost {
                 ).show();
                 return;
             }
-            showEditor(members, existing);
+            repository.loadDocuments(documents -> {
+                if (binding != null) showEditor(members, documents, existing);
+            });
         });
     }
 
     private void showEditor(
             @NonNull List<FamilyMember> members,
+            @NonNull List<DocumentEntry> documents,
             @Nullable HealthRecordWithMember existing
     ) {
         DialogHealthRecordBinding dialogBinding =
@@ -203,6 +207,17 @@ public class HealthFragment extends Fragment implements AddActionHost {
                 typeLabels
         ));
 
+        List<String> documentTitles = new ArrayList<>();
+        documentTitles.add(getString(R.string.health_no_linked_document));
+        for (DocumentEntry document : documents) {
+            documentTitles.add(document.title);
+        }
+        dialogBinding.healthLinkedDocumentInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                documentTitles
+        ));
+
         Calendar selectedDate = Calendar.getInstance();
         if (existing != null) {
             dialogBinding.healthDialogTitle.setText(
@@ -219,7 +234,12 @@ public class HealthFragment extends Fragment implements AddActionHost {
             dialogBinding.healthTitleInput.setText(record.title);
             dialogBinding.healthValueInput.setText(record.value);
             dialogBinding.healthNotesInput.setText(record.notes);
-            dialogBinding.healthLinkedDocumentInput.setText(record.linkedDocumentTitle);
+            dialogBinding.healthLinkedDocumentInput.setText(
+                    record.linkedDocumentTitle.isEmpty()
+                            ? getString(R.string.health_no_linked_document)
+                            : record.linkedDocumentTitle,
+                    false
+            );
             dialogBinding.healthTimelineNoteInput.setText(record.timelineNote);
             dialogBinding.healthSharedSwitch.setChecked(record.isShared);
             selectedDate.setTimeInMillis(record.recordedAt);
@@ -229,6 +249,10 @@ public class HealthFragment extends Fragment implements AddActionHost {
                     false
             );
             dialogBinding.healthTypeInput.setText(typeLabels[0], false);
+            dialogBinding.healthLinkedDocumentInput.setText(
+                    getString(R.string.health_no_linked_document),
+                    false
+            );
         }
         dialogBinding.healthDateInput.setText(
                 dateFormat.format(selectedDate.getTime())
@@ -299,7 +323,14 @@ public class HealthFragment extends Fragment implements AddActionHost {
             record.value = textOf(dialogBinding.healthValueInput);
             record.notes = textOf(dialogBinding.healthNotesInput);
             record.recordedAt = selectedDate.getTimeInMillis();
-            record.linkedDocumentTitle = textOf(dialogBinding.healthLinkedDocumentInput);
+            DocumentEntry linkedDocument = findDocument(
+                    documents,
+                    textOf(dialogBinding.healthLinkedDocumentInput)
+            );
+            record.linkedDocumentId = linkedDocument == null ? 0L : linkedDocument.id;
+            record.linkedDocumentTitle = linkedDocument == null
+                    ? ""
+                    : linkedDocument.title;
             record.timelineNote = textOf(dialogBinding.healthTimelineNoteInput);
             record.isShared = dialogBinding.healthSharedSwitch.isChecked();
             record.updatedAt = System.currentTimeMillis();
@@ -320,6 +351,17 @@ public class HealthFragment extends Fragment implements AddActionHost {
             });
         });
         dialog.show();
+    }
+
+    @Nullable
+    private DocumentEntry findDocument(
+            @NonNull List<DocumentEntry> documents,
+            @NonNull String title
+    ) {
+        for (DocumentEntry document : documents) {
+            if (document.title.equalsIgnoreCase(title)) return document;
+        }
+        return null;
     }
 
     @Nullable

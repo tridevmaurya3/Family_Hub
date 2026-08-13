@@ -12,6 +12,8 @@ import com.google.firebase.database.DataSnapshot;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
 import com.tridev.familyhub.data.local.dao.HealthRecordDao;
+import com.tridev.familyhub.data.local.dao.DocumentDao;
+import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.HealthRecord;
 import com.tridev.familyhub.data.local.entity.HealthRecordWithMember;
@@ -35,6 +37,10 @@ public class HealthRepository {
         void onMembersLoaded(@NonNull List<FamilyMember> members);
     }
 
+    public interface DocumentsCallback {
+        void onDocumentsLoaded(@NonNull List<DocumentEntry> documents);
+    }
+
     public interface ActionCallback {
         void onComplete();
     }
@@ -49,6 +55,7 @@ public class HealthRepository {
 
     private final HealthRecordDao healthRecordDao;
     private final FamilyMemberDao familyMemberDao;
+    private final DocumentDao documentDao;
     private final FamilyAccountRepository familyAccountRepository =
             new FamilyAccountRepository();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -58,6 +65,14 @@ public class HealthRepository {
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         healthRecordDao = database.healthRecordDao();
         familyMemberDao = database.familyMemberDao();
+        documentDao = database.documentDao();
+    }
+
+    public void loadDocuments(@NonNull DocumentsCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<DocumentEntry> documents = documentDao.getAll();
+            mainHandler.post(() -> callback.onDocumentsLoaded(documents));
+        });
     }
 
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
