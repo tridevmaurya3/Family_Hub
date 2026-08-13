@@ -69,7 +69,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 30,
+        version = 31,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -350,6 +350,17 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `vehicles` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicles_cloudId` ON `vehicles` (`cloudId`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicles_familyId` ON `vehicles` (`familyId`)");
+        }
+    };
+    private static final Migration MIGRATION_30_31 = new Migration(30, 31) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `properties` ADD COLUMN `cloudId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `properties` ADD COLUMN `familyId` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `properties` ADD COLUMN `assignedOwnerName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `properties` ADD COLUMN `updatedByUid` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `properties` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_cloudId` ON `properties` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_familyId` ON `properties` (`familyId`)");
         }
     };
 
@@ -868,7 +879,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_26_27,
                                     MIGRATION_27_28,
                                     MIGRATION_28_29,
-                                    MIGRATION_29_30
+                                    MIGRATION_29_30,
+                                    MIGRATION_30_31
                             )
                             .build();
                 }

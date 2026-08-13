@@ -20,6 +20,7 @@ import androidx.room.PrimaryKey;
                 @Index("ownerMemberId"),
                 @Index("propertyType"),
                 @Index("title")
+                ,@Index("cloudId"), @Index("familyId")
         }
 )
 public class PropertyEntry {
@@ -77,4 +78,9 @@ public class PropertyEntry {
     @NonNull public String linkedDocumentTitle = "";
     @NonNull public String timelineNote = "";
     public long updatedAt;
+    @NonNull public String cloudId = "";
+    @NonNull public String familyId = "";
+    @NonNull public String assignedOwnerName = "";
+    @NonNull public String updatedByUid = "";
+    public boolean isShared;
 }

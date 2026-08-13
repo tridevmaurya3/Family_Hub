@@ -34,6 +34,8 @@ public interface PropertyDao {
 
     @Query("SELECT COUNT(*) FROM properties")
     int count();
+    @Query("SELECT * FROM properties WHERE cloudId = :cloudId LIMIT 1")
+    PropertyEntry getByCloudId(String cloudId);
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(PropertyEntry property);

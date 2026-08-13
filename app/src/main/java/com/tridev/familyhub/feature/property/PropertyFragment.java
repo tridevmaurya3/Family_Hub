@@ -137,6 +137,9 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                 }
         );
         loadProperties("");
+        repository.startRealtimeSync(() -> {
+            if (binding != null) loadProperties(currentQuery());
+        });
     }
 
     @Override
@@ -238,6 +241,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                             : property.linkedDocumentTitle,
                     false);
             form.propertyTimelineNoteInput.setText(property.timelineNote);
+            form.propertySharedSwitch.setChecked(property.isShared);
         }
         if (purchaseDate[0] > 0L) {
             form.propertyPurchaseDateInput.setText(
@@ -306,6 +310,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
             form.propertyTitleLayout.setError(null);
 
             property.ownerMemberId = owner.id;
+            property.assignedOwnerName = owner.name;
             property.propertyType = PROPERTY_TYPES[typeIndex];
             property.title = title;
             property.address = textOf(form.propertyAddressInput);
@@ -329,6 +334,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
             property.linkedDocumentId = document == null ? 0L : document.id;
             property.linkedDocumentTitle = document == null ? "" : document.title;
             property.timelineNote = textOf(form.propertyTimelineNoteInput);
+            property.isShared = form.propertySharedSwitch.isChecked();
             property.updatedAt = System.currentTimeMillis();
 
             repository.save(property, () -> {
@@ -552,6 +558,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
         binding.propertyRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();
