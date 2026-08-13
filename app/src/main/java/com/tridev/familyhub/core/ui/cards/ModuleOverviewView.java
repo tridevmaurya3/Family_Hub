@@ -1,6 +1,7 @@
 package com.tridev.familyhub.core.ui.cards;
 
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Color;
@@ -15,9 +16,11 @@ import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentActivity;
 
 import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 /**
  * Reusable compact overview surface used at the top of Family Hub modules.
@@ -75,6 +78,7 @@ public final class ModuleOverviewView extends FrameLayout {
 
         if (attrs == null) {
             applyColors(defaultAccent, defaultContainer);
+            enableDefaultBackNavigation();
             return;
         }
 
@@ -112,6 +116,31 @@ public final class ModuleOverviewView extends FrameLayout {
         } finally {
             values.recycle();
         }
+        enableDefaultBackNavigation();
+    }
+
+    /** Gives every module overview the same compact back action as Grocery. */
+    private void enableDefaultBackNavigation() {
+        setNavigationAction(R.drawable.ic_arrow_back, R.string.back, view -> {
+            FragmentActivity activity = findActivity(getContext());
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).openHome();
+            } else if (activity != null) {
+                activity.getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
+    }
+
+    @Nullable
+    private static FragmentActivity findActivity(@NonNull Context context) {
+        Context current = context;
+        while (current instanceof ContextWrapper) {
+            if (current instanceof FragmentActivity) return (FragmentActivity) current;
+            Context base = ((ContextWrapper) current).getBaseContext();
+            if (base == current) break;
+            current = base;
+        }
+        return null;
     }
 
     private void applyColors(
