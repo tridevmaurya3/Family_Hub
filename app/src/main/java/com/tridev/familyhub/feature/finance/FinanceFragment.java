@@ -182,6 +182,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             if (query.trim().isEmpty()) {
                 latestEntries = new ArrayList<>(entries);
                 updateSmartInsights();
+                updateAnalytics();
             }
             boolean isEmpty = entries.isEmpty();
             binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
@@ -311,6 +312,46 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                 accounts.size(),
                 currencyFormatter.format(projectedExpense)
         ));
+    }
+
+    private void updateAnalytics() {
+        if (binding == null) return;
+        Calendar now = Calendar.getInstance();
+        String current = new SimpleDateFormat("yyyy-MM", Locale.US).format(now.getTime());
+        now.add(Calendar.MONTH, -1);
+        String previous = new SimpleDateFormat("yyyy-MM", Locale.US).format(now.getTime());
+        double currentExpense = 0D, previousExpense = 0D, currentIncome = 0D;
+        Map<String, Double> categories = new HashMap<>(), accounts = new HashMap<>(), payers = new HashMap<>();
+        for (FinanceEntry entry : latestEntries) {
+            if ("UPCOMING".equals(entry.recurrenceStatus)) continue;
+            if (entry.transactionDate.startsWith(previous) && FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)) {
+                previousExpense += entry.amount;
+            }
+            if (!entry.transactionDate.startsWith(current)) continue;
+            if (FinanceEntry.TYPE_INCOME.equals(entry.entryType)) { currentIncome += entry.amount; continue; }
+            currentExpense += entry.amount;
+            categories.put(entry.category, categories.getOrDefault(entry.category, 0D) + entry.amount);
+            accounts.put(entry.accountName, accounts.getOrDefault(entry.accountName, 0D) + entry.amount);
+            if (!entry.paidByName.isEmpty()) payers.put(entry.paidByName,
+                    payers.getOrDefault(entry.paidByName, 0D) + entry.amount);
+        }
+        double change = previousExpense <= 0D ? (currentExpense > 0D ? 100D : 0D)
+                : ((currentExpense - previousExpense) / previousExpense) * 100D;
+        int savingsRate = currentIncome <= 0D ? 0 : (int) Math.round(
+                Math.max(0D, (currentIncome - currentExpense) / currentIncome * 100D));
+        String trend = change > 5D ? getString(R.string.finance_trend_up)
+                : change < -5D ? getString(R.string.finance_trend_down) : getString(R.string.finance_trend_flat);
+        binding.financeAnalyticsSummary.setText(getString(R.string.finance_analytics_summary,
+                String.format(Locale.getDefault(), "%+.0f%%", change), savingsRate,
+                largestKey(categories), largestKey(accounts), largestKey(payers), trend));
+    }
+
+    private String largestKey(Map<String, Double> values) {
+        String result = getString(R.string.finance_insight_none); double largest = -1D;
+        for (Map.Entry<String, Double> value : values.entrySet()) {
+            if (value.getValue() > largest) { largest = value.getValue(); result = value.getKey(); }
+        }
+        return result;
     }
 
     private void showEntryEditor(@Nullable FinanceEntry existingEntry) {

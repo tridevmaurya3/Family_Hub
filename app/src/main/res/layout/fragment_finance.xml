@@ -318,7 +318,7 @@
         app:startIconTint="@color/fh_module_finance"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_insights_actions">
+        app:layout_constraintTop_toBottomOf="@id/finance_analytics_card">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/finance_search_input"
@@ -331,6 +331,27 @@
             android:textColor="@color/fh_on_surface" />
 
     </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/finance_analytics_card"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        app:cardBackgroundColor="@color/fh_module_finance_container"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/finance_insights_actions">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="@dimen/space_10">
+            <TextView style="@style/TextAppearance.FamilyHub.BodyStrong" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/finance_analytics_title" />
+            <TextView android:id="@+id/finance_analytics_summary" style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4" android:maxLines="5"
+                android:text="@string/finance_analytics_loading" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/finance_recycler_view"

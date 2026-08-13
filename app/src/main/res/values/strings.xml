@@ -1386,6 +1386,12 @@ Sharing: %12$s</string>
     <string-array name="finance_settlement_labels"><item>NOT_APPLICABLE</item><item>PENDING</item><item>PARTIALLY_SETTLED</item><item>SETTLED</item></string-array>
     <string name="finance_budget">Monthly budget</string>
     <string name="finance_monthly_report">Monthly report</string>
+    <string name="finance_analytics_title">Analytics &amp; smart report</string>
+    <string name="finance_analytics_loading">Analysing category, account and family spending…</string>
+    <string name="finance_analytics_summary">Month change: %1$s • Savings rate: %2$d%%\nTop category: %3$s • Top account: %4$s\nTop family payer: %5$s • %6$s</string>
+    <string name="finance_trend_up">Spending increased—review the top category.</string>
+    <string name="finance_trend_down">Spending decreased—current pattern is improving.</string>
+    <string name="finance_trend_flat">Spending is stable compared with last month.</string>
     <string name="finance_budget_prompt">Set the maximum planned expense for this month.</string>
     <string name="finance_budget_saved">Monthly budget updated</string>
     <string name="finance_smart_health">Smart budget health</string>
