@@ -544,6 +544,37 @@
             app:icon="@drawable/ic_document"
             app:iconGravity="textStart" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:gravity="end"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_documents_pdf"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="@string/documents_vault_pdf_report"
+                android:textSize="10sp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_documents_excel"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="@string/documents_vault_excel_report"
+                android:textSize="10sp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_documents_report_share"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="@string/documents_vault_share_report"
+                android:textSize="10sp" />
+        </LinearLayout>
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"

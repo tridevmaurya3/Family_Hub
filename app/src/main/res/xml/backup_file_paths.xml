@@ -7,4 +7,5 @@
         name="document_captures"
         path="document_captures/" />
     <cache-path name="grocery_reports" path="grocery_reports/" />
+    <cache-path name="document_reports" path="document_reports/" />
 </paths>

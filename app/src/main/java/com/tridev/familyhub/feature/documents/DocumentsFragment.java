@@ -207,6 +207,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         });
         binding.buttonMissingDocumentsChecklist.setOnClickListener(
                 clickedView -> runProtected(this::showMissingDocumentsChecklist));
+        binding.buttonDocumentsPdf.setOnClickListener(v -> runProtected(() -> exportInventory(true)));
+        binding.buttonDocumentsExcel.setOnClickListener(v -> runProtected(() -> exportInventory(false)));
+        binding.buttonDocumentsReportShare.setOnClickListener(v -> runProtected(() -> exportInventory(true)));
 
         renderLockState();
         if (preferences.isUnlocked()) {
@@ -1113,6 +1116,36 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
         });
+    }
+
+    private void exportInventory(boolean pdf) {
+        repository.loadDocuments("", documents -> {
+            android.content.Context context = requireContext().getApplicationContext();
+            java.util.concurrent.Executors.newSingleThreadExecutor().execute(() -> {
+                try {
+                    java.io.File folder = new java.io.File(context.getCacheDir(), "document_reports");
+                    if (!folder.exists() && !folder.mkdirs()) throw new java.io.IOException();
+                    java.io.File file = new java.io.File(folder, "Documents_Inventory_"
+                            + new java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ENGLISH).format(new java.util.Date())
+                            + (pdf ? ".pdf" : ".xls"));
+                    if (pdf) DocumentReportExporter.pdf(file, documents);
+                    else DocumentReportExporter.excel(file, documents);
+                    if (isAdded()) requireActivity().runOnUiThread(() -> shareInventory(file, pdf));
+                } catch (Exception error) {
+                    if (isAdded()) requireActivity().runOnUiThread(() -> showMessage(R.string.documents_vault_report_error));
+                }
+            });
+        });
+    }
+
+    private void shareInventory(@NonNull java.io.File file, boolean pdf) {
+        Uri uri = androidx.core.content.FileProvider.getUriForFile(requireContext(),
+                requireContext().getPackageName() + ".backupfiles", file);
+        Intent intent = new Intent(Intent.ACTION_SEND)
+                .setType(pdf ? "application/pdf" : "application/vnd.ms-excel")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, getString(R.string.documents_vault_report_title)));
     }
 
     private void confirmDelete(@NonNull DocumentEntry document) {

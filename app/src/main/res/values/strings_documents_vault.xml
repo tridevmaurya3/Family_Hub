@@ -49,6 +49,11 @@
     <string name="documents_vault_missing_title">Family document readiness</string>
     <string name="documents_vault_all_ready">All essential document categories are covered.</string>
     <string name="documents_vault_add_members_first">Add family members to generate a personal checklist.</string>
+    <string name="documents_vault_pdf_report">PDF</string>
+    <string name="documents_vault_excel_report">Excel</string>
+    <string name="documents_vault_share_report">Share</string>
+    <string name="documents_vault_report_error">Document report could not be created.</string>
+    <string name="documents_vault_report_title">Documents inventory report</string>
 
     <string-array name="documents_vault_module_labels">
         <item>@string/documents_vault_no_link</item>
