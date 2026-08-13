@@ -19,6 +19,7 @@ import java.security.MessageDigest;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
 
 /** Keeps Documents Vault database work away from the UI thread. */
 public class DocumentRepository {
@@ -163,6 +164,64 @@ public class DocumentRepository {
                 mainHandler.post(() -> callback.onError(error));
             }
         });
+    }
+
+    public void renew(
+            @NonNull DocumentEntry renewed,
+            @NonNull DocumentEntry previous,
+            @NonNull SaveCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            try {
+                DocumentEntry version = copy(previous);
+                version.id = 0L;
+                version.linkedModule = "DOCUMENT_VERSION";
+                if (version.fingerprint.isEmpty()) {
+                    version.fingerprint = fingerprint(version.contentUri);
+                }
+                version.updatedAt = System.currentTimeMillis();
+                renewed.fingerprint = fingerprint(renewed.contentUri);
+                renewed.updatedAt = System.currentTimeMillis();
+                documentDao.renewWithVersion(version, renewed);
+                DocumentExpiryScheduler.sync(appContext);
+                mainHandler.post(() -> callback.onSaved(renewed.id));
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void loadVersionHistory(
+            @NonNull DocumentEntry document,
+            @NonNull DocumentsCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<DocumentEntry> history = new ArrayList<>();
+            DocumentEntry current = document;
+            int guard = 0;
+            while (current != null && guard++ < 50) {
+                history.add(current);
+                if (current.previousVersionId <= 0L) break;
+                current = documentDao.getVersionById(current.previousVersionId);
+            }
+            mainHandler.post(() -> callback.onDocumentsLoaded(history));
+        });
+    }
+
+    @NonNull
+    private static DocumentEntry copy(@NonNull DocumentEntry source) {
+        DocumentEntry copy = new DocumentEntry();
+        copy.title = source.title; copy.category = source.category;
+        copy.contentUri = source.contentUri; copy.mimeType = source.mimeType;
+        copy.documentNumber = source.documentNumber; copy.issuer = source.issuer;
+        copy.memberName = source.memberName; copy.tags = source.tags;
+        copy.notes = source.notes; copy.searchableText = source.searchableText;
+        copy.fingerprint = source.fingerprint; copy.linkedModule = source.linkedModule;
+        copy.emergency = source.emergency; copy.issuedAt = source.issuedAt;
+        copy.expiryAt = source.expiryAt; copy.createdAt = source.createdAt;
+        copy.updatedAt = source.updatedAt; copy.deletedAt = source.deletedAt;
+        copy.previousVersionId = source.previousVersionId;
+        return copy;
     }
 
     public void delete(

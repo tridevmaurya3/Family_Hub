@@ -32,6 +32,16 @@
     <string name="documents_vault_delete_forever_message">This removes the vault record and app-owned scan. This action cannot be undone.</string>
     <string name="documents_vault_deleted_forever">Document permanently deleted</string>
     <string name="documents_vault_ocr_complete">Smart OCR indexed the document text</string>
+    <string name="documents_vault_history">History</string>
+    <string name="documents_vault_version_history">Version history</string>
+    <string name="documents_vault_current_version">Current • %1$s</string>
+    <string name="documents_vault_old_version">Previous • %1$s</string>
+    <string name="documents_vault_renewed">Document renewed; previous version is safe</string>
+    <string name="documents_vault_secure_share_title">Secure share</string>
+    <string name="documents_vault_secure_share_warning">Choose a temporary access session. Family Hub will revoke its URI permission after the selected time, but a recipient may still save a copy while access is active.</string>
+    <string name="documents_vault_share_5_minutes">5 minutes</string>
+    <string name="documents_vault_share_15_minutes">15 minutes</string>
+    <string name="documents_vault_share_60_minutes">60 minutes</string>
     <string name="documents_vault_all_categories">All categories</string>
     <string name="documents_vault_category_filter">Category</string>
     <string name="documents_vault_no_results_title">No matching documents</string>

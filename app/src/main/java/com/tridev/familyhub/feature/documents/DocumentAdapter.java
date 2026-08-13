@@ -38,6 +38,8 @@ public class DocumentAdapter
 
         void onPermanentDelete(@NonNull DocumentEntry document);
 
+        void onHistory(@NonNull DocumentEntry document);
+
         boolean isFavorite(@NonNull DocumentEntry document);
     }
 
@@ -137,6 +139,7 @@ public class DocumentAdapter
             binding.shareDocumentButton.setVisibility(View.VISIBLE);
             binding.editDocumentButton.setVisibility(View.VISIBLE);
             binding.favoriteDocumentButton.setVisibility(View.VISIBLE);
+            binding.historyDocumentButton.setVisibility(View.VISIBLE);
 
             binding.getRoot().setOnClickListener(
                     view -> listener.onOpen(document)
@@ -150,6 +153,9 @@ public class DocumentAdapter
             binding.editDocumentButton.setOnClickListener(
                     view -> listener.onEdit(document)
             );
+            binding.historyDocumentButton.setOnClickListener(
+                    view -> listener.onHistory(document)
+            );
             binding.favoriteDocumentButton.setOnClickListener(
                     view -> listener.onToggleFavorite(document)
             );
@@ -162,6 +168,7 @@ public class DocumentAdapter
             binding.shareDocumentButton.setVisibility(View.GONE);
             binding.editDocumentButton.setVisibility(View.GONE);
             binding.favoriteDocumentButton.setVisibility(View.GONE);
+            binding.historyDocumentButton.setVisibility(View.GONE);
             binding.openDocumentButton.setVisibility(View.VISIBLE);
             binding.deleteDocumentButton.setVisibility(View.VISIBLE);
             binding.openDocumentButton.setText(R.string.documents_vault_restore);

@@ -188,6 +188,14 @@
                     app:iconGravity="textStart" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/history_document_button"
+                    style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:minWidth="0dp"
+                    android:text="@string/documents_vault_history" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/delete_document_button"
                     style="@style/Widget.FamilyHub.Button.Danger"
                     android:layout_width="wrap_content"

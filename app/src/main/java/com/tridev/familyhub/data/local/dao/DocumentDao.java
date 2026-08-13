@@ -7,6 +7,7 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
+import androidx.room.Transaction;
 
 import com.tridev.familyhub.data.local.entity.DocumentEntry;
 
@@ -15,12 +16,12 @@ import java.util.List;
 @Dao
 public interface DocumentDao {
 
-    @Query("SELECT * FROM documents WHERE deletedAt = 0 ORDER BY updatedAt DESC, createdAt DESC")
+    @Query("SELECT * FROM documents WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION' ORDER BY updatedAt DESC, createdAt DESC")
     @NonNull
     List<DocumentEntry> getAll();
 
     @Query("SELECT * FROM documents "
-            + "WHERE deletedAt = 0 AND (title LIKE '%' || :query || '%' "
+            + "WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION' AND (title LIKE '%' || :query || '%' "
             + "OR category LIKE '%' || :query || '%' "
             + "OR documentNumber LIKE '%' || :query || '%' "
             + "OR issuer LIKE '%' || :query || '%' "
@@ -33,7 +34,7 @@ public interface DocumentDao {
     List<DocumentEntry> search(@NonNull String query);
 
     @Query("SELECT * FROM documents "
-            + "WHERE deletedAt = 0 AND expiryAt > 0 "
+            + "WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION' AND expiryAt > 0 "
             + "ORDER BY expiryAt ASC")
     @NonNull
     List<DocumentEntry> getExpiryCandidates();
@@ -41,20 +42,20 @@ public interface DocumentDao {
     @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
     DocumentEntry getById(long documentId);
 
-    @Query("SELECT COUNT(*) FROM documents WHERE deletedAt = 0")
+    @Query("SELECT COUNT(*) FROM documents WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION'")
     int count();
 
     /** Compatibility query used by the Dashboard's upcoming-expiry summary. */
     @Query("SELECT COUNT(*) FROM documents "
-            + "WHERE deletedAt = 0 AND expiryAt > 0 AND expiryAt <= :deadline")
+            + "WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION' AND expiryAt > 0 AND expiryAt <= :deadline")
     int countExpiringBy(long deadline);
 
     @Query("SELECT COUNT(*) FROM documents "
-            + "WHERE deletedAt = 0 AND expiryAt > 0 AND expiryAt < :startOfToday")
+            + "WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION' AND expiryAt > 0 AND expiryAt < :startOfToday")
     int countExpired(long startOfToday);
 
     @Query("SELECT COUNT(*) FROM documents "
-            + "WHERE deletedAt = 0 AND expiryAt >= :startOfToday AND expiryAt <= :deadline")
+            + "WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION' AND expiryAt >= :startOfToday AND expiryAt <= :deadline")
     int countExpiringBetween(long startOfToday, long deadline);
 
     @Query("SELECT COUNT(*) FROM documents WHERE contentUri = :contentUri")
@@ -83,6 +84,9 @@ public interface DocumentDao {
     @Query("UPDATE documents SET deletedAt = 0, updatedAt = :updatedAt WHERE id = :documentId")
     int restore(long documentId, long updatedAt);
 
+    @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
+    DocumentEntry getVersionById(long documentId);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(@NonNull DocumentEntry entry);
 
@@ -91,4 +95,17 @@ public interface DocumentDao {
 
     @Delete
     int delete(@NonNull DocumentEntry entry);
+
+    @Transaction
+    default long renewWithVersion(
+            @NonNull DocumentEntry previousVersion,
+            @NonNull DocumentEntry renewed
+    ) {
+        long versionId = insert(previousVersion);
+        renewed.previousVersionId = versionId;
+        if (update(renewed) != 1) {
+            throw new IllegalStateException("Renewal could not be saved");
+        }
+        return versionId;
+    }
 }

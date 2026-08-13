@@ -169,6 +169,11 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             }
 
             @Override
+            public void onHistory(@NonNull DocumentEntry document) {
+                runProtected(() -> showVersionHistory(document));
+            }
+
+            @Override
             public boolean isFavorite(@NonNull DocumentEntry document) {
                 return preferences.isFavorite(document.id);
             }
@@ -923,26 +928,16 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             @Nullable String replacedContentUri,
             boolean isNew
     ) {
-        repository.save(document, new DocumentRepository.SaveCallback() {
+        DocumentRepository.SaveCallback callback = new DocumentRepository.SaveCallback() {
             @Override
             public void onSaved(long documentId) {
                 if (binding == null) {
                     return;
                 }
-                if (fileReplaced
-                        && replacedContentUri != null
-                        && !replacedContentUri.isEmpty()
-                        && !replacedContentUri.equals(document.contentUri)) {
-                    DocumentCaptureStorage.deleteIfOwned(
-                            requireContext(),
-                            replacedContentUri
-                    );
-                    releasePermission(replacedContentUri);
-                }
                 dismissEditor();
                 loadDocuments();
                 showMessage(fileReplaced
-                        ? R.string.documents_vault_replaced
+                        ? R.string.documents_vault_renewed
                         : isNew
                         ? R.string.documents_vault_added
                         : R.string.documents_vault_updated);
@@ -959,7 +954,15 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 }
                 showMessage(R.string.backup_error_generic);
             }
-        });
+        };
+        if (fileReplaced && replacedContentUri != null && document.id > 0L) {
+            DocumentEntry previous = copyOf(document);
+            previous.contentUri = replacedContentUri;
+            previous.fingerprint = "";
+            repository.renew(document, previous, callback);
+        } else {
+            repository.save(document, callback);
+        }
     }
 
     private void enrichAndSave(
@@ -998,6 +1001,23 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     }
 
     private void shareDocument(@NonNull DocumentEntry document) {
+        String[] options = {
+                getString(R.string.documents_vault_share_5_minutes),
+                getString(R.string.documents_vault_share_15_minutes),
+                getString(R.string.documents_vault_share_60_minutes)
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.documents_vault_secure_share_title)
+                .setMessage(R.string.documents_vault_secure_share_warning)
+                .setItems(options, (dialog, which) -> {
+                    long minutes = which == 0 ? 5L : which == 1 ? 15L : 60L;
+                    launchSecureShare(document, minutes);
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void launchSecureShare(@NonNull DocumentEntry document, long minutes) {
         try {
             Uri uri = Uri.parse(document.contentUri);
             Intent share = new Intent(Intent.ACTION_SEND)
@@ -1016,9 +1036,36 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     share,
                     getString(R.string.documents_vault_share_title)
             ));
+            android.content.Context shareContext = requireContext().getApplicationContext();
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+                    () -> {
+                        shareContext.revokeUriPermission(
+                                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    }, java.util.concurrent.TimeUnit.MINUTES.toMillis(minutes));
         } catch (Exception exception) {
             showMessage(R.string.documents_vault_missing_file);
         }
+    }
+
+    private void showVersionHistory(@NonNull DocumentEntry document) {
+        repository.loadVersionHistory(document, versions -> {
+            if (binding == null) return;
+            String[] labels = new String[versions.size()];
+            for (int index = 0; index < versions.size(); index++) {
+                DocumentEntry version = versions.get(index);
+                String date = DateFormat.getDateInstance(DateFormat.MEDIUM)
+                        .format(new Date(version.updatedAt > 0L
+                                ? version.updatedAt : version.createdAt));
+                labels[index] = getString(index == 0
+                        ? R.string.documents_vault_current_version
+                        : R.string.documents_vault_old_version, date);
+            }
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.documents_vault_version_history)
+                    .setItems(labels, (dialog, which) -> openDocument(versions.get(which)))
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+        });
     }
 
     private void confirmDelete(@NonNull DocumentEntry document) {
