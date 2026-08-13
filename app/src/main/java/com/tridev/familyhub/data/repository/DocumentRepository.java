@@ -53,6 +53,11 @@ public class DocumentRepository {
         void onLoaded(@NonNull List<String> missingItems, boolean hasMembers);
     }
 
+    public interface IntegrityCallback {
+        void onLoaded(int verified, int changed, int missing, int notIndexed,
+                      @NonNull List<String> issues);
+    }
+
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
 
@@ -236,6 +241,33 @@ public class DocumentRepository {
                 }
             }
             mainHandler.post(() -> callback.onLoaded(missing, !members.isEmpty()));
+        });
+    }
+
+    public void verifyIntegrity(@NonNull IntegrityCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<DocumentEntry> documents = documentDao.getAll();
+            List<String> issues = new ArrayList<>();
+            int verified = 0, changed = 0, missing = 0, notIndexed = 0;
+            for (DocumentEntry document : documents) {
+                String actual = fingerprint(document.contentUri);
+                if (actual.isEmpty()) {
+                    missing++;
+                    issues.add(document.title + " — file unavailable");
+                } else if (document.fingerprint.isEmpty()) {
+                    notIndexed++;
+                    issues.add(document.title + " — fingerprint not indexed");
+                } else if (!actual.equalsIgnoreCase(document.fingerprint)) {
+                    changed++;
+                    issues.add(document.title + " — content changed");
+                } else {
+                    verified++;
+                }
+            }
+            int safeVerified = verified, safeChanged = changed;
+            int safeMissing = missing, safeNotIndexed = notIndexed;
+            mainHandler.post(() -> callback.onLoaded(safeVerified, safeChanged,
+                    safeMissing, safeNotIndexed, issues));
         });
     }
 

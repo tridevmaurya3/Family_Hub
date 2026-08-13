@@ -573,6 +573,14 @@
                 android:minWidth="0dp"
                 android:text="@string/documents_vault_share_report"
                 android:textSize="10sp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_documents_integrity"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:text="@string/documents_vault_integrity"
+                android:textSize="10sp" />
         </LinearLayout>
 
         <FrameLayout

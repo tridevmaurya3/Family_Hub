@@ -210,6 +210,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         binding.buttonDocumentsPdf.setOnClickListener(v -> runProtected(() -> exportInventory(true)));
         binding.buttonDocumentsExcel.setOnClickListener(v -> runProtected(() -> exportInventory(false)));
         binding.buttonDocumentsReportShare.setOnClickListener(v -> runProtected(() -> exportInventory(true)));
+        binding.buttonDocumentsIntegrity.setOnClickListener(
+                v -> runProtected(this::showIntegrityCenter));
 
         renderLockState();
         if (preferences.isUnlocked()) {
@@ -1135,6 +1137,34 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     if (isAdded()) requireActivity().runOnUiThread(() -> showMessage(R.string.documents_vault_report_error));
                 }
             });
+        });
+    }
+
+    private void showIntegrityCenter() {
+        repository.verifyIntegrity((verified, changed, missing, notIndexed, issues) -> {
+            if (binding == null) return;
+            StringBuilder message = new StringBuilder()
+                    .append("Verified: ").append(verified)
+                    .append("\nChanged: ").append(changed)
+                    .append("\nMissing: ").append(missing)
+                    .append("\nNot indexed: ").append(notIndexed)
+                    .append("\n\n")
+                    .append(getString(R.string.documents_vault_backup_covered));
+            if (!issues.isEmpty()) {
+                message.append("\n\nNeeds attention:");
+                int limit = Math.min(issues.size(), 12);
+                for (int index = 0; index < limit; index++) {
+                    message.append("\n• ").append(issues.get(index));
+                }
+                if (issues.size() > limit) {
+                    message.append("\n• +").append(issues.size() - limit).append(" more");
+                }
+            }
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.documents_vault_integrity_title)
+                    .setMessage(message.toString())
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
         });
     }
 

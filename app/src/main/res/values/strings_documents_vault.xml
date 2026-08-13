@@ -54,6 +54,9 @@
     <string name="documents_vault_share_report">Share</string>
     <string name="documents_vault_report_error">Document report could not be created.</string>
     <string name="documents_vault_report_title">Documents inventory report</string>
+    <string name="documents_vault_integrity">Integrity</string>
+    <string name="documents_vault_integrity_title">Document Integrity Center</string>
+    <string name="documents_vault_backup_covered">Encrypted backup coverage: metadata and accessible document attachments are included.</string>
 
     <string-array name="documents_vault_module_labels">
         <item>@string/documents_vault_no_link</item>
