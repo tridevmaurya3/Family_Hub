@@ -15,6 +15,7 @@ import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
 import com.tridev.familyhub.feature.journey.FamilyJourneyRecorder;
 import com.tridev.familyhub.feature.sos.FamilySosLiveMonitor;
 import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
+import com.tridev.familyhub.geofence.FamilyAlertCloudSyncScheduler;
 import com.tridev.familyhub.location.FamilyDeviceSafetyMonitorScheduler;
 import com.tridev.familyhub.location.FamilyLivePrecisionActivityCallbacks;
 import com.tridev.familyhub.location.LocationRecoveryNotifier;
@@ -47,6 +48,7 @@ public class FamilyHubApplication extends Application {
         FamilyAutomationScheduler.scheduleNow(this);
         SafePlaceGeofenceSyncScheduler.scheduleNow(this);
         FamilyDeviceSafetyMonitorScheduler.enable(this);
+        FamilyAlertCloudSyncScheduler.enable(this);
         restoreFamilyLiveSafetyNets();
     }
 

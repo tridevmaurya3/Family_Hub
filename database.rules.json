@@ -146,6 +146,16 @@
         }
       }
     },
+    "familySafetyAlerts": {
+      "$familyId": {
+        ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+        ".indexOn": ["occurredAt", "type", "createdByUid"],
+        "$eventId": {
+          ".write": "auth != null && !data.exists() && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && newData.child('createdByUid').val() === auth.uid",
+          ".validate": "newData.child('eventId').val() === $eventId && newData.child('familyId').val() === $familyId && newData.child('createdByUid').val() === auth.uid && newData.child('placeId').isString() && newData.child('placeId').val().length >= 1 && newData.child('placeId').val().length <= 160 && newData.child('type').val().matches(/^(ARRIVED|LEFT|DWELL|MEMBER_NO_UPDATE|MEMBER_LOW_BATTERY|MEMBER_DEVICE_OFFLINE)$/) && newData.child('occurredAt').isNumber() && newData.child('deduplicationBucket').isNumber() && newData.child('deduplicationBucket').val() >= 0 && newData.child('createdAt').isNumber()"
+        }
+      }
+    },
     "sharedModules": {
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",

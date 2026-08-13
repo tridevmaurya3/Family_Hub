@@ -101,6 +101,7 @@ public final class SafePlaceAlertDispatcher {
         if (inserted == -1L) {
             return false;
         }
+        FamilyAlertCloudSyncScheduler.scheduleNow(appContext);
 
         if (preferences.shouldShowNotification(alertType, occurredAt)) {
             showNotification(appContext, place, alertType);

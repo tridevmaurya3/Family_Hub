@@ -27,6 +27,7 @@ import com.tridev.familyhub.geofence.FamilySafetyAlertPreferences;
 import com.tridev.familyhub.geofence.SafePlaceSmartAlertPolicy;
 import com.tridev.familyhub.location.FamilyDeviceSafetyAlertPolicy;
 import com.tridev.familyhub.location.FamilyDeviceSafetyMonitorScheduler;
+import com.tridev.familyhub.geofence.FamilyAlertCloudSyncScheduler;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -75,6 +76,7 @@ public final class SafePlaceAlertHistoryActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         FamilyDeviceSafetyMonitorScheduler.scheduleNow(this);
+        FamilyAlertCloudSyncScheduler.scheduleNow(this);
         load();
     }
 

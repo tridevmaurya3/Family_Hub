@@ -15,6 +15,7 @@ import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
 import com.tridev.familyhub.feature.familylive.SafePlaceAlertHistoryActivity;
 import com.tridev.familyhub.geofence.FamilySafetyAlertPreferences;
+import com.tridev.familyhub.geofence.FamilyAlertCloudSyncScheduler;
 
 /** Saves device-health alerts in the shared Safety Alert Centre. */
 public final class FamilyDeviceSafetyAlertDispatcher {
@@ -71,6 +72,7 @@ public final class FamilyDeviceSafetyAlertDispatcher {
         if (inserted == -1L) {
             return false;
         }
+        FamilyAlertCloudSyncScheduler.scheduleNow(appContext);
 
         if (preferences.shouldShowNotification(alertType, occurredAt)) {
             showNotification(
