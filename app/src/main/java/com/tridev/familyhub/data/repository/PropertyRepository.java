@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
 import com.tridev.familyhub.data.local.dao.PropertyDao;
+import com.tridev.familyhub.data.local.dao.DocumentDao;
+import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.PropertyEntry;
 import com.tridev.familyhub.data.local.entity.PropertyWithOwner;
@@ -27,6 +29,9 @@ public class PropertyRepository {
     public interface MembersCallback {
         void onMembersLoaded(@NonNull List<FamilyMember> members);
     }
+    public interface DocumentsCallback {
+        void onDocumentsLoaded(@NonNull List<DocumentEntry> documents);
+    }
 
     public interface ActionCallback {
         void onComplete();
@@ -37,12 +42,21 @@ public class PropertyRepository {
 
     private final PropertyDao propertyDao;
     private final FamilyMemberDao familyMemberDao;
+    private final DocumentDao documentDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public PropertyRepository(@NonNull Context context) {
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         propertyDao = database.propertyDao();
         familyMemberDao = database.familyMemberDao();
+        documentDao = database.documentDao();
+    }
+
+    public void loadDocuments(@NonNull DocumentsCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<DocumentEntry> documents = documentDao.getAll();
+            mainHandler.post(() -> callback.onDocumentsLoaded(documents));
+        });
     }
 
     public void loadProperties(

@@ -17,6 +17,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.PropertyEntry;
 import com.tridev.familyhub.data.local.entity.PropertyWithOwner;
 import com.tridev.familyhub.data.repository.PropertyRepository;
@@ -156,12 +157,15 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                 ).show();
                 return;
             }
-            showEditor(members, existing);
+            repository.loadDocuments(documents -> {
+                if (binding != null) showEditor(members, documents, existing);
+            });
         });
     }
 
     private void showEditor(
             @NonNull List<FamilyMember> members,
+            @NonNull List<DocumentEntry> documents,
             @Nullable PropertyWithOwner existing
     ) {
         DialogPropertyBinding form =
@@ -195,12 +199,20 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 stateLabels
         ));
+        List<String> documentTitles = new ArrayList<>();
+        documentTitles.add(getString(R.string.property_no_linked_document));
+        for (DocumentEntry document : documents) documentTitles.add(document.title);
+        form.propertyLinkedDocumentInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                documentTitles));
 
         long[] purchaseDate = {property.purchaseDate};
         if (existing == null) {
             form.propertyOwnerInput.setText(members.get(0).name, false);
             form.propertyTypeInput.setText(typeLabels[0], false);
             form.propertyStateInput.setText(stateLabels[0], false);
+            form.propertyLinkedDocumentInput.setText(
+                    getString(R.string.property_no_linked_document), false);
         } else {
             form.propertyDialogTitle.setText(R.string.property_edit);
             form.propertyOwnerInput.setText(existing.ownerName, false);
@@ -220,7 +232,11 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                     property.registrationReference
             );
             form.propertyNotesInput.setText(property.notes);
-            form.propertyLinkedDocumentInput.setText(property.linkedDocumentTitle);
+            form.propertyLinkedDocumentInput.setText(
+                    property.linkedDocumentTitle.isEmpty()
+                            ? getString(R.string.property_no_linked_document)
+                            : property.linkedDocumentTitle,
+                    false);
             form.propertyTimelineNoteInput.setText(property.timelineNote);
         }
         if (purchaseDate[0] > 0L) {
@@ -308,7 +324,10 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                     form.propertyRegistrationInput
             );
             property.notes = textOf(form.propertyNotesInput);
-            property.linkedDocumentTitle = textOf(form.propertyLinkedDocumentInput);
+            DocumentEntry document = findDocument(
+                    documents, textOf(form.propertyLinkedDocumentInput));
+            property.linkedDocumentId = document == null ? 0L : document.id;
+            property.linkedDocumentTitle = document == null ? "" : document.title;
             property.timelineNote = textOf(form.propertyTimelineNoteInput);
             property.updatedAt = System.currentTimeMillis();
 
@@ -328,6 +347,15 @@ public class PropertyFragment extends Fragment implements AddActionHost {
             });
         });
         dialog.show();
+    }
+
+    @Nullable
+    private DocumentEntry findDocument(@NonNull List<DocumentEntry> documents,
+                                       @NonNull String title) {
+        for (DocumentEntry document : documents) {
+            if (document.title.equalsIgnoreCase(title)) return document;
+        }
+        return null;
     }
 
     private void setNumber(
