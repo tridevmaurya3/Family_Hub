@@ -212,7 +212,7 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
         ArrayAdapter<FamilyJourneyRepository.Member> adapter =
                 new ArrayAdapter<>(
                         this,
-                        android.R.layout.simple_dropdown_item_1line,
+                        R.layout.item_form_dropdown,
                         new ArrayList<>(accessibleMembers)
                 );
         memberInput.setAdapter(adapter);

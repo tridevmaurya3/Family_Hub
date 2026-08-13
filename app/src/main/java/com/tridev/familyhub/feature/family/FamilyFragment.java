@@ -440,7 +440,7 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     private ArrayAdapter<String> dropdown(@NonNull String[] values) {
         return new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 values
         );
     }

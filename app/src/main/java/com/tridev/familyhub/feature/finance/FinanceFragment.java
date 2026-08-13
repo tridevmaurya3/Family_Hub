@@ -371,17 +371,17 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         );
         updateCategoryChoices(dialogBinding, expenseCategories);
         dialogBinding.financeAccountInput.setAdapter(new ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line, loadAccounts()
+                requireContext(), R.layout.item_form_dropdown, loadAccounts()
         ));
         dialogBinding.financePaymentMethodInput.setAdapter(new ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                requireContext(), R.layout.item_form_dropdown,
                 getResources().getStringArray(R.array.finance_payment_method_labels)
         ));
         dialogBinding.financeSplitTypeInput.setAdapter(new ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                requireContext(), R.layout.item_form_dropdown,
                 getResources().getStringArray(R.array.finance_split_type_labels)));
         dialogBinding.financeSettlementInput.setAdapter(new ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line,
+                requireContext(), R.layout.item_form_dropdown,
                 getResources().getStringArray(R.array.finance_settlement_labels)));
         dialogBinding.financeSplitTypeInput.setText("NONE", false);
         dialogBinding.financeSettlementInput.setText("NOT_APPLICABLE", false);
@@ -394,7 +394,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                             if (!member.displayName.trim().isEmpty()) names.add(member.displayName);
                         }
                         dialogBinding.financePaidByInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                                android.R.layout.simple_dropdown_item_1line, names));
+                                R.layout.item_form_dropdown, names));
                     }
                     @Override public void onError(@NonNull Exception error) { }
                 });
@@ -492,7 +492,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     ) {
         editor.financeCategoryInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 categories
         ));
     }

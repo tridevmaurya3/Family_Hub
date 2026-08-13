@@ -143,7 +143,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
         String[] collaborationLabels =
                 getResources().getStringArray(R.array.collaboration_status_labels);
         dialogBinding.reminderCollaborationStatusInput.setAdapter(new android.widget.ArrayAdapter<>(
-                requireContext(), android.R.layout.simple_dropdown_item_1line, collaborationLabels
+                requireContext(), R.layout.item_form_dropdown, collaborationLabels
         ));
         boolean isNewReminder = existingReminder == null;
         Calendar selectedTime = Calendar.getInstance();

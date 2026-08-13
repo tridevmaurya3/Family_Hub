@@ -184,7 +184,7 @@ public class PlannerFragment extends Fragment implements AddActionHost {
         form.plannerRepeatInput.setAdapter(dropdown(repeatLabels));
         form.plannerMemberInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 memberNames
         ));
         String[] collaborationLabels = getResources().getStringArray(R.array.collaboration_status_labels);
@@ -327,7 +327,7 @@ public class PlannerFragment extends Fragment implements AddActionHost {
     private ArrayAdapter<String> dropdown(@NonNull String[] labels) {
         return new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 labels
         );
     }

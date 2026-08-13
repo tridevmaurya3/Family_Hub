@@ -209,7 +209,7 @@ public final class FamilyLocationReportsActivity extends AppCompatActivity {
         }
         ArrayAdapter<MemberSelection> adapter = new ArrayAdapter<>(
                 this,
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 new ArrayList<>(selections)
         );
         memberInput.setAdapter(adapter);

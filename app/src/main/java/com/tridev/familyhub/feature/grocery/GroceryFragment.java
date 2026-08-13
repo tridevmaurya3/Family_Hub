@@ -442,27 +442,27 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         }
         form.groceryCategoryInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 categoryLabels
         ));
         form.groceryPriorityInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 priorityLabels
         ));
         form.groceryListTypeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 listTypeLabels
         ));
         form.groceryAssigneeInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 assigneeLabels
         ));
         form.groceryQuantityUnitInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 quantityUnits
         ));
         form.groceryNameLayout.setEndIconOnClickListener(v -> {

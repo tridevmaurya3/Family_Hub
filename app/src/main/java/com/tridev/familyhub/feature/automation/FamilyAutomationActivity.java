@@ -613,7 +613,7 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
         input.setSingleLine(true);
         input.setAdapter(new ArrayAdapter<>(
                 this,
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 values
         ));
         layout.addView(input, new TextInputLayout.LayoutParams(

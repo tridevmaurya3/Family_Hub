@@ -161,7 +161,7 @@ public final class BackupRestoreActivity extends AppCompatActivity {
         };
         frequencyInput.setAdapter(new ArrayAdapter<>(
                 this,
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_form_dropdown,
                 labels
         ));
     }

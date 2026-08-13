@@ -81,7 +81,7 @@ public class SafePlacesActivity extends AppCompatActivity {
                 }
         );
         binding.safePlaceType.setAdapter(new ArrayAdapter<>(
-                this, android.R.layout.simple_dropdown_item_1line,
+                this, R.layout.item_form_dropdown,
                 getResources().getStringArray(R.array.safe_place_types)
         ));
         binding.buttonBack.setOnClickListener(v -> finish());
