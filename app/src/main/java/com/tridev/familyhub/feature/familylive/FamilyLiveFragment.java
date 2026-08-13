@@ -75,6 +75,7 @@ public class FamilyLiveFragment extends Fragment {
     private boolean mapViewSelected;
     private boolean fitMapOnNextRender = true;
     private boolean satelliteMap;
+    private long selectedSharingDurationMs = 8L * 60L * 60L * 1000L;
     private int selectedFilterId = R.id.chipFamilyLiveAll;
     private int lastRenderedCount = -1;
     @NonNull private String memberQuery = "";
@@ -1046,6 +1047,29 @@ public class FamilyLiveFragment extends Fragment {
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(
                         R.string.family_live_continue,
+                        (dialog, which) -> showSharingDurationPicker()
+                )
+                .show();
+    }
+
+    private void showSharingDurationPicker() {
+        String[] options = getResources().getStringArray(
+                R.array.family_live_sharing_durations
+        );
+        long[] durations = {
+                60L * 60L * 1000L,
+                8L * 60L * 60L * 1000L,
+                24L * 60L * 60L * 1000L,
+                0L
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.family_live_sharing_duration_title)
+                .setSingleChoiceItems(options, 1, (dialog, which) -> {
+                    selectedSharingDurationMs = durations[which];
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(
+                        R.string.family_live_start_sharing,
                         (dialog, which) -> continueStartFlow()
                 )
                 .show();
@@ -1216,6 +1240,10 @@ public class FamilyLiveFragment extends Fragment {
     }
 
     private void startSharing() {
+        LocationSharingStore.prepareSharingDuration(
+                requireContext(),
+                selectedSharingDurationMs
+        );
         ContextCompat.startForegroundService(
                 requireContext(),
                 FamilyLocationService.startIntent(requireContext())

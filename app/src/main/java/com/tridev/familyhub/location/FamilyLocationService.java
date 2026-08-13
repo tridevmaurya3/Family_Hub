@@ -242,6 +242,12 @@ public class FamilyLocationService extends Service {
             setPrecisionLiveMode(false, 0L);
         }
     };
+    private final Runnable sharingExpiryRunnable = () -> {
+        if (!serviceDestroyed.get()
+                && !LocationSharingStore.isSharingEnabled(this)) {
+            stopSharing();
+        }
+    };
 
     @NonNull
     public static Intent startIntent(@NonNull Context context) {
@@ -420,6 +426,7 @@ public class FamilyLocationService extends Service {
                     registerMovementTransitions();
                     scheduleProfileEvaluation();
                     scheduleDeviceHealthMonitor();
+                    scheduleSharingExpiry();
                     evaluateDeviceHealth(true);
 
                     if (pendingImmediateRefresh) {
@@ -596,6 +603,18 @@ public class FamilyLocationService extends Service {
         );
     }
 
+    private void scheduleSharingExpiry() {
+        mainHandler.removeCallbacks(sharingExpiryRunnable);
+        long expiresAt = LocationSharingStore.sharingExpiresAt(this);
+        if (expiresAt <= 0L) {
+            return;
+        }
+        mainHandler.postDelayed(
+                sharingExpiryRunnable,
+                Math.max(0L, expiresAt - System.currentTimeMillis())
+        );
+    }
+
     private void scheduleLocationRequestRetry() {
         if (!LocationSharingStore.isSharingEnabled(this)
                 || serviceDestroyed.get()
@@ -680,6 +699,7 @@ public class FamilyLocationService extends Service {
 
         precisionActiveUntil = enabled ? activeUntil : 0L;
         mainHandler.removeCallbacks(precisionExpiryRunnable);
+        mainHandler.removeCallbacks(sharingExpiryRunnable);
         if (enabled) {
             long delay = Math.max(
                     1_000L,
@@ -944,6 +964,10 @@ public class FamilyLocationService extends Service {
         values.put("charging", battery.charging);
         values.put("online", true);
         values.put("sharingEnabled", true);
+        values.put(
+                "sharingExpiresAt",
+                LocationSharingStore.sharingExpiresAt(this)
+        );
 
         String availabilityReason = isPowerSaveMode()
                 ? FamilyLiveAvailability.BATTERY_SAVER

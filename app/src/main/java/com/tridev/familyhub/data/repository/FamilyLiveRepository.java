@@ -25,6 +25,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -81,6 +83,8 @@ public class FamilyLiveRepository {
     @Nullable private DatabaseReference locationReference;
     @Nullable private ValueEventListener membershipListener;
     @Nullable private ValueEventListener locationListener;
+    @Nullable private DatabaseReference privacyReference;
+    @Nullable private ValueEventListener privacyListener;
     @Nullable private CloudMemberListCallback cloudCallback;
     private int observerGeneration;
     private boolean initialMembershipsLoaded;
@@ -254,35 +258,70 @@ public class FamilyLiveRepository {
             int generation,
             @NonNull ErrorCallback errorCallback
     ) {
-        firebaseRoot.child("journeyPrivacy").child(familyId).get()
-                .addOnSuccessListener(snapshot -> {
+        privacyReference = firebaseRoot.child("journeyPrivacy")
+                .child(familyId);
+        privacyListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
                     if (closed.get() || generation != observerGeneration) {
                         return;
                     }
-                    attachRestrictedLocation(
-                            familyId, viewerUid, generation, errorCallback
-                    );
+                    Set<String> allowed = new HashSet<>();
+                    allowed.add(viewerUid);
                     for (DataSnapshot owner : snapshot.getChildren()) {
                         String ownerUid = owner.getKey();
                         if (ownerUid != null && Boolean.TRUE.equals(owner
                                 .child("viewers").child(viewerUid)
                                 .getValue(Boolean.class))) {
-                            attachRestrictedLocation(
-                                    familyId,
-                                    ownerUid,
-                                    generation,
-                                    errorCallback
-                            );
+                            allowed.add(ownerUid);
                         }
                     }
+                    reconcileRestrictedLocations(
+                            familyId,
+                            allowed,
+                            generation,
+                            errorCallback
+                    );
                     initialLocationsLoaded = true;
                     dispatchCloudMembers();
-                })
-                .addOnFailureListener(error -> {
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
                     if (!closed.get() && generation == observerGeneration) {
-                        errorCallback.onError(error);
+                        errorCallback.onError(error.toException());
                     }
-                });
+            }
+        };
+        privacyReference.addValueEventListener(privacyListener);
+    }
+
+    private void reconcileRestrictedLocations(
+            @NonNull String familyId,
+            @NonNull Set<String> allowed,
+            int generation,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        for (String existing : new ArrayList<>(
+                restrictedLocationReferences.keySet()
+        )) {
+            if (allowed.contains(existing)) {
+                continue;
+            }
+            DatabaseReference reference = restrictedLocationReferences
+                    .remove(existing);
+            ValueEventListener listener = restrictedLocationListeners
+                    .remove(existing);
+            if (reference != null && listener != null) {
+                reference.removeEventListener(listener);
+            }
+            cloudLocations.remove(existing);
+        }
+        for (String targetUid : allowed) {
+            attachRestrictedLocation(
+                    familyId, targetUid, generation, errorCallback
+            );
+        }
     }
 
     private void attachRestrictedLocation(
@@ -427,6 +466,9 @@ public class FamilyLiveRepository {
         if (locationReference != null && locationListener != null) {
             locationReference.removeEventListener(locationListener);
         }
+        if (privacyReference != null && privacyListener != null) {
+            privacyReference.removeEventListener(privacyListener);
+        }
         for (Map.Entry<String, DatabaseReference> entry
                 : restrictedLocationReferences.entrySet()) {
             ValueEventListener listener = restrictedLocationListeners.get(
@@ -442,6 +484,8 @@ public class FamilyLiveRepository {
         locationReference = null;
         membershipListener = null;
         locationListener = null;
+        privacyReference = null;
+        privacyListener = null;
         cloudCallback = null;
         initialMembershipsLoaded = false;
         initialLocationsLoaded = false;

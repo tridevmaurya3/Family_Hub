@@ -1015,6 +1015,13 @@
     <string name="family_live_sharing_on">Location sharing is on</string>
     <string name="family_live_sharing_on_detail">Authorised members of your family can see your latest location.</string>
     <string name="family_live_sharing_starting">Starting secure sharing…</string>
+    <string name="family_live_sharing_duration_title">Share location for</string>
+    <string-array name="family_live_sharing_durations">
+        <item>1 hour</item>
+        <item>8 hours</item>
+        <item>24 hours</item>
+        <item>Until I stop it</item>
+    </string-array>
     <string name="family_live_permission_title">Share your location?</string>
     <string name="family_live_permission_explanation">Family Hub needs location permission to update authorised family members. Sharing remains visible through a persistent notification and can be stopped at any time.</string>
     <string name="family_live_continue">Continue</string>
