@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -47,6 +50,7 @@ import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.location.FamilyLocationService;
 import com.tridev.familyhub.location.LocationFreshnessPolicy;
 import com.tridev.familyhub.location.LocationSharingStore;
+import com.tridev.familyhub.location.LocationServiceDiagnosticsStore;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -282,6 +286,35 @@ public class FamilyLiveFragment extends Fragment {
                         R.string.family_live_sharing_extended,
                         Toast.LENGTH_SHORT
                 ).show();
+            }
+        });
+        binding.buttonEmergencyPrivacyStop.setOnClickListener(ignored ->
+                showEmergencyPrivacyStopDialog());
+
+        repository.observeOwnViewerActivity((viewerName, viewedAt) -> {
+            if (binding == null) {
+                return;
+            }
+            if (viewedAt <= 0L || viewerName.trim().isEmpty()) {
+                binding.tvViewerActivity.setText(
+                        R.string.family_live_viewer_activity_none
+                );
+                return;
+            }
+            String time = DateFormat.getDateTimeInstance(
+                    DateFormat.SHORT,
+                    DateFormat.SHORT
+            ).format(new Date(viewedAt));
+            binding.tvViewerActivity.setText(getString(
+                    R.string.family_live_viewer_activity_latest,
+                    viewerName,
+                    time
+            ));
+        }, ignored -> {
+            if (binding != null) {
+                binding.tvViewerActivity.setText(
+                        R.string.family_live_viewer_activity_unavailable
+                );
             }
         });
 
@@ -1390,7 +1423,115 @@ public class FamilyLiveFragment extends Fragment {
                         requireContext()
                 ) > 0L ? View.VISIBLE : View.GONE
         );
+        binding.buttonEmergencyPrivacyStop.setVisibility(
+                enabled ? View.VISIBLE : View.GONE
+        );
         updateSharingActivity(enabled);
+        updateSharingHealth(enabled);
+        updatePendingSyncStatus();
+    }
+
+    private void updateSharingHealth(boolean enabled) {
+        if (!enabled) {
+            binding.tvSharingHealth.setText(
+                    R.string.family_live_health_standby
+            );
+            return;
+        }
+        if (!hasForegroundLocationPermission()) {
+            binding.tvSharingHealth.setText(
+                    R.string.family_live_health_permission
+            );
+            return;
+        }
+        if (!isLocationEnabled()) {
+            binding.tvSharingHealth.setText(R.string.family_live_health_gps);
+            return;
+        }
+        if (!isInternetAvailable()) {
+            binding.tvSharingHealth.setText(
+                    R.string.family_live_health_offline
+            );
+            return;
+        }
+        LocationServiceDiagnosticsStore.Snapshot diagnostics =
+                LocationServiceDiagnosticsStore.read(requireContext());
+        if (diagnostics.consecutiveMisses > 0) {
+            binding.tvSharingHealth.setText(getString(
+                    R.string.family_live_health_recovering,
+                    diagnostics.consecutiveMisses
+            ));
+        } else {
+            binding.tvSharingHealth.setText(
+                    R.string.family_live_health_ready
+            );
+        }
+    }
+
+    private void updatePendingSyncStatus() {
+        if (repository == null) {
+            return;
+        }
+        repository.loadPendingSyncStatus((pendingCount, queuedAt) -> {
+            if (binding == null) {
+                return;
+            }
+            if (pendingCount <= 0) {
+                binding.tvSharingSync.setText(
+                        R.string.family_live_sync_current
+                );
+                return;
+            }
+            String time = queuedAt <= 0L ? "" : DateFormat
+                    .getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                    .format(new Date(queuedAt));
+            binding.tvSharingSync.setText(getString(
+                    R.string.family_live_sync_pending,
+                    time
+            ));
+        });
+    }
+
+    private boolean isInternetAvailable() {
+        ConnectivityManager manager = (ConnectivityManager) requireContext()
+                .getSystemService(android.content.Context.CONNECTIVITY_SERVICE);
+        if (manager == null) {
+            return false;
+        }
+        Network network = manager.getActiveNetwork();
+        NetworkCapabilities capabilities = network == null
+                ? null : manager.getNetworkCapabilities(network);
+        return capabilities != null && capabilities.hasCapability(
+                NetworkCapabilities.NET_CAPABILITY_VALIDATED
+        );
+    }
+
+    private void showEmergencyPrivacyStopDialog() {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.family_live_emergency_stop_title)
+                .setMessage(R.string.family_live_emergency_stop_detail)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(
+                        R.string.family_live_emergency_stop_confirm,
+                        (dialog, which) -> executeEmergencyPrivacyStop()
+                )
+                .show();
+    }
+
+    private void executeEmergencyPrivacyStop() {
+        stopSharing();
+        if (repository == null) {
+            return;
+        }
+        repository.revokeOwnViewers(() -> Toast.makeText(
+                requireContext(),
+                R.string.family_live_emergency_stop_done,
+                Toast.LENGTH_LONG
+        ).show(), ignored -> Toast.makeText(
+                requireContext(),
+                R.string.family_live_emergency_stop_local_done,
+                Toast.LENGTH_LONG
+        ).show());
     }
 
     private void updateSharingActivity(boolean enabled) {

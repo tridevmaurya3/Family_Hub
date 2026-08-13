@@ -232,6 +232,52 @@
                         android:textColor="@color/fh_text_secondary"
                         android:textSize="9sp" />
 
+                    <TextView
+                        android:id="@+id/tvSharingHealth"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:maxLines="2"
+                        android:text="@string/family_live_health_checking"
+                        android:textColor="@color/fh_text_secondary"
+                        android:textSize="9sp" />
+
+                    <TextView
+                        android:id="@+id/tvSharingSync"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:maxLines="2"
+                        android:text="@string/family_live_sync_checking"
+                        android:textColor="@color/fh_text_secondary"
+                        android:textSize="9sp" />
+
+                    <TextView
+                        android:id="@+id/tvViewerActivity"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:maxLines="2"
+                        android:text="@string/family_live_viewer_activity_none"
+                        android:textColor="@color/fh_text_secondary"
+                        android:textSize="9sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/buttonEmergencyPrivacyStop"
+                        style="@style/Widget.FamilyHub.Button.Text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="38dp"
+                        android:layout_gravity="end"
+                        android:layout_marginTop="@dimen/space_2"
+                        android:minWidth="0dp"
+                        android:text="@string/family_live_emergency_privacy_stop"
+                        android:textColor="@color/fh_error"
+                        android:textSize="10sp"
+                        android:visibility="gone" />
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

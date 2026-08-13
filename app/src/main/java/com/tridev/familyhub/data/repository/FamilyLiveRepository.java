@@ -14,8 +14,11 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.database.ServerValue;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyLiveStatusDao;
+import com.tridev.familyhub.data.local.dao.PendingLocationUploadDao;
+import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.model.FamilyLiveMemberData;
@@ -64,10 +67,19 @@ public class FamilyLiveRepository {
         void onComplete();
     }
 
+    public interface PendingSyncCallback {
+        void onLoaded(int pendingCount, long queuedAt);
+    }
+
+    public interface ViewerActivityCallback {
+        void onChanged(@NonNull String viewerName, long viewedAt);
+    }
+
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
 
     private final FamilyLiveStatusDao familyLiveStatusDao;
+    private final PendingLocationUploadDao pendingLocationUploadDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final DatabaseReference firebaseRoot =
             FirebaseDatabase.getInstance().getReference();
@@ -78,6 +90,7 @@ public class FamilyLiveRepository {
             new HashMap<>();
     private final Map<String, ValueEventListener> restrictedLocationListeners =
             new HashMap<>();
+    private final Map<String, Long> lastViewerAuditWrites = new HashMap<>();
 
     @Nullable private DatabaseReference membershipReference;
     @Nullable private DatabaseReference locationReference;
@@ -85,6 +98,8 @@ public class FamilyLiveRepository {
     @Nullable private ValueEventListener locationListener;
     @Nullable private DatabaseReference privacyReference;
     @Nullable private ValueEventListener privacyListener;
+    @Nullable private DatabaseReference viewerAuditReference;
+    @Nullable private ValueEventListener viewerAuditListener;
     @Nullable private CloudMemberListCallback cloudCallback;
     private int observerGeneration;
     private boolean initialMembershipsLoaded;
@@ -94,6 +109,73 @@ public class FamilyLiveRepository {
         familyLiveStatusDao = FamilyHubDatabase
                 .getInstance(context)
                 .familyLiveStatusDao();
+        pendingLocationUploadDao = FamilyHubDatabase
+                .getInstance(context)
+                .pendingLocationUploadDao();
+    }
+
+    public void loadPendingSyncStatus(@NonNull PendingSyncCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            int count = pendingLocationUploadDao.count();
+            PendingLocationUpload latest = pendingLocationUploadDao.getLatest();
+            long queuedAt = latest == null ? 0L : latest.createdAt;
+            mainHandler.post(() -> {
+                if (!closed.get()) {
+                    callback.onLoaded(count, queuedAt);
+                }
+            });
+        });
+    }
+
+    public void revokeOwnViewers(
+            @NonNull ActionCallback callback,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            errorCallback.onError(new IllegalStateException("AUTH_REQUIRED"));
+            return;
+        }
+        firebaseRoot.child("users").child(user.getUid()).child("familyId")
+                .get().addOnSuccessListener(snapshot -> {
+                    String familyId = snapshot.getValue(String.class);
+                    if (familyId == null || familyId.trim().isEmpty()) {
+                        errorCallback.onError(new IllegalStateException(
+                                "ACTIVE_FAMILY_REQUIRED"
+                        ));
+                        return;
+                    }
+                    firebaseRoot.child("journeyPrivacy").child(familyId)
+                            .child(user.getUid()).child("viewers")
+                            .removeValue()
+                            .addOnSuccessListener(ignored -> callback.onComplete())
+                            .addOnFailureListener(errorCallback::onError);
+                }).addOnFailureListener(errorCallback::onError);
+    }
+
+    public void observeOwnViewerActivity(
+            @NonNull ViewerActivityCallback callback,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onChanged("", 0L);
+            return;
+        }
+        firebaseRoot.child("users").child(user.getUid()).child("familyId")
+                .get().addOnSuccessListener(snapshot -> {
+                    String familyId = snapshot.getValue(String.class);
+                    if (familyId == null || familyId.trim().isEmpty()) {
+                        callback.onChanged("", 0L);
+                        return;
+                    }
+                    attachViewerAuditListener(
+                            familyId,
+                            user.getUid(),
+                            callback,
+                            errorCallback
+                    );
+                }).addOnFailureListener(errorCallback::onError);
     }
 
     public void observeCloudMembers(
@@ -354,6 +436,7 @@ public class FamilyLiveRepository {
                 }
                 if (snapshot.exists()) {
                     putCloudLocation(snapshot, targetUid);
+                    recordViewerAccess(familyId, targetUid);
                 } else {
                     cloudLocations.remove(targetUid);
                 }
@@ -370,6 +453,67 @@ public class FamilyLiveRepository {
         restrictedLocationReferences.put(targetUid, reference);
         restrictedLocationListeners.put(targetUid, listener);
         reference.addValueEventListener(listener);
+    }
+
+    private void recordViewerAccess(
+            @NonNull String familyId,
+            @NonNull String ownerUid
+    ) {
+        FirebaseUser viewer = FirebaseAuth.getInstance().getCurrentUser();
+        if (viewer == null || viewer.getUid().equals(ownerUid)) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long lastWrite = lastViewerAuditWrites.getOrDefault(ownerUid, 0L);
+        if (now - lastWrite < 5L * 60L * 1000L) {
+            return;
+        }
+        lastViewerAuditWrites.put(ownerUid, now);
+        Map<String, Object> values = new HashMap<>();
+        values.put("viewerUid", viewer.getUid());
+        values.put("viewedAt", ServerValue.TIMESTAMP);
+        firebaseRoot.child("viewerAudit").child(familyId).child(ownerUid)
+                .child(viewer.getUid()).updateChildren(values);
+    }
+
+    private void attachViewerAuditListener(
+            @NonNull String familyId,
+            @NonNull String ownerUid,
+            @NonNull ViewerActivityCallback callback,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        if (viewerAuditReference != null && viewerAuditListener != null) {
+            viewerAuditReference.removeEventListener(viewerAuditListener);
+        }
+        viewerAuditReference = firebaseRoot.child("viewerAudit")
+                .child(familyId).child(ownerUid);
+        viewerAuditListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                long latestAt = 0L;
+                String latestUid = "";
+                for (DataSnapshot child : snapshot.getChildren()) {
+                    Long viewedAt = child.child("viewedAt").getValue(Long.class);
+                    if (viewedAt != null && viewedAt > latestAt) {
+                        latestAt = viewedAt;
+                        latestUid = child.getKey() == null ? "" : child.getKey();
+                    }
+                }
+                MemberProfile profile = cloudProfiles.get(latestUid);
+                callback.onChanged(
+                        profile == null && !latestUid.isEmpty()
+                                ? "Family member"
+                                : profile == null ? "" : profile.displayName,
+                        latestAt
+                );
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                errorCallback.onError(error.toException());
+            }
+        };
+        viewerAuditReference.addValueEventListener(viewerAuditListener);
     }
 
     private void dispatchCloudMembers() {
@@ -497,6 +641,7 @@ public class FamilyLiveRepository {
         locationListener = null;
         privacyReference = null;
         privacyListener = null;
+        lastViewerAuditWrites.clear();
         cloudCallback = null;
         initialMembershipsLoaded = false;
         initialLocationsLoaded = false;
@@ -609,6 +754,11 @@ public class FamilyLiveRepository {
     public void close() {
         closed.set(true);
         stopObservingCloudMembers();
+        if (viewerAuditReference != null && viewerAuditListener != null) {
+            viewerAuditReference.removeEventListener(viewerAuditListener);
+        }
+        viewerAuditReference = null;
+        viewerAuditListener = null;
         mainHandler.removeCallbacksAndMessages(null);
     }
 

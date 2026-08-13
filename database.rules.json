@@ -181,6 +181,17 @@
         }
       }
     },
+    "viewerAudit": {
+      "$familyId": {
+        "$ownerUid": {
+          ".read": "auth != null && auth.uid === $ownerUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+          "$viewerUid": {
+            ".write": "auth != null && auth.uid === $viewerUid && $viewerUid !== $ownerUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (root.child('memberships').child($familyId).child(auth.uid).child('role').val().matches(/^(OWNER_ADMIN|GUARDIAN)$/) || root.child('journeyPrivacy').child($familyId).child($ownerUid).child('viewers').child(auth.uid).val() === true)",
+            ".validate": "newData.child('viewerUid').val() === $viewerUid && newData.child('viewedAt').isNumber()"
+          }
+        }
+      }
+    },
     "locations": {
       "$familyId": {
         ".indexOn": [
