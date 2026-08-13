@@ -17,6 +17,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.VehicleWithOwner;
 import com.tridev.familyhub.data.repository.VehicleRepository;
@@ -156,12 +157,15 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 ).show();
                 return;
             }
-            showEditor(members, existing);
+            repository.loadDocuments(documents -> {
+                if (binding != null) showEditor(members, documents, existing);
+            });
         });
     }
 
     private void showEditor(
             @NonNull List<FamilyMember> members,
+            @NonNull List<DocumentEntry> documents,
             @Nullable VehicleWithOwner existing
     ) {
         DialogVehicleBinding form =
@@ -196,6 +200,14 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 fuelLabels
         ));
+        List<String> documentTitles = new ArrayList<>();
+        documentTitles.add(getString(R.string.vehicle_no_linked_document));
+        for (DocumentEntry document : documents) documentTitles.add(document.title);
+        form.vehicleLinkedDocumentInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                documentTitles
+        ));
 
         long[] selectedDates = {
                 vehicle.insuranceExpiryAt,
@@ -207,6 +219,8 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             form.vehicleOwnerInput.setText(members.get(0).name, false);
             form.vehicleTypeInput.setText(typeLabels[0], false);
             form.vehicleFuelInput.setText(fuelLabels[0], false);
+            form.vehicleLinkedDocumentInput.setText(
+                    getString(R.string.vehicle_no_linked_document), false);
         } else {
             form.vehicleDialogTitle.setText(R.string.vehicle_edit);
             form.vehicleOwnerInput.setText(existing.ownerName, false);
@@ -225,7 +239,12 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 ));
             }
             form.vehicleNotesInput.setText(vehicle.notes);
-            form.vehicleLinkedDocumentInput.setText(vehicle.linkedDocumentTitle);
+            form.vehicleLinkedDocumentInput.setText(
+                    vehicle.linkedDocumentTitle.isEmpty()
+                            ? getString(R.string.vehicle_no_linked_document)
+                            : vehicle.linkedDocumentTitle,
+                    false
+            );
             form.vehicleTimelineNoteInput.setText(vehicle.timelineNote);
         }
 
@@ -311,7 +330,10 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             vehicle.pollutionExpiryAt = selectedDates[1];
             vehicle.serviceDueAt = selectedDates[2];
             vehicle.notes = textOf(form.vehicleNotesInput);
-            vehicle.linkedDocumentTitle = textOf(form.vehicleLinkedDocumentInput);
+            DocumentEntry document = findDocument(
+                    documents, textOf(form.vehicleLinkedDocumentInput));
+            vehicle.linkedDocumentId = document == null ? 0L : document.id;
+            vehicle.linkedDocumentTitle = document == null ? "" : document.title;
             vehicle.timelineNote = textOf(form.vehicleTimelineNoteInput);
             vehicle.updatedAt = System.currentTimeMillis();
 
@@ -337,6 +359,15 @@ public class VehicleFragment extends Fragment implements AddActionHost {
             });
         });
         dialog.show();
+    }
+
+    @Nullable
+    private DocumentEntry findDocument(@NonNull List<DocumentEntry> documents,
+                                       @NonNull String title) {
+        for (DocumentEntry document : documents) {
+            if (document.title.equalsIgnoreCase(title)) return document;
+        }
+        return null;
     }
 
     private void bindDateField(

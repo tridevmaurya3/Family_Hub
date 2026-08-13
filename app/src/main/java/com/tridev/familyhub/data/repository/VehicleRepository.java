@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
 import com.tridev.familyhub.data.local.dao.VehicleDao;
+import com.tridev.familyhub.data.local.dao.DocumentDao;
+import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.Vehicle;
 import com.tridev.familyhub.data.local.entity.VehicleWithOwner;
@@ -27,6 +29,9 @@ public class VehicleRepository {
     public interface MembersCallback {
         void onMembersLoaded(@NonNull List<FamilyMember> members);
     }
+    public interface DocumentsCallback {
+        void onDocumentsLoaded(@NonNull List<DocumentEntry> documents);
+    }
 
     public interface ResultCallback {
         void onComplete(boolean successful);
@@ -36,13 +41,22 @@ public class VehicleRepository {
             Executors.newSingleThreadExecutor();
 
     private final VehicleDao vehicleDao;
+    private final DocumentDao documentDao;
     private final HealthRepository authorisedMemberSource;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public VehicleRepository(@NonNull Context context) {
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         vehicleDao = database.vehicleDao();
+        documentDao = database.documentDao();
         authorisedMemberSource = new HealthRepository(context);
+    }
+
+    public void loadDocuments(@NonNull DocumentsCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<DocumentEntry> documents = documentDao.getAll();
+            mainHandler.post(() -> callback.onDocumentsLoaded(documents));
+        });
     }
 
     public void loadVehicles(
