@@ -127,6 +127,7 @@ public class FamilyLocationService extends Service {
     private boolean requestingUpdates;
     private boolean trackingProfileChangeInProgress;
     private boolean familySessionReady;
+    private boolean familySessionInitializationInProgress;
     private boolean networkAvailable;
     private boolean waitingForFreshLocation;
     private boolean waitingForReliableLocation;
@@ -149,6 +150,7 @@ public class FamilyLocationService extends Service {
     private int candidateTrackingSamples;
     private long currentProfileAppliedAt;
     private int locationRequestRetryAttempt;
+    private int familySessionGeneration;
 
     @Nullable
     private Location previousMovementLocation;
@@ -325,6 +327,9 @@ public class FamilyLocationService extends Service {
             return START_STICKY;
         }
         pendingImmediateRefresh = pendingImmediateRefresh || forceRefresh;
+        if (familySessionInitializationInProgress) {
+            return START_STICKY;
+        }
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null || !user.isEmailVerified()) {
@@ -333,11 +338,21 @@ public class FamilyLocationService extends Service {
         }
 
         userId = user.getUid();
-        FirebaseDatabase.getInstance().getReference()
+        familySessionInitializationInProgress = true;
+        int sessionGeneration = ++familySessionGeneration;
+        DatabaseReference firebaseRoot = FirebaseDatabase
+                .getInstance()
+                .getReference();
+        firebaseRoot
                 .child("users")
                 .child(userId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    if (!isCurrentFamilySessionInitialization(
+                            sessionGeneration
+                    )) {
+                        return;
+                    }
                     String resolvedFamilyId =
                             snapshot.child("familyId").getValue(String.class);
                     String status =
@@ -349,13 +364,54 @@ public class FamilyLocationService extends Service {
                         stopSharing();
                         return;
                     }
+                    verifyMembershipAndStartSession(
+                            firebaseRoot,
+                            resolvedFamilyId.trim(),
+                            sessionGeneration
+                    );
+                })
+                .addOnFailureListener(error -> {
+                    if (isCurrentFamilySessionInitialization(
+                            sessionGeneration
+                    )) {
+                        stopSharing();
+                    }
+                });
 
-                    familyId = resolvedFamilyId.trim();
-                    locationReference = FirebaseDatabase.getInstance()
-                            .getReference()
+        return START_STICKY;
+    }
+
+    private void verifyMembershipAndStartSession(
+            @NonNull DatabaseReference firebaseRoot,
+            @NonNull String resolvedFamilyId,
+            int sessionGeneration
+    ) {
+        firebaseRoot.child("memberships")
+                .child(resolvedFamilyId)
+                .child(userId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!isCurrentFamilySessionInitialization(
+                            sessionGeneration
+                    )) {
+                        return;
+                    }
+                    String membershipUid = snapshot.child("uid")
+                            .getValue(String.class);
+                    String membershipStatus = snapshot.child("status")
+                            .getValue(String.class);
+                    if (!userId.equals(membershipUid)
+                            || !"ACTIVE".equals(membershipStatus)) {
+                        stopSharing();
+                        return;
+                    }
+
+                    familyId = resolvedFamilyId;
+                    locationReference = firebaseRoot
                             .child("locations")
                             .child(familyId)
                             .child(userId);
+                    familySessionInitializationInProgress = false;
                     familySessionReady = true;
                     registerDisconnectState();
                     attachPrecisionSessionListener();
@@ -371,9 +427,19 @@ public class FamilyLocationService extends Service {
                         requestImmediateFreshLocation();
                     }
                 })
-                .addOnFailureListener(error -> stopSharing());
+                .addOnFailureListener(error -> {
+                    if (isCurrentFamilySessionInitialization(
+                            sessionGeneration
+                    )) {
+                        stopSharing();
+                    }
+                });
+    }
 
-        return START_STICKY;
+    private boolean isCurrentFamilySessionInitialization(int generation) {
+        return !serviceDestroyed.get()
+                && familySessionInitializationInProgress
+                && generation == familySessionGeneration;
     }
 
     @NonNull
@@ -1193,6 +1259,8 @@ public class FamilyLocationService extends Service {
 
     private void stopSharing() {
         LocationSharingStore.setSharingEnabled(this, false);
+        familySessionGeneration++;
+        familySessionInitializationInProgress = false;
         familySessionReady = false;
         detachPrecisionSessionListener();
         removeScheduledWork();
@@ -1222,6 +1290,8 @@ public class FamilyLocationService extends Service {
 
     private void stopWithoutRestart() {
         LocationSharingStore.setSharingEnabled(this, false);
+        familySessionGeneration++;
+        familySessionInitializationInProgress = false;
         familySessionReady = false;
         detachPrecisionSessionListener();
         removeScheduledWork();

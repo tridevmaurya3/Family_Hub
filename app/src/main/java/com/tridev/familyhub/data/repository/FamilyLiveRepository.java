@@ -158,7 +158,9 @@ public class FamilyLiveRepository {
                     String uid = child.child("uid").getValue(String.class);
                     String status =
                             child.child("status").getValue(String.class);
-                    if (uid == null || !"ACTIVE".equals(status)) {
+                    if (uid == null
+                            || !uid.equals(child.getKey())
+                            || !"ACTIVE".equals(status)) {
                         continue;
                     }
                     cloudProfiles.put(uid, new MemberProfile(
@@ -225,7 +227,7 @@ public class FamilyLiveRepository {
                     Long serviceConsecutiveMisses = child
                             .child("serviceConsecutiveMisses")
                             .getValue(Long.class);
-                    if (uid == null) {
+                    if (uid == null || !uid.equals(child.getKey())) {
                         continue;
                     }
                     cloudLocations.put(uid, new CloudLocation(
