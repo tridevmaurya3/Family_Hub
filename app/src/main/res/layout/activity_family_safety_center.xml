@@ -46,26 +46,11 @@
                     app:iconPadding="0dp"
                     app:iconTint="@color/fh_primary" />
 
-                <LinearLayout
+                <Space
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="1dp"
                     android:layout_marginStart="@dimen/space_12"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/TextAppearance.FamilyHub.Heading"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/family_safety_center_title" />
-
-                    <TextView
-                        style="@style/TextAppearance.FamilyHub.Caption"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/family_safety_center_subtitle" />
-                </LinearLayout>
+                    android:layout_weight="1" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonFamilySafetyRefresh"
