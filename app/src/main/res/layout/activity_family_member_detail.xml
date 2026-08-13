@@ -34,13 +34,11 @@
                 app:icon="@drawable/ic_arrow_back"
                 app:iconPadding="0dp" />
 
-            <TextView
-                style="@style/TextAppearance.FamilyHub.SectionTitle"
+            <Space
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="1dp"
                 android:layout_marginStart="@dimen/space_12"
-                android:layout_weight="1"
-                android:text="@string/family_member_detail_title" />
+                android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonMemberDetailRetry"

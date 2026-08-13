@@ -53,17 +53,10 @@
                 android:orientation="vertical">
 
                 <TextView
-                    style="@style/TextAppearance.FamilyHub.SectionTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/family_journey_map_title" />
-
-                <TextView
                     android:id="@+id/textJourneyMapSubtitle"
                     style="@style/TextAppearance.FamilyHub.Caption"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
                     android:maxLines="1" />
             </LinearLayout>
         </LinearLayout>

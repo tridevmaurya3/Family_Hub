@@ -23,12 +23,6 @@
             android:text="@string/action_back" />
 
         <TextView
-            style="@style/TextAppearance.FamilyHub.Heading"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/family_admin_title" />
-
-        <TextView
             android:id="@+id/tv_family_name"
             style="@style/TextAppearance.FamilyHub.Body"
             android:layout_width="match_parent"
