@@ -26,7 +26,7 @@ import com.tridev.familyhub.backup.BackupRestoreActivity;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
-import com.tridev.familyhub.MainActivity;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 /** Compact account, settings, encrypted backup and privacy page. */
 public class MoreFragment extends Fragment {

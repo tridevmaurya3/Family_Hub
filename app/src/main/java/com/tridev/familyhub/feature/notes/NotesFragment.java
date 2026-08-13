@@ -90,6 +90,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.notesRecyclerView.setAdapter(adapter);
+        repository.startRealtimeSync(this::reload);
         binding.emptyAddNoteButton.setOnClickListener(
                 clickedView -> showEditor(null)
         );
@@ -132,6 +133,12 @@ public class NotesFragment extends Fragment implements AddActionHost {
                 }
         );
         reload();
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
+        super.onDestroyView();
     }
 
     @Override

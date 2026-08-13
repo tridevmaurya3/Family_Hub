@@ -35,6 +35,9 @@ public interface NoteDao {
     @Query("SELECT COUNT(*) FROM notes WHERE isArchived = 0 AND isPinned = 1")
     int countPinned();
 
+    @Query("SELECT * FROM notes WHERE cloudId = :cloudId LIMIT 1")
+    NoteEntry getByCloudId(String cloudId);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(NoteEntry note);
 
