@@ -1381,6 +1381,9 @@ Sharing: %12$s</string>
     <string name="finance_split_type">Expense split</string>
     <string name="finance_participants">Participants (comma separated)</string>
     <string name="finance_custom_amounts">Custom shares (e.g. Tridev:500, Bharati:300)</string>
+    <string name="finance_participants_required">Add the participating family members</string>
+    <string name="finance_participants_minimum">A split requires at least two participants</string>
+    <string name="finance_split_total_error">Custom shares must total exactly %1$s</string>
     <string name="finance_settlement_status">Settlement status</string>
     <string-array name="finance_split_type_labels"><item>NONE</item><item>EQUAL</item><item>CUSTOM</item></string-array>
     <string-array name="finance_settlement_labels"><item>NOT_APPLICABLE</item><item>PENDING</item><item>PARTIALLY_SETTLED</item><item>SETTLED</item></string-array>

@@ -520,6 +520,26 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         valid &= requireText(editor.financeCategoryLayout, category, R.string.finance_category_required);
         valid &= requireText(editor.financeAccountLayout, account, R.string.finance_account_required);
         valid &= requireText(editor.financePaymentMethodLayout, paymentMethod, R.string.finance_payment_required);
+        String splitType = editor.financeSplitTypeInput.getText().toString().trim();
+        String participants = editor.financeParticipantsInput.getText().toString().trim();
+        if (!"NONE".equals(splitType)) {
+            valid &= requireText(editor.financeParticipantsLayout, participants,
+                    R.string.finance_participants_required);
+            if (participants.split(",").length < 2) {
+                editor.financeParticipantsLayout.setError(getString(R.string.finance_participants_minimum));
+                valid = false;
+            }
+        } else {
+            editor.financeParticipantsLayout.setError(null);
+        }
+        if ("CUSTOM".equals(splitType) && amount != null) {
+            double splitTotal = customSplitTotal(editor.financeSplitAmountsInput.getText().toString());
+            if (Math.abs(splitTotal - amount) > 0.01D) {
+                editor.financeSplitAmountsLayout.setError(getString(
+                        R.string.finance_split_total_error, currencyFormatter.format(amount)));
+                valid = false;
+            } else editor.financeSplitAmountsLayout.setError(null);
+        } else editor.financeSplitAmountsLayout.setError(null);
         if (!isValidIsoDate(date)) {
             editor.financeEntryDateLayout.setError(getString(R.string.finance_date_invalid));
             valid = false;
@@ -527,6 +547,20 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             editor.financeEntryDateLayout.setError(null);
         }
         return valid ? amount : null;
+    }
+
+    private double customSplitTotal(String input) {
+        double total = 0D;
+        try {
+            for (String part : input.split(",")) {
+                int separator = part.lastIndexOf(':');
+                if (separator <= 0) return Double.NaN;
+                double value = Double.parseDouble(part.substring(separator + 1).trim());
+                if (!Double.isFinite(value) || value < 0) return Double.NaN;
+                total += value;
+            }
+            return total;
+        } catch (NumberFormatException error) { return Double.NaN; }
     }
 
     private String[] loadAccounts() {
