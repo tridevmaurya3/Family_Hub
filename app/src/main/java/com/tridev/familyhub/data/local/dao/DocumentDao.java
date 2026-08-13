@@ -74,6 +74,9 @@ public interface DocumentDao {
     @NonNull
     List<DocumentEntry> getTrash();
 
+    @Query("SELECT COUNT(*) FROM documents WHERE deletedAt > 0")
+    int countTrash();
+
     @Query("UPDATE documents SET deletedAt = :deletedAt, updatedAt = :deletedAt WHERE id = :documentId")
     int moveToTrash(long documentId, long deletedAt);
 

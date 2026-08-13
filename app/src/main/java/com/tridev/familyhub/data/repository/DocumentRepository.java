@@ -11,6 +11,7 @@ import com.tridev.familyhub.data.local.dao.DocumentDao;
 import com.tridev.familyhub.data.local.entity.DocumentEntry;
 import com.tridev.familyhub.feature.documents.DocumentExpiryPolicy;
 import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
+import com.tridev.familyhub.feature.documents.DocumentCaptureStorage;
 
 import java.util.List;
 import java.io.InputStream;
@@ -43,7 +44,7 @@ public class DocumentRepository {
     }
 
     public interface StatsCallback {
-        void onLoaded(int total, int expiring, int expired);
+        void onLoaded(int total, int expiring, int expired, int trash);
     }
 
     private static final ExecutorService DATABASE_EXECUTOR =
@@ -96,10 +97,12 @@ public class DocumentRepository {
                     deadline
             );
             int expired = documentDao.countExpired(startOfToday);
+            int trash = documentDao.countTrash();
             mainHandler.post(() -> callback.onLoaded(
                     total,
                     expiring,
-                    expired
+                    expired,
+                    trash
             ));
         });
     }
@@ -195,6 +198,24 @@ public class DocumentRepository {
                     throw new IllegalStateException("Document could not be restored");
                 }
                 DocumentExpiryScheduler.sync(appContext);
+                mainHandler.post(callback::onComplete);
+            } catch (Exception error) {
+                mainHandler.post(() -> callback.onError(error));
+            }
+        });
+    }
+
+    public void permanentlyDelete(
+            @NonNull DocumentEntry document,
+            @NonNull ActionCallback callback
+    ) {
+        DATABASE_EXECUTOR.execute(() -> {
+            try {
+                int deleted = documentDao.delete(document);
+                if (deleted != 1) {
+                    throw new IllegalStateException("Document could not be permanently deleted");
+                }
+                DocumentCaptureStorage.deleteIfOwned(appContext, document.contentUri);
                 mainHandler.post(callback::onComplete);
             } catch (Exception error) {
                 mainHandler.post(() -> callback.onError(error));

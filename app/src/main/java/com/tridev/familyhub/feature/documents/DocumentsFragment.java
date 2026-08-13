@@ -52,7 +52,8 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         ALL,
         EXPIRING,
         EXPIRED,
-        FAVORITES
+        FAVORITES,
+        TRASH
     }
 
     private FragmentDocumentsBinding binding;
@@ -155,6 +156,16 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             @Override
             public void onDelete(@NonNull DocumentEntry document) {
                 runProtected(() -> confirmDelete(document));
+            }
+
+            @Override
+            public void onRestore(@NonNull DocumentEntry document) {
+                runProtected(() -> restoreDocument(document));
+            }
+
+            @Override
+            public void onPermanentDelete(@NonNull DocumentEntry document) {
+                runProtected(() -> confirmPermanentDelete(document));
             }
 
             @Override
@@ -425,7 +436,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     selectedCategory = position == 0
                             ? ""
                             : categories.get(position);
-                    applyFilters();
+                    loadDocuments();
                 }
         );
     }
@@ -442,10 +453,12 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                         filterMode = FilterMode.EXPIRED;
                     } else if (checkedId == R.id.filter_favorites_chip) {
                         filterMode = FilterMode.FAVORITES;
+                    } else if (checkedId == R.id.filter_trash_chip) {
+                        filterMode = FilterMode.TRASH;
                     } else {
                         filterMode = FilterMode.ALL;
                     }
-                    applyFilters();
+                    loadDocuments();
                 }
         );
     }
@@ -488,17 +501,22 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 || !preferences.isUnlocked()) {
             return;
         }
-        repository.loadDocuments(currentQuery(), documents -> {
+        DocumentRepository.DocumentsCallback documentsCallback = documents -> {
             if (binding == null || !preferences.isUnlocked()) {
                 return;
             }
             loadedDocuments.clear();
             loadedDocuments.addAll(documents);
             applyFilters();
-        });
+        };
+        if (filterMode == FilterMode.TRASH) {
+            repository.loadTrash(documentsCallback);
+        } else {
+            repository.loadDocuments(currentQuery(), documentsCallback);
+        }
         repository.loadStats(
                 preferences.reminderDays(),
-                (total, expiring, expired) -> {
+                (total, expiring, expired, trash) -> {
                     if (binding == null) {
                         return;
                     }
@@ -509,6 +527,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     binding.textDocumentsExpired.setText(
                             String.valueOf(expired)
                     );
+                    binding.textDocumentsTrash.setText(String.valueOf(trash));
                 }
         );
     }
@@ -521,6 +540,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         long now = System.currentTimeMillis();
         int reminderDays = preferences.reminderDays();
         for (DocumentEntry document : loadedDocuments) {
+            if (filterMode == FilterMode.TRASH && !matchesQuery(document, currentQuery())) {
+                continue;
+            }
             if (!selectedCategory.isEmpty()
                     && !selectedCategory.equalsIgnoreCase(document.category)) {
                 continue;
@@ -546,6 +568,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         }
 
         adapter.setReminderDays(reminderDays);
+        adapter.setTrashMode(filterMode == FilterMode.TRASH);
         adapter.submitList(visible);
         boolean empty = visible.isEmpty();
         binding.documentRecyclerView.setVisibility(
@@ -556,15 +579,30 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         );
         boolean hasAnyDocuments = !loadedDocuments.isEmpty()
                 || !currentQuery().isEmpty();
-        binding.documentsEmptyTitle.setText(hasAnyDocuments
+        binding.documentsEmptyTitle.setText(filterMode == FilterMode.TRASH
+                ? R.string.documents_vault_trash_empty_title
+                : hasAnyDocuments
                 ? R.string.documents_vault_no_results_title
                 : R.string.documents_empty_title);
-        binding.documentsEmptyDetail.setText(hasAnyDocuments
+        binding.documentsEmptyDetail.setText(filterMode == FilterMode.TRASH
+                ? R.string.documents_vault_trash_empty_detail
+                : hasAnyDocuments
                 ? R.string.documents_vault_no_results_detail
                 : R.string.documents_empty_detail);
         binding.emptyAddDocumentButton.setVisibility(
-                hasAnyDocuments ? View.GONE : View.VISIBLE
+                filterMode == FilterMode.TRASH || hasAnyDocuments ? View.GONE : View.VISIBLE
         );
+    }
+
+    private boolean matchesQuery(@NonNull DocumentEntry document, @NonNull String query) {
+        String needle = query.trim().toLowerCase(java.util.Locale.ENGLISH);
+        if (needle.isEmpty()) return true;
+        String value = (document.title + " " + document.category + " "
+                + document.documentNumber + " " + document.issuer + " "
+                + document.memberName + " " + document.tags + " "
+                + document.notes + " " + document.searchableText)
+                .toLowerCase(java.util.Locale.ENGLISH);
+        return value.contains(needle);
     }
 
     private void showDocumentEditorInternal(
@@ -820,7 +858,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         String oldContentUri = pending.document.contentUri;
         pending.document.contentUri = target.uri.toString();
         pending.document.mimeType = "image/jpeg";
-        saveDocument(
+        enrichAndSave(
                 pending.document,
                 pending.replacingFile,
                 oldContentUri,
@@ -856,7 +894,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     String mime = requireContext().getContentResolver()
                             .getType(uri);
                     pending.document.mimeType = mime == null ? "" : mime;
-                    saveDocument(
+                    enrichAndSave(
                             pending.document,
                             pending.replacingFile,
                             oldContentUri,
@@ -921,6 +959,19 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 }
                 showMessage(R.string.backup_error_generic);
             }
+        });
+    }
+
+    private void enrichAndSave(
+            @NonNull DocumentEntry document,
+            boolean fileReplaced,
+            @Nullable String replacedContentUri,
+            boolean isNew
+    ) {
+        DocumentOcrProcessor.enrich(requireContext(), document, detected -> {
+            if (binding == null) return;
+            saveDocument(document, fileReplaced, replacedContentUri, isNew);
+            if (detected) showMessage(R.string.documents_vault_ocr_complete);
         });
     }
 
@@ -993,6 +1044,38 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                                 }
                         )
                 )
+                .show();
+    }
+
+    private void restoreDocument(@NonNull DocumentEntry document) {
+        repository.restore(document, new DocumentRepository.ActionCallback() {
+            @Override public void onComplete() {
+                loadDocuments();
+                showMessage(R.string.documents_vault_restored);
+            }
+            @Override public void onError(@NonNull Exception error) {
+                showMessage(R.string.backup_error_generic);
+            }
+        });
+    }
+
+    private void confirmPermanentDelete(@NonNull DocumentEntry document) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.documents_vault_delete_forever_title)
+                .setMessage(R.string.documents_vault_delete_forever_message)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.documents_vault_delete_forever, (dialog, which) ->
+                        repository.permanentlyDelete(document, new DocumentRepository.ActionCallback() {
+                            @Override public void onComplete() {
+                                preferences.removeFavorite(document.id);
+                                releasePermission(document.contentUri);
+                                loadDocuments();
+                                showMessage(R.string.documents_vault_deleted_forever);
+                            }
+                            @Override public void onError(@NonNull Exception error) {
+                                showMessage(R.string.backup_error_generic);
+                            }
+                        }))
                 .show();
     }
 

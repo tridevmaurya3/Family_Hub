@@ -3,6 +3,7 @@ package com.tridev.familyhub.feature.documents;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -33,6 +34,10 @@ public class DocumentAdapter
 
         void onDelete(@NonNull DocumentEntry document);
 
+        void onRestore(@NonNull DocumentEntry document);
+
+        void onPermanentDelete(@NonNull DocumentEntry document);
+
         boolean isFavorite(@NonNull DocumentEntry document);
     }
 
@@ -41,6 +46,7 @@ public class DocumentAdapter
     private final SimpleDateFormat dateFormat =
             new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
     private int reminderDays = DocumentVaultPreferences.DEFAULT_REMINDER_DAYS;
+    private boolean trashMode;
 
     public DocumentAdapter(@NonNull DocumentActionListener listener) {
         this.listener = listener;
@@ -55,6 +61,11 @@ public class DocumentAdapter
 
     public void setReminderDays(int reminderDays) {
         this.reminderDays = reminderDays;
+        notifyDataSetChanged();
+    }
+
+    public void setTrashMode(boolean trashMode) {
+        this.trashMode = trashMode;
         notifyDataSetChanged();
     }
 
@@ -115,7 +126,17 @@ public class DocumentAdapter
                     dateFormat.format(new Date(document.createdAt))
             ));
             bindStatus(context, document, status, now);
+            if (trashMode) {
+                bindTrashActions(document);
+                return;
+            }
             bindFavorite(document);
+
+            binding.openDocumentButton.setText(R.string.open);
+            binding.deleteDocumentButton.setText(R.string.remove);
+            binding.shareDocumentButton.setVisibility(View.VISIBLE);
+            binding.editDocumentButton.setVisibility(View.VISIBLE);
+            binding.favoriteDocumentButton.setVisibility(View.VISIBLE);
 
             binding.getRoot().setOnClickListener(
                     view -> listener.onOpen(document)
@@ -135,6 +156,20 @@ public class DocumentAdapter
             binding.deleteDocumentButton.setOnClickListener(
                     view -> listener.onDelete(document)
             );
+        }
+
+        private void bindTrashActions(@NonNull DocumentEntry document) {
+            binding.shareDocumentButton.setVisibility(View.GONE);
+            binding.editDocumentButton.setVisibility(View.GONE);
+            binding.favoriteDocumentButton.setVisibility(View.GONE);
+            binding.openDocumentButton.setVisibility(View.VISIBLE);
+            binding.deleteDocumentButton.setVisibility(View.VISIBLE);
+            binding.openDocumentButton.setText(R.string.documents_vault_restore);
+            binding.deleteDocumentButton.setText(R.string.documents_vault_delete_forever);
+            binding.getRoot().setOnClickListener(view -> listener.onRestore(document));
+            binding.openDocumentButton.setOnClickListener(view -> listener.onRestore(document));
+            binding.deleteDocumentButton.setOnClickListener(
+                    view -> listener.onPermanentDelete(document));
         }
 
         private void bindFavorite(@NonNull DocumentEntry document) {

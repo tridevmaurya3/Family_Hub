@@ -208,7 +208,7 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:orientation="horizontal"
-            android:weightSum="3">
+            android:weightSum="4">
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.FamilyHub.Card.Subtle"
@@ -291,6 +291,34 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/documents_vault_expired"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.FamilyHub.Card.Subtle"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/text_documents_trash"
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/fh_info"
+                        android:textSize="17sp" />
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/documents_vault_filter_trash"
                         android:textSize="10sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -466,6 +494,14 @@
                                 android:layout_height="wrap_content"
                                 android:checkable="true"
                                 android:text="@string/documents_vault_filter_favorites" />
+
+                            <com.google.android.material.chip.Chip
+                                android:id="@+id/filter_trash_chip"
+                                style="@style/Widget.FamilyHub.StatusChip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checkable="true"
+                                android:text="@string/documents_vault_filter_trash" />
                         </com.google.android.material.chip.ChipGroup>
                     </HorizontalScrollView>
                 </LinearLayout>

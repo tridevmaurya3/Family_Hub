@@ -22,6 +22,16 @@
     <string name="documents_vault_filter_expiring">Expiring</string>
     <string name="documents_vault_filter_expired">Expired</string>
     <string name="documents_vault_filter_favorites">Favorites</string>
+    <string name="documents_vault_filter_trash">Trash</string>
+    <string name="documents_vault_trash_empty_title">Trash is empty</string>
+    <string name="documents_vault_trash_empty_detail">Deleted documents stay here until you remove them permanently.</string>
+    <string name="documents_vault_restore">Restore</string>
+    <string name="documents_vault_restored">Document restored</string>
+    <string name="documents_vault_delete_forever">Delete forever</string>
+    <string name="documents_vault_delete_forever_title">Permanently delete document?</string>
+    <string name="documents_vault_delete_forever_message">This removes the vault record and app-owned scan. This action cannot be undone.</string>
+    <string name="documents_vault_deleted_forever">Document permanently deleted</string>
+    <string name="documents_vault_ocr_complete">Smart OCR indexed the document text</string>
     <string name="documents_vault_all_categories">All categories</string>
     <string name="documents_vault_category_filter">Category</string>
     <string name="documents_vault_no_results_title">No matching documents</string>
