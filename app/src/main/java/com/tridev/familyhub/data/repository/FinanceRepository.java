@@ -19,6 +19,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
@@ -57,6 +58,7 @@ public class FinanceRepository {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private DatabaseReference sharedEntriesReference;
     @Nullable private ValueEventListener sharedEntriesListener;
+    private int sharedSyncGeneration;
 
     public FinanceRepository(Context context) {
         financeEntryDao = FamilyHubDatabase.getInstance(context).financeEntryDao();
@@ -188,11 +190,13 @@ public class FinanceRepository {
     /** Starts family-scoped realtime reconciliation. Private entries are never uploaded. */
     public void startSharedSync(@NonNull ActionCallback onChanged) {
         stopSharedSync();
+        int requestGeneration = sharedSyncGeneration;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
         new FamilyAccountRepository().loadSession(
                 new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
                     @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
+                        if (requestGeneration != sharedSyncGeneration) return;
                         if (state == null || !state.isActive() || state.familyId == null) return;
                         attachSharedListener(state.familyId, onChanged);
                     }
@@ -201,6 +205,7 @@ public class FinanceRepository {
     }
 
     public void stopSharedSync() {
+        sharedSyncGeneration++;
         if (sharedEntriesReference != null && sharedEntriesListener != null) {
             sharedEntriesReference.removeEventListener(sharedEntriesListener);
         }
@@ -234,6 +239,7 @@ public class FinanceRepository {
                                       @NonNull ActionCallback onChanged) {
         sharedEntriesReference = FirebaseDatabase.getInstance().getReference()
                 .child("sharedModules").child(familyId).child("finance");
+        sharedEntriesReference.keepSynced(true);
         sharedEntriesListener = new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
                 DATABASE_EXECUTOR.execute(() -> {
@@ -252,7 +258,8 @@ public class FinanceRepository {
                         }
                     }
                     for (FinanceEntry local : financeEntryDao.getSharedForFamily(familyId)) {
-                        if (!local.cloudId.isEmpty() && !remoteIds.contains(local.cloudId)) {
+                        if (!local.cloudId.isEmpty() && !remoteIds.contains(local.cloudId)
+                                && System.currentTimeMillis() - local.updatedAt > 30_000L) {
                             financeEntryDao.deleteByCloudId(local.cloudId);
                         }
                     }
@@ -273,6 +280,7 @@ public class FinanceRepository {
         values.put("accountName", entry.accountName); values.put("paymentMethod", entry.paymentMethod);
         values.put("recurring", entry.isRecurring); values.put("shared", true);
         values.put("createdAt", entry.createdAt); values.put("updatedAt", entry.updatedAt);
+        values.put("serverUpdatedAt", ServerValue.TIMESTAMP);
         values.put("updatedByUid", entry.updatedByUid); values.put("updatedByName", entry.updatedByName);
         values.put("recurrenceSeriesId", entry.recurrenceSeriesId);
         values.put("recurrenceMonth", entry.recurrenceMonth);
