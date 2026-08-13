@@ -2,6 +2,8 @@ package com.tridev.familyhub.feature.property;
 
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
+import android.view.View;
+import androidx.core.content.ContextCompat;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -107,6 +109,29 @@ public class PropertyAdapter
                                     R.string.property_value_not_added
                             )
             );
+            double change = property.estimatedValue - property.purchaseValue;
+            boolean hasComparableValues = property.purchaseValue > 0
+                    && property.estimatedValue > 0;
+            binding.propertyValueChange.setVisibility(
+                    hasComparableValues ? View.VISIBLE : View.GONE);
+            if (hasComparableValues) {
+                binding.propertyValueChange.setText(binding.getRoot().getContext()
+                        .getString(change >= 0
+                                ? R.string.property_value_growth
+                                : R.string.property_value_loss,
+                                currencyFormat.format(Math.abs(change))));
+                binding.propertyValueChange.setTextColor(ContextCompat.getColor(
+                        binding.getRoot().getContext(), change >= 0
+                                ? R.color.fh_success : R.color.fh_error));
+            }
+            boolean hasDocument = !property.linkedDocumentTitle.isEmpty();
+            binding.propertyDocument.setVisibility(
+                    hasDocument ? View.VISIBLE : View.GONE);
+            if (hasDocument) binding.propertyDocument.setText(
+                    property.linkedDocumentTitle);
+            binding.propertySharing.setText(property.isShared
+                    ? R.string.property_shared_status
+                    : R.string.property_private_status);
 
             binding.getRoot().setOnClickListener(
                     view -> listener.onEdit(item)

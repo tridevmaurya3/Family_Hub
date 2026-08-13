@@ -526,6 +526,10 @@
     <string name="property_add">Add property</string>
     <string name="property_no_linked_document">No linked document</string>
     <string name="property_share_with_family">Share this property with authorised family members</string>
+    <string name="property_shared_status">Shared with family</string>
+    <string name="property_private_status">Private</string>
+    <string name="property_value_growth">Value increased by %1$s</string>
+    <string name="property_value_loss">Value decreased by %1$s</string>
     <string name="property_edit">Edit property</string>
     <string name="property_save">Save property</string>
     <string name="property_owner_label">Owner</string>

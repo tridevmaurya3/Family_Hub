@@ -110,6 +110,38 @@
 
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/property_value_change"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_6"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/property_document"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_6"
+            android:drawablePadding="@dimen/space_6"
+            android:maxLines="1"
+            android:textColor="@color/fh_primary"
+            android:visibility="gone"
+            app:drawableStartCompat="@drawable/ic_document" />
+
+        <TextView
+            android:id="@+id/property_sharing"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_6"
+            android:background="@drawable/bg_status_pill"
+            android:paddingStart="@dimen/space_8"
+            android:paddingTop="@dimen/space_4"
+            android:paddingEnd="@dimen/space_8"
+            android:paddingBottom="@dimen/space_4" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="@dimen/border_width"
