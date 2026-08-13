@@ -117,6 +117,8 @@ public class FamilyLocationService extends Service {
     private DatabaseReference locationReference;
     private DatabaseReference precisionSessionReference;
     private ValueEventListener precisionSessionListener;
+    private DatabaseReference activeMembershipReference;
+    private ValueEventListener activeMembershipListener;
     private PendingLocationUploadDao pendingLocationUploadDao;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -420,6 +422,7 @@ public class FamilyLocationService extends Service {
                     familySessionInitializationInProgress = false;
                     familySessionReady = true;
                     registerDisconnectState();
+                    attachActiveMembershipListener();
                     attachPrecisionSessionListener();
 
                     LocationSharingStore.setSharingEnabled(this, true);
@@ -447,6 +450,71 @@ public class FamilyLocationService extends Service {
         return !serviceDestroyed.get()
                 && familySessionInitializationInProgress
                 && generation == familySessionGeneration;
+    }
+
+    private void attachActiveMembershipListener() {
+        detachActiveMembershipListener();
+        if (familyId == null || userId == null) {
+            return;
+        }
+        activeMembershipReference = FirebaseDatabase.getInstance()
+                .getReference()
+                .child("memberships")
+                .child(familyId)
+                .child(userId);
+        activeMembershipListener = new ValueEventListener() {
+            private boolean initialSnapshot = true;
+
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (serviceDestroyed.get()) {
+                    return;
+                }
+                String membershipUid = snapshot.child("uid")
+                        .getValue(String.class);
+                String membershipStatus = snapshot.child("status")
+                        .getValue(String.class);
+                boolean active = userId.equals(membershipUid)
+                        && "ACTIVE".equals(membershipStatus);
+                if (initialSnapshot) {
+                    initialSnapshot = false;
+                    if (active) {
+                        return;
+                    }
+                }
+                if (!active) {
+                    stopForMembershipRevocation();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                if (!serviceDestroyed.get()) {
+                    stopForMembershipRevocation();
+                }
+            }
+        };
+        activeMembershipReference.addValueEventListener(
+                activeMembershipListener
+        );
+    }
+
+    private void detachActiveMembershipListener() {
+        if (activeMembershipReference != null
+                && activeMembershipListener != null) {
+            activeMembershipReference.removeEventListener(
+                    activeMembershipListener
+            );
+        }
+        activeMembershipReference = null;
+        activeMembershipListener = null;
+    }
+
+    private void stopForMembershipRevocation() {
+        detachActiveMembershipListener();
+        LocationSharingStore.setSharingEnabled(this, false);
+        executeQueueTask(() -> pendingLocationUploadDao.deleteAll());
+        stopWithoutRestart();
     }
 
     @NonNull
@@ -1288,6 +1356,7 @@ public class FamilyLocationService extends Service {
         familySessionGeneration++;
         familySessionInitializationInProgress = false;
         familySessionReady = false;
+        detachActiveMembershipListener();
         detachPrecisionSessionListener();
         removeScheduledWork();
         removeUpdates();
@@ -1319,6 +1388,7 @@ public class FamilyLocationService extends Service {
         familySessionGeneration++;
         familySessionInitializationInProgress = false;
         familySessionReady = false;
+        detachActiveMembershipListener();
         detachPrecisionSessionListener();
         removeScheduledWork();
         removeUpdates();
@@ -1835,6 +1905,7 @@ public class FamilyLocationService extends Service {
     @Override
     public void onDestroy() {
         serviceDestroyed.set(true);
+        detachActiveMembershipListener();
         detachPrecisionSessionListener();
         removeScheduledWork();
         unregisterNetworkCallback();

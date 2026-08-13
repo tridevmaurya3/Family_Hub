@@ -163,6 +163,7 @@ public class FamilyLiveRepository {
                     return;
                 }
                 cloudProfiles.clear();
+                boolean viewerStillActive = false;
                 for (DataSnapshot child : snapshot.getChildren()) {
                     String uid = child.child("uid").getValue(String.class);
                     String status =
@@ -176,6 +177,16 @@ public class FamilyLiveRepository {
                             stringValue(child.child("displayName")),
                             stringValue(child.child("role"))
                     ));
+                    if (viewerUid.equals(uid)) {
+                        viewerStillActive = true;
+                    }
+                }
+                if (!viewerStillActive) {
+                    stopObservingCloudMembers();
+                    errorCallback.onError(new IllegalStateException(
+                            "MEMBERSHIP_REVOKED"
+                    ));
+                    return;
                 }
                 initialMembershipsLoaded = true;
                 dispatchCloudMembers();
