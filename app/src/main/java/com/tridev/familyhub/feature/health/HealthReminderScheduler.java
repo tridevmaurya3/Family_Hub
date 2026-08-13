@@ -15,8 +15,6 @@ import java.util.concurrent.TimeUnit;
 /** Schedules one deduplicated alert for an upcoming Health timeline item. */
 public final class HealthReminderScheduler {
 
-    private static final long ADVANCE_MILLIS = TimeUnit.HOURS.toMillis(24);
-
     private HealthReminderScheduler() { }
 
     public static void sync(@NonNull Context context,
@@ -25,7 +23,9 @@ public final class HealthReminderScheduler {
         if (!supportsReminder(record.recordType) || record.recordedAt <= 0L) {
             return;
         }
-        long delay = record.recordedAt - ADVANCE_MILLIS
+        long delay = record.recordedAt
+                - TimeUnit.MINUTES.toMillis(
+                        Math.max(0, record.reminderMinutesBefore))
                 - System.currentTimeMillis();
         if (delay < 0L) return;
 

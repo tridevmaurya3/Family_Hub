@@ -31,7 +31,7 @@ public class HealthRecordAdapter
     private final List<HealthRecordWithMember> records = new ArrayList<>();
     private final RecordActionListener listener;
     private final SimpleDateFormat dateFormat =
-            new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+            new SimpleDateFormat("dd MMM yyyy • hh:mm a", Locale.getDefault());
 
     public HealthRecordAdapter(@NonNull RecordActionListener listener) {
         this.listener = listener;

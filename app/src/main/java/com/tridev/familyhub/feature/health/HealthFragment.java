@@ -1,6 +1,10 @@
 package com.tridev.familyhub.feature.health;
 
+import android.Manifest;
 import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,6 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -44,6 +49,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
             HealthRecord.TYPE_VACCINATION,
             HealthRecord.TYPE_OTHER
     };
+    private static final int[] REMINDER_MINUTES = {30, 60, 360, 1440, 2880};
 
     private FragmentHealthBinding binding;
     private HealthRepository repository;
@@ -54,6 +60,8 @@ public class HealthFragment extends Fragment implements AddActionHost {
     private String selectedRecordType = "";
     private final SimpleDateFormat dateFormat =
             new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+    private final SimpleDateFormat timeFormat =
+            new SimpleDateFormat("hh:mm a", Locale.getDefault());
 
     @Nullable
     @Override
@@ -217,6 +225,14 @@ public class HealthFragment extends Fragment implements AddActionHost {
                 android.R.layout.simple_dropdown_item_1line,
                 documentTitles
         ));
+        String[] reminderLabels = getResources().getStringArray(
+                R.array.health_reminder_labels
+        );
+        dialogBinding.healthReminderInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                reminderLabels
+        ));
 
         Calendar selectedDate = Calendar.getInstance();
         if (existing != null) {
@@ -242,6 +258,10 @@ public class HealthFragment extends Fragment implements AddActionHost {
             );
             dialogBinding.healthTimelineNoteInput.setText(record.timelineNote);
             dialogBinding.healthSharedSwitch.setChecked(record.isShared);
+            dialogBinding.healthReminderInput.setText(
+                    reminderLabels[reminderIndex(record.reminderMinutesBefore)],
+                    false
+            );
             selectedDate.setTimeInMillis(record.recordedAt);
         } else {
             dialogBinding.healthMemberInput.setText(
@@ -253,9 +273,13 @@ public class HealthFragment extends Fragment implements AddActionHost {
                     getString(R.string.health_no_linked_document),
                     false
             );
+            dialogBinding.healthReminderInput.setText(reminderLabels[3], false);
         }
         dialogBinding.healthDateInput.setText(
                 dateFormat.format(selectedDate.getTime())
+        );
+        dialogBinding.healthTimeInput.setText(
+                timeFormat.format(selectedDate.getTime())
         );
 
         dialogBinding.healthDateInput.setOnClickListener(clickedView ->
@@ -272,6 +296,23 @@ public class HealthFragment extends Fragment implements AddActionHost {
                         selectedDate.get(Calendar.YEAR),
                         selectedDate.get(Calendar.MONTH),
                         selectedDate.get(Calendar.DAY_OF_MONTH)
+                ).show()
+        );
+        dialogBinding.healthTimeInput.setOnClickListener(clickedView ->
+                new TimePickerDialog(
+                        requireContext(),
+                        (picker, hour, minute) -> {
+                            selectedDate.set(Calendar.HOUR_OF_DAY, hour);
+                            selectedDate.set(Calendar.MINUTE, minute);
+                            selectedDate.set(Calendar.SECOND, 0);
+                            selectedDate.set(Calendar.MILLISECOND, 0);
+                            dialogBinding.healthTimeInput.setText(
+                                    timeFormat.format(selectedDate.getTime())
+                            );
+                        },
+                        selectedDate.get(Calendar.HOUR_OF_DAY),
+                        selectedDate.get(Calendar.MINUTE),
+                        false
                 ).show()
         );
 
@@ -333,6 +374,13 @@ public class HealthFragment extends Fragment implements AddActionHost {
                     : linkedDocument.title;
             record.timelineNote = textOf(dialogBinding.healthTimelineNoteInput);
             record.isShared = dialogBinding.healthSharedSwitch.isChecked();
+            int reminderIndex = findLabelIndex(
+                    reminderLabels,
+                    textOf(dialogBinding.healthReminderInput)
+            );
+            record.reminderMinutesBefore = REMINDER_MINUTES[
+                    reminderIndex < 0 ? 3 : reminderIndex
+            ];
             record.updatedAt = System.currentTimeMillis();
 
             repository.save(record, () -> {
@@ -340,6 +388,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
                     return;
                 }
                 dialog.dismiss();
+                requestNotificationPermissionIfNeeded();
                 loadRecords(currentQuery());
                 Snackbar.make(
                         binding.getRoot(),
@@ -351,6 +400,30 @@ public class HealthFragment extends Fragment implements AddActionHost {
             });
         });
         dialog.show();
+    }
+
+    private int reminderIndex(int minutes) {
+        for (int index = 0; index < REMINDER_MINUTES.length; index++) {
+            if (REMINDER_MINUTES[index] == minutes) return index;
+        }
+        return 3;
+    }
+
+    private int findLabelIndex(@NonNull String[] labels,
+                               @NonNull String selected) {
+        for (int index = 0; index < labels.length; index++) {
+            if (labels[index].equalsIgnoreCase(selected)) return index;
+        }
+        return -1;
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5201);
+        }
     }
 
     @Nullable

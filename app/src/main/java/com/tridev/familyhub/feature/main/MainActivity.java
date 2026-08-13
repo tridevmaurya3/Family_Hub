@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String EXTRA_OPEN_DOCUMENTS_VAULT =
             "open_documents_vault";
+    private static final String EXTRA_OPEN_HEALTH = "open_health";
     public static final String EXTRA_OPEN_GROCERY = "open_grocery";
     public static final String EXTRA_OPEN_ROUTE = "open_feature_route";
     public static final String ROUTE_FAMILY = "family";
@@ -190,6 +191,11 @@ public class MainActivity extends AppCompatActivity {
                     .beginTransaction()
                     .replace(R.id.main_content, new GroceryFragment())
                     .commit();
+            return true;
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_HEALTH, false)) {
+            intent.removeExtra(EXTRA_OPEN_HEALTH);
+            openRoute(ROUTE_HEALTH);
             return true;
         }
         if (!intent.getBooleanExtra(EXTRA_OPEN_DOCUMENTS_VAULT, false)) {

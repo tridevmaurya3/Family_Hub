@@ -309,6 +309,7 @@ public class HealthRepository {
         values.put("value", record.value);
         values.put("notes", record.notes);
         values.put("recordedAt", record.recordedAt);
+        values.put("reminderMinutesBefore", record.reminderMinutesBefore);
         values.put("linkedDocumentTitle", record.linkedDocumentTitle);
         values.put("timelineNote", record.timelineNote);
         values.put("shared", true);
@@ -347,6 +348,9 @@ public class HealthRepository {
             record.value = text(snapshot, "value");
             record.notes = text(snapshot, "notes");
             record.recordedAt = number(snapshot, "recordedAt");
+            long reminderMinutes = number(snapshot, "reminderMinutesBefore");
+            record.reminderMinutesBefore = reminderMinutes <= 0L
+                    ? 1440 : (int) reminderMinutes;
             record.linkedDocumentTitle = text(snapshot, "linkedDocumentTitle");
             record.timelineNote = text(snapshot, "timelineNote");
             record.isShared = true;
