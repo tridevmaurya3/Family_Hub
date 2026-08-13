@@ -108,6 +108,20 @@ public final class FamilyDeviceSafetyAlertPolicy {
         return Math.max(0L, occurredAt) / cooldown;
     }
 
+    public static boolean cooldownElapsed(
+            @NonNull String alertType,
+            long lastAlertAt,
+            long now
+    ) {
+        if (!isSupported(alertType) || now <= 0L) {
+            return false;
+        }
+        if (lastAlertAt <= 0L || lastAlertAt > now + 2L * 60L * 1000L) {
+            return true;
+        }
+        return now - lastAlertAt >= cooldownMs(alertType);
+    }
+
     @NonNull
     public static String memberPlaceId(@NonNull String memberUid) {
         return "member:" + memberUid.trim();

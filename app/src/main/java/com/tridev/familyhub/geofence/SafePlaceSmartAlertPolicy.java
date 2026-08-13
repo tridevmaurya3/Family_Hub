@@ -48,11 +48,10 @@ public final class SafePlaceSmartAlertPolicy {
         long sameCooldown = ALERT_DWELL.equals(alertType)
                 ? DWELL_ALERT_COOLDOWN_MS
                 : SAME_ALERT_COOLDOWN_MS;
-        if (lastSameAt > 0L && now - lastSameAt < sameCooldown) {
+        if (!elapsed(lastSameAt, now, sameCooldown)) {
             return false;
         }
-        return lastOppositeAt <= 0L
-                || now - lastOppositeAt >= OPPOSITE_ALERT_GUARD_MS;
+        return elapsed(lastOppositeAt, now, OPPOSITE_ALERT_GUARD_MS);
     }
 
     public static boolean confirmedInside(
@@ -91,8 +90,14 @@ public final class SafePlaceSmartAlertPolicy {
                 && now - locationTime <= LOCATION_MAX_AGE_MS;
     }
 
-    public static long deduplicationBucket(long now) {
-        return Math.max(0L, now) / SAME_ALERT_COOLDOWN_MS;
+    public static long deduplicationBucket(
+            @NonNull String alertType,
+            long now
+    ) {
+        long window = ALERT_DWELL.equals(alertType)
+                ? DWELL_ALERT_COOLDOWN_MS
+                : SAME_ALERT_COOLDOWN_MS;
+        return Math.max(0L, now) / window;
     }
 
     @Nullable
@@ -128,5 +133,15 @@ public final class SafePlaceSmartAlertPolicy {
                 MIN_ACCURACY_BUFFER_METERS,
                 Math.min(maximum, accuracyMeters)
         );
+    }
+
+    private static boolean elapsed(long previousAt, long now, long window) {
+        if (previousAt <= 0L) {
+            return true;
+        }
+        if (previousAt > now + 2L * 60L * 1000L) {
+            return true;
+        }
+        return now - previousAt >= window;
     }
 }

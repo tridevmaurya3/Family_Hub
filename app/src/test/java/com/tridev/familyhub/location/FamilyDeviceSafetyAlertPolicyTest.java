@@ -148,4 +148,26 @@ public class FamilyDeviceSafetyAlertPolicyTest {
                 )
         );
     }
+
+    @Test
+    public void cooldownRecoversFromLargeFutureClockSkew() {
+        String type = FamilyDeviceSafetyAlertPolicy.ALERT_NO_UPDATE;
+
+        assertFalse(FamilyDeviceSafetyAlertPolicy.cooldownElapsed(
+                type,
+                NOW + 60_000L,
+                NOW
+        ));
+        assertTrue(FamilyDeviceSafetyAlertPolicy.cooldownElapsed(
+                type,
+                NOW + 120_001L,
+                NOW
+        ));
+        assertTrue(FamilyDeviceSafetyAlertPolicy.cooldownElapsed(
+                type,
+                NOW - FamilyDeviceSafetyAlertPolicy
+                        .NO_UPDATE_REMINDER_COOLDOWN_MS,
+                NOW
+        ));
+    }
 }

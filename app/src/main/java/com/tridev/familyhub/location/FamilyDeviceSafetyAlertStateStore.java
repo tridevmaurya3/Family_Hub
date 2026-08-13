@@ -38,18 +38,15 @@ public final class FamilyDeviceSafetyAlertStateStore {
                 || now <= 0L) {
             return false;
         }
-        boolean active = preferences.getBoolean(
-                key(PREFIX_ACTIVE, memberUid, alertType),
-                false
-        );
         long lastAlertAt = preferences.getLong(
                 key(PREFIX_LAST_ALERT, memberUid, alertType),
                 0L
         );
-        return !active
-                || lastAlertAt <= 0L
-                || now - lastAlertAt
-                >= FamilyDeviceSafetyAlertPolicy.cooldownMs(alertType);
+        return FamilyDeviceSafetyAlertPolicy.cooldownElapsed(
+                alertType,
+                lastAlertAt,
+                now
+        );
     }
 
     public void recordActive(

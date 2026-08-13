@@ -82,7 +82,10 @@ public final class SafePlaceAlertDispatcher {
         alert.transitionType = alertType;
         alert.occurredAt = occurredAt;
         alert.deduplicationBucket =
-                SafePlaceSmartAlertPolicy.deduplicationBucket(occurredAt);
+                SafePlaceSmartAlertPolicy.deduplicationBucket(
+                        alertType,
+                        occurredAt
+                );
         alert.isRead = false;
 
         long inserted;

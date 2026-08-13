@@ -1,6 +1,7 @@
 package com.tridev.familyhub.geofence;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -101,6 +102,35 @@ public class SafePlaceSmartAlertPolicyTest {
         ));
         assertNull(SafePlaceSmartAlertPolicy.oppositeOf(
                 SafePlaceSmartAlertPolicy.ALERT_DWELL
+        ));
+    }
+
+    @Test
+    public void dwellUsesItsLongerDeduplicationWindow() {
+        long now = 24L * 60L * 60L * 1000L;
+        assertEquals(
+                now / SafePlaceSmartAlertPolicy.DWELL_ALERT_COOLDOWN_MS,
+                SafePlaceSmartAlertPolicy.deduplicationBucket(
+                        SafePlaceSmartAlertPolicy.ALERT_DWELL,
+                        now
+                )
+        );
+    }
+
+    @Test
+    public void dispatchRecoversFromLargeFutureClockSkew() {
+        long now = 5_000_000L;
+        assertFalse(SafePlaceSmartAlertPolicy.shouldDispatch(
+                SafePlaceSmartAlertPolicy.ALERT_ARRIVED,
+                now,
+                now + 60_000L,
+                0L
+        ));
+        assertTrue(SafePlaceSmartAlertPolicy.shouldDispatch(
+                SafePlaceSmartAlertPolicy.ALERT_ARRIVED,
+                now,
+                now + 120_001L,
+                0L
         ));
     }
 }

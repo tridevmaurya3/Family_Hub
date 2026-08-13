@@ -57,6 +57,23 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
                     || !"ACTIVE".equals(status)) {
                 return Result.success();
             }
+            familyId = familyId.trim();
+
+            DataSnapshot viewerMembership = Tasks.await(
+                    root.child("memberships")
+                            .child(familyId)
+                            .child(viewer.getUid())
+                            .get(),
+                    FIREBASE_TIMEOUT_SECONDS,
+                    TimeUnit.SECONDS
+            );
+            if (!viewer.getUid().equals(stringValue(
+                    viewerMembership.child("uid")
+            )) || !"ACTIVE".equals(stringValue(
+                    viewerMembership.child("status")
+            ))) {
+                return Result.success();
+            }
 
             DataSnapshot memberships = Tasks.await(
                     root.child("memberships").child(familyId).get(),
@@ -96,6 +113,7 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
             String memberUid = stringValue(membership.child("uid"));
             String memberStatus = stringValue(membership.child("status"));
             if (memberUid.isEmpty()
+                    || !memberUid.equals(membership.getKey())
                     || viewerUid.equals(memberUid)
                     || !"ACTIVE".equals(memberStatus)) {
                 continue;
@@ -124,7 +142,11 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
                 continue;
             }
 
-            long updatedAt = longValue(location.child("updatedAt"));
+            long locationUpdatedAt = firstPositive(
+                    longValue(location.child("locationUpdatedAt")),
+                    longValue(location.child("clientTimestamp")),
+                    longValue(location.child("updatedAt"))
+            );
             long heartbeatAt = longValue(
                     location.child("serviceHeartbeatAt")
             );
@@ -151,14 +173,14 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
                             online,
                             disconnectedAt,
                             heartbeatAt,
-                            updatedAt,
+                            locationUpdatedAt,
                             now
                     );
             boolean noUpdate = FamilyDeviceSafetyAlertPolicy
                     .shouldFlagNoUpdate(
                             true,
                             !online,
-                            updatedAt,
+                            locationUpdatedAt,
                             now
                     );
             boolean lowBattery = FamilyDeviceSafetyAlertPolicy
@@ -166,7 +188,7 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
                             true,
                             battery,
                             charging,
-                            updatedAt,
+                            locationUpdatedAt,
                             now
                     );
 
@@ -188,16 +210,52 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
                     noUpdate,
                     now
             );
+            evaluateLowBatteryCondition(
+                    context,
+                    stateStore,
+                    memberUid,
+                    memberName,
+                    battery,
+                    charging,
+                    lowBattery,
+                    now
+            );
+        }
+    }
+
+    private void evaluateLowBatteryCondition(
+            @NonNull Context context,
+            @NonNull FamilyDeviceSafetyAlertStateStore stateStore,
+            @NonNull String memberUid,
+            @NonNull String memberName,
+            int battery,
+            boolean charging,
+            boolean lowBatteryTriggered,
+            long now
+    ) {
+        String alertType =
+                FamilyDeviceSafetyAlertPolicy.ALERT_LOW_BATTERY;
+        if (FamilyDeviceSafetyAlertPolicy.lowBatteryRecovered(
+                battery,
+                charging
+        )) {
+            stateStore.clearActive(memberUid, alertType);
+            return;
+        }
+        if (lowBatteryTriggered) {
             evaluateCondition(
                     context,
                     stateStore,
                     memberUid,
                     memberName,
-                    FamilyDeviceSafetyAlertPolicy.ALERT_LOW_BATTERY,
-                    lowBattery,
+                    alertType,
+                    true,
                     now
             );
+            return;
         }
+        // Between 16% and 21%, retain any existing low-battery condition.
+        // Recovery is confirmed only after charging or reaching 22%.
     }
 
     private void evaluateCondition(
@@ -242,6 +300,16 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
     private static long longValue(@NonNull DataSnapshot snapshot) {
         Long value = snapshot.getValue(Long.class);
         return value == null ? 0L : Math.max(0L, value);
+    }
+
+    private static long firstPositive(long first, long second, long third) {
+        if (first > 0L) {
+            return first;
+        }
+        if (second > 0L) {
+            return second;
+        }
+        return Math.max(0L, third);
     }
 
     @Nullable
