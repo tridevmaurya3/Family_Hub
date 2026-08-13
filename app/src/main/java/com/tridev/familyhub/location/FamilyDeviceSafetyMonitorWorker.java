@@ -74,23 +74,25 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
             ))) {
                 return Result.success();
             }
+            String viewerRole = stringValue(
+                    viewerMembership.child("role")
+            );
+            if (!"OWNER_ADMIN".equals(viewerRole)
+                    && !"GUARDIAN".equals(viewerRole)) {
+                return Result.success();
+            }
 
             DataSnapshot memberships = Tasks.await(
                     root.child("memberships").child(familyId).get(),
                     FIREBASE_TIMEOUT_SECONDS,
                     TimeUnit.SECONDS
             );
-            DataSnapshot locations = Tasks.await(
-                    root.child("locations").child(familyId).get(),
-                    FIREBASE_TIMEOUT_SECONDS,
-                    TimeUnit.SECONDS
-            );
-
             evaluateMembers(
                     context,
                     viewer.getUid(),
                     memberships,
-                    locations,
+                    root,
+                    familyId,
                     System.currentTimeMillis()
             );
             return Result.success();
@@ -103,9 +105,10 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
             @NonNull Context context,
             @NonNull String viewerUid,
             @NonNull DataSnapshot memberships,
-            @NonNull DataSnapshot locations,
+            @NonNull DatabaseReference root,
+            @NonNull String familyId,
             long now
-    ) {
+    ) throws Exception {
         FamilyDeviceSafetyAlertStateStore stateStore =
                 new FamilyDeviceSafetyAlertStateStore(context);
 
@@ -127,7 +130,12 @@ public final class FamilyDeviceSafetyMonitorWorker extends Worker {
             }
             stateStore.rememberMemberName(memberUid, memberName);
 
-            DataSnapshot location = locations.child(memberUid);
+            DataSnapshot location = Tasks.await(
+                    root.child("locations").child(familyId)
+                            .child(memberUid).get(),
+                    FIREBASE_TIMEOUT_SECONDS,
+                    TimeUnit.SECONDS
+            );
             if (!location.exists()) {
                 stateStore.clearAllConditions(memberUid);
                 continue;

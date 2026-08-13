@@ -72,6 +72,10 @@ public class FamilyLiveRepository {
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final Map<String, MemberProfile> cloudProfiles = new HashMap<>();
     private final Map<String, CloudLocation> cloudLocations = new HashMap<>();
+    private final Map<String, DatabaseReference> restrictedLocationReferences =
+            new HashMap<>();
+    private final Map<String, ValueEventListener> restrictedLocationListeners =
+            new HashMap<>();
 
     @Nullable private DatabaseReference membershipReference;
     @Nullable private DatabaseReference locationReference;
@@ -124,6 +128,7 @@ public class FamilyLiveRepository {
                     }
                     attachFamilyListeners(
                             familyId,
+                            user.getUid(),
                             generation,
                             errorCallback
                     );
@@ -137,15 +142,15 @@ public class FamilyLiveRepository {
 
     private void attachFamilyListeners(
             @NonNull String familyId,
+            @NonNull String viewerUid,
             int generation,
             @NonNull ErrorCallback errorCallback
     ) {
         membershipReference = firebaseRoot
                 .child("memberships")
                 .child(familyId);
-        locationReference = firebaseRoot
-                .child("locations")
-                .child(familyId);
+        DatabaseReference viewerMembershipReference = firebaseRoot
+                .child("memberships").child(familyId).child(viewerUid);
 
         membershipListener = new ValueEventListener() {
             @Override
@@ -180,97 +185,128 @@ public class FamilyLiveRepository {
             }
         };
 
-        locationListener = new ValueEventListener() {
+        viewerMembershipReference.get().addOnSuccessListener(snapshot -> {
+            if (closed.get() || generation != observerGeneration) {
+                return;
+            }
+            String uid = stringValue(snapshot.child("uid"));
+            String status = stringValue(snapshot.child("status"));
+            String role = stringValue(snapshot.child("role"));
+            if (!viewerUid.equals(uid) || !"ACTIVE".equals(status)) {
+                errorCallback.onError(new IllegalStateException(
+                        "ACTIVE_FAMILY_REQUIRED"
+                ));
+                return;
+            }
+            if ("OWNER_ADMIN".equals(role) || "GUARDIAN".equals(role)) {
+                attachPrivilegedLocationListener(
+                        familyId, generation, errorCallback
+                );
+            } else {
+                attachRestrictedLocationListeners(
+                        familyId, viewerUid, generation, errorCallback
+                );
+            }
+        }).addOnFailureListener(error -> {
+            if (!closed.get() && generation == observerGeneration) {
+                errorCallback.onError(error);
+            }
+        });
+
+        membershipReference.addValueEventListener(membershipListener);
+    }
+
+    private void attachPrivilegedLocationListener(
+            @NonNull String familyId,
+            int generation,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        firebaseRoot.child("memberships").child(familyId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (closed.get() || generation != observerGeneration) {
+                        return;
+                    }
+                    for (DataSnapshot member : snapshot.getChildren()) {
+                        String uid = stringValue(member.child("uid"));
+                        if (!uid.isEmpty()
+                                && uid.equals(member.getKey())
+                                && "ACTIVE".equals(stringValue(
+                                member.child("status")
+                        ))) {
+                            attachRestrictedLocation(
+                                    familyId, uid, generation, errorCallback
+                            );
+                        }
+                    }
+                    initialLocationsLoaded = true;
+                    dispatchCloudMembers();
+                })
+                .addOnFailureListener(error -> {
+                    if (!closed.get() && generation == observerGeneration) {
+                        errorCallback.onError(error);
+                    }
+                });
+    }
+
+    private void attachRestrictedLocationListeners(
+            @NonNull String familyId,
+            @NonNull String viewerUid,
+            int generation,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        firebaseRoot.child("journeyPrivacy").child(familyId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (closed.get() || generation != observerGeneration) {
+                        return;
+                    }
+                    attachRestrictedLocation(
+                            familyId, viewerUid, generation, errorCallback
+                    );
+                    for (DataSnapshot owner : snapshot.getChildren()) {
+                        String ownerUid = owner.getKey();
+                        if (ownerUid != null && Boolean.TRUE.equals(owner
+                                .child("viewers").child(viewerUid)
+                                .getValue(Boolean.class))) {
+                            attachRestrictedLocation(
+                                    familyId,
+                                    ownerUid,
+                                    generation,
+                                    errorCallback
+                            );
+                        }
+                    }
+                    initialLocationsLoaded = true;
+                    dispatchCloudMembers();
+                })
+                .addOnFailureListener(error -> {
+                    if (!closed.get() && generation == observerGeneration) {
+                        errorCallback.onError(error);
+                    }
+                });
+    }
+
+    private void attachRestrictedLocation(
+            @NonNull String familyId,
+            @NonNull String targetUid,
+            int generation,
+            @NonNull ErrorCallback errorCallback
+    ) {
+        if (restrictedLocationReferences.containsKey(targetUid)) {
+            return;
+        }
+        DatabaseReference reference = firebaseRoot.child("locations")
+                .child(familyId).child(targetUid);
+        ValueEventListener listener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (closed.get() || generation != observerGeneration) {
                     return;
                 }
-                cloudLocations.clear();
-                for (DataSnapshot child : snapshot.getChildren()) {
-                    String uid = child.child("uid").getValue(String.class);
-                    Double latitude =
-                            child.child("latitude").getValue(Double.class);
-                    Double longitude =
-                            child.child("longitude").getValue(Double.class);
-                    Double accuracy =
-                            child.child("accuracy").getValue(Double.class);
-                    String placeLabel =
-                            child.child("placeLabel").getValue(String.class);
-                    Long batteryValue =
-                            child.child("batteryPercentage").getValue(Long.class);
-                    Boolean charging =
-                            child.child("charging").getValue(Boolean.class);
-                    Double speed =
-                            child.child("speedMetersPerSecond")
-                                    .getValue(Double.class);
-                    String movementType =
-                            child.child("movementType").getValue(String.class);
-                    Boolean sharing =
-                            child.child("sharingEnabled").getValue(Boolean.class);
-                    Boolean online =
-                            child.child("online").getValue(Boolean.class);
-                    String availabilityReason = child
-                            .child("availabilityReason")
-                            .getValue(String.class);
-                    Long updatedAt =
-                            child.child("updatedAt").getValue(Long.class);
-                    Long locationUpdatedAt = child
-                            .child("locationUpdatedAt")
-                            .getValue(Long.class);
-                    Long clientTimestamp = child
-                            .child("clientTimestamp")
-                            .getValue(Long.class);
-                    String serviceState = child
-                            .child("serviceState")
-                            .getValue(String.class);
-                    Long serviceHeartbeatAt = child
-                            .child("serviceHeartbeatAt")
-                            .getValue(Long.class);
-                    Long serviceRecoveryCount = child
-                            .child("serviceRecoveryCount")
-                            .getValue(Long.class);
-                    Long serviceConsecutiveMisses = child
-                            .child("serviceConsecutiveMisses")
-                            .getValue(Long.class);
-                    if (uid == null || !uid.equals(child.getKey())) {
-                        continue;
-                    }
-                    cloudLocations.put(uid, new CloudLocation(
-                            latitude,
-                            longitude,
-                            accuracy,
-                            placeLabel == null ? "" : placeLabel.trim(),
-                            batteryValue == null
-                                    ? -1
-                                    : Math.max(-1, Math.min(
-                                            100,
-                                            batteryValue.intValue()
-                                    )),
-                            Boolean.TRUE.equals(charging),
-                            speed == null ? 0D : Math.max(0D, speed),
-                            movementType == null
-                                    ? "UNKNOWN"
-                                    : movementType,
-                            Boolean.TRUE.equals(sharing),
-                            Boolean.TRUE.equals(online),
-                            availabilityReason == null
-                                    ? ""
-                                    : availabilityReason,
-                            firstPositiveTimestamp(
-                                    locationUpdatedAt,
-                                    clientTimestamp,
-                                    updatedAt
-                            ),
-                            serviceState == null ? "" : serviceState,
-                            serviceHeartbeatAt == null
-                                    ? 0L
-                                    : serviceHeartbeatAt,
-                            safeNonNegativeInt(serviceRecoveryCount),
-                            safeNonNegativeInt(serviceConsecutiveMisses)
-                    ));
+                if (snapshot.exists()) {
+                    putCloudLocation(snapshot, targetUid);
+                } else {
+                    cloudLocations.remove(targetUid);
                 }
-                initialLocationsLoaded = true;
                 dispatchCloudMembers();
             }
 
@@ -281,9 +317,9 @@ public class FamilyLiveRepository {
                 }
             }
         };
-
-        membershipReference.addValueEventListener(membershipListener);
-        locationReference.addValueEventListener(locationListener);
+        restrictedLocationReferences.put(targetUid, reference);
+        restrictedLocationListeners.put(targetUid, listener);
+        reference.addValueEventListener(listener);
     }
 
     private void dispatchCloudMembers() {
@@ -336,6 +372,53 @@ public class FamilyLiveRepository {
         callback.onMembersChanged(members);
     }
 
+    private void putCloudLocation(
+            @NonNull DataSnapshot snapshot,
+            @Nullable String expectedUid
+    ) {
+        String uid = snapshot.child("uid").getValue(String.class);
+        if (uid == null || expectedUid == null || !uid.equals(expectedUid)) {
+            return;
+        }
+        Long battery = snapshot.child("batteryPercentage")
+                .getValue(Long.class);
+        Long locationUpdatedAt = snapshot.child("locationUpdatedAt")
+                .getValue(Long.class);
+        Long clientTimestamp = snapshot.child("clientTimestamp")
+                .getValue(Long.class);
+        Long updatedAt = snapshot.child("updatedAt").getValue(Long.class);
+        cloudLocations.put(uid, new CloudLocation(
+                snapshot.child("latitude").getValue(Double.class),
+                snapshot.child("longitude").getValue(Double.class),
+                snapshot.child("accuracy").getValue(Double.class),
+                stringValue(snapshot.child("placeLabel")),
+                battery == null ? -1 : Math.max(
+                        -1, Math.min(100, battery.intValue())
+                ),
+                Boolean.TRUE.equals(snapshot.child("charging")
+                        .getValue(Boolean.class)),
+                Math.max(0D, doubleValue(snapshot.child(
+                        "speedMetersPerSecond"
+                ))),
+                defaultValue(stringValue(snapshot.child("movementType")),
+                        "UNKNOWN"),
+                Boolean.TRUE.equals(snapshot.child("sharingEnabled")
+                        .getValue(Boolean.class)),
+                Boolean.TRUE.equals(snapshot.child("online")
+                        .getValue(Boolean.class)),
+                stringValue(snapshot.child("availabilityReason")),
+                firstPositiveTimestamp(
+                        locationUpdatedAt, clientTimestamp, updatedAt
+                ),
+                stringValue(snapshot.child("serviceState")),
+                longValue(snapshot.child("serviceHeartbeatAt")),
+                safeNonNegativeInt(snapshot.child("serviceRecoveryCount")
+                        .getValue(Long.class)),
+                safeNonNegativeInt(snapshot.child("serviceConsecutiveMisses")
+                        .getValue(Long.class))
+        ));
+    }
+
     public void stopObservingCloudMembers() {
         observerGeneration++;
         if (membershipReference != null && membershipListener != null) {
@@ -344,6 +427,17 @@ public class FamilyLiveRepository {
         if (locationReference != null && locationListener != null) {
             locationReference.removeEventListener(locationListener);
         }
+        for (Map.Entry<String, DatabaseReference> entry
+                : restrictedLocationReferences.entrySet()) {
+            ValueEventListener listener = restrictedLocationListeners.get(
+                    entry.getKey()
+            );
+            if (listener != null) {
+                entry.getValue().removeEventListener(listener);
+            }
+        }
+        restrictedLocationReferences.clear();
+        restrictedLocationListeners.clear();
         membershipReference = null;
         locationReference = null;
         membershipListener = null;
@@ -476,6 +570,24 @@ public class FamilyLiveRepository {
         return value > Integer.MAX_VALUE
                 ? Integer.MAX_VALUE
                 : value.intValue();
+    }
+
+    private static long longValue(@NonNull DataSnapshot snapshot) {
+        Long value = snapshot.getValue(Long.class);
+        return value == null ? 0L : Math.max(0L, value);
+    }
+
+    private static double doubleValue(@NonNull DataSnapshot snapshot) {
+        Double value = snapshot.getValue(Double.class);
+        return value == null ? 0D : value;
+    }
+
+    @NonNull
+    private static String defaultValue(
+            @NonNull String value,
+            @NonNull String fallback
+    ) {
+        return value.isEmpty() ? fallback : value;
     }
 
     private static long firstPositiveTimestamp(
