@@ -29,6 +29,7 @@ public final class LocationRecoveryNotifier {
     private static final String CHANNEL_ID = "family_live_recovery";
     private static final int RECOVERY_NOTIFICATION_ID = 4121;
     private static final int BATTERY_NOTIFICATION_ID = 4122;
+    private static final int EXPIRY_WARNING_NOTIFICATION_ID = 4123;
 
     private static final String PREFS = "family_live_recovery_notice";
     private static final String KEY_LAST_BATTERY_NOTICE =
@@ -116,12 +117,34 @@ public final class LocationRecoveryNotifier {
                 .cancel(RECOVERY_NOTIFICATION_ID);
     }
 
+    public static void showExpiryWarning(@NonNull Context context) {
+        Context appContext = context.getApplicationContext();
+        createChannel(appContext);
+        NotificationCompat.Builder builder = baseBuilder(appContext)
+                .setContentTitle(appContext.getString(
+                        R.string.family_live_expiry_warning_title
+                ))
+                .setContentText(appContext.getString(
+                        R.string.family_live_expiry_warning_detail
+                ))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+                .setContentIntent(openAppPendingIntent(appContext));
+        notifySafely(appContext, EXPIRY_WARNING_NOTIFICATION_ID, builder);
+    }
+
+    public static void cancelExpiryWarning(@NonNull Context context) {
+        NotificationManagerCompat.from(context.getApplicationContext())
+                .cancel(EXPIRY_WARNING_NOTIFICATION_ID);
+    }
+
     public static void cancelAll(@NonNull Context context) {
         NotificationManagerCompat manager = NotificationManagerCompat.from(
                 context.getApplicationContext()
         );
         manager.cancel(RECOVERY_NOTIFICATION_ID);
         manager.cancel(BATTERY_NOTIFICATION_ID);
+        manager.cancel(EXPIRY_WARNING_NOTIFICATION_ID);
     }
 
     public static boolean isIgnoringBatteryOptimizations(
