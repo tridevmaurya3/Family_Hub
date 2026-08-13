@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
@@ -34,6 +35,9 @@ import java.util.Map;
 
 /** Office 365-style Journey History timeline and privacy controls. */
 public final class FamilyJourneyActivity extends AppCompatActivity {
+
+    public static final String EXTRA_OPEN_PRIVACY =
+            "com.tridev.familyhub.extra.OPEN_JOURNEY_PRIVACY";
 
     private final FamilyJourneyRepository repository =
             new FamilyJourneyRepository();
@@ -66,10 +70,15 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
             System.currentTimeMillis()
     );
     private boolean overviewLoading;
+    private boolean openPrivacyAfterLoad;
 
     @Override
     protected void onCreate(@Nullable Bundle state) {
         super.onCreate(state);
+        openPrivacyAfterLoad = getIntent().getBooleanExtra(
+                EXTRA_OPEN_PRIVACY,
+                false
+        );
         setContentView(R.layout.activity_family_journey);
 
         memberInput = findViewById(R.id.inputJourneyMember);
@@ -176,6 +185,10 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
                 recordingCard.setEnabled(true);
                 renderRecordingState();
                 bindMemberDropdown(preserveSelection);
+                if (openPrivacyAfterLoad) {
+                    openPrivacyAfterLoad = false;
+                    showPrivacyDialog();
+                }
             }
 
             @Override
@@ -517,6 +530,26 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
             content.addView(check);
             viewerChecks.put(member.uid, check);
         }
+
+        MaterialButton revokeAll = new MaterialButton(
+                this,
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+        );
+        revokeAll.setText(R.string.family_journey_revoke_all_viewers);
+        revokeAll.setTextSize(12F);
+        LinearLayout.LayoutParams revokeParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        revokeParams.topMargin = dp(8);
+        revokeAll.setLayoutParams(revokeParams);
+        revokeAll.setOnClickListener(ignored -> {
+            for (CheckBox checkBox : viewerChecks.values()) {
+                checkBox.setChecked(false);
+            }
+        });
+        content.addView(revokeAll);
 
         androidx.appcompat.app.AlertDialog dialog =
                 new MaterialAlertDialogBuilder(this)

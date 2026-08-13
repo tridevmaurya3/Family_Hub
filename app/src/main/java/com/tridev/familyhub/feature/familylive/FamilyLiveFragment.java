@@ -43,6 +43,7 @@ import com.tridev.familyhub.data.repository.FamilyLiveRepository;
 import com.tridev.familyhub.databinding.FragmentFamilyLiveBinding;
 import com.tridev.familyhub.feature.familylive.adapter.FamilyLiveAdapter;
 import com.tridev.familyhub.feature.familylive.model.FamilyLiveMemberUiModel;
+import com.tridev.familyhub.feature.journey.FamilyJourneyActivity;
 import com.tridev.familyhub.location.FamilyLocationService;
 import com.tridev.familyhub.location.LocationFreshnessPolicy;
 import com.tridev.familyhub.location.LocationSharingStore;
@@ -249,6 +250,14 @@ public class FamilyLiveFragment extends Fragment {
                 showSharingEducation();
             }
         });
+        binding.buttonManageViewers.setOnClickListener(ignored ->
+                startActivity(new Intent(
+                        requireContext(),
+                        FamilyJourneyActivity.class
+                ).putExtra(
+                        FamilyJourneyActivity.EXTRA_OPEN_PRIVACY,
+                        true
+                )));
 
         updateSharingUi();
         updateFilterCounts(0, 0, 0, 0);

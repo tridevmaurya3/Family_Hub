@@ -1016,6 +1016,8 @@
     <string name="family_live_sharing_on_detail">Authorised members of your family can see your latest location.</string>
     <string name="family_live_sharing_starting">Starting secure sharing…</string>
     <string name="family_live_sharing_duration_title">Share location for</string>
+    <string name="family_live_manage_viewers">Viewers</string>
+    <string name="family_journey_revoke_all_viewers">Clear all trusted viewers</string>
     <string-array name="family_live_sharing_durations">
         <item>1 hour</item>
         <item>8 hours</item>
