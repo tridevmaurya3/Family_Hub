@@ -1021,6 +1021,8 @@
     <string name="family_live_sharing_activity_started">Started %1$s</string>
     <string name="family_live_sharing_activity_stopped">Last session stopped %1$s</string>
     <string name="family_live_sharing_activity_expired">Last session expired %1$s</string>
+    <string name="family_live_extend_sharing">+1 hr</string>
+    <string name="family_live_sharing_extended">Sharing extended by 1 hour.</string>
     <string name="family_live_sharing_starting">Starting secure sharing…</string>
     <string name="family_live_sharing_duration_title">Share location for</string>
     <string name="family_live_manage_viewers">Viewers</string>

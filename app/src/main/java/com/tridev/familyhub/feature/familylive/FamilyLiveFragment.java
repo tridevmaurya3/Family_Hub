@@ -269,6 +269,21 @@ public class FamilyLiveFragment extends Fragment {
                         FamilyJourneyActivity.EXTRA_OPEN_PRIVACY,
                         true
                 )));
+        binding.buttonExtendSharing.setOnClickListener(ignored -> {
+            boolean extended = LocationSharingStore.extendTimedSharing(
+                    requireContext(),
+                    60L * 60L * 1000L
+            );
+            if (extended) {
+                updateSharingUi();
+                scheduleSharingStatusRefresh();
+                Toast.makeText(
+                        requireContext(),
+                        R.string.family_live_sharing_extended,
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
+        });
 
         updateSharingUi();
         updateFilterCounts(0, 0, 0, 0);
@@ -1370,6 +1385,11 @@ public class FamilyLiveFragment extends Fragment {
         binding.buttonLocationSharing.setText(enabled
                 ? R.string.family_live_stop_sharing
                 : R.string.family_live_start_sharing);
+        binding.buttonExtendSharing.setVisibility(
+                enabled && LocationSharingStore.sharingExpiresAt(
+                        requireContext()
+                ) > 0L ? View.VISIBLE : View.GONE
+        );
         updateSharingActivity(enabled);
     }
 

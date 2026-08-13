@@ -188,6 +188,22 @@
                             android:textSize="10sp" />
 
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/buttonExtendSharing"
+                            style="@style/Widget.FamilyHub.Button.Text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:minWidth="0dp"
+                            android:text="@string/family_live_extend_sharing"
+                            android:textColor="@color/fh_primary"
+                            android:textSize="10sp"
+                            android:visibility="gone"
+                            app:icon="@drawable/ic_add"
+                            app:iconGravity="textStart"
+                            app:iconPadding="@dimen/space_2"
+                            app:iconSize="14dp"
+                            app:iconTint="@color/fh_primary" />
+
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/buttonManageViewers"
                             style="@style/Widget.FamilyHub.Button.Text"
                             android:layout_width="wrap_content"

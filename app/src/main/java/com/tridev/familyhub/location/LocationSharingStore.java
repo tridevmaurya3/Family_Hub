@@ -61,6 +61,33 @@ public final class LocationSharingStore {
         );
     }
 
+    public static boolean extendTimedSharing(
+            @NonNull Context context,
+            long extensionMs
+    ) {
+        Context appContext = context.getApplicationContext();
+        if (extensionMs <= 0L || !isSharingEnabled(appContext)) {
+            return false;
+        }
+        SharedPreferences preferences = preferences(appContext);
+        long expiresAt = preferences.getLong(KEY_SHARING_EXPIRES_AT, 0L);
+        if (expiresAt <= 0L) {
+            return false;
+        }
+        long extendedExpiry = Math.max(
+                expiresAt,
+                System.currentTimeMillis()
+        ) + extensionMs;
+        preferences.edit()
+                .putLong(KEY_SHARING_EXPIRES_AT, extendedExpiry)
+                .apply();
+        LocationSharingExpiryScheduler.schedule(
+                appContext,
+                extendedExpiry
+        );
+        return true;
+    }
+
     public static void prepareSharingDuration(
             @NonNull Context context,
             long durationMs
