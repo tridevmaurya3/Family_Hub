@@ -31,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_12">
+                android:padding="@dimen/space_8">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonFamilySafetyBack"
@@ -87,7 +87,7 @@
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
+            android:layout_marginTop="@dimen/space_8"
             app:cardBackgroundColor="@color/fh_success_container"
             app:cardCornerRadius="@dimen/radius_20"
             app:strokeColor="@color/fh_success"
@@ -98,15 +98,15 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_16">
+                android:padding="@dimen/space_10">
 
                 <ImageView
                     android:id="@+id/imageFamilySafetyOverview"
                     android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
-                    android:padding="11dp"
+                    android:padding="8dp"
                     android:src="@drawable/ic_safe_place_shield"
                     app:tint="@color/fh_success" />
 
@@ -164,7 +164,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="@dimen/space_12">
+                    android:padding="@dimen/space_8">
 
                     <TextView
                         android:id="@+id/textFamilySafetySosCount"
@@ -200,7 +200,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="@dimen/space_12">
+                    android:padding="@dimen/space_8">
 
                     <TextView
                         android:id="@+id/textFamilySafetyAttentionCount"
@@ -244,7 +244,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="@dimen/space_12">
+                    android:padding="@dimen/space_8">
 
                     <TextView
                         android:id="@+id/textFamilySafetyUnreadCount"
@@ -280,7 +280,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="@dimen/space_12">
+                    android:padding="@dimen/space_8">
 
                     <TextView
                         android:id="@+id/textFamilySafetyMemberCount"
@@ -335,11 +335,11 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_14">
+                android:padding="@dimen/space_10">
 
                 <ImageView
                     android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
                     android:padding="10dp"
@@ -396,11 +396,11 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_14">
+                android:padding="@dimen/space_10">
 
                 <ImageView
                     android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
                     android:padding="10dp"
@@ -457,11 +457,11 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_14">
+                android:padding="@dimen/space_10">
 
                 <ImageView
                     android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
                     android:padding="10dp"
@@ -518,11 +518,11 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_14">
+                android:padding="@dimen/space_10">
 
                 <ImageView
                     android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_height="40dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
                     android:padding="10dp"

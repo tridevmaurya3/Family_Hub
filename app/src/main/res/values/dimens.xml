@@ -18,12 +18,12 @@
     <dimen name="space_40">40dp</dimen>
 
     <!-- Standard screen and component spacing -->
-    <dimen name="screen_padding_horizontal">16dp</dimen>
-    <dimen name="screen_padding_vertical">16dp</dimen>
-    <dimen name="card_padding">12dp</dimen>
-    <dimen name="card_spacing">8dp</dimen>
-    <dimen name="form_field_spacing">10dp</dimen>
-    <dimen name="section_spacing">24dp</dimen>
+    <dimen name="screen_padding_horizontal">10dp</dimen>
+    <dimen name="screen_padding_vertical">10dp</dimen>
+    <dimen name="card_padding">10dp</dimen>
+    <dimen name="card_spacing">6dp</dimen>
+    <dimen name="form_field_spacing">8dp</dimen>
+    <dimen name="section_spacing">16dp</dimen>
 
     <!-- Fluent corner-radius scale -->
     <dimen name="radius_4">4dp</dimen>
@@ -40,7 +40,7 @@
     <dimen name="icon_size_small">18dp</dimen>
     <dimen name="icon_size_medium">24dp</dimen>
     <dimen name="icon_size_large">28dp</dimen>
-    <dimen name="icon_tile_size">40dp</dimen>
+    <dimen name="icon_tile_size">36dp</dimen>
     <dimen name="button_height">48dp</dimen>
     <dimen name="input_min_height">56dp</dimen>
     <dimen name="touch_target_min">48dp</dimen>
@@ -50,11 +50,11 @@
     <dimen name="family_map_control_text_size">11sp</dimen>
 
     <!-- Compact module surfaces; touch targets remain at least 48dp. -->
-    <dimen name="compact_page_top_padding">16dp</dimen>
-    <dimen name="compact_section_spacing">12dp</dimen>
-    <dimen name="compact_empty_state_padding">18dp</dimen>
-    <dimen name="compact_empty_state_icon_size">52dp</dimen>
-    <dimen name="compact_empty_state_icon_padding">14dp</dimen>
+    <dimen name="compact_page_top_padding">8dp</dimen>
+    <dimen name="compact_section_spacing">8dp</dimen>
+    <dimen name="compact_empty_state_padding">12dp</dimen>
+    <dimen name="compact_empty_state_icon_size">44dp</dimen>
+    <dimen name="compact_empty_state_icon_padding">10dp</dimen>
     <dimen name="family_live_section_gap">6dp</dimen>
     <dimen name="family_live_card_padding">10dp</dimen>
     <dimen name="family_live_avatar_size">44dp</dimen>
