@@ -136,12 +136,6 @@ public class NotesFragment extends Fragment implements AddActionHost {
     }
 
     @Override
-    public void onDestroyView() {
-        if (repository != null) repository.stopRealtimeSync();
-        super.onDestroyView();
-    }
-
-    @Override
     public void onAddRequested() {
         showEditor(null);
     }
@@ -329,6 +323,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
         binding.notesRecyclerView.setAdapter(null);
         binding = null;
         super.onDestroyView();
