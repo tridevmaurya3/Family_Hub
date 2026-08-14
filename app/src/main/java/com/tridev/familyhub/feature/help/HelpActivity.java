@@ -1,5 +1,6 @@
 package com.tridev.familyhub.feature.help;
 
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.text.Editable;
@@ -24,6 +25,8 @@ import androidx.core.widget.NestedScrollView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,25 +72,45 @@ public class HelpActivity extends AppCompatActivity {
         root.setPadding(dp(16), dp(12), dp(16), dp(32));
         scroll.addView(root, matchWrap());
 
+        MaterialCardView headerCard = card(R.color.fh_surface, R.color.fh_outline_variant);
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
         ImageButton back = new ImageButton(this);
-        back.setImageResource(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        back.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        back.setImageResource(R.drawable.ic_arrow_back);
+        back.setBackgroundResource(R.drawable.bg_icon_button);
+        back.setPadding(dp(9), dp(9), dp(9), dp(9));
         back.setColorFilter(color(R.color.fh_primary));
         back.setContentDescription("Back");
         back.setOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
-        header.addView(back, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        header.addView(back, new LinearLayout.LayoutParams(dp(36), dp(36)));
 
         LinearLayout heading = vertical();
-        titleView = text(24, true, R.color.fh_text_primary);
-        subtitleView = text(13, false, R.color.fh_text_secondary);
+        titleView = text(16, true, R.color.fh_text_primary);
+        subtitleView = text(10, false, R.color.fh_text_secondary);
         heading.addView(titleView);
         heading.addView(subtitleView, topMargin(2));
         LinearLayout.LayoutParams headingParams = new LinearLayout.LayoutParams(0, -2, 1F);
         headingParams.leftMargin = dp(8);
         header.addView(heading, headingParams);
-        root.addView(header);
+
+        ImageButton notifications = headerAction(R.drawable.ic_bell,
+                getString(R.string.reminders_title));
+        notifications.setOnClickListener(v -> startActivity(
+                new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE,
+                                MainActivity.ROUTE_REMINDERS)));
+        header.addView(notifications, new LinearLayout.LayoutParams(dp(36), dp(36)));
+
+        ImageButton profile = headerAction(R.drawable.ic_profile_person,
+                getString(R.string.more_profile_title));
+        profile.setOnClickListener(v -> startActivity(
+                new Intent(this, ProfileSettingsActivity.class)));
+        LinearLayout.LayoutParams profileParams = new LinearLayout.LayoutParams(dp(36), dp(36));
+        profileParams.leftMargin = dp(4);
+        header.addView(profile, profileParams);
+        header.setPadding(dp(8), dp(8), dp(8), dp(8));
+        headerCard.addView(header);
+        root.addView(headerCard);
 
         MaterialCardView languageCard = card(R.color.fh_primary_container, R.color.fh_primary);
         LinearLayout languageRow = new LinearLayout(this);
@@ -138,6 +161,16 @@ public class HelpActivity extends AppCompatActivity {
             return insets;
         });
         return scroll;
+    }
+
+    private ImageButton headerAction(int icon, @NonNull String description) {
+        ImageButton button = new ImageButton(this);
+        button.setImageResource(icon);
+        button.setBackgroundResource(R.drawable.bg_icon_button);
+        button.setColorFilter(color(R.color.fh_primary));
+        button.setContentDescription(description);
+        button.setPadding(dp(9), dp(9), dp(9), dp(9));
+        return button;
     }
 
     private void selectLanguage(boolean useHindi) {
