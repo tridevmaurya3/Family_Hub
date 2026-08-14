@@ -88,6 +88,12 @@ public class HealthRecordAdapter
             binding.healthRecordDate.setText(dateFormat.format(
                     new Date(record.recordedAt)
             ));
+            boolean hasTimeline = !record.timelineNote.trim().isEmpty();
+            binding.healthRecordTimeline.setVisibility(
+                    hasTimeline ? View.VISIBLE : View.GONE);
+            if (hasTimeline) {
+                binding.healthRecordTimeline.setText(record.timelineNote.trim());
+            }
             boolean hasDocument = !record.linkedDocumentTitle.isEmpty();
             binding.healthRecordDocument.setVisibility(
                     hasDocument ? View.VISIBLE : View.GONE

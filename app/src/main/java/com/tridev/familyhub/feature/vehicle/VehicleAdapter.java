@@ -110,6 +110,12 @@ public class VehicleAdapter
             } else {
                 binding.vehicleDueDate.setVisibility(View.GONE);
             }
+            boolean hasTimeline = !vehicle.timelineNote.trim().isEmpty();
+            binding.vehicleTimeline.setVisibility(
+                    hasTimeline ? View.VISIBLE : View.GONE);
+            if (hasTimeline) {
+                binding.vehicleTimeline.setText(vehicle.timelineNote.trim());
+            }
             boolean hasDocument = !vehicle.linkedDocumentTitle.isEmpty();
             binding.vehicleDocument.setVisibility(
                     hasDocument ? View.VISIBLE : View.GONE);

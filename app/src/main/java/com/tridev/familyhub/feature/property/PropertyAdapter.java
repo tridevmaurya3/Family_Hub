@@ -126,6 +126,12 @@ public class PropertyAdapter
                         binding.getRoot().getContext(), change >= 0
                                 ? R.color.fh_success : R.color.fh_error));
             }
+            boolean hasTimeline = !property.timelineNote.trim().isEmpty();
+            binding.propertyTimeline.setVisibility(
+                    hasTimeline ? View.VISIBLE : View.GONE);
+            if (hasTimeline) {
+                binding.propertyTimeline.setText(property.timelineNote.trim());
+            }
             boolean hasDocument = !property.linkedDocumentTitle.isEmpty();
             binding.propertyDocument.setVisibility(
                     hasDocument ? View.VISIBLE : View.GONE);
