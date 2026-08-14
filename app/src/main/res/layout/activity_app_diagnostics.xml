@@ -1,22 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_page_three_tone" android:fillViewport="true" android:fitsSystemWindows="true">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="@dimen/screen_padding_horizontal" android:paddingTop="@dimen/space_16" android:paddingEnd="@dimen/screen_padding_horizontal" android:paddingBottom="@dimen/space_32">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
-            <ImageButton android:id="@+id/diagnostics_back" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/bg_icon_button" android:contentDescription="@string/back" android:padding="11dp" android:src="@drawable/ic_arrow_back" app:tint="@color/fh_primary" />
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="@dimen/space_10" android:layout_weight="1" android:orientation="vertical">
-                <TextView style="@style/TextAppearance.FamilyHub.Heading" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diagnostics_title" android:textSize="20sp" />
-                <TextView android:id="@+id/diagnostics_version" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            </LinearLayout>
-            <com.google.android.material.button.MaterialButton android:id="@+id/diagnostics_refresh" style="@style/Widget.Material3.Button.IconButton" android:layout_width="44dp" android:layout_height="44dp" android:contentDescription="@string/diagnostics_refresh" app:icon="@drawable/ic_family_map_refresh" app:iconTint="@color/fh_primary" />
-        </LinearLayout>
-        <com.google.android.material.card.MaterialCardView style="@style/Widget.FamilyHub.Card.Flat" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16" app:cardBackgroundColor="@color/fh_primary_container" app:strokeColor="@color/fh_primary">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/space_16">
-                <TextView android:id="@+id/diagnostics_overall" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diagnostics_checking" android:textColor="@color/fh_primary" />
-                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="@string/diagnostics_detail" />
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/bg_page_three_tone" android:fillViewport="true" android:fitsSystemWindows="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingStart="@dimen/screen_padding_horizontal"
+        android:paddingTop="@dimen/compact_page_top_padding" android:paddingEnd="@dimen/screen_padding_horizontal"
+        android:paddingBottom="@dimen/space_32">
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/fh_surface" app:strokeColor="@color/fh_outline_variant">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:gravity="center_vertical" android:orientation="horizontal" android:padding="@dimen/space_8">
+                <ImageButton android:id="@+id/diagnostics_back" android:layout_width="36dp" android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_button" android:contentDescription="@string/back"
+                    android:padding="9dp" android:src="@drawable/ic_arrow_back" app:tint="@color/fh_primary" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/TextAppearance.FamilyHub.Heading" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="@string/diagnostics_title" android:textSize="16sp" />
+                    <TextView android:id="@+id/diagnostics_version" style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="10sp" />
+                </LinearLayout>
+                <ImageButton android:id="@+id/diagnostics_notifications" android:layout_width="36dp" android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_button" android:contentDescription="@string/reminders_title"
+                    android:padding="9dp" android:src="@drawable/ic_bell" app:tint="@color/fh_primary" />
+                <ImageButton android:id="@+id/diagnostics_profile" android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_marginStart="@dimen/space_4" android:background="@drawable/bg_icon_button"
+                    android:contentDescription="@string/more_profile_title" android:padding="9dp"
+                    android:src="@drawable/ic_profile_person" app:tint="@color/fh_primary" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/diagnostics_refresh"
+                    style="@style/Widget.Material3.Button.IconButton" android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_marginStart="@dimen/space_4" android:contentDescription="@string/diagnostics_refresh"
+                    app:icon="@drawable/ic_family_map_refresh" app:iconTint="@color/fh_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <TextView style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_20" android:text="@string/diagnostics_checks" />
-        <LinearLayout android:id="@+id/diagnostics_checks_container" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:orientation="vertical" />
-        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16" android:gravity="center" android:text="@string/diagnostics_privacy" />
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_10"
+            app:cardBackgroundColor="@color/fh_primary_container" app:strokeColor="@color/fh_primary">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="@dimen/space_12">
+                <TextView android:id="@+id/diagnostics_overall" style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/diagnostics_checking" android:textColor="@color/fh_primary" />
+                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/diagnostics_detail" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <TextView style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16"
+            android:text="@string/diagnostics_checks" />
+        <LinearLayout android:id="@+id/diagnostics_checks_container" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8" android:orientation="vertical" />
+        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16"
+            android:gravity="center" android:text="@string/diagnostics_privacy" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

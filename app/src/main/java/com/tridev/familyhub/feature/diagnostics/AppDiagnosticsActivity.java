@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.diagnostics;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
@@ -25,6 +26,8 @@ import com.tridev.familyhub.backup.BackupPreferences;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.databinding.ActivityAppDiagnosticsBinding;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
+import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.location.LocationSharingStore;
 
 import java.text.SimpleDateFormat;
@@ -46,6 +49,12 @@ public class AppDiagnosticsActivity extends AppCompatActivity {
         binding = ActivityAppDiagnosticsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         binding.diagnosticsBack.setOnClickListener(v -> finish());
+        binding.diagnosticsNotifications.setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE,
+                                MainActivity.ROUTE_REMINDERS)));
+        binding.diagnosticsProfile.setOnClickListener(v ->
+                startActivity(new Intent(this, ProfileSettingsActivity.class)));
         binding.diagnosticsRefresh.setOnClickListener(v -> runChecks());
         binding.diagnosticsVersion.setText(getString(R.string.diagnostics_version,
                 BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
