@@ -20,6 +20,8 @@ import com.tridev.familyhub.data.repository.FamilyAccountRepository;
 import com.tridev.familyhub.databinding.ActivityFamilyManagementBinding;
 import com.tridev.familyhub.databinding.ItemFamilyAccountMemberBinding;
 import com.tridev.familyhub.databinding.ItemPendingJoinRequestBinding;
+import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
 public class FamilyManagementActivity extends AppCompatActivity {
 
@@ -37,6 +39,12 @@ public class FamilyManagementActivity extends AppCompatActivity {
 
         binding.buttonBack.setOnClickListener(v ->
                 getOnBackPressedDispatcher().onBackPressed());
+        binding.buttonNotifications.setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE,
+                                MainActivity.ROUTE_REMINDERS)));
+        binding.buttonProfile.setOnClickListener(v ->
+                startActivity(new Intent(this, ProfileSettingsActivity.class)));
         binding.buttonGenerateInvite.setOnClickListener(v -> generateInvite());
         binding.buttonManageHouseholds.setOnClickListener(v ->
                 startActivity(new Intent(
