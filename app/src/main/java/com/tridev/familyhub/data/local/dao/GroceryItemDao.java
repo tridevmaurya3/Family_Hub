@@ -41,6 +41,9 @@ public interface GroceryItemDao {
     @Query("SELECT * FROM grocery_items WHERE cloudId = :cloudId LIMIT 1")
     GroceryItem getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM grocery_items WHERE financeEntryId = :financeEntryId LIMIT 1")
+    GroceryItem getByFinanceEntryId(long financeEntryId);
+
     @Query("SELECT * FROM grocery_items WHERE name = :name COLLATE NOCASE LIMIT 1")
     GroceryItem findDuplicate(String name);
 

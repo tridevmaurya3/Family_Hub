@@ -687,7 +687,9 @@ public class GroceryRepository {
     private void linkFinance(@NonNull GroceryItem item) {
         if (!item.isPurchased) {
             if (item.financeEntryId > 0L) {
+                FinanceEntry linked = financeEntryDao.getById(item.financeEntryId);
                 financeEntryDao.deleteById(item.financeEntryId);
+                removeSharedFinance(linked);
                 item.financeEntryId = 0L;
             }
             return;
@@ -696,7 +698,9 @@ public class GroceryRepository {
                 ? item.actualCost : item.estimatedCost;
         if (amount <= 0D) {
             if (item.financeEntryId > 0L) {
+                FinanceEntry linked = financeEntryDao.getById(item.financeEntryId);
                 financeEntryDao.deleteById(item.financeEntryId);
+                removeSharedFinance(linked);
                 item.financeEntryId = 0L;
             }
             return;
@@ -709,9 +713,24 @@ public class GroceryRepository {
                 existing.transactionDate = purchaseDate(item);
                 existing.updatedAt = System.currentTimeMillis();
                 financeEntryDao.update(existing);
+                publishLinkedFinance(existing);
                 return;
             }
             item.financeEntryId = 0L;
+        }
+        String linkedCloudId = linkedFinanceCloudId(item);
+        if (!linkedCloudId.isEmpty()) {
+            FinanceEntry existing = financeEntryDao.getByCloudId(linkedCloudId);
+            if (existing != null) {
+                item.financeEntryId = existing.id;
+                existing.amount = amount;
+                existing.note = financeNote(item);
+                existing.transactionDate = purchaseDate(item);
+                existing.updatedAt = System.currentTimeMillis();
+                financeEntryDao.update(existing);
+                publishLinkedFinance(existing);
+                return;
+            }
         }
         FinanceEntry entry = new FinanceEntry();
         entry.entryType = FinanceEntry.TYPE_EXPENSE;
@@ -721,7 +740,44 @@ public class GroceryRepository {
         entry.transactionDate = purchaseDate(item);
         entry.createdAt = System.currentTimeMillis();
         entry.updatedAt = entry.createdAt;
+        if (!linkedCloudId.isEmpty()) {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            entry.isShared = true;
+            entry.cloudId = linkedCloudId;
+            entry.familyId = activeFamilyId;
+            entry.updatedByUid = user == null ? "" : user.getUid();
+            entry.updatedByName = displayName(user);
+        }
         item.financeEntryId = financeEntryDao.insert(entry);
+        publishLinkedFinance(entry);
+    }
+
+    @NonNull
+    private String linkedFinanceCloudId(@NonNull GroceryItem item) {
+        if (activeFamilyId.isEmpty() || item.cloudId.isEmpty()) return "";
+        return "grocery_" + item.cloudId;
+    }
+
+    private void publishLinkedFinance(@NonNull FinanceEntry entry) {
+        if (!entry.isShared || entry.familyId.isEmpty() || entry.cloudId.isEmpty()) return;
+        Map<String, Object> values = new HashMap<>();
+        values.put("cloudId", entry.cloudId); values.put("familyId", entry.familyId);
+        values.put("entryType", entry.entryType); values.put("amount", entry.amount);
+        values.put("category", entry.category); values.put("note", entry.note);
+        values.put("transactionDate", entry.transactionDate);
+        values.put("accountName", entry.accountName); values.put("paymentMethod", entry.paymentMethod);
+        values.put("recurring", false); values.put("shared", true);
+        values.put("createdAt", entry.createdAt); values.put("updatedAt", entry.updatedAt);
+        values.put("serverUpdatedAt", ServerValue.TIMESTAMP);
+        values.put("updatedByUid", entry.updatedByUid); values.put("updatedByName", entry.updatedByName);
+        firebaseRoot.child("sharedModules").child(entry.familyId)
+                .child("finance").child(entry.cloudId).setValue(values);
+    }
+
+    private void removeSharedFinance(@Nullable FinanceEntry entry) {
+        if (entry == null || entry.familyId.isEmpty() || entry.cloudId.isEmpty()) return;
+        firebaseRoot.child("sharedModules").child(entry.familyId)
+                .child("finance").child(entry.cloudId).removeValue();
     }
 
     @NonNull

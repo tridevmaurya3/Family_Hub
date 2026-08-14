@@ -14,6 +14,7 @@ import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.FinanceAccount;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
+import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -183,8 +184,10 @@ public class FinanceRepository {
 
     public void delete(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            GroceryItem linkedGrocery = groceryItemDao.getByFinanceEntryId(entry.id);
             financeEntryDao.delete(entry);
             groceryItemDao.resetLinkedPurchase(entry.id, System.currentTimeMillis());
+            publishLinkedGroceryReset(linkedGrocery);
             if (entry.isShared) {
                 removeShared(entry.familyId, entry.cloudId);
             }
@@ -194,15 +197,47 @@ public class FinanceRepository {
 
     private void syncLinkedGrocery(@NonNull FinanceEntry entry) {
         if (entry.id <= 0L) return;
+        GroceryItem linked = groceryItemDao.getByFinanceEntryId(entry.id);
         boolean validGroceryExpense = FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)
                 && "Grocery".equalsIgnoreCase(entry.category)
                 && entry.amount > 0D;
         if (validGroceryExpense) {
             groceryItemDao.updateLinkedFinanceAmount(
                     entry.id, entry.amount, entry.updatedAt);
+            publishLinkedGroceryAmount(linked, entry);
         } else {
             groceryItemDao.resetLinkedPurchase(entry.id, entry.updatedAt);
+            publishLinkedGroceryReset(linked);
         }
+    }
+
+    private void publishLinkedGroceryAmount(
+            @Nullable GroceryItem item,
+            @NonNull FinanceEntry entry
+    ) {
+        if (item == null || item.familyId.isEmpty() || item.cloudId.isEmpty()) return;
+        Map<String, Object> values = new HashMap<>();
+        values.put("actualCost", entry.amount);
+        values.put("updatedAt", entry.updatedAt);
+        values.put("serverUpdatedAt", ServerValue.TIMESTAMP);
+        FirebaseDatabase.getInstance().getReference("sharedShopping")
+                .child(item.familyId).child("items").child(item.cloudId)
+                .updateChildren(values);
+    }
+
+    private void publishLinkedGroceryReset(@Nullable GroceryItem item) {
+        if (item == null || item.familyId.isEmpty() || item.cloudId.isEmpty()) return;
+        long now = System.currentTimeMillis();
+        Map<String, Object> values = new HashMap<>();
+        values.put("purchased", false);
+        values.put("buyingStatus", GroceryItem.STATUS_PENDING);
+        values.put("purchasedAt", 0L);
+        values.put("purchasedByName", "");
+        values.put("updatedAt", now);
+        values.put("serverUpdatedAt", ServerValue.TIMESTAMP);
+        FirebaseDatabase.getInstance().getReference("sharedShopping")
+                .child(item.familyId).child("items").child(item.cloudId)
+                .updateChildren(values);
     }
 
     /** Starts family-scoped realtime reconciliation. Private entries are never uploaded. */
