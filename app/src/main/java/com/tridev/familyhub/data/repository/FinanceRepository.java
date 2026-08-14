@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.FinanceEntryDao;
 import com.tridev.familyhub.data.local.dao.FinanceAccountDao;
+import com.tridev.familyhub.data.local.dao.GroceryItemDao;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.FinanceAccount;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
@@ -55,6 +56,7 @@ public class FinanceRepository {
 
     private final FinanceEntryDao financeEntryDao;
     private final FinanceAccountDao financeAccountDao;
+    private final GroceryItemDao groceryItemDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private DatabaseReference sharedEntriesReference;
     @Nullable private ValueEventListener sharedEntriesListener;
@@ -63,6 +65,7 @@ public class FinanceRepository {
     public FinanceRepository(Context context) {
         financeEntryDao = FamilyHubDatabase.getInstance(context).financeEntryDao();
         financeAccountDao = FamilyHubDatabase.getInstance(context).financeAccountDao();
+        groceryItemDao = FamilyHubDatabase.getInstance(context).groceryItemDao();
     }
 
     public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
@@ -106,6 +109,7 @@ public class FinanceRepository {
                 entry.updatedByName = "";
                 financeEntryDao.update(entry);
             }
+            syncLinkedGrocery(entry);
             mainHandler.post(callback::onComplete);
         });
     }
@@ -180,11 +184,25 @@ public class FinanceRepository {
     public void delete(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             financeEntryDao.delete(entry);
+            groceryItemDao.resetLinkedPurchase(entry.id, System.currentTimeMillis());
             if (entry.isShared) {
                 removeShared(entry.familyId, entry.cloudId);
             }
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    private void syncLinkedGrocery(@NonNull FinanceEntry entry) {
+        if (entry.id <= 0L) return;
+        boolean validGroceryExpense = FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)
+                && "Grocery".equalsIgnoreCase(entry.category)
+                && entry.amount > 0D;
+        if (validGroceryExpense) {
+            groceryItemDao.updateLinkedFinanceAmount(
+                    entry.id, entry.amount, entry.updatedAt);
+        } else {
+            groceryItemDao.resetLinkedPurchase(entry.id, entry.updatedAt);
+        }
     }
 
     /** Starts family-scoped realtime reconciliation. Private entries are never uploaded. */

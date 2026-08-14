@@ -84,4 +84,13 @@ public interface GroceryItemDao {
 
     @Query("DELETE FROM grocery_items WHERE isPurchased = 1")
     int deletePurchased();
+
+    @Query("UPDATE grocery_items SET actualCost = :amount, updatedAt = :updatedAt "
+            + "WHERE financeEntryId = :financeEntryId")
+    int updateLinkedFinanceAmount(long financeEntryId, double amount, long updatedAt);
+
+    @Query("UPDATE grocery_items SET financeEntryId = 0, isPurchased = 0, "
+            + "purchasedAt = 0, buyingStatus = 'PENDING', purchasedByName = '', "
+            + "updatedAt = :updatedAt WHERE financeEntryId = :financeEntryId")
+    int resetLinkedPurchase(long financeEntryId, long updatedAt);
 }
