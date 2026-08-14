@@ -21,6 +21,7 @@
 
     <queries>
         <package android:name="com.example.moneymanagerpro" />
+        <package android:name="com.tridev.loanmanagerpro" />
     </queries>
 
     <application
@@ -49,6 +50,12 @@
             android:authorities="${applicationId}.finance_money_manager_sync"
             android:exported="false"
             android:initOrder="39" />
+
+        <provider
+            android:name=".feature.finance.LoanManagerProjectionProvider"
+            android:authorities="com.tridev.familyhub.tridev.loanprojection"
+            android:exported="true"
+            android:grantUriPermissions="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
