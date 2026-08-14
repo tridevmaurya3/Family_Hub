@@ -18,6 +18,7 @@ import com.tridev.familyhub.data.local.entity.Reminder;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -52,6 +53,7 @@ public class ReminderRepository {
 
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
+        retryPendingSharedReminders();
         subscriber = new FamilyCollaborationSubscriber("reminders",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
@@ -70,6 +72,21 @@ public class ReminderRepository {
                     }
                 });
         subscriber.start();
+    }
+
+    /** Retries local-first reminder shares saved while Firebase was unavailable. */
+    private void retryPendingSharedReminders() {
+        DATABASE_EXECUTOR.execute(() -> {
+            for (Reminder pending : reminderDao.getPendingShared()) {
+                if (pending.isShared && pending.familyId.isEmpty()) {
+                    if (pending.cloudId.isEmpty()) {
+                        pending.cloudId = UUID.randomUUID().toString();
+                        reminderDao.update(pending);
+                    }
+                    publish(pending);
+                }
+            }
+        });
     }
 
     public void stopRealtimeSync() {
@@ -103,6 +120,10 @@ public class ReminderRepository {
                 reminderDao.update(reminder);
             }
             if (reminder.isShared) {
+                if (reminder.cloudId.isEmpty()) {
+                    reminder.cloudId = UUID.randomUUID().toString();
+                    reminderDao.update(reminder);
+                }
                 publish(reminder);
             } else {
                 String previousFamilyId = reminder.familyId;
