@@ -572,7 +572,7 @@ public class DashboardFragment extends Fragment {
                 stats.getDocumentsExpiringSoon(), stats.getVehiclesDueSoon()));
         String owners = data.getPriorityOwners();
         binding.dashboardPriorityOwners.setText(owners.isEmpty()
-                ? R.string.dashboard_priority_no_owner
+                ? getString(R.string.dashboard_priority_no_owner)
                 : getString(R.string.dashboard_priority_owner_names, owners));
         binding.dashboardPendingCard.setOnClickListener(v ->
                 openPendingPriority(stats));
