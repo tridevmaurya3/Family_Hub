@@ -695,14 +695,19 @@ public class GroceryRepository {
         double amount = item.actualCost > 0D
                 ? item.actualCost : item.estimatedCost;
         if (amount <= 0D) {
+            if (item.financeEntryId > 0L) {
+                financeEntryDao.deleteById(item.financeEntryId);
+                item.financeEntryId = 0L;
+            }
             return;
         }
         if (item.financeEntryId > 0L) {
             FinanceEntry existing = financeEntryDao.getById(item.financeEntryId);
             if (existing != null) {
                 existing.amount = amount;
-                existing.note = item.name + (item.quantity.isEmpty()
-                        ? "" : " • " + item.quantity);
+                existing.note = financeNote(item);
+                existing.transactionDate = purchaseDate(item);
+                existing.updatedAt = System.currentTimeMillis();
                 financeEntryDao.update(existing);
                 return;
             }
@@ -712,12 +717,25 @@ public class GroceryRepository {
         entry.entryType = FinanceEntry.TYPE_EXPENSE;
         entry.amount = amount;
         entry.category = "Grocery";
-        entry.note = item.name + (item.quantity.isEmpty()
-                ? "" : " • " + item.quantity);
-        entry.transactionDate = new SimpleDateFormat(
-                "yyyy-MM-dd", Locale.US).format(new Date());
+        entry.note = financeNote(item);
+        entry.transactionDate = purchaseDate(item);
         entry.createdAt = System.currentTimeMillis();
+        entry.updatedAt = entry.createdAt;
         item.financeEntryId = financeEntryDao.insert(entry);
+    }
+
+    @NonNull
+    private static String financeNote(@NonNull GroceryItem item) {
+        return "[Grocery] " + item.name + (item.quantity.isEmpty()
+                ? "" : " • " + item.quantity);
+    }
+
+    @NonNull
+    private static String purchaseDate(@NonNull GroceryItem item) {
+        long timestamp = item.purchasedAt > 0L
+                ? item.purchasedAt : System.currentTimeMillis();
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                .format(new Date(timestamp));
     }
 
     @NonNull
