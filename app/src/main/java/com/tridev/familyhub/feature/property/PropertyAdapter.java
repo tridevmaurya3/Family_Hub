@@ -26,6 +26,8 @@ public class PropertyAdapter
         void onEdit(@NonNull PropertyWithOwner item);
 
         void onDelete(@NonNull PropertyWithOwner item);
+
+        void onOpenDocument(@NonNull PropertyWithOwner item);
     }
 
     private final List<PropertyWithOwner> properties = new ArrayList<>();
@@ -127,8 +129,13 @@ public class PropertyAdapter
             boolean hasDocument = !property.linkedDocumentTitle.isEmpty();
             binding.propertyDocument.setVisibility(
                     hasDocument ? View.VISIBLE : View.GONE);
-            if (hasDocument) binding.propertyDocument.setText(
-                    property.linkedDocumentTitle);
+            if (hasDocument) {
+                binding.propertyDocument.setText(property.linkedDocumentTitle);
+                binding.propertyDocument.setOnClickListener(
+                        view -> listener.onOpenDocument(item));
+            } else {
+                binding.propertyDocument.setOnClickListener(null);
+            }
             binding.propertySharing.setText(property.isShared
                     ? R.string.property_shared_status
                     : R.string.property_private_status);

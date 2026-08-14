@@ -263,6 +263,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void openDocument(long documentId) {
+        if (documentId <= 0L) return;
+        clearSecondaryScreens();
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.main_content,
+                        DocumentsFragment.forDocument(documentId))
+                .addToBackStack(null)
+                .commit();
+    }
+
     @Override
     protected void onStart() {
         super.onStart();

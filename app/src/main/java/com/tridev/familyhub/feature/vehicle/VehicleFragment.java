@@ -84,6 +84,14 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                     public void onDelete(@NonNull VehicleWithOwner item) {
                         confirmDelete(item);
                     }
+
+                    @Override
+                    public void onOpenDocument(@NonNull VehicleWithOwner item) {
+                        if (requireActivity() instanceof MainActivity) {
+                            ((MainActivity) requireActivity()).openDocument(
+                                    item.vehicle.linkedDocumentId);
+                        }
+                    }
                 }
         );
 

@@ -26,6 +26,8 @@ public class VehicleAdapter
         void onEdit(@NonNull VehicleWithOwner item);
 
         void onDelete(@NonNull VehicleWithOwner item);
+
+        void onOpenDocument(@NonNull VehicleWithOwner item);
     }
 
     private final List<VehicleWithOwner> vehicles = new ArrayList<>();
@@ -111,8 +113,13 @@ public class VehicleAdapter
             boolean hasDocument = !vehicle.linkedDocumentTitle.isEmpty();
             binding.vehicleDocument.setVisibility(
                     hasDocument ? View.VISIBLE : View.GONE);
-            if (hasDocument) binding.vehicleDocument.setText(
-                    vehicle.linkedDocumentTitle);
+            if (hasDocument) {
+                binding.vehicleDocument.setText(vehicle.linkedDocumentTitle);
+                binding.vehicleDocument.setOnClickListener(
+                        view -> listener.onOpenDocument(item));
+            } else {
+                binding.vehicleDocument.setOnClickListener(null);
+            }
             binding.vehicleSharing.setText(vehicle.isShared
                     ? R.string.vehicle_shared_status
                     : R.string.vehicle_private_status);

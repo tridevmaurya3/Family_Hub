@@ -26,6 +26,8 @@ public class HealthRecordAdapter
         void onEdit(@NonNull HealthRecordWithMember item);
 
         void onDelete(@NonNull HealthRecordWithMember item);
+
+        void onOpenDocument(@NonNull HealthRecordWithMember item);
     }
 
     private final List<HealthRecordWithMember> records = new ArrayList<>();
@@ -92,6 +94,10 @@ public class HealthRecordAdapter
             );
             if (hasDocument) {
                 binding.healthRecordDocument.setText(record.linkedDocumentTitle);
+                binding.healthRecordDocument.setOnClickListener(
+                        view -> listener.onOpenDocument(item));
+            } else {
+                binding.healthRecordDocument.setOnClickListener(null);
             }
             binding.healthRecordSharing.setText(record.isShared
                     ? R.string.health_shared_status

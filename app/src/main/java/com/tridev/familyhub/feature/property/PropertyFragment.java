@@ -86,6 +86,14 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                     public void onDelete(@NonNull PropertyWithOwner item) {
                         confirmDelete(item);
                     }
+
+                    @Override
+                    public void onOpenDocument(@NonNull PropertyWithOwner item) {
+                        if (requireActivity() instanceof MainActivity) {
+                            ((MainActivity) requireActivity()).openDocument(
+                                    item.property.linkedDocumentId);
+                        }
+                    }
                 }
         );
         binding.propertyRecyclerView.setLayoutManager(

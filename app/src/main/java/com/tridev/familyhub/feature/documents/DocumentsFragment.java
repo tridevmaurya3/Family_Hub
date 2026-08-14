@@ -49,6 +49,8 @@ import java.util.List;
  */
 public class DocumentsFragment extends Fragment implements AddActionHost {
 
+    private static final String ARG_OPEN_DOCUMENT_ID = "open_document_id";
+
     private enum FilterMode {
         ALL,
         EXPIRING,
@@ -76,6 +78,16 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     private androidx.appcompat.app.AlertDialog editorDialog;
     @Nullable
     private DialogDocumentEditorBinding editorBinding;
+    private long pendingOpenDocumentId;
+
+    @NonNull
+    public static DocumentsFragment forDocument(long documentId) {
+        DocumentsFragment fragment = new DocumentsFragment();
+        Bundle arguments = new Bundle();
+        arguments.putLong(ARG_OPEN_DOCUMENT_ID, documentId);
+        fragment.setArguments(arguments);
+        return fragment;
+    }
     private long editorExpiryAt;
     private boolean updatingLockSwitch;
     @Nullable
@@ -130,6 +142,9 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             @Nullable Bundle savedInstanceState
     ) {
         super.onViewCreated(view, savedInstanceState);
+
+        pendingOpenDocumentId = getArguments() == null ? 0L
+                : getArguments().getLong(ARG_OPEN_DOCUMENT_ID, 0L);
 
         repository = new DocumentRepository(requireContext());
         preferences = new DocumentVaultPreferences(requireContext());
@@ -533,6 +548,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
             loadedDocuments.clear();
             loadedDocuments.addAll(documents);
             applyFilters();
+            openPendingDocumentIfAvailable();
         };
         if (filterMode == FilterMode.TRASH) {
             repository.loadTrash(documentsCallback);
@@ -555,6 +571,16 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                     binding.textDocumentsTrash.setText(String.valueOf(trash));
                 }
         );
+    }
+
+    private void openPendingDocumentIfAvailable() {
+        if (pendingOpenDocumentId <= 0L) return;
+        for (DocumentEntry document : loadedDocuments) {
+            if (document.id != pendingOpenDocumentId) continue;
+            pendingOpenDocumentId = 0L;
+            runProtected(() -> openDocument(document));
+            return;
+        }
     }
 
     private void applyFilters() {

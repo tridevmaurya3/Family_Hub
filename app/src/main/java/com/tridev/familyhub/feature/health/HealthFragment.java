@@ -94,6 +94,14 @@ public class HealthFragment extends Fragment implements AddActionHost {
                     public void onDelete(@NonNull HealthRecordWithMember item) {
                         confirmDelete(item);
                     }
+
+                    @Override
+                    public void onOpenDocument(@NonNull HealthRecordWithMember item) {
+                        if (requireActivity() instanceof MainActivity) {
+                            ((MainActivity) requireActivity()).openDocument(
+                                    item.record.linkedDocumentId);
+                        }
+                    }
                 }
         );
 
