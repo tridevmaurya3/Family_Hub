@@ -26,19 +26,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * STEP 9 bootstrap for Family Hub Finance -> MoneyManagerPro.
+ * STEP 9/10 bootstrap for Family Hub Finance -> MoneyManagerPro.
  *
- * Design:
- * - no Family Hub Room schema migration;
- * - historical rows are baselined and are not bulk-imported automatically;
- * - new local/private or current-user shared entries are sent;
- * - remote family-member entries never enter this device owner's personal
- *   MoneyManager ledger;
- * - Grocery-linked Finance rows are excluded because STEP 8 already owns them;
- * - edits are sent as a new version with force-review, never as a silent rewrite
- *   of MoneyManager's canonical ledger;
- * - deleting a Family Hub source row never silently deletes finalized MoneyManager
- *   history.
+ * Grocery-owned rows and finalized LoanManager projections are excluded so
+ * MoneyManager never receives an echo of a transaction it already finalized.
  */
 public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -135,13 +126,9 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                     sendAndRemember(context, preferences, key, entry,
                             pendingForceReview);
                 }
-                // Historical baseline or already accepted version.
                 continue;
             }
 
-            // No previous version means this row was created after STEP 9 was
-            // initialized. A changed version is an edit and therefore requires
-            // explicit MoneyManager review before it can alter canonical history.
             boolean forceReview = !previousEvent.isEmpty();
             sendAndRemember(context, preferences, key, entry, forceReview);
         }
@@ -169,12 +156,8 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             editor.putBoolean(PREFIX_PENDING + key, false);
         } else if ("UNAVAILABLE".equals(result.status)
                 || "FAILED".equals(result.status)) {
-            // Keep exact version retryable. Deterministic event id prevents a
-            // later retry from producing duplicate MoneyManager rows.
             editor.putBoolean(PREFIX_PENDING + key, true);
         } else {
-            // Validation rejection is not hammered repeatedly; a later edit gets
-            // a new version and can be evaluated again.
             editor.putBoolean(PREFIX_PENDING + key, false);
         }
         editor.apply();
@@ -186,14 +169,19 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         if (!FinanceMoneyManagerBridge.isPostable(entry)) return false;
         if (entry == null) return false;
 
-        // Strong local exclusion for STEP 8 grocery-owned rows. cloudId covers
-        // shared grocery purchases, financeEntryId covers normal linked rows, and
-        // the internal [Grocery] marker closes the short insert/update race for a
-        // local-only purchase before GroceryItem.financeEntryId is persisted.
         if (entry.cloudId != null
                 && entry.cloudId.toLowerCase(java.util.Locale.ROOT)
                 .startsWith("grocery_")) return false;
         if (entry.note != null && entry.note.startsWith("[Grocery] ")) return false;
+
+        // STEP 10: this row is already a projection of a MoneyManager-finalized
+        // loan payment. Never send it back into MoneyManager and create a loop.
+        if (entry.note != null
+                && entry.note.startsWith("[LoanManagerProjection] ")) return false;
+        if (entry.cloudId != null
+                && entry.cloudId.toLowerCase(java.util.Locale.ROOT)
+                .startsWith("loan_projection_")) return false;
+
         return groceryDao.getByFinanceEntryId(entry.id) == null;
     }
 
@@ -203,8 +191,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         if (!entry.isShared) return true;
         if (currentUser == null) return false;
         String editorUid = safe(entry.updatedByUid);
-        // A just-created local shared row may be observed before publishShared()
-        // writes the current UID back to Room. Empty therefore means local/eligible.
         return editorUid.isEmpty() || currentUser.getUid().equals(editorUid);
     }
 
@@ -217,10 +203,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         }
     }
 
-    /**
-     * MoneyManager is the canonical ledger. Source deletion only forgets local
-     * sync bookkeeping; it never destroys finalized MoneyManager history.
-     */
     private void pruneDeletedSourceState(
             @NonNull SharedPreferences preferences,
             @NonNull Set<String> existingKeys) {
@@ -244,7 +226,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         return value == null ? "" : value.trim();
     }
 
-    // Initializer only; no public CRUD surface.
     @Nullable @Override public Cursor query(@NonNull Uri uri,
             @Nullable String[] projection, @Nullable String selection,
             @Nullable String[] selectionArgs, @Nullable String sortOrder) { return null; }
