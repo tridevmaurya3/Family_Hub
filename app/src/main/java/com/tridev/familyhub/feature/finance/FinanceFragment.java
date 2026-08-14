@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.transition.TransitionManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,7 +19,9 @@ import android.text.InputType;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
@@ -33,6 +36,7 @@ import com.tridev.familyhub.data.repository.FamilyAccountRepository;
 import com.tridev.familyhub.databinding.DialogFinanceEntryBinding;
 import com.tridev.familyhub.databinding.FragmentFinanceBinding;
 import com.tridev.familyhub.feature.finance.adapter.FinanceEntryAdapter;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -60,6 +64,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     private FinanceRepository repository;
     private FinanceSummary latestSummary = new FinanceSummary();
     @NonNull private List<FinanceEntry> latestEntries = new ArrayList<>();
+    private boolean financeHeaderCollapsed;
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
     @Nullable
@@ -88,6 +93,34 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
 
         binding.financeRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.financeRecyclerView.setAdapter(entryAdapter);
+        binding.financeOverview.setNavigationAction(
+                R.drawable.ic_arrow_back,
+                R.string.back,
+                clickedView -> {
+                    if (requireActivity() instanceof MainActivity) {
+                        ((MainActivity) requireActivity()).openHome();
+                    } else {
+                        requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                    }
+                }
+        );
+        binding.financeRecyclerView.addOnScrollListener(
+                new RecyclerView.OnScrollListener() {
+                    @Override
+                    public void onScrolled(
+                            @NonNull RecyclerView recyclerView,
+                            int dx,
+                            int dy
+                    ) {
+                        if (dy > 6 && !financeHeaderCollapsed) {
+                            setFinanceHeaderCollapsed(true);
+                        } else if (!recyclerView.canScrollVertically(-1)
+                                && financeHeaderCollapsed) {
+                            setFinanceHeaderCollapsed(false);
+                        }
+                    }
+                }
+        );
         binding.emptyAddFinanceButton.setOnClickListener(v -> showEntryEditor(null));
         binding.financeBudgetButton.setOnClickListener(v -> showBudgetEditor());
         binding.financeReportButton.setOnClickListener(v -> showMonthlyReport());
@@ -109,6 +142,34 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             }
         });
         refreshData();
+    }
+
+    /** Matches Grocery: keep search visible while the list uses the full page. */
+    private void setFinanceHeaderCollapsed(boolean collapsed) {
+        if (binding == null || financeHeaderCollapsed == collapsed) return;
+        financeHeaderCollapsed = collapsed;
+        TransitionManager.beginDelayedTransition(binding.getRoot());
+        int visibility = collapsed ? View.GONE : View.VISIBLE;
+        binding.financeOverview.setVisibility(visibility);
+        binding.monthSummaryCard.setVisibility(visibility);
+        binding.financeAccountsCard.setVisibility(visibility);
+        binding.financeSmartHealthCard.setVisibility(visibility);
+        binding.financeInsightsActions.setVisibility(visibility);
+        binding.financeAnalyticsCard.setVisibility(visibility);
+
+        ConstraintSet constraints = new ConstraintSet();
+        constraints.clone(binding.getRoot());
+        constraints.clear(R.id.finance_search_layout, ConstraintSet.TOP);
+        constraints.connect(
+                R.id.finance_search_layout,
+                ConstraintSet.TOP,
+                collapsed ? ConstraintSet.PARENT_ID : R.id.finance_analytics_card,
+                collapsed ? ConstraintSet.TOP : ConstraintSet.BOTTOM,
+                getResources().getDimensionPixelSize(
+                        collapsed ? R.dimen.space_4 : R.dimen.space_16
+                )
+        );
+        constraints.applyTo(binding.getRoot());
     }
 
     @Override

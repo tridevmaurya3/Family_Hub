@@ -29,6 +29,7 @@ import com.tridev.familyhub.data.repository.HealthRepository;
 import com.tridev.familyhub.databinding.DialogHealthRecordBinding;
 import com.tridev.familyhub.databinding.FragmentHealthBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -100,6 +101,13 @@ public class HealthFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.healthRecyclerView.setAdapter(adapter);
+        binding.healthBackButton.setOnClickListener(clickedView -> {
+            if (requireActivity() instanceof MainActivity) {
+                ((MainActivity) requireActivity()).openHome();
+            } else {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
         binding.emptyAddHealthButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );

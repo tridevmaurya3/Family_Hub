@@ -17,6 +17,16 @@
         android:paddingEnd="@dimen/screen_padding_horizontal"
         android:paddingBottom="72dp">
 
+        <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
+            android:id="@+id/settings_overview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:overviewAccentColor="@color/fh_primary"
+            app:overviewContainerColor="@color/fh_primary_container"
+            app:overviewDetail="@string/more_profile_detail"
+            app:overviewIcon="@drawable/ic_profile_person"
+            app:overviewTitle="@string/more_profile_title" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_vehicle"
             style="@style/Widget.FamilyHub.Card.Flat"

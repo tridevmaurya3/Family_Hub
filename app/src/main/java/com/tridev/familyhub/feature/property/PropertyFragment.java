@@ -24,6 +24,7 @@ import com.tridev.familyhub.data.repository.PropertyRepository;
 import com.tridev.familyhub.databinding.DialogPropertyBinding;
 import com.tridev.familyhub.databinding.FragmentPropertyBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.SimpleDateFormat;
 import java.text.NumberFormat;
@@ -91,6 +92,13 @@ public class PropertyFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.propertyRecyclerView.setAdapter(adapter);
+        binding.propertyBackButton.setOnClickListener(clickedView -> {
+            if (requireActivity() instanceof MainActivity) {
+                ((MainActivity) requireActivity()).openHome();
+            } else {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
         binding.emptyAddPropertyButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );

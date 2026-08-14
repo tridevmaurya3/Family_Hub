@@ -24,6 +24,7 @@ import com.tridev.familyhub.data.repository.VehicleRepository;
 import com.tridev.familyhub.databinding.DialogVehicleBinding;
 import com.tridev.familyhub.databinding.FragmentVehicleBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -90,6 +91,13 @@ public class VehicleFragment extends Fragment implements AddActionHost {
                 new LinearLayoutManager(requireContext())
         );
         binding.vehicleRecyclerView.setAdapter(adapter);
+        binding.vehicleBackButton.setOnClickListener(clickedView -> {
+            if (requireActivity() instanceof MainActivity) {
+                ((MainActivity) requireActivity()).openHome();
+            } else {
+                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
         binding.emptyAddVehicleButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );

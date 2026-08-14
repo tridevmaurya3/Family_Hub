@@ -169,7 +169,7 @@ public class MoreFragment extends Fragment {
         profile.setCornerRadius(dp(16));
         profile.setOnClickListener(v -> startActivity(new Intent(
                 requireContext(), ProfileSettingsActivity.class)));
-        content.addView(profile, 0);
+        content.addView(profile, Math.min(1, content.getChildCount()));
     }
 
     private void styleSettingsCards() {

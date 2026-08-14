@@ -62,6 +62,7 @@ public class HelpActivity extends AppCompatActivity {
     private View buildScreen() {
         NestedScrollView scroll = new NestedScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setFitsSystemWindows(true);
         scroll.setBackgroundResource(R.drawable.bg_page_three_tone);
 
         LinearLayout root = vertical();
