@@ -45,6 +45,12 @@
             android:initOrder="40" />
 
         <provider
+            android:name=".feature.finance.FinanceMoneyManagerSyncInitializer"
+            android:authorities="${applicationId}.finance_money_manager_sync"
+            android:exported="false"
+            android:initOrder="39" />
+
+        <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.backupfiles"
             android:exported="false"
