@@ -18,6 +18,7 @@ import com.tridev.familyhub.data.local.entity.PlannerItem;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -57,6 +58,7 @@ public class PlannerRepository {
 
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
+        retryPendingSharedPlannerItems();
         subscriber = new FamilyCollaborationSubscriber("planner",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
@@ -75,6 +77,21 @@ public class PlannerRepository {
                     }
                 });
         subscriber.start();
+    }
+
+    /** Retries local-first Planner shares saved while Firebase was unavailable. */
+    private void retryPendingSharedPlannerItems() {
+        DATABASE_EXECUTOR.execute(() -> {
+            for (PlannerItem pending : plannerItemDao.getPendingShared()) {
+                if (pending.isShared && pending.familyId.isEmpty()) {
+                    if (pending.cloudId.isEmpty()) {
+                        pending.cloudId = UUID.randomUUID().toString();
+                        plannerItemDao.update(pending);
+                    }
+                    publish(pending);
+                }
+            }
+        });
     }
 
     public void stopRealtimeSync() {
@@ -145,6 +162,10 @@ public class PlannerRepository {
                 plannerItemDao.update(item);
             }
             if (item.isShared) {
+                if (item.cloudId.isEmpty()) {
+                    item.cloudId = UUID.randomUUID().toString();
+                    plannerItemDao.update(item);
+                }
                 publish(item);
             } else {
                 String previousFamilyId = item.familyId;
