@@ -55,6 +55,17 @@ public class MoreFragment extends Fragment {
         hideModuleCards();
         addProfileEntry();
         styleSettingsCards();
+        binding.settingsOverview.setNavigationAction(
+                R.drawable.ic_menu_hamburger,
+                R.string.feature_menu_title,
+                clickedView -> {
+                    if (requireActivity()
+                            instanceof com.tridev.familyhub.feature.main.MainActivity) {
+                        ((com.tridev.familyhub.feature.main.MainActivity)
+                                requireActivity()).showFeatureMenu();
+                    }
+                }
+        );
 
         boolean darkThemeEnabled =
                 (getResources().getConfiguration().uiMode

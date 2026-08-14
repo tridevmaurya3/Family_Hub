@@ -2,6 +2,7 @@ package com.tridev.familyhub.core.ui.cards;
 
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Color;
@@ -9,6 +10,7 @@ import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.view.View;
 
@@ -21,6 +23,7 @@ import androidx.fragment.app.FragmentActivity;
 import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
 /**
  * Reusable compact overview surface used at the top of Family Hub modules.
@@ -32,6 +35,8 @@ public final class ModuleOverviewView extends FrameLayout {
     private ImageView iconView;
     private TextView titleView;
     private TextView detailView;
+    private ImageButton notificationButton;
+    private ImageButton profileButton;
 
     public ModuleOverviewView(@NonNull Context context) {
         this(context, null);
@@ -69,6 +74,11 @@ public final class ModuleOverviewView extends FrameLayout {
         iconView = findViewById(R.id.module_overview_icon);
         titleView = findViewById(R.id.module_overview_title);
         detailView = findViewById(R.id.module_overview_detail);
+        notificationButton = findViewById(
+                R.id.module_overview_notification
+        );
+        profileButton = findViewById(R.id.module_overview_profile);
+        enableDashboardActions();
 
         int defaultAccent = ContextCompat.getColor(context, R.color.fh_primary);
         int defaultContainer = ContextCompat.getColor(
@@ -127,6 +137,25 @@ public final class ModuleOverviewView extends FrameLayout {
                 ((MainActivity) activity).openHome();
             } else if (activity != null) {
                 activity.getOnBackPressedDispatcher().onBackPressed();
+            }
+        });
+    }
+
+    /** Provides the same notification and profile actions as Dashboard. */
+    private void enableDashboardActions() {
+        notificationButton.setOnClickListener(view -> {
+            FragmentActivity activity = findActivity(getContext());
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).openTab(R.id.nav_reminders);
+            }
+        });
+        profileButton.setOnClickListener(view -> {
+            FragmentActivity activity = findActivity(getContext());
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).openProfile();
+            } else {
+                getContext().startActivity(new Intent(
+                        getContext(), ProfileSettingsActivity.class));
             }
         });
     }
