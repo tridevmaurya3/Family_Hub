@@ -19,6 +19,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <queries>
+        <package android:name="com.example.moneymanagerpro" />
+    </queries>
+
     <application
         android:name=".core.FamilyHubApplication"
         android:allowBackup="false"
@@ -33,6 +37,12 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
+
+        <provider
+            android:name=".feature.grocery.GroceryMoneyManagerSyncInitializer"
+            android:authorities="${applicationId}.grocery_money_manager_sync"
+            android:exported="false"
+            android:initOrder="40" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
