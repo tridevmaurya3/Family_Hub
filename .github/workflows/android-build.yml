@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - main
   workflow_dispatch:
   issues:
     types:
@@ -108,7 +109,7 @@ jobs:
                 ? '✅ **Android build verification passed**'
                 : '❌ **Android build verification failed**',
               '',
-              '`testDebugUnitTest` and `assembleDebug` were run on `master` with Java 17.',
+              '`testDebugUnitTest` and `assembleDebug` were run on the checked-out branch with Java 17.',
               '',
               '<details><summary>Final Gradle output</summary>',
               '',
