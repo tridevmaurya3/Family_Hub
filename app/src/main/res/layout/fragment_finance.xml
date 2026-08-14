@@ -310,6 +310,70 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <HorizontalScrollView
+        android:id="@+id/finance_filter_scroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_6"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/finance_search_layout">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/finance_filter_group"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:chipSpacingHorizontal="@dimen/space_6"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/finance_filter_all"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="@string/finance_filter_all" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/finance_filter_today"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/finance_filter_today" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/finance_filter_week"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/finance_filter_week" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/finance_filter_month"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/finance_filter_month" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/finance_filter_income"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/finance_income" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/finance_filter_expense"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/finance_expense" />
+
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/finance_analytics_card"
         style="@style/Widget.FamilyHub.Card.Flat"
@@ -341,7 +405,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_search_layout" />
+        app:layout_constraintTop_toBottomOf="@id/finance_filter_scroll" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/finance_empty_state"
@@ -353,7 +417,7 @@
         app:cardBackgroundColor="@color/fh_module_finance_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_search_layout"
+        app:layout_constraintTop_toBottomOf="@id/finance_filter_scroll"
         app:strokeColor="@color/fh_module_finance">
 
         <LinearLayout

@@ -64,6 +64,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     private FinanceRepository repository;
     private FinanceSummary latestSummary = new FinanceSummary();
     @NonNull private List<FinanceEntry> latestEntries = new ArrayList<>();
+    private int selectedFinanceFilter = R.id.finance_filter_all;
     private boolean financeHeaderCollapsed;
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
@@ -138,6 +139,11 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             public void afterTextChanged(Editable searchText) {
                 loadEntries(searchText.toString());
             }
+        });
+        binding.financeFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            selectedFinanceFilter = checkedIds.isEmpty()
+                    ? R.id.finance_filter_all : checkedIds.get(0);
+            applyFinanceFilters();
         });
         refreshData();
     }
@@ -237,16 +243,60 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             if (binding == null) {
                 return;
             }
-            entryAdapter.submitList(entries);
             if (query.trim().isEmpty()) {
                 latestEntries = new ArrayList<>(entries);
                 updateSmartInsights();
                 updateAnalytics();
             }
-            boolean isEmpty = entries.isEmpty();
-            binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-            binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+            applyFinanceFilters(entries);
         });
+    }
+
+    private void applyFinanceFilters() {
+        String query = binding.financeSearchInput.getText().toString().trim();
+        if (!query.isEmpty()) {
+            loadEntries(query);
+            return;
+        }
+        applyFinanceFilters(latestEntries);
+    }
+
+    private void applyFinanceFilters(@NonNull List<FinanceEntry> source) {
+        List<FinanceEntry> filtered = new ArrayList<>();
+        Calendar start = Calendar.getInstance();
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+        if (selectedFinanceFilter == R.id.finance_filter_week) {
+            start.set(Calendar.DAY_OF_WEEK, start.getFirstDayOfWeek());
+        } else if (selectedFinanceFilter == R.id.finance_filter_month) {
+            start.set(Calendar.DAY_OF_MONTH, 1);
+        }
+        String startDate = new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US)
+                .format(start.getTime());
+        String today = todayAsIsoDate();
+        for (FinanceEntry entry : source) {
+            boolean include;
+            if (selectedFinanceFilter == R.id.finance_filter_today) {
+                include = today.equals(entry.transactionDate);
+            } else if (selectedFinanceFilter == R.id.finance_filter_week
+                    || selectedFinanceFilter == R.id.finance_filter_month) {
+                include = entry.transactionDate.compareTo(startDate) >= 0
+                        && entry.transactionDate.compareTo(today) <= 0;
+            } else if (selectedFinanceFilter == R.id.finance_filter_income) {
+                include = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
+            } else if (selectedFinanceFilter == R.id.finance_filter_expense) {
+                include = FinanceEntry.TYPE_EXPENSE.equals(entry.entryType);
+            } else {
+                include = true;
+            }
+            if (include) filtered.add(entry);
+        }
+        entryAdapter.submitList(filtered);
+        boolean isEmpty = filtered.isEmpty();
+        binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
     }
 
     private void loadSummary() {
