@@ -1,0 +1,258 @@
+package com.tridev.familyhub.feature.finance;
+
+import android.content.ContentProvider;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.room.InvalidationTracker;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.tridev.familyhub.data.local.FamilyHubDatabase;
+import com.tridev.familyhub.data.local.dao.GroceryItemDao;
+import com.tridev.familyhub.data.local.entity.FinanceEntry;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * STEP 9 bootstrap for Family Hub Finance -> MoneyManagerPro.
+ *
+ * Design:
+ * - no Family Hub Room schema migration;
+ * - historical rows are baselined and are not bulk-imported automatically;
+ * - new local/private or current-user shared entries are sent;
+ * - remote family-member entries never enter this device owner's personal
+ *   MoneyManager ledger;
+ * - Grocery-linked Finance rows are excluded because STEP 8 already owns them;
+ * - edits are sent as a new version with force-review, never as a silent rewrite
+ *   of MoneyManager's canonical ledger;
+ * - deleting a Family Hub source row never silently deletes finalized MoneyManager
+ *   history.
+ */
+public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
+
+    private static final String PREFS = "finance_money_manager_sync_v1";
+    private static final String KEY_INITIALIZED = "initialized";
+    private static final String PREFIX_EVENT = "event_";
+    private static final String PREFIX_SOURCE = "source_";
+    private static final String PREFIX_PENDING = "pending_";
+    private static final String PREFIX_FORCE_REVIEW = "force_review_";
+
+    private static final ExecutorService EXECUTOR =
+            Executors.newSingleThreadExecutor();
+
+    private final AtomicBoolean scanQueued = new AtomicBoolean(false);
+    @Nullable private Context appContext;
+    @Nullable private InvalidationTracker.Observer observer;
+
+    @Override
+    public boolean onCreate() {
+        Context context = getContext();
+        if (context == null) return false;
+        appContext = context.getApplicationContext();
+
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(appContext);
+        observer = new InvalidationTracker.Observer("finance_entries") {
+            @Override
+            public void onInvalidated(@NonNull Set<String> tables) {
+                scheduleScan();
+            }
+        };
+        database.getInvalidationTracker().addObserver(observer);
+        scheduleScan();
+        return true;
+    }
+
+    private void scheduleScan() {
+        Context context = appContext;
+        if (context == null || !scanQueued.compareAndSet(false, true)) return;
+        EXECUTOR.execute(() -> {
+            try {
+                scan(context);
+            } finally {
+                scanQueued.set(false);
+            }
+        });
+    }
+
+    private void scan(@NonNull Context context) {
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
+        List<FinanceEntry> entries = database.financeEntryDao().getAll();
+        GroceryItemDao groceryDao = database.groceryItemDao();
+        SharedPreferences preferences = context.getSharedPreferences(
+                PREFS, Context.MODE_PRIVATE);
+
+        if (!preferences.getBoolean(KEY_INITIALIZED, false)) {
+            SharedPreferences.Editor baseline = preferences.edit();
+            for (FinanceEntry entry : entries) {
+                if (!eligibleStructure(entry, groceryDao)) continue;
+                String key = FinanceMoneyManagerBridge.stableEntryKey(entry);
+                baseline.putString(PREFIX_EVENT + key,
+                        FinanceMoneyManagerBridge.eventIdFor(entry));
+                baseline.putString(PREFIX_SOURCE + key,
+                        FinanceMoneyManagerBridge.sourceRecordIdFor(entry));
+                baseline.putBoolean(PREFIX_PENDING + key, false);
+                baseline.putBoolean(PREFIX_FORCE_REVIEW + key, false);
+            }
+            baseline.putBoolean(KEY_INITIALIZED, true).apply();
+            return;
+        }
+
+        FirebaseUser currentUser = currentUser();
+        Set<String> existingKeys = new HashSet<>();
+
+        for (FinanceEntry entry : entries) {
+            if (entry == null || entry.id <= 0L) continue;
+            String key = FinanceMoneyManagerBridge.stableEntryKey(entry);
+            existingKeys.add(key);
+
+            if (!eligibleStructure(entry, groceryDao)
+                    || !belongsToThisDeviceUser(entry, currentUser)) {
+                continue;
+            }
+
+            String currentEvent = FinanceMoneyManagerBridge.eventIdFor(entry);
+            String currentSource = FinanceMoneyManagerBridge.sourceRecordIdFor(entry);
+            String previousEvent = safe(preferences.getString(
+                    PREFIX_EVENT + key, ""));
+            boolean pending = preferences.getBoolean(PREFIX_PENDING + key, false);
+            boolean pendingForceReview = preferences.getBoolean(
+                    PREFIX_FORCE_REVIEW + key, false);
+
+            if (!previousEvent.isEmpty() && currentEvent.equals(previousEvent)) {
+                if (pending) {
+                    sendAndRemember(context, preferences, key, entry,
+                            pendingForceReview);
+                }
+                // Historical baseline or already accepted version.
+                continue;
+            }
+
+            // No previous version means this row was created after STEP 9 was
+            // initialized. A changed version is an edit and therefore requires
+            // explicit MoneyManager review before it can alter canonical history.
+            boolean forceReview = !previousEvent.isEmpty();
+            sendAndRemember(context, preferences, key, entry, forceReview);
+        }
+
+        pruneDeletedSourceState(preferences, existingKeys);
+    }
+
+    private void sendAndRemember(
+            @NonNull Context context,
+            @NonNull SharedPreferences preferences,
+            @NonNull String key,
+            @NonNull FinanceEntry entry,
+            boolean forceReview) {
+        FinanceMoneyManagerBridge.Result result =
+                FinanceMoneyManagerBridge.send(context, entry, forceReview);
+
+        String currentEvent = FinanceMoneyManagerBridge.eventIdFor(entry);
+        String currentSource = FinanceMoneyManagerBridge.sourceRecordIdFor(entry);
+        SharedPreferences.Editor editor = preferences.edit()
+                .putString(PREFIX_EVENT + key, currentEvent)
+                .putString(PREFIX_SOURCE + key, currentSource)
+                .putBoolean(PREFIX_FORCE_REVIEW + key, forceReview);
+
+        if (result.accepted) {
+            editor.putBoolean(PREFIX_PENDING + key, false);
+        } else if ("UNAVAILABLE".equals(result.status)
+                || "FAILED".equals(result.status)) {
+            // Keep exact version retryable. Deterministic event id prevents a
+            // later retry from producing duplicate MoneyManager rows.
+            editor.putBoolean(PREFIX_PENDING + key, true);
+        } else {
+            // Validation rejection is not hammered repeatedly; a later edit gets
+            // a new version and can be evaluated again.
+            editor.putBoolean(PREFIX_PENDING + key, false);
+        }
+        editor.apply();
+    }
+
+    private boolean eligibleStructure(
+            @Nullable FinanceEntry entry,
+            @NonNull GroceryItemDao groceryDao) {
+        if (!FinanceMoneyManagerBridge.isPostable(entry)) return false;
+        if (entry == null) return false;
+
+        // Strong local exclusion for STEP 8 grocery-owned rows. cloudId covers
+        // shared grocery purchases, financeEntryId covers normal linked rows, and
+        // the internal [Grocery] marker closes the short insert/update race for a
+        // local-only purchase before GroceryItem.financeEntryId is persisted.
+        if (entry.cloudId != null
+                && entry.cloudId.toLowerCase(java.util.Locale.ROOT)
+                .startsWith("grocery_")) return false;
+        if (entry.note != null && entry.note.startsWith("[Grocery] ")) return false;
+        return groceryDao.getByFinanceEntryId(entry.id) == null;
+    }
+
+    private boolean belongsToThisDeviceUser(
+            @NonNull FinanceEntry entry,
+            @Nullable FirebaseUser currentUser) {
+        if (!entry.isShared) return true;
+        if (currentUser == null) return false;
+        String editorUid = safe(entry.updatedByUid);
+        // A just-created local shared row may be observed before publishShared()
+        // writes the current UID back to Room. Empty therefore means local/eligible.
+        return editorUid.isEmpty() || currentUser.getUid().equals(editorUid);
+    }
+
+    @Nullable
+    private FirebaseUser currentUser() {
+        try {
+            return FirebaseAuth.getInstance().getCurrentUser();
+        } catch (RuntimeException unavailable) {
+            return null;
+        }
+    }
+
+    /**
+     * MoneyManager is the canonical ledger. Source deletion only forgets local
+     * sync bookkeeping; it never destroys finalized MoneyManager history.
+     */
+    private void pruneDeletedSourceState(
+            @NonNull SharedPreferences preferences,
+            @NonNull Set<String> existingKeys) {
+        Map<String, ?> all = preferences.getAll();
+        SharedPreferences.Editor editor = null;
+        for (String prefKey : all.keySet()) {
+            if (!prefKey.startsWith(PREFIX_EVENT)) continue;
+            String key = prefKey.substring(PREFIX_EVENT.length());
+            if (existingKeys.contains(key)) continue;
+            if (editor == null) editor = preferences.edit();
+            editor.remove(PREFIX_EVENT + key)
+                    .remove(PREFIX_SOURCE + key)
+                    .remove(PREFIX_PENDING + key)
+                    .remove(PREFIX_FORCE_REVIEW + key);
+        }
+        if (editor != null) editor.apply();
+    }
+
+    @NonNull
+    private static String safe(@Nullable String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    // Initializer only; no public CRUD surface.
+    @Nullable @Override public Cursor query(@NonNull Uri uri,
+            @Nullable String[] projection, @Nullable String selection,
+            @Nullable String[] selectionArgs, @Nullable String sortOrder) { return null; }
+    @Nullable @Override public String getType(@NonNull Uri uri) { return null; }
+    @Nullable @Override public Uri insert(@NonNull Uri uri,
+            @Nullable ContentValues values) { return null; }
+    @Override public int delete(@NonNull Uri uri, @Nullable String selection,
+            @Nullable String[] selectionArgs) { return 0; }
+    @Override public int update(@NonNull Uri uri, @Nullable ContentValues values,
+            @Nullable String selection, @Nullable String[] selectionArgs) { return 0; }
+}
