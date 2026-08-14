@@ -20,6 +20,9 @@ public interface PlannerItemDao {
     @Query("SELECT * FROM planner_items WHERE cloudId = :cloudId LIMIT 1")
     PlannerItem getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM planner_items WHERE isShared = 1 AND familyId = ''")
+    List<PlannerItem> getPendingShared();
+
     @Query("SELECT * FROM planner_items WHERE isReminderEnabled = 1 "
             + "AND isCompleted = 0")
     List<PlannerItem> getReminderEnabled();
