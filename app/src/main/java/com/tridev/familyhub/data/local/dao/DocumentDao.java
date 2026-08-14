@@ -43,6 +43,12 @@ public interface DocumentDao {
     @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
     DocumentEntry getById(long documentId);
 
+    @Query("SELECT * FROM documents WHERE deletedAt = 0 "
+            + "AND linkedModule != 'DOCUMENT_VERSION' "
+            + "AND title = :title COLLATE NOCASE "
+            + "ORDER BY updatedAt DESC, id DESC LIMIT 1")
+    DocumentEntry getActiveByTitle(@NonNull String title);
+
     @Query("SELECT COUNT(*) FROM documents WHERE deletedAt = 0 AND linkedModule != 'DOCUMENT_VERSION'")
     int count();
 

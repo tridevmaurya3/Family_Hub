@@ -114,12 +114,16 @@ public class VehicleRepository {
     ) {
         for (VehicleWithOwner item : vehicles) {
             Vehicle vehicle = item.vehicle;
-            if (vehicle.linkedDocumentId <= 0L) continue;
-            DocumentEntry document = documentDao.getById(vehicle.linkedDocumentId);
+            if (vehicle.linkedDocumentId <= 0L
+                    && vehicle.linkedDocumentTitle.isEmpty()) continue;
+            DocumentEntry document = vehicle.linkedDocumentId > 0L
+                    ? documentDao.getById(vehicle.linkedDocumentId)
+                    : documentDao.getActiveByTitle(vehicle.linkedDocumentTitle);
+            if (vehicle.linkedDocumentId <= 0L && document == null) continue;
             String currentTitle = document == null || document.deletedAt > 0L
                     ? "" : document.title;
             long currentId = currentTitle.isEmpty()
-                    ? 0L : vehicle.linkedDocumentId;
+                    ? 0L : document.id;
             if (vehicle.linkedDocumentId == currentId
                     && vehicle.linkedDocumentTitle.equals(currentTitle)) {
                 continue;

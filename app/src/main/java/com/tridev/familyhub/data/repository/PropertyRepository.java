@@ -108,12 +108,16 @@ public class PropertyRepository {
     ) {
         for (PropertyWithOwner item : properties) {
             PropertyEntry property = item.property;
-            if (property.linkedDocumentId <= 0L) continue;
-            DocumentEntry document = documentDao.getById(property.linkedDocumentId);
+            if (property.linkedDocumentId <= 0L
+                    && property.linkedDocumentTitle.isEmpty()) continue;
+            DocumentEntry document = property.linkedDocumentId > 0L
+                    ? documentDao.getById(property.linkedDocumentId)
+                    : documentDao.getActiveByTitle(property.linkedDocumentTitle);
+            if (property.linkedDocumentId <= 0L && document == null) continue;
             String currentTitle = document == null || document.deletedAt > 0L
                     ? "" : document.title;
             long currentId = currentTitle.isEmpty()
-                    ? 0L : property.linkedDocumentId;
+                    ? 0L : document.id;
             if (property.linkedDocumentId == currentId
                     && property.linkedDocumentTitle.equals(currentTitle)) {
                 continue;

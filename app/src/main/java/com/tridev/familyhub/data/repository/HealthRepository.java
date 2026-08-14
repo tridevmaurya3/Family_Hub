@@ -125,12 +125,16 @@ public class HealthRepository {
     ) {
         for (HealthRecordWithMember item : records) {
             HealthRecord record = item.record;
-            if (record.linkedDocumentId <= 0L) continue;
-            DocumentEntry document = documentDao.getById(record.linkedDocumentId);
+            if (record.linkedDocumentId <= 0L
+                    && record.linkedDocumentTitle.isEmpty()) continue;
+            DocumentEntry document = record.linkedDocumentId > 0L
+                    ? documentDao.getById(record.linkedDocumentId)
+                    : documentDao.getActiveByTitle(record.linkedDocumentTitle);
+            if (record.linkedDocumentId <= 0L && document == null) continue;
             String currentTitle = document == null || document.deletedAt > 0L
                     ? "" : document.title;
             long currentId = currentTitle.isEmpty()
-                    ? 0L : record.linkedDocumentId;
+                    ? 0L : document.id;
             if (record.linkedDocumentId == currentId
                     && record.linkedDocumentTitle.equals(currentTitle)) {
                 continue;
