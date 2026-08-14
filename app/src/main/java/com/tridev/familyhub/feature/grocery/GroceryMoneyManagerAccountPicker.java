@@ -12,21 +12,21 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Small optional checkpoint shown immediately before a grocery item is marked
- * purchased. It lets the user choose the exact existing MoneyManager Bank/Credit
- * Card for THIS purchase only.
+ * Optional checkpoint shown immediately after a grocery purchase is completed.
+ * It lets the user choose the exact existing MoneyManager Bank/Credit Card for
+ * THIS purchase only.
  *
  * If MoneyManager is absent, not trusted, or has no active accounts, purchase
- * completion continues normally and MoneyManager mapping can be reviewed later.
+ * completion remains untouched and the bridge simply retries later.
  */
 public final class GroceryMoneyManagerAccountPicker {
 
     private GroceryMoneyManagerAccountPicker() { }
 
-    public static void chooseForNextPurchase(
+    public static void chooseForCompletedPurchase(
             @NonNull Activity activity,
             @NonNull GroceryItem item,
-            @NonNull Runnable continuePurchase) {
+            @NonNull Runnable continueSync) {
         new Thread(() -> {
             GroceryMoneyManagerBridge.AccountCatalog catalog =
                     GroceryMoneyManagerBridge.loadAccountCatalog(activity);
@@ -35,10 +35,10 @@ public final class GroceryMoneyManagerAccountPicker {
                 if (!catalog.available || catalog.choices.isEmpty()) {
                     GroceryMoneyManagerBridge.rememberNextPurchaseAccount(
                             activity, item, null);
-                    continuePurchase.run();
+                    continueSync.run();
                     return;
                 }
-                showPicker(activity, item, catalog.choices, continuePurchase);
+                showPicker(activity, item, catalog.choices, continueSync);
             });
         }, "GroceryMoneyAccountCatalog").start();
     }
@@ -47,7 +47,7 @@ public final class GroceryMoneyManagerAccountPicker {
             @NonNull Activity activity,
             @NonNull GroceryItem item,
             @NonNull List<GroceryMoneyManagerBridge.AccountChoice> choices,
-            @NonNull Runnable continuePurchase) {
+            @NonNull Runnable continueSync) {
         List<String> labels = new ArrayList<>();
         for (GroceryMoneyManagerBridge.AccountChoice choice : choices) {
             labels.add(choice.label);
@@ -55,9 +55,15 @@ public final class GroceryMoneyManagerAccountPicker {
         labels.add("Choose later in MoneyManager");
         AtomicBoolean continued = new AtomicBoolean(false);
 
+        Runnable reviewLater = () -> {
+            GroceryMoneyManagerBridge.rememberNextPurchaseAccount(
+                    activity, item, null);
+            if (continued.compareAndSet(false, true)) continueSync.run();
+        };
+
         new MaterialAlertDialogBuilder(activity)
                 .setTitle("Paid from")
-                .setMessage("Select the MoneyManager bank or credit card used for this purchase.")
+                .setMessage("Select the MoneyManager bank or credit card used for this grocery purchase.")
                 .setItems(labels.toArray(new String[0]), (dialog, which) -> {
                     String ref = which >= 0 && which < choices.size()
                             ? choices.get(which).canonicalRef
@@ -65,15 +71,11 @@ public final class GroceryMoneyManagerAccountPicker {
                     GroceryMoneyManagerBridge.rememberNextPurchaseAccount(
                             activity, item, ref);
                     if (continued.compareAndSet(false, true)) {
-                        continuePurchase.run();
+                        continueSync.run();
                     }
                 })
-                .setNegativeButton("Cancel purchase", (dialog, which) -> {
-                    // Intentionally do not continue. The grocery item stays pending.
-                })
-                .setOnCancelListener(dialog -> {
-                    // Back/outside tap cancels this purchase completion checkpoint.
-                })
+                .setNegativeButton("Choose later", (dialog, which) -> reviewLater.run())
+                .setOnCancelListener(dialog -> reviewLater.run())
                 .show();
     }
 }
