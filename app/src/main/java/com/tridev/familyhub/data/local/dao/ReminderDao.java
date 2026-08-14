@@ -33,6 +33,9 @@ public interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE cloudId = :cloudId LIMIT 1")
     Reminder getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM reminders WHERE isShared = 1 AND familyId = ''")
+    List<Reminder> getPendingShared();
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(Reminder reminder);
 
