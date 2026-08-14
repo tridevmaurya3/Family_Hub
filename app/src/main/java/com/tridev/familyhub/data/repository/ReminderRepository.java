@@ -11,6 +11,8 @@ import com.google.firebase.database.DataSnapshot;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.ReminderDao;
+import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.Reminder;
 
 import java.util.List;
@@ -38,11 +40,14 @@ public class ReminderRepository {
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private final ReminderDao reminderDao;
+    private final FamilyMemberDao familyMemberDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public ReminderRepository(Context context) {
-        reminderDao = FamilyHubDatabase.getInstance(context).reminderDao();
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
+        reminderDao = database.reminderDao();
+        familyMemberDao = database.familyMemberDao();
     }
 
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
@@ -149,8 +154,9 @@ public class ReminderRepository {
             reminder.reminderAt=number(s,"reminderAt");
             reminder.repeatType=fallback(text(s,"repeatType"), Reminder.REPEAT_ONCE);
             reminder.isEnabled=bool(s,"enabled");
-            reminder.assignedMemberId=parseLong(text(s,"assignedMemberId"));
             reminder.assignedMemberName=text(s,"assignedMemberName");
+            reminder.assignedMemberId=resolveLocalMemberId(
+                    reminder.assignedMemberName);
             reminder.collaborationStatus=fallback(text(s,"collaborationStatus"),"PENDING");
             reminder.isShared=true; reminder.createdAt=number(s,"createdAt");
             if(reminder.createdAt==0L) reminder.createdAt=updatedAt;
@@ -166,6 +172,12 @@ public class ReminderRepository {
     private static boolean bool(DataSnapshot s,String key){Boolean v=s.child(key).getValue(Boolean.class);return v!=null&&v;}
     private static long parseLong(String v){try{return Long.parseLong(v);}catch(NumberFormatException e){return 0L;}}
     @NonNull private static String fallback(String v,String fallback){return v.isEmpty()?fallback:v;}
+
+    private long resolveLocalMemberId(@NonNull String memberName) {
+        if (memberName.trim().isEmpty()) return 0L;
+        FamilyMember local = familyMemberDao.getByName(memberName.trim());
+        return local == null ? 0L : local.id;
+    }
 
     public void delete(Reminder reminder, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {

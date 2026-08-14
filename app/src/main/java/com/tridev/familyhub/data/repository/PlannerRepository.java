@@ -11,6 +11,8 @@ import com.google.firebase.database.DataSnapshot;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.dao.PlannerItemDao;
+import com.tridev.familyhub.data.local.dao.FamilyMemberDao;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.PlannerItem;
 
 import java.util.List;
@@ -43,13 +45,14 @@ public class PlannerRepository {
             Executors.newSingleThreadExecutor();
 
     private final PlannerItemDao plannerItemDao;
+    private final FamilyMemberDao familyMemberDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public PlannerRepository(@NonNull Context context) {
-        plannerItemDao = FamilyHubDatabase
-                .getInstance(context)
-                .plannerItemDao();
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
+        plannerItemDao = database.plannerItemDao();
+        familyMemberDao = database.familyMemberDao();
     }
 
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
@@ -202,9 +205,9 @@ public class PlannerRepository {
             item.priority = fallback(text(s, "priority"), PlannerItem.PRIORITY_NORMAL);
             item.startAt = number(s, "startAt"); item.endAt = number(s, "endAt");
             item.isAllDay = bool(s, "allDay");
-            long memberId = parseLong(text(s, "assignedMemberId"));
-            item.assignedMemberId = memberId == 0L ? null : memberId;
             item.assignedMemberName = text(s, "assignedMemberName");
+            item.assignedMemberId = resolveLocalMemberId(
+                    item.assignedMemberName);
             item.collaborationStatus = fallback(text(s, "collaborationStatus"), "PENDING");
             item.repeatType = fallback(text(s, "repeatType"), PlannerItem.REPEAT_NONE);
             item.isCompleted = bool(s, "completed");
@@ -224,6 +227,13 @@ public class PlannerRepository {
     private static boolean bool(DataSnapshot s,String key){Boolean v=s.child(key).getValue(Boolean.class);return v!=null&&v;}
     private static long parseLong(String v){try{return Long.parseLong(v);}catch(NumberFormatException e){return 0L;}}
     @NonNull private static String fallback(String v,String fallback){return v.isEmpty()?fallback:v;}
+
+    @Nullable
+    private Long resolveLocalMemberId(@NonNull String memberName) {
+        if (memberName.trim().isEmpty()) return null;
+        FamilyMember local = familyMemberDao.getByName(memberName.trim());
+        return local == null ? null : local.id;
+    }
 
     public void setCompleted(
             @NonNull PlannerItem item,
