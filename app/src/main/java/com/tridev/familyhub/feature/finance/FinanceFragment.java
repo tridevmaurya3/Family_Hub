@@ -112,12 +112,24 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         binding.financeRecyclerView.addOnScrollListener(
                 new RecyclerView.OnScrollListener() {
                     @Override
+                    public void onScrollStateChanged(
+                            @NonNull RecyclerView recyclerView,
+                            int newState
+                    ) {
+                        if (newState == RecyclerView.SCROLL_STATE_DRAGGING
+                                && recyclerView.canScrollVertically(1)
+                                && !financeHeaderCollapsed) {
+                            setFinanceHeaderCollapsed(true);
+                        }
+                    }
+
+                    @Override
                     public void onScrolled(
                             @NonNull RecyclerView recyclerView,
                             int dx,
                             int dy
                     ) {
-                        if (dy > 6 && !financeHeaderCollapsed) {
+                        if (dy > 2 && !financeHeaderCollapsed) {
                             setFinanceHeaderCollapsed(true);
                         } else if (!recyclerView.canScrollVertically(-1)
                                 && financeHeaderCollapsed) {
@@ -166,6 +178,9 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         binding.financeSmartHealthCard.setVisibility(visibility);
         binding.financeInsightsActions.setVisibility(visibility);
         binding.financeAnalyticsCard.setVisibility(visibility);
+        if (collapsed) {
+            binding.financeSearchInput.clearFocus();
+        }
 
         ConstraintSet constraints = new ConstraintSet();
         constraints.clone(binding.getRoot());

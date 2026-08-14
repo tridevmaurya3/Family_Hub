@@ -400,6 +400,8 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
+        android:nestedScrollingEnabled="true"
+        android:overScrollMode="ifContentScrolls"
         android:paddingTop="@dimen/space_16"
         android:paddingBottom="88dp"
         app:layout_constraintBottom_toBottomOf="parent"
