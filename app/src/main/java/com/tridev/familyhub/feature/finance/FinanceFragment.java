@@ -1,361 +1,782 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×m;å:-jZ.¶›­–)Ş³W6¶vR6öÒçG&–FWbæfÖ–Ç–‡V"æfVGW&Ræf–ææ6S° ¦–×÷'BæG&ö–BæäFFU–6¶W$F–Æös°¦–×÷'BæG&ö–Bæ6öçFVçBä6öçFW‡C°¦–×÷'BæG&ö–Bæ6öçFVçBå6†&VE&VfW&Væ6W3°¦–×÷'BæG&ö–Bæ÷2ä'VæFÆS°¦–×÷'BæG&ö–BçFW‡BäVF—F&ÆS°¦–×÷'BæG&ö–BçFW‡BåFW‡EWF–Ç3°¦–×÷'BæG&ö–BçFW‡BåFW‡EvF6†W#°¦–×÷'BæG&ö–BçG&ç6—F–öâåG&ç6—F–öäÖævW#°¦–×÷'BæG&ö–Bçf–WräÆ–÷WD–æfÆFW#°¦–×÷'BæG&ö–Bçf–Wråf–Ws°¦–×÷'BæG&ö–Bçf–Wråf–Wtw&÷W°¦–×÷'BæG&ö–Bçv–FvWBä'&”FFW#°¦–×÷'BæG&ö–Bçv–FvWBäVF—EFW‡C°¦–×÷'BæG&ö–Bçv–FvWBäÆ–æV$Æ–÷WC°¦–×÷'BæG&ö–BçFW‡Bä–çWEG—S° ¦–×÷'BæG&ö–G‚æææ÷FF–öâäæöäçVÆÃ°¦–×÷'BæG&ö–G‚æææ÷FF–öâäçVÆÆ&ÆS°¦–×÷'BæG&ö–G‚æg&vÖVçBæäg&vÖVçC°¦–×÷'BæG&ö–G‚æ6öç7G&–çFÆ–÷WBçv–FvWBä6öç7G&–çE6WC°¦–×÷'BæG&ö–G‚ç&V7–6ÆW'f–Wrçv–FvWBäÆ–æV$Æ–÷WDÖævW#°¦–×÷'BæG&ö–G‚ç&V7–6ÆW'f–Wrçv–FvWBå&V7–6ÆW%f–Ws° ¦–×÷'B6öÒævöövÆRææG&ö–BæÖFW&–ÂæF–ÆöräÖFW&–ÄÆW'DF–Æöt'V–ÆFW#°¦–×÷'B6öÒævöövÆRææG&ö–BæÖFW&–Âç6æ6¶&"å6æ6¶&#°¦–×÷'B6öÒævöövÆRææG&ö–BæÖFW&–ÂçFW‡Ff–VÆBåFW‡D–çWDÆ–÷WC°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"å#°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æ6÷&RçV’å6VÖçF–5fÇVU7G–ÆW#°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFFæÆö6ÂæVçF—G’äf–ææ6TVçG'“°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFFæÆö6ÂæVçF—G’äf–ææ6T66÷VçC°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFFæÆö6ÂæVçF—G’äf–ææ6U7VÖÖ'“°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFFç&W÷6—F÷'’äf–ææ6U&W÷6—F÷'“°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFFç&W÷6—F÷'’äfÖ–Ç”66÷VçE&W÷6—F÷'“°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFF&–æF–æräF–Æötf–ææ6TVçG'”&–æF–æs°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æFF&–æF–æräg&vÖVçDf–ææ6T&–æF–æs°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æfVGW&Ræf–ææ6RæFFW"äf–ææ6TVçG'”FFW#°¦–×÷'B6öÒçG&–FWbæfÖ–Ç–‡V"æfVGW&RæÖ–âäÖ–ä7F—f—G“° ¦–×÷'B¦fçFW‡BäçVÖ&W$f÷&ÖC°¦–×÷'B¦fçFW‡Bå'6TW†6WF–öã°¦–×÷'B¦fçFW‡Bå6–×ÆTFFTf÷&ÖC°¦–×÷'B¦fçWF–Âä6ÆVæF#°¦–×÷'B¦fçWF–ÂäFFS°¦–×÷'B¦fçWF–ÂäÆö6ÆS°¦–×÷'B¦fçWF–ÂäÆ–æ¶VD†6…6WC°¦–×÷'B¦fçWF–Âä'&”Æ—7C°¦–×÷'B¦fçWF–Âä†6„Ö°¦–×÷'B¦fçWF–ÂäÆ—7C°¦–×÷'B¦fçWF–ÂäÖ°¦–×÷'B¦fçWF–Âå6WC° ¢ò¢¢6ö×ÆWFRÆö6Â–æ6öÖRæBW‡Vç6RfVGW&Râ¢ğ§V&Æ–26Æ72f–ææ6Tg&vÖVçBW‡FVæG2g&vÖVçB–×ÆVÖVçG26öÒçG&–FWbæfÖ–Ç–‡V"æfVGW&RæÖ–âäFD7F–öä†÷7B° ¢&—fFR7FF–2f–æÂ7G&–ær•4õôDDUõEDU$âÒ'———’ÔÔÒÖFB#°¢&—fFR7FF–2f–æÂ7G&–ærd”ää4Uõ$Te2Ò&f–ææ6Uó%÷&VfW&Væ6W2#°¢&—fFR7FF–2f–æÂ7G&–ær´U•ôÔôåD„Å•ô%TDtUBÒ&ÖöçF†Ç•ö'VFvWB#°¢&—fFR7FF–2f–æÂ7G&–ær´U•ô44õTåE2Ò&66÷VçG2#° ¢&—fFRg&vÖVçDf–ææ6T&–æF–ær&–æF–æs°¢&—fFRf–ææ6TVçG'”FFW"VçG'”FFW#°¢&—fFRf–ææ6U&W÷6—F÷'’&W÷6—F÷'“°¢&—fFRf–ææ6U7VÖÖ'’ÆFW7E7VÖÖ'’ÒæWrf–ææ6U7VÖÖ'’‚“°¢æöäçVÆÂ&—fFRÆ—7CÄf–ææ6TVçG'“âÆFW7DVçG&–W2ÒæWr'&”Æ—7CÃâ‚“°¢&—fFR&ööÆVâf–ææ6T†VFW$6öÆÆ6VC°¢&—fFRf–æÂçVÖ&W$f÷&ÖB7W'&Væ7”f÷&ÖGFW"ÒçVÖ&W$f÷&ÖBævWD7W'&Væ7”–ç7Fæ6R†æWrÆö6ÆR‚&Vâ"Â$”â"’“° ¢çVÆÆ&ÆP¢÷fW'&–FP¢V&Æ–2f–Wröä7&VFUf–Wr„æöäçVÆÂÆ–÷WD–æfÆFW"–æfÆFW"ÂçVÆÆ&ÆRf–Wtw&÷W6öçF–æW"À¢çVÆÆ&ÆR'VæFÆR6fVD–ç7Fæ6U7FFR’°¢&–æF–ærÒg&vÖVçDf–ææ6T&–æF–æræ–æfÆFR†–æfÆFW"Â6öçF–æW"ÂfÇ6R“°¢&WGW&â&–æF–ærævWE&ö÷B‚“°¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–Böåf–Wt7&VFVB„æöäçVÆÂf–Wrf–WrÂçVÆÆ&ÆR'VæFÆR6fVD–ç7Fæ6U7FFR’°¢7WW"æöåf–Wt7&VFVB‡f–WrÂ6fVD–ç7Fæ6U7FFR“°¢&W÷6—F÷'’ÒæWrf–ææ6U&W÷6—F÷'’‡&WV—&T6öçFW‡B‚’“°¢VçG'”FFW"ÒæWrf–ææ6TVçG'”FFW"†æWrf–ææ6TVçG'”FFW"äVçG'”7F–öäÆ—7FVæW"‚’°¢÷fW'&–FP¢V&Æ–2fö–BöäVF—B„f–ææ6TVçG'’VçG'’’°¢6†÷tVçG'”VF—F÷"†VçG'’“°¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–BöäFVÆWFR„f–ææ6TVçG'’VçG'’’°¢6öæf—&ÔFVÆWFR†VçG'’“°¢Ğ¢Ò“° ¢&–æF–æræf–ææ6U&V7–6ÆW%f–Wrç6WDÆ–÷WDÖævW"†æWrÆ–æV$Æ–÷WDÖævW"‡&WV—&T6öçFW‡B‚’’“°¢&–æF–æræf–ææ6U&V7–6ÆW%f–Wrç6WDFFW"†VçG'”FFW"“°¢&–æF–æræf–ææ6T÷fW'f–Wrç6WDæf–vF–öä7F–öâ€¢"æG&v&ÆRæ–5öÖVçUö†Ö'W&vW"À¢"ç7G&–æræfVGW&UöÖVçU÷F—FÆRÀ¢6Æ–6¶VEf–WrÓâ°¢–b‡&WV—&T7F—f—G’‚’–ç7Fæ6VöbÖ–ä7F—f—G’’°¢‚„Ö–ä7F—f—G’’&WV—&T7F—f—G’‚’’ç6†÷tfVGW&TÖVçR‚“°¢Ğ¢Ğ¢“°¢&–æF–æræf–ææ6U&V7–6ÆW%f–WræFDöå67&öÆÄÆ—7FVæW"€¢æWr&V7–6ÆW%f–Wräöå67&öÆÄÆ—7FVæW"‚’°¢÷fW'&–FP¢V&Æ–2fö–Böå67&öÆÆVB€¢æöäçVÆÂ&V7–6ÆW%f–Wr&V7–6ÆW%f–WrÀ¢–çBG‚À¢–çBG¢’°¢–b†G’âbbbf–ææ6T†VFW$6öÆÆ6VB’°¢6WDf–ææ6T†VFW$6öÆÆ6VB‡G'VR“°¢ÒVÇ6R–b‚&V7–6ÆW%f–Wræ6å67&öÆÅfW'F–6ÆÇ’‚Ó¢bbf–ææ6T†VFW$6öÆÆ6VB’°¢6WDf–ææ6T†VFW$6öÆÆ6VB†fÇ6R“°¢Ğ¢Ğ¢Ğ¢“°¢&–æF–æræV×G”FDf–ææ6T'WGFöâç6WDöä6Æ–6´Æ—7FVæW"‡bÓâ6†÷tVçG'”VF—F÷"†çVÆÂ’“°¢&–æF–æræf–ææ6T'VFvWD'WGFöâç6WDöä6Æ–6´Æ—7FVæW"‡bÓâ6†÷t'VFvWDVF—F÷"‚’“°¢&–æF–æræf–ææ6U&W÷'D'WGFöâç6WDöä6Æ–6´Æ—7FVæW"‡bÓâ6†÷tÖöçF†Ç•&W÷'B‚’“°¢&–æF–æræf–ææ6TÖævT66÷VçG4'WGFöâç6WDöä6Æ–6´Æ—7FVæW"‡bÓâ6†÷t66÷VçDVF—F÷"‚’“°¢&–æF–æræf–ææ6U6V&6„–çWBæFEFW‡D6†ævVDÆ—7FVæW"†æWrFW‡EvF6†W"‚’°¢÷fW'&–FP¢V&Æ–2fö–B&Vf÷&UFW‡D6†ævVB„6†%6WVVæ6R2Â–çB7F'BÂ–çB6÷VçBÂ–çBgFW"’°¢òòæòv÷&²&Vf÷&RF†RFW‡B6†ævW2à¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–BöåFW‡D6†ævVB„6†%6WVVæ6R2Â–çB7F'BÂ–çB&Vf÷&RÂ–çB6÷VçB’°¢òòf–ÇFW&–ær—2Æ–VBgFW"F†RFW‡B6†ævW2à¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–BgFW%FW‡D6†ævVB„VF—F&ÆR6V&6…FW‡B’°¢ÆöDVçG&–W2‡6V&6…FW‡BçFõ7G&–ær‚’“°¢Ğ¢Ò“°¢&Vg&W6„FF‚“°¢Ğ ¢ò¢¢ÖF6†W2w&ö6W'“¢¶VW6V&6‚f—6–&ÆRv†–ÆRF†RÆ—7BW6W2F†RgVÆÂvRâ¢ğ¢&—fFRfö–B6WDf–ææ6T†VFW$6öÆÆ6VB†&ööÆVâ6öÆÆ6VB’°¢–b†&–æF–ærÓÒçVÆÂÇÂf–ææ6T†VFW$6öÆÆ6VBÓÒ6öÆÆ6VB’&WGW&ã°¢f–ææ6T†VFW$6öÆÆ6VBÒ6öÆÆ6VC°¢G&ç6—F–öäÖævW"æ&Vv–äFVÆ–VEG&ç6—F–öâ†&–æF–ærævWE&ö÷B‚’“°¢–çBf—6–&–Æ—G’Ò6öÆÆ6VBòf–WrätôäR¢f–Wråd•4”$ÄS°¢&–æF–æræf–ææ6T÷fW'f–Wrç6WEf—6–&–Æ—G’‡f—6–&–Æ—G’“°¢&–æF–æræÖöçF…7VÖÖ'”6&Bç6WEf—6–&–Æ—G’‡f—6–&–Æ—G’“°¢&–æF–æræf–ææ6T66÷VçG46&Bç6WEf—6–&–Æ—G’‡f—6–&–Æ—G’“°¢&–æF–æræf–ææ6U6Ö'D†VÇF„6&Bç6WEf—6–&–Æ—G’‡f—6–&–Æ—G’“°¢&–æF–æræf–ææ6T–ç6–v‡G47F–öç2ç6WEf—6–&–Æ—G’‡f—6–&–Æ—G’“°¢&–æF–æræf–ææ6TæÇ—F–746&Bç6WEf—6–&–Æ—G’‡f—6–&–Æ—G’“° ¢6öç7G&–çE6WB6öç7G&–çG2ÒæWr6öç7G&–çE6WB‚“°¢6öç7G&–çG2æ6ÆöæR†&–æF–ærævWE&ö÷B‚’“°¢6öç7G&–çG2æ6ÆV"…"æ–Bæf–ææ6U÷6V&6…öÆ–÷WBÂ6öç7G&–çE6WBåDõ“°¢6öç7G&–çG2æ6öææV7B€¢"æ–Bæf–ææ6U÷6V&6…öÆ–÷WBÀ¢6öç7G&–çE6WBåDõÀ¢6öÆÆ6VBò6öç7G&–çE6WBå$TåEô”B¢"æ–Bæf–ææ6UöæÇ—F–75ö6&BÀ¢6öÆÆ6VBò6öç7G&–çE6WBåDõ¢6öç7G&–çE6WBä$õEDôÒÀ¢vWE&W6÷W&6W2‚’ævWDF–ÖVç6–öå—†VÅ6—¦R€¢6öÆÆ6VBò"æF–ÖVâç76UóB¢"æF–ÖVâç76Uó`¢¢“°¢6öç7G&–çG2æÇ•Fò†&–æF–ærævWE&ö÷B‚’“°¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–BöäFE&WVW7FVB‚’°¢6†÷tVçG'”VF—F÷"†çVÆÂ“°¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–Böå&W7VÖR‚’°¢7WW"æöå&W7VÖR‚“°¢–b†&–æF–ærÒçVÆÂ’°¢&W÷6—F÷'’ç7F'E6†&VE7–æ2‡F†—3£§&Vg&W6„FF“°¢&W÷6—F÷'’ç'Vå&V7W'&–ætWFöÖF–öâ‡F†—3£§&Vg&W6„FF“°¢Ğ¢Ğ ¢÷fW'&–FP¢V&Æ–2fö–BöåW6R‚’°¢&W÷6—F÷'’ç7F÷6†&VE7–æ2‚“°¢7WW"æöåW6R‚“°¢Ğ ¢&—fFRfö–B&Vg&W6„FF‚’°¢ÆöDVçG&–W2†&–æF–æræf–ææ6U6V&6„–çWBævWEFW‡B‚’çFõ7G&–ær‚’“°¢ÆöE7VÖÖ'’‚“°¢ÆöD66÷VçE7VÖÖ'’‚“°¢Ğ ¢&—fFRfö–BÆöD66÷VçE7VÖÖ'’‚’°¢&W÷6—F÷'’æÆöD66÷VçG2†66÷VçG2Óâ°¢–b†&–æF–ærÓÒçVÆÂ’&WGW&ã°¢F÷V&ÆRF÷FÂÒC°¢f÷"„f–ææ6T66÷VçB66÷VçB¢66÷VçG2’F÷FÂ³Ò66÷VçBæ7W'&VçD&Ææ6S°¢&–æF–æræf–ææ6T66÷VçG57VÖÖ'’ç6WEFW‡B†vWE7G&–ær€¢"ç7G&–æræf–ææ6Uö66÷VçE÷7VÖÖ'’Â66÷VçG2ç6—¦R‚’Â7W'&Væ7”f÷&ÖGFW"æf÷&ÖB‡F÷FÂ’’“°¢Ò“°¢Ğ ¢&—fFRfö–B6†÷t66÷VçDVF—F÷"‚’°¢–çBFF–ærÒ†–çB’ƒ#¢vWE&W6÷W&6W2‚’ævWDF—7Æ”ÖWG&–72‚’æFVç6—G’“°¢Æ–æV$Æ–÷WBf÷&ÒÒæWrÆ–æV$Æ–÷WB‡&WV—&T6öçFW‡B‚’“°¢f÷&Òç6WD÷&–VçFF–öâ„Æ–æV$Æ–÷WBådU%D”4Â“²f÷&Òç6WEFF–ær‡FF–ærÂFF–ærò"ÂFF–ærÂ“°¢VF—EFW‡BæÖRÒæWrVF—EFW‡B‡&WV—&T6öçFW‡B‚’“²æÖRç6WD†–çB…"ç7G&–æræf–ææ6Uö66÷VçEöæÖR“°¢VF—EFW‡BG—RÒæWrVF—EFW‡B‡&WV—&T6öçFW‡B‚’“²G—Rç6WD†–çB…"ç7G&–æræf–ææ6Uö66÷VçE÷G—R“°¢VF—EFW‡B÷Væ–ærÒæWrVF—EFW‡B‡&WV—&T6öçFW‡B‚’“²÷Væ–ærç6WD†–çB…"ç7G&–æræf–ææ6Uö÷Væ–æuö&Ææ6R“°¢÷Væ–ærç6WD–çWEG—R„–çWEG—RåE•Uô4Ä55ôåTÔ$U"Â–çWEG—RåE•UôåTÔ$U%ôdÄuôDT4”ÔÀ¢Â–çWEG—RåE•UôåTÔ$U%ôdÄuõ4”täTB“°¢f÷&ÒæFEf–Wr†æÖR“²f÷&ÒæFEf–Wr‡G—R“²f÷&ÒæFEf–Wr†÷Væ–ær“°¢æWrÖFW&–ÄÆW'DF–Æöt'V–ÆFW"‡&WV—&T6öçFW‡B‚’¢ç6WEF—FÆR…"ç7G&–æræf–ææ6UöFEö66÷VçB’ç6WEf–Wr†f÷&Ò¢ç6WDæVvF—fT'WGFöâ…"ç7G&–æræ6æ6VÂÂçVÆÂ¢ç6WE÷6—F—fT'WGFöâ…"ç7G&–ærç6fRÂ†F–ÆörÂv†–6‚’Óâ°¢7G&–ær66÷VçDæÖRÒæÖRævWEFW‡B‚’çFõ7G&–ær‚’çG&–Ò‚“°¢–b†66÷VçDæÖRæ—4V×G’‚’’&WGW&ã°¢f–ææ6T66÷VçB66÷VçBÒæWrf–ææ6T66÷VçB‚“²66÷VçBææÖRÒ66÷VçDæÖS°¢66÷VçBæ66÷VçEG—RÒG—RævWEFW‡B‚’çFõ7G&–ær‚’çG&–Ò‚’æ—4V×G’‚¢ò$õD„U""¢G—RævWEFW‡B‚’çFõ7G&–ær‚’çG&–Ò‚’çFõWW$66R„Æö6ÆRå$ôõB“°¢G'’²66÷VçBæ÷Væ–æt&Ææ6RÒF÷V&ÆRç'6TF÷V&ÆR†÷Væ–ærævWEFW‡B‚’çFõ7G&–ær‚’çG&–Ò‚’“²Ğ¢6F6‚„çVÖ&W$f÷&ÖDW†6WF–öâ–væ÷&VB’²66÷VçBæ÷Væ–æt&Ææ6RÒC²Ğ¢&VÖVÖ&W$66÷VçB†66÷VçBææÖR“°¢&W÷6—F÷'’ç6fT66÷VçB†66÷VçBÂF†—3£§&Vg&W6„FF“°¢Ò’ç6†÷r‚“°¢Ğ ¢&—fFRfö–BÆöDVçG&–W2…7G&–ærVW'’’°¢&W÷6—F÷'’æÆöDVçG&–W2‡VW'’ÂVçG&–W2Óâ°¢–b†&–æF–ærÓÒçVÆÂ’°¢&WGW&ã°¢Ğ¢VçG'”FFW"ç7V&Ö—DÆ—7B†VçG&–W2“°¢–b‡VW'’çG&–Ò‚’æ—4V×G’‚’’°¢ÆFW7DVçG&–W2ÒæWr'&”Æ—7CÃâ†VçG&–W2“°¢WFFU6Ö'D–ç6–v‡G2‚“°¢WFFTæÇ—F–72‚“°¢Ğ¢&ööÆVâ—4V×G’ÒVçG&–W2æ—4V×G’‚“°¢&–æF–æræf–ææ6U&V7–6ÆW%f–Wrç6WEf—6–&–Æ—G’†—4V×G’òf–WrätôäR¢f–Wråd•4”$ÄR“°¢&–æF–æræf–ææ6TV×G•7FFRç6WEf—6–&–Æ—G’†—4V×G’òf–Wråd•4”$ÄR¢f–WrätôäR“°¢Ò“°¢Ğ ¢&—fFRfö–BÆöE7VÖÖ'’‚’°¢&W÷6—F÷'’æÆöD7W'&VçDÖöçF…7VÖÖ'’‡7VÖÖ'’Óâ°¢–b†&–æF–ærÓÒçVÆÂ’°¢&WGW&ã°¢Ğ¢f–ææ6U7VÖÖ'’6fU7VÖÖ'’Ò7VÖÖ'’ÓÒçVÆÂòæWrf–ææ6U7VÖÖ'’‚’¢7VÖÖ'“°¢ÆFW7E7VÖÖ'’Ò6fU7VÖÖ'“°¢&–æF–æræÖöçF„W‡Vç6UfÇVRç6WEFW‡B†7W'&Væ7”f÷&ÖGFW"æf÷&ÖB‡6fU7VÖÖ'’æW‡Vç6R’“°¢&–æF–æræÖöçF„–æ6öÖUfÇVRç6WEFW‡B†7W'&Væ7”f÷&ÖGFW"æf÷&ÖB‡6fU7VÖÖ'’æ–æ6öÖR’“°¢&–æF–æræÖöçF„&Ææ6UfÇVRç6WEFW‡B†7W'&Væ7”f÷&ÖGFW"æf÷&ÖB€¢6fU7VÖÖ'’æ–æ6öÖRÒ6fU7VÖÖ'’æW‡Vç6P¢’“°¢6VÖçF–5fÇVU7G–ÆW"æÇ’€¢&–æF–æræÖöçF„W‡Vç6UfÇVRÀ¢×6fU7VÖÖ'’æW‡Vç6P¢“°¢6VÖçF–5fÇVU7G–ÆW"æÇ’€¢&–æF–æræÖöçF„–æ6öÖUfÇVRÀ¢6fU7VÖÖ'’æ–æ6öÖP¢“°¢6VÖçF–5fÇVU7G–ÆW"æÇ’€¢&–æF–æræÖöçF„&Ææ6UfÇVRÀ¢6fU7VÖÖ'’æ–æ6öÖRÒ6fU7VÖÖ'’æW‡Vç6P¢“°¢WFFU6Ö'D–ç6–v‡G2‚“°¢Ò“°¢Ğ ¢&—fFRfö–BWFFU6Ö'D–ç6–v‡G2‚’°¢–b†&–æF–ærÓÒçVÆÂ’°¢&WGW&ã°¢Ğ¢F÷V&ÆR'VFvWBÒÖöçF†Ç”'VFvWB‚“°¢F÷V&ÆRW‡Vç6RÒÆFW7E7VÖÖ'’æW‡Vç6S°¢–çB'VFvWEW&6VçBÒ'VFvWBÃÒBò¢†–çB’ÖF‚ç&÷VæB€¢†W‡Vç6Rò'VFvWB’¢@¢“°¢&–æF–æræf–ææ6T'VFvWE&öw&W72ç6WE&öw&W746ö×B€¢ÖF‚æÖ–âƒÂÖF‚æÖ‚ƒÂ'VFvWEW&6VçB’’À¢G'VP¢“° ¢–b†'VFvWBÃÒB’°¢&–æF–æræf–ææ6T'VFvWD†VÇF…F—FÆRç6WEFW‡B€¢"ç7G&–æræf–ææ6Uö†VÇF…öæõö'VFvW@¢“°¢&–æF–æræf–ææ6T'VFvWD†VÇF„FWF–Âç6WEFW‡B€¢"ç7G&–æræf–ææ6Uö†VÇF…öæõö'VFvWEöFWF–À¢“°¢ÒVÇ6R°¢–çBF—FÆS°¢–b†W‡Vç6Râ'VFvWB’°¢F—FÆRÒ"ç7G&–æræf–ææ6Uö†VÇF…ö÷fW%ö'VFvWC°¢ÒVÇ6R–b†'VFvWEW&6VçBãÒ“’°¢F—FÆRÒ"ç7G&–æræf–ææ6Uö†VÇF…ö7&—F–6Ã°¢ÒVÇ6R–b†'VFvWEW&6VçBãÒs’°¢F—FÆRÒ"ç7G&–æræf–ææ6Uö†VÇF…÷vF6ƒ°¢ÒVÇ6R°¢F—FÆRÒ"ç7G&–æræf–ææ6Uö†VÇF…övööC°¢Ğ¢&–æF–æræf–ææ6T'VFvWD†VÇF…F—FÆRç6WEFW‡B‡F—FÆR“°¢&–æF–æræf–ææ6T'VFvWD†VÇF„FWF–Âç6WEFW‡B†vWE7G&–ær€¢"ç7G&–æræf–ææ6Uö†VÇF…ö'VFvWEöFWF–ÂÀ¢'VFvWEW&6VçBÀ¢7W'&Væ7”f÷&ÖGFW"æf÷&ÖB„ÖF‚æÖ‚ƒBÂ'VFvWBÒW‡Vç6R’¢’“°¢Ğ ¢7G&–ærÖöçF…&Vf—‚ÒæWr6–×ÆTFFTf÷&ÖB€¢'———’ÔÔÒ"À¢Æö6ÆRåU0¢’æf÷&ÖB†æWrFFR‚’“°¢ÖÅ7G&–ærÂF÷V&ÆSâ6FVv÷'”W‡Vç6RÒæWr†6„ÖÃâ‚“°¢6WCÅ7G&–æsâ66÷VçG2ÒæWrÆ–æ¶VD†6…6WCÃâ‚“°¢–çB&V7W'&–æt6÷VçBÒ°¢–çB6†&VD6÷VçBÒ°¢–çBÖöçF…G&ç67F–öç2Ò°¢f÷"„f–ææ6TVçG'’VçG'’¢ÆFW7DVçG&–W2’°¢–b‚VçG'’çG&ç67F–öäFFRç7F'G5v—F‚†ÖöçF…&Vf—‚’’°¢6öçF–çVS°¢Ğ¢ÖöçF…G&ç67F–öç2²³°¢66÷VçG2æFB†VçG'’æ66÷VçDæÖR“°¢–b†VçG'’æ—5&V7W'&–ær’°¢&V7W'&–æt6÷VçB²³°¢Ğ¢–b†VçG'’æ—56†&VB’°¢6†&VD6÷VçB²³°¢Ğ¢–b„f–ææ6TVçG'’åE•UôU…Tå4RæWVÇ2†VçG'’æVçG'•G—R’’°¢6FVv÷'”W‡Vç6RçWB€¢VçG'’æ6FVv÷'’À¢6FVv÷'”W‡Vç6RævWD÷$FVfVÇB†VçG'’æ6FVv÷'’ÂB¢²VçG'’æÖ÷Vç@¢“°¢Ğ¢Ğ¢7G&–ærF÷6FVv÷'’ÒvWE7G&–ær…"ç7G&–æræf–ææ6Uö–ç6–v‡EöæöæR“°¢F÷V&ÆRF÷Ö÷VçBÒC°¢f÷"„ÖäVçG'“Å7G&–ærÂF÷V&ÆSâ—FVÒ¢6FVv÷'”W‡Vç6RæVçG'•6WB‚’’°¢–b†—FVÒævWEfÇVR‚’âF÷Ö÷VçB’°¢F÷6FVv÷'’Ò—FVÒævWD¶W’‚“°¢F÷Ö÷VçBÒ—FVÒævWEfÇVR‚“°¢Ğ¢Ğ¢6ÆVæF"6ÆVæF"Ò6ÆVæF"ævWD–ç7Fæ6R‚“°¢–çBF’ÒÖF‚æÖ‚ƒÂ6ÆVæF"ævWB„6ÆVæF"äD•ôôeôÔôåD‚’“°¢–çBF—4–äÖöçF‚Ò6ÆVæF"ævWD7GVÄÖ†–×VÒ€¢6ÆVæF"äD•ôôeôÔôåD€¢“°¢F÷V&ÆR&ö¦V7FVDW‡Vç6RÒW‡Vç6RÃÒ@¢òB¢†W‡Vç6RòF’’¢F—4–äÖöçFƒ°¢&–æF–æræf–ææ6U6Ö'D–ç6–v‡DFWF–Âç6WEFW‡B†vWE7G&–ær€¢"ç7G&–æræf–ææ6U÷6Ö'Eö–ç6–v‡EöFWF–ÂÀ¢ÖöçF…G&ç67F–öç2À¢F÷6FVv÷'’À¢7W'&Væ7”f÷&ÖGFW"æf÷&ÖB‡F÷Ö÷VçB’À¢&V7W'&–æt6÷VçBÀ¢6†&VD6÷VçBÀ¢66÷VçG2ç6—¦R‚’À¢7W'&Væ7”f÷&ÖGFW"æf÷&ÖB‡&ö¦V7FVDW‡Vç6R¢’“°¢Ğ ¢&—fFRfö–BWFFTæÇ—F–72‚’°¢–b†&–æF–ærÓÒçVÆÂ’&WGW&ã°¢6ÆVæF"æ÷rÒ6ÆVæF"ævWD–ç7Fæ6R‚“°¢7G&–ær7W'&VçBÒæWr6–×ÆTFFTf÷&ÖB‚'———’ÔÔÒ"ÂÆö6ÆRåU2’æf÷&ÖB†æ÷rævWEF–ÖR‚’“°¢æ÷ræFB„6ÆVæF"äÔôåD‚ÂÓ“°¢7G&–ær&Wf–÷W2ÒæWr6–×ÆTFFTf÷&ÖB‚'———’ÔÔÒ"ÂÆö6ÆRåU2’æf÷&ÖB†æ÷rævWEF–ÖR‚’“°¢F÷V&ÆR7W'&VçDW‡Vç6RÒBÂ&Wf–÷W4W‡Vç6RÒBÂ7W'&VçD–æ6öÖRÒC°¢ÖÅ7G&–ærÂF÷V&ÆSâ6FVv÷&–W2ÒæWr†6„ÖÃâ‚’Â66÷VçG2ÒæWr†6„ÖÃâ‚’Â–W'2ÒæWr†6„ÖÃâ‚“°¢f÷"„f–ææ6TVçG'’VçG'’¢ÆFW7DVçG&–W2’°¢–b‚%U4ôÔ”är"æWVÇ2†VçG'’ç&V7W'&Væ6U7FGW2’’6öçF–çVS°¢–b†VçG'’çG&ç67F–öäFFRç7F'G5v—F‚‡&Wf–÷W2’bbf–ææ6TVçG'’åE•UôU…Tå4RæWVÇ2†VçG'’æVçG'•G—R’’°¢&Wf–÷W4W‡Vç6R³ÒVçG'’æÖ÷VçC°¢Ğ¢–b‚VçG'’çG&ç67F–öäFFRç7F'G5v—F‚†7W'&VçB’’6öçF–çVS°¢–b„f–ææ6TVçG'’åE•Uô”ä4ôÔRæWVÇ2†VçG'’æVçG'•G—R’’²7W'&VçD–æ6öÖR³ÒVçG'’æÖ÷VçC²6öçF–çVS²Ğ¢7W'&VçDW‡Vç6R³ÒVçG'’æÖ÷VçC°¢6FVv÷&–W2çWB†VçG'’æ6FVv÷'’Â6FVv÷&–W2ævWD÷$FVfVÇB†VçG'’æ6FVv÷'’ÂB’²VçG'’æÖ÷VçB“°¢66÷VçG2çWB†VçG'’æ66÷VçDæÖRÂ66÷VçG2ævWD÷$FVfVÇB†VçG'’æ66÷VçDæÖRÂB’²VçG'’æÖ÷VçB“°¢–b‚VçG'’ç–D'”æÖRæ—4V×G’‚’’–W'2çWB†VçG'’ç–D'”æÖRÀ¢–W'2ævWD÷$FVfVÇB†VçG'’ç–D'”æÖRÂB’²VçG'’æÖ÷VçB“°¢Ğ¢F÷V&ÆR6†ævRÒ&Wf–÷W4W‡Vç6RÃÒBò†7W'&VçDW‡Vç6RâBòB¢B¢¢‚†7W'&VçDW‡Vç6RÒ&Wf–÷W4W‡Vç6R’ò&Wf–÷W4W‡Vç6R’¢C°¢–çB6f–æw5&FRÒ7W'&VçD–æ6öÖRÃÒBò¢†–çB’ÖF‚ç&÷VæB€¢ÖF‚æÖ‚ƒBÂ†7W'&VçD–æ6öÖRÒ7W'&VçDW‡Vç6R’ò7W'&VçD–æ6öÖR¢B’“°¢7G&–ærG&VæBÒ6†ævRâTBòvWE7G&–ær…"ç7G&–æræf–ææ6U÷G&VæE÷W¢¢6†ævRÂÓTBòvWE7G&–ær…"ç7G&–æræf–ææ6U÷G&VæEöF÷vâ’¢vWE7G&–ær…"ç7G&–æræf–ææ6U÷G&VæEöfÆB“°¢&–æF–æræf–ææ6TæÇ—F–757VÖÖ'’ç6WEFW‡B†vWE7G&–ær…"ç7G&–æræf–ææ6UöæÇ—F–75÷7VÖÖ'’À¢7G&–æræf÷&ÖB„Æö6ÆRævWDFVfVÇB‚’Â"R²ãbRR"Â6†ævR’Â6f–æw5&FRÀ¢Æ&vW7D¶W’†6FVv÷&–W2’ÂÆ&vW7D¶W’†66÷VçG2’ÂÆ&vW7D¶W’‡–W'2’ÂG&VæB’“°¢Ğ ¢&—fFR7G&–ærÆ&vW7D¶W’„ÖÅ7G&–ærÂF÷V&ÆSâfÇVW2’°¢7G&–ær&W7VÇNù¶‰ËkºwµçY]Ù^J
-NÈBˆBˆ™]\›ˆ™\İ[ÂˆB‚ˆš]˜]H›ÚYÚİÑ[QY]ÜŠ[X›Hš[˜[˜ÙQ[H^\İ[™Ñ[JHÂˆX[ÙÑš[˜[˜ÙQ[Pš[™[™ÈX[ÙĞš[™[™ÈHX[ÙÑš[˜[˜ÙQ[Pš[™[™Ëš[™›]JÙ]^[İ][™›]\Š
-JNÂˆ›ÛÛX[ˆ\Ó™]Ñ[HH^\İ[™Ñ[HOH[ÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙQY]Ü•]KœÙ]^
-\Ó™]Ñ[BˆÈ‹œİš[™Ë˜YÙš[˜[˜ÙWÙ[Bˆˆ‹œİš[™Ë™Y]Ùš[˜[˜ÙWÙ[JNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙQ[Q]R[œ]œÙ]^
-\Ó™]Ñ[BˆÈÙ^P\Ò\ÛÑ]J
-Bˆˆ^\İ[™Ñ[K˜[œØXİ[Û‘]JNÂˆİš[™Ö×H^[œÙPØ]YÛÜšY\ÈHÙ]™\Ûİ\˜Ù\Ê
-K™Ù]İš[™Ğ\œ˜^Jˆ‹˜\œ˜^K™š[˜[˜ÙWÙ^[œÙWØØ]YÛÜWÛX™[Âˆ
-NÂˆİš[™Ö×H[˜ÛÛYPØ]YÛÜšY\ÈHÙ]™\Ûİ\˜Ù\Ê
-K™Ù]İš[™Ğ\œ˜^Jˆ‹˜\œ˜^K™š[˜[˜ÙWÚ[˜ÛÛYWØØ]YÛÜWÛX™[Âˆ
-NÂˆ\]PØ]YÛÜPÚÚXÙ\ÊX[ÙĞš[™[™Ë^[œÙPØ]YÛÜšY\ÊNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙPXØÛİ[[œ]œÙ]Y\\Š™]È\œ˜^PY\\Šˆ™\]Z\™PÛÛ^
+package com.tridev.familyhub.feature.finance;
 
-K‹›^[İ]š][WÙ›Ü›WÙ›ÜİÛ‹ØYXØÛİ[Ê
-Bˆ
-JNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙT^[Y[Y]Ù[œ]œÙ]Y\\Š™]È\œ˜^PY\\Šˆ™\]Z\™PÛÛ^
+import android.app.DatePickerDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.transition.TransitionManager;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.text.InputType;
 
-K‹›^[İ]š][WÙ›Ü›WÙ›ÜİÛ‹ˆÙ]™\Ûİ\˜Ù\Ê
-K™Ù]İš[™Ğ\œ˜^J‹˜\œ˜^K™š[˜[˜ÙWÜ^[Y[ÛY]ÙÛX™[ÊBˆ
-JNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÜ]\R[œ]œÙ]Y\\Š™]È\œ˜^PY\\Šˆ™\]Z\™PÛÛ^
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-K‹›^[İ]š][WÙ›Ü›WÙ›ÜİÛ‹ˆÙ]™\Ûİ\˜Ù\Ê
-K™Ù]İš[™Ğ\œ˜^J‹˜\œ˜^K™š[˜[˜ÙWÜÜ]İ\WÛX™[ÊJJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÙ][Y[[œ]œÙ]Y\\Š™]È\œ˜^PY\\Šˆ™\]Z\™PÛÛ^
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.TextInputLayout;
+import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ui.SemanticValueStyler;
+import com.tridev.familyhub.data.local.entity.FinanceEntry;
+import com.tridev.familyhub.data.local.entity.FinanceAccount;
+import com.tridev.familyhub.data.local.entity.FinanceSummary;
+import com.tridev.familyhub.data.repository.FinanceRepository;
+import com.tridev.familyhub.data.repository.FamilyAccountRepository;
+import com.tridev.familyhub.databinding.DialogFinanceEntryBinding;
+import com.tridev.familyhub.databinding.FragmentFinanceBinding;
+import com.tridev.familyhub.feature.finance.adapter.FinanceEntryAdapter;
+import com.tridev.familyhub.feature.main.MainActivity;
 
-K‹›^[İ]š][WÙ›Ü›WÙ›ÜİÛ‹ˆÙ]™\Ûİ\˜Ù\Ê
-K™Ù]İš[™Ğ\œ˜^J‹˜\œ˜^K™š[˜[˜ÙWÜÙ][Y[ÛX™[ÊJJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÜ]\R[œ]œÙ]^
-““Ó‘H‹˜[ÙJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÙ][Y[[œ]œÙ]^
-““ÕĞTPĞP“H‹˜[ÙJNÂˆ™]È˜[Z[PXØÛİ[™\ÜÚ]ÜJ
-K›ØY]]Üš\ÙYY[X™\œÊˆ™]È˜[Z[PXØÛİ[™\ÜÚ]ÜK”™\İ[Ø[˜XÚÏ\İ˜[Z[PXØÛİ[™\ÜÚ]ÜK“Y[X™\Š
-HÂˆİ™\œšYHX›XÈ›ÚYÛ”İXØÙ\ÜÊ[X›H\İ˜[Z[PXØÛİ[™\ÜÚ]ÜK“Y[X™\ˆY[X™\œÊHÂˆYˆ
-š[™[™ÈOH[Y[X™\œÈOH[
-H™]\›Âˆ\İİš[™Ïˆ˜[Y\ÈH™]È\œ˜^S\İŠ
-NÂˆ›Üˆ
-˜[Z[PXØÛİ[™\ÜÚ]ÜK“Y[X™\ˆY[X™\ˆˆY[X™\œÊHÂˆYˆ
-[Y[X™\‹™\Ü^S˜[YKš[J
-Kš\Ñ[\J
-JH˜[Y\Ë˜Y
-Y[X™\‹™\Ü^S˜[YJNÂˆBˆX[ÙĞš[™[™Ë™š[˜[˜ÙTZYR[œ]œÙ]Y\\Š™]È\œ˜^PY\\Š™\]Z\™PÛÛ^
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+import java.util.LinkedHashSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-Kˆ‹›^[İ]š][WÙ›Ü›WÙ›ÜİÛ‹˜[Y\ÊJNÂˆBˆİ™\œšYHX›XÈ›ÚYÛ‘\œ›ÜŠ›Û“[^Ù\[Ûˆ\œ›ÜŠHÈBˆJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙPXØÛİ[[œ]œÙ]^
-\Ó™]Ñ[HÈØ\Úˆˆ^\İ[™Ñ[K˜XØÛİ[˜[YK˜[ÙJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙT^[Y[Y]Ù[œ]œÙ]^
-ˆ\Ó™]Ñ[HÈØ\Úˆˆ^\İ[™Ñ[Kœ^[Y[Y]Ù˜[ÙBˆ
-NÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙU\QÜ›İ\œÙ]ÛÚXÚÙYÚ[™ÙS\İ[™\Šˆ
-Ü›İ\ÚXÚÙYY
-HOˆ\]PØ]YÛÜPÚÚXÙ\ÊˆX[ÙĞš[™[™ËˆÚXÚÙYYOH‹šY\WÚ[˜ÛÛYWØ]Û‚ˆÈ[˜ÛÛYPØ]YÛÜšY\Âˆˆ^[œÙPØ]YÛÜšY\Âˆ
-Bˆ
-NÂ‚ˆYˆ
-Z\Ó™]Ñ[JHÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙP[[İ[[œ]œÙ]^
-İš[™Ë˜[YSÙŠ^\İ[™Ñ[K˜[[İ[
-JNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙPØ]YÛÜR[œ]œÙ]^
-^\İ[™Ñ[K˜Ø]YÛÜJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙS›İR[œ]œÙ]^
-^\İ[™Ñ[K››İJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙT™Xİ\œš[™ÔİÚ]ÚœÙ]ÚXÚÙY
-^\İ[™Ñ[Kš\Ô™Xİ\œš[™ÊNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÚ\™YİÚ]ÚœÙ]ÚXÚÙY
-^\İ[™Ñ[Kš\ÔÚ\™Y
-NÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTZYR[œ]œÙ]^
-^\İ[™Ñ[KœZYS˜[YK˜[ÙJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÜ]\R[œ]œÙ]^
-^\İ[™Ñ[KœÜ]\K˜[ÙJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙT\XÚ\[Ò[œ]œÙ]^
-^\İ[™Ñ[Kœ\XÚ\[˜[Y\ÊNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÜ][[İ[Ò[œ]œÙ]^
-^\İ[™Ñ[KœÜ][[İ[ÊNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙTÙ][Y[[œ]œÙ]^
-^\İ[™Ñ[KœÙ][Y[İ]\Ë˜[ÙJNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙU\QÜ›İ\˜ÚXÚÊš[˜[˜ÙQ[K•TWÒSÓÓQK™\]X[Ê^\İ[™Ñ[K™[U\JBˆÈ‹šY\WÚ[˜ÛÛYWØ]Û‚ˆˆ‹šY\WÙ^[œÙWØ]ÛŠNÂˆ\]PØ]YÛÜPÚÚXÙ\ÊˆX[ÙĞš[™[™Ëˆš[˜[˜ÙQ[K•TWÒSÓÓQK™\]X[Ê^\İ[™Ñ[K™[U\JBˆÈ[˜ÛÛYPØ]YÛÜšY\Âˆˆ^[œÙPØ]YÛÜšY\Âˆ
-NÂˆB‚ˆš[˜[[™›ÚY˜\ÛÛ\]˜\[\X[ÙÈX[ÙÈH™]ÈX]\šX[[\X[ÙĞZ[\Š™\]Z\™PÛÛ^
+/** Complete local income and expense feature. */
+public class FinanceFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
 
-JBˆœÙ]šY]ÊX[ÙĞš[™[™Ë™Ù]›Ûİ
+    private static final String ISO_DATE_PATTERN = "yyyy-MM-dd";
+    private static final String FINANCE_PREFS = "finance_2_preferences";
+    private static final String KEY_MONTHLY_BUDGET = "monthly_budget";
+    private static final String KEY_ACCOUNTS = "accounts";
 
-JBˆ˜Ü™X]J
-NÂ‚ˆX[ÙĞš[™[™Ë™š[˜[˜ÙQ[Q]R[œ]œÙ]ÛÛXÚÓ\İ[™\ŠˆOˆÚİÑ]TXÚÙ\ŠˆX[ÙĞš[™[™Ë™š[˜[˜ÙQ[Q]R[œ]ˆ
-JNÂˆX[ÙĞš[™[™Ë™š[˜[˜ÙQ[Q]S^[İ]œÙ][™XÛÛ“ÛÛXÚÓ\İ[™\ŠˆOˆÚİÑ]TXÚÙ\ŠˆX[ÙĞš[™[™Ë™š[˜[˜ÙQ[Q]R[œ]ˆ
-JNÂˆX[ÙĞš[™[™Ë˜Ø[˜Ù[š[˜[˜ÙP]Û‹œÙ]ÛÛXÚÓ\İ[™\ŠˆOˆX[ÙË™\ÛZ\ÜÊ
-JNÂˆX[ÙĞš[™[™ËœØ]™Qš[˜[˜ÙP]Û‹œÙ]ÛÛXÚÓ\İ[™\ŠˆOˆÂˆİX›H[[İ[H˜[Y]QY]ÜŠX[ÙĞš[™[™ÊNÂˆYˆ
-[[İ[OH[
-HÂˆ™]\›ÂˆB‚ˆš[˜[˜ÙQ[H[HH\Ó™]Ñ[HÈ™]Èš[˜[˜ÙQ[J
-Hˆ^\İ[™Ñ[NÂˆ[K™[U\HHX[ÙĞš[™[™Ë™š[˜[˜ÙU\QÜ›İ\™Ù]ÚXÚÙY˜Y[Ğ]Û’Y
+    private FragmentFinanceBinding binding;
+    private FinanceEntryAdapter entryAdapter;
+    private FinanceRepository repository;
+    private FinanceSummary latestSummary = new FinanceSummary();
+    @NonNull private List<FinanceEntry> latestEntries = new ArrayList<>();
+    private boolean financeHeaderCollapsed;
+    private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
-HOH‹šY\WÚ[˜ÛÛYWØ]Û‚ˆÈš[˜[˜ÙQ[K•TWÒSÓÓQBˆˆš[˜[˜ÙQ[K•TWÑVS”ÑNÂˆ[K˜[[İ[H[[İ[Âˆ[K˜Ø]YÛÜHHX[ÙĞš[™[™Ë™š[˜[˜ÙPØ]YÛÜR[œ]™Ù]^
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        binding = FragmentFinanceBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[K››İHHX[ÙĞš[™[™Ë™š[˜[˜ÙS›İR[œ]™Ù]^
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        repository = new FinanceRepository(requireContext());
+        entryAdapter = new FinanceEntryAdapter(new FinanceEntryAdapter.EntryActionListener() {
+            @Override
+            public void onEdit(FinanceEntry entry) {
+                showEntryEditor(entry);
+            }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[K˜[œØXİ[Û‘]HHX[ÙĞš[™[™Ë™š[˜[˜ÙQ[Q]R[œ]™Ù]^
+            @Override
+            public void onDelete(FinanceEntry entry) {
+                confirmDelete(entry);
+            }
+        });
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[K˜XØÛİ[˜[YHHX[ÙĞš[™[™Ë™š[˜[˜ÙPXØÛİ[[œ]™Ù]^
+        binding.financeRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.financeRecyclerView.setAdapter(entryAdapter);
+        binding.financeOverview.setNavigationAction(
+                R.drawable.ic_menu_hamburger,
+                R.string.feature_menu_title,
+                clickedView -> {
+                    if (requireActivity() instanceof MainActivity) {
+                        ((MainActivity) requireActivity()).showFeatureMenu();
+                    }
+                }
+        );
+        binding.financeRecyclerView.addOnScrollListener(
+                new RecyclerView.OnScrollListener() {
+                    @Override
+                    public void onScrolled(
+                            @NonNull RecyclerView recyclerView,
+                            int dx,
+                            int dy
+                    ) {
+                        if (dy > 6 && !financeHeaderCollapsed) {
+                            setFinanceHeaderCollapsed(true);
+                        } else if (!recyclerView.canScrollVertically(-1)
+                                && financeHeaderCollapsed) {
+                            setFinanceHeaderCollapsed(false);
+                        }
+                    }
+                }
+        );
+        binding.emptyAddFinanceButton.setOnClickListener(v -> showEntryEditor(null));
+        binding.financeBudgetButton.setOnClickListener(v -> showBudgetEditor());
+        binding.financeReportButton.setOnClickListener(v -> showMonthlyReport());
+        binding.financeManageAccountsButton.setOnClickListener(v -> showAccountEditor());
+        binding.financeSearchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // No work before the text changes.
+            }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[Kœ^[Y[Y]ÙHX[ÙĞš[™[™Ë™š[˜[˜ÙT^[Y[Y]Ù[œ]™Ù]^
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // Filtering is applied after the text changes.
+            }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[Kš\Ô™Xİ\œš[™ÈHX[ÙĞš[™[™Ë™š[˜[˜ÙT™Xİ\œš[™ÔİÚ]Úš\ĞÚXÚÙY
+            @Override
+            public void afterTextChanged(Editable searchText) {
+                loadEntries(searchText.toString());
+            }
+        });
+        refreshData();
+    }
 
-NÂˆ[Kš\ÔÚ\™YHX[ÙĞš[™[™Ë™š[˜[˜ÙTÚ\™YİÚ]Úš\ĞÚXÚÙY
+    /** Matches Grocery: keep search visible while the list uses the full page. */
+    private void setFinanceHeaderCollapsed(boolean collapsed) {
+        if (binding == null || financeHeaderCollapsed == collapsed) return;
+        financeHeaderCollapsed = collapsed;
+        TransitionManager.beginDelayedTransition(binding.getRoot());
+        int visibility = collapsed ? View.GONE : View.VISIBLE;
+        binding.financeOverview.setVisibility(visibility);
+        binding.monthSummaryCard.setVisibility(visibility);
+        binding.financeAccountsCard.setVisibility(visibility);
+        binding.financeSmartHealthCard.setVisibility(visibility);
+        binding.financeInsightsActions.setVisibility(visibility);
+        binding.financeAnalyticsCard.setVisibility(visibility);
 
-NÂˆ[KœZYS˜[YHHX[ÙĞš[™[™Ë™š[˜[˜ÙTZYR[œ]™Ù]^
+        ConstraintSet constraints = new ConstraintSet();
+        constraints.clone(binding.getRoot());
+        constraints.clear(R.id.finance_search_layout, ConstraintSet.TOP);
+        constraints.connect(
+                R.id.finance_search_layout,
+                ConstraintSet.TOP,
+                collapsed ? ConstraintSet.PARENT_ID : R.id.finance_analytics_card,
+                collapsed ? ConstraintSet.TOP : ConstraintSet.BOTTOM,
+                getResources().getDimensionPixelSize(
+                        collapsed ? R.dimen.space_4 : R.dimen.space_16
+                )
+        );
+        constraints.applyTo(binding.getRoot());
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[KœÜ]\HHX[ÙĞš[™[™Ë™š[˜[˜ÙTÜ]\R[œ]™Ù]^
+    @Override
+    public void onAddRequested() {
+        showEntryEditor(null);
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[Kœ\XÚ\[˜[Y\ÈHX[ÙĞš[™[™Ë™š[˜[˜ÙT\XÚ\[Ò[œ]™Ù]^
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (binding != null) {
+            repository.startSharedSync(this::refreshData);
+            repository.runRecurringAutomation(this::refreshData);
+        }
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[KœÜ][[İ[ÈHX[ÙĞš[™[™Ë™š[˜[˜ÙTÜ][[İ[Ò[œ]™Ù]^
+    @Override
+    public void onPause() {
+        repository.stopSharedSync();
+        super.onPause();
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ[KœÙ][Y[İ]\ÈHX[ÙĞš[™[™Ë™š[˜[˜ÙTÙ][Y[[œ]™Ù]^
+    private void refreshData() {
+        loadEntries(binding.financeSearchInput.getText().toString());
+        loadSummary();
+        loadAccountSummary();
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆYˆ
-H““Ó‘H‹™\]X[Ê[KœÜ]\JJH[Kš\ÔÚ\™YHYNÂˆ™[Y[X™\XØÛİ[
-[K˜XØÛİ[˜[YJNÂ‚ˆ™\ÜÚ]ÜKœØ]™J[K
+    private void loadAccountSummary() {
+        repository.loadAccounts(accounts -> {
+            if (binding == null) return;
+            double total = 0D;
+            for (FinanceAccount account : accounts) total += account.currentBalance;
+            binding.financeAccountsSummary.setText(getString(
+                    R.string.finance_account_summary, accounts.size(), currencyFormatter.format(total)));
+        });
+    }
 
-HOˆÂˆYˆ
-š[™[™ÈOH[
-HÂˆ™]\›ÂˆBˆX[ÙË™\ÛZ\ÜÊ
-NÂˆ™Yœ™\Ú]J
-NÂˆÛ˜XÚØ˜\‹›XZÙJˆš[™[™Ë™Ù]›Ûİ
+    private void showAccountEditor() {
+        int padding = (int) (20 * getResources().getDisplayMetrics().density);
+        LinearLayout form = new LinearLayout(requireContext());
+        form.setOrientation(LinearLayout.VERTICAL); form.setPadding(padding, padding / 2, padding, 0);
+        EditText name = new EditText(requireContext()); name.setHint(R.string.finance_account_name);
+        EditText type = new EditText(requireContext()); type.setHint(R.string.finance_account_type);
+        EditText opening = new EditText(requireContext()); opening.setHint(R.string.finance_opening_balance);
+        opening.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
+                | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        form.addView(name); form.addView(type); form.addView(opening);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.finance_add_account).setView(form)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.save, (dialog, which) -> {
+                    String accountName = name.getText().toString().trim();
+                    if (accountName.isEmpty()) return;
+                    FinanceAccount account = new FinanceAccount(); account.name = accountName;
+                    account.accountType = type.getText().toString().trim().isEmpty()
+                            ? "OTHER" : type.getText().toString().trim().toUpperCase(Locale.ROOT);
+                    try { account.openingBalance = Double.parseDouble(opening.getText().toString().trim()); }
+                    catch (NumberFormatException ignored) { account.openingBalance = 0D; }
+                    rememberAccount(account.name);
+                    repository.saveAccount(account, this::refreshData);
+                }).show();
+    }
 
-Kˆ\Ó™]Ñ[HÈ‹œİš[™Ë™š[˜[˜ÙWÙ[WØYYˆ‹œİš[™Ë™š[˜[˜ÙWÙ[Wİ\]YˆÛ˜XÚØ˜\‹“S‘ÕÔÒÔ•ˆ
-KœÚİÊ
-NÂˆJNÂˆJNÂˆX[ÙËœÚİÊ
-NÂˆB‚ˆš]˜]H›ÚY\]PØ]YÛÜPÚÚXÙ\Êˆ›Û“[X[ÙÑš[˜[˜ÙQ[Pš[™[™ÈY]Ü‹ˆ›Û“[İš[™Ö×HØ]YÛÜšY\Âˆ
-HÂˆY]Ü‹™š[˜[˜ÙPØ]YÛÜR[œ]œÙ]Y\\Š™]È\œ˜^PY\\Šˆ™\]Z\™PÛÛ^
+    private void loadEntries(String query) {
+        repository.loadEntries(query, entries -> {
+            if (binding == null) {
+                return;
+            }
+            entryAdapter.submitList(entries);
+            if (query.trim().isEmpty()) {
+                latestEntries = new ArrayList<>(entries);
+                updateSmartInsights();
+                updateAnalytics();
+            }
+            boolean isEmpty = entries.isEmpty();
+            binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+            binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        });
+    }
 
-Kˆ‹›^[İ]š][WÙ›Ü›WÙ›ÜİÛ‹ˆØ]YÛÜšY\Âˆ
-JNÂˆB‚ˆ[X›Bˆš]˜]HİX›H˜[Y]QY]ÜŠX[ÙÑš[˜[˜ÙQ[Pš[™[™ÈY]ÜŠHÂˆİš[™È[[İ[^HY]Ü‹™š[˜[˜ÙP[[İ[[œ]™Ù]^
+    private void loadSummary() {
+        repository.loadCurrentMonthSummary(summary -> {
+            if (binding == null) {
+                return;
+            }
+            FinanceSummary safeSummary = summary == null ? new FinanceSummary() : summary;
+            latestSummary = safeSummary;
+            binding.monthExpenseValue.setText(currencyFormatter.format(safeSummary.expense));
+            binding.monthIncomeValue.setText(currencyFormatter.format(safeSummary.income));
+            binding.monthBalanceValue.setText(currencyFormatter.format(
+                    safeSummary.income - safeSummary.expense
+            ));
+            SemanticValueStyler.apply(
+                    binding.monthExpenseValue,
+                    -safeSummary.expense
+            );
+            SemanticValueStyler.apply(
+                    binding.monthIncomeValue,
+                    safeSummary.income
+            );
+            SemanticValueStyler.apply(
+                    binding.monthBalanceValue,
+                    safeSummary.income - safeSummary.expense
+            );
+            updateSmartInsights();
+        });
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆİš[™ÈØ]YÛÜHHY]Ü‹™š[˜[˜ÙPØ]YÛÜR[œ]™Ù]^
+    private void updateSmartInsights() {
+        if (binding == null) {
+            return;
+        }
+        double budget = monthlyBudget();
+        double expense = latestSummary.expense;
+        int budgetPercent = budget <= 0D ? 0 : (int) Math.round(
+                (expense / budget) * 100D
+        );
+        binding.financeBudgetProgress.setProgressCompat(
+                Math.min(100, Math.max(0, budgetPercent)),
+                true
+        );
 
-KÔİš[™Ê
-Kš[J
-NÂˆİš[™È]HHY]Ü‹™š[˜[˜ÙQ[Q]R[œ]™Ù]^
+        if (budget <= 0D) {
+            binding.financeBudgetHealthTitle.setText(
+                    R.string.finance_health_no_budget
+            );
+            binding.financeBudgetHealthDetail.setText(
+                    R.string.finance_health_no_budget_detail
+            );
+        } else {
+            int title;
+            if (expense > budget) {
+                title = R.string.finance_health_over_budget;
+            } else if (budgetPercent >= 90) {
+                title = R.string.finance_health_critical;
+            } else if (budgetPercent >= 70) {
+                title = R.string.finance_health_watch;
+            } else {
+                title = R.string.finance_health_good;
+            }
+            binding.financeBudgetHealthTitle.setText(title);
+            binding.financeBudgetHealthDetail.setText(getString(
+                    R.string.finance_health_budget_detail,
+                    budgetPercent,
+                    currencyFormatter.format(Math.max(0D, budget - expense))
+            ));
+        }
 
-KÔİš[™Ê
-Kš[J
-NÂˆİš[™ÈXØÛİ[HY]Ü‹™š[˜[˜ÙPXØÛİ[[œ]™Ù]^
+        String monthPrefix = new SimpleDateFormat(
+                "yyyy-MM",
+                Locale.US
+        ).format(new Date());
+        Map<String, Double> categoryExpense = new HashMap<>();
+        Set<String> accounts = new LinkedHashSet<>();
+        int recurringCount = 0;
+        int sharedCount = 0;
+        int monthTransactions = 0;
+        for (FinanceEntry entry : latestEntries) {
+            if (!entry.transactionDate.startsWith(monthPrefix)) {
+                continue;
+            }
+            monthTransactions++;
+            accounts.add(entry.accountName);
+            if (entry.isRecurring) {
+                recurringCount++;
+            }
+            if (entry.isShared) {
+                sharedCount++;
+            }
+            if (FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)) {
+                categoryExpense.put(
+                        entry.category,
+                        categoryExpense.getOrDefault(entry.category, 0D)
+                                + entry.amount
+                );
+            }
+        }
+        String topCategory = getString(R.string.finance_insight_none);
+        double topAmount = 0D;
+        for (Map.Entry<String, Double> item : categoryExpense.entrySet()) {
+            if (item.getValue() > topAmount) {
+                topCategory = item.getKey();
+                topAmount = item.getValue();
+            }
+        }
+        Calendar calendar = Calendar.getInstance();
+        int day = Math.max(1, calendar.get(Calendar.DAY_OF_MONTH));
+        int daysInMonth = calendar.getActualMaximum(
+                Calendar.DAY_OF_MONTH
+        );
+        double projectedExpense = expense <= 0D
+                ? 0D : (expense / day) * daysInMonth;
+        binding.financeSmartInsightDetail.setText(getString(
+                R.string.finance_smart_insight_detail,
+                monthTransactions,
+                topCategory,
+                currencyFormatter.format(topAmount),
+                recurringCount,
+                sharedCount,
+                accounts.size(),
+                currencyFormatter.format(projectedExpense)
+        ));
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆİš[™È^[Y[Y]ÙHY]Ü‹™š[˜[˜ÙT^[Y[Y]Ù[œ]™Ù]^
+    private void updateAnalytics() {
+        if (binding == null) return;
+        Calendar now = Calendar.getInstance();
+        String current = new SimpleDateFormat("yyyy-MM", Locale.US).format(now.getTime());
+        now.add(Calendar.MONTH, -1);
+        String previous = new SimpleDateFormat("yyyy-MM", Locale.US).format(now.getTime());
+        double currentExpense = 0D, previousExpense = 0D, currentIncome = 0D;
+        Map<String, Double> categories = new HashMap<>(), accounts = new HashMap<>(), payers = new HashMap<>();
+        for (FinanceEntry entry : latestEntries) {
+            if ("UPCOMING".equals(entry.recurrenceStatus)) continue;
+            if (entry.transactionDate.startsWith(previous) && FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)) {
+                previousExpense += entry.amount;
+            }
+            if (!entry.transactionDate.startsWith(current)) continue;
+            if (FinanceEntry.TYPE_INCOME.equals(entry.entryType)) { currentIncome += entry.amount; continue; }
+            currentExpense += entry.amount;
+            categories.put(entry.category, categories.getOrDefault(entry.category, 0D) + entry.amount);
+            accounts.put(entry.accountName, accounts.getOrDefault(entry.accountName, 0D) + entry.amount);
+            if (!entry.paidByName.isEmpty()) payers.put(entry.paidByName,
+                    payers.getOrDefault(entry.paidByName, 0D) + entry.amount);
+        }
+        double change = previousExpense <= 0D ? (currentExpense > 0D ? 100D : 0D)
+                : ((currentExpense - previousExpense) / previousExpense) * 100D;
+        int savingsRate = currentIncome <= 0D ? 0 : (int) Math.round(
+                Math.max(0D, (currentIncome - currentExpense) / currentIncome * 100D));
+        String trend = change > 5D ? getString(R.string.finance_trend_up)
+                : change < -5D ? getString(R.string.finance_trend_down) : getString(R.string.finance_trend_flat);
+        binding.financeAnalyticsSummary.setText(getString(R.string.finance_analytics_summary,
+                String.format(Locale.getDefault(), "%+.0f%%", change), savingsRate,
+                largestKey(categories), largestKey(accounts), largestKey(payers), trend));
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆ›ÛÛX[ˆ˜[YHYNÂˆİX›H[[İ[H[Â‚ˆHÂˆ[[İ[HİX›Kœ\œÙQİX›J[[İ[^
-NÂˆYˆ
-QİX›Kš\Ñš[š]J[[İ[
-H[[İ[H
-HÂˆ›İÈ™]È[X™\‘›Ü›X]^Ù\[ÛŠ
-NÂˆBˆY]Ü‹™š[˜[˜ÙP[[İ[^[İ]œÙ]\œ›ÜŠ[
-NÂˆHØ]Ú
-[X™\‘›Ü›X]^Ù\[Ûˆ^Ù\[ÛŠHÂˆY]Ü‹™š[˜[˜ÙP[[İ[^[İ]œÙ]\œ›ÜŠÙ]İš[™Ê‹œİš[™Ë™š[˜[˜ÙWØ[[İ[Ú[˜[Y
-JNÂˆ˜[YH˜[ÙNÂˆBˆ˜[Y	H™\]Z\™U^
-Y]Ü‹™š[˜[˜ÙPØ]YÛÜS^[İ]Ø]YÛÜK‹œİš[™Ë™š[˜[˜ÙWØØ]YÛÜWÜ™\]Z\™Y
-NÂˆ˜[Y	H™\]Z\™U^
-Y]Ü‹™š[˜[˜ÙPXØÛİ[^[İ]XØÛİ[‹œİš[™Ë™š[˜[˜ÙWØXØÛİ[Ü™\]Z\™Y
-NÂˆ˜[Y	H™\]Z\™U^
-Y]Ü‹™š[˜[˜ÙT^[Y[Y]Ù^[İ]^[Y[Y]Ù‹œİš[™Ë™š[˜[˜ÙWÜ^[Y[Ü™\]Z\™Y
-NÂˆİš[™ÈÜ]\HHY]Ü‹™š[˜[˜ÙTÜ]\R[œ]™Ù]^
+    private String largestKey(Map<String, Double> values) {
+        String result = getString(R.string.finance_insight_none); double largest = -1D;
+        for (Map.Entry<String, Double> value : values.entrySet()) {
+            if (value.getValue() > largest) { largest = value.getValue(); result = value.getKey(); }
+        }
+        return result;
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆİš[™È\XÚ\[ÈHY]Ü‹™š[˜[˜ÙT\XÚ\[Ò[œ]™Ù]^
+    private void showEntryEditor(@Nullable FinanceEntry existingEntry) {
+        DialogFinanceEntryBinding dialogBinding = DialogFinanceEntryBinding.inflate(getLayoutInflater());
+        boolean isNewEntry = existingEntry == null;
+        dialogBinding.financeEditorTitle.setText(isNewEntry
+                ? R.string.add_finance_entry
+                : R.string.edit_finance_entry);
+        dialogBinding.financeEntryDateInput.setText(isNewEntry
+                ? todayAsIsoDate()
+                : existingEntry.transactionDate);
+        String[] expenseCategories = getResources().getStringArray(
+                R.array.finance_expense_category_labels
+        );
+        String[] incomeCategories = getResources().getStringArray(
+                R.array.finance_income_category_labels
+        );
+        updateCategoryChoices(dialogBinding, expenseCategories);
+        dialogBinding.financeAccountInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, loadAccounts()
+        ));
+        dialogBinding.financePaymentMethodInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown,
+                getResources().getStringArray(R.array.finance_payment_method_labels)
+        ));
+        dialogBinding.financeSplitTypeInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown,
+                getResources().getStringArray(R.array.finance_split_type_labels)));
+        dialogBinding.financeSettlementInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown,
+                getResources().getStringArray(R.array.finance_settlement_labels)));
+        dialogBinding.financeSplitTypeInput.setText("NONE", false);
+        dialogBinding.financeSettlementInput.setText("NOT_APPLICABLE", false);
+        new FamilyAccountRepository().loadAuthorisedMembers(
+                new FamilyAccountRepository.ResultCallback<List<FamilyAccountRepository.Member>>() {
+                    @Override public void onSuccess(@Nullable List<FamilyAccountRepository.Member> members) {
+                        if (binding == null || members == null) return;
+                        List<String> names = new ArrayList<>();
+                        for (FamilyAccountRepository.Member member : members) {
+                            if (!member.displayName.trim().isEmpty()) names.add(member.displayName);
+                        }
+                        dialogBinding.financePaidByInput.setAdapter(new ArrayAdapter<>(requireContext(),
+                                R.layout.item_form_dropdown, names));
+                    }
+                    @Override public void onError(@NonNull Exception error) { }
+                });
+        dialogBinding.financeAccountInput.setText(isNewEntry ? "Cash" : existingEntry.accountName, false);
+        dialogBinding.financePaymentMethodInput.setText(
+                isNewEntry ? "Cash" : existingEntry.paymentMethod, false
+        );
+        dialogBinding.financeTypeGroup.setOnCheckedChangeListener(
+                (group, checkedId) -> updateCategoryChoices(
+                        dialogBinding,
+                        checkedId == R.id.type_income_button
+                                ? incomeCategories
+                                : expenseCategories
+                )
+        );
 
-KÔİš[™Ê
-Kš[J
-NÂˆYˆ
-H““Ó‘H‹™\]X[ÊÜ]\JJHÂˆ˜[Y	H™\]Z\™U^
-Y]Ü‹™š[˜[˜ÙT\XÚ\[Ó^[İ]\XÚ\[Ëˆ‹œİš[™Ë™š[˜[˜ÙWÜ\XÚ\[×Ü™\]Z\™Y
-NÂˆYˆ
-\XÚ\[ËœÜ]
-‹ŠK›[™İŠHÂˆY]Ü‹™š[˜[˜ÙT\XÚ\[Ó^[İ]œÙ]\œ›ÜŠÙ]İš[™Ê‹œİš[™Ë™š[˜[˜ÙWÜ\XÚ\[×ÛZ[š[][JJNÂˆ˜[YH˜[ÙNÂˆBˆH[ÙHÂˆY]Ü‹™š[˜[˜ÙT\XÚ\[Ó^[İ]œÙ]\œ›ÜŠ[
-NÂˆBˆYˆ
-ÕTÕÓH‹™\]X[ÊÜ]\JH	‰ˆ[[İ[OH[
-HÂˆİX›HÜ]İ[Hİ\İÛTÜ]İ[
-Y]Ü‹™š[˜[˜ÙTÜ][[İ[Ò[œ]™Ù]^
+        if (!isNewEntry) {
+            dialogBinding.financeAmountInput.setText(String.valueOf(existingEntry.amount));
+            dialogBinding.financeCategoryInput.setText(existingEntry.category);
+            dialogBinding.financeNoteInput.setText(existingEntry.note);
+            dialogBinding.financeRecurringSwitch.setChecked(existingEntry.isRecurring);
+            dialogBinding.financeSharedSwitch.setChecked(existingEntry.isShared);
+            dialogBinding.financePaidByInput.setText(existingEntry.paidByName, false);
+            dialogBinding.financeSplitTypeInput.setText(existingEntry.splitType, false);
+            dialogBinding.financeParticipantsInput.setText(existingEntry.participantNames);
+            dialogBinding.financeSplitAmountsInput.setText(existingEntry.splitAmounts);
+            dialogBinding.financeSettlementInput.setText(existingEntry.settlementStatus, false);
+            dialogBinding.financeTypeGroup.check(FinanceEntry.TYPE_INCOME.equals(existingEntry.entryType)
+                    ? R.id.type_income_button
+                    : R.id.type_expense_button);
+            updateCategoryChoices(
+                    dialogBinding,
+                    FinanceEntry.TYPE_INCOME.equals(existingEntry.entryType)
+                            ? incomeCategories
+                            : expenseCategories
+            );
+        }
 
-KÔİš[™Ê
-JNÂˆYˆ
-X]˜XœÊÜ]İ[H[[İ[
-HˆŒQ
-HÂˆY]Ü‹™š[˜[˜ÙTÜ][[İ[Ó^[İ]œÙ]\œ›ÜŠÙ]İš[™Êˆ‹œİš[™Ë™š[˜[˜ÙWÜÜ]İİ[Ù\œ›Ü‹İ\œ™[˜ŞQ›Ü›X]\‹™›Ü›X]
-[[İ[
-JJNÂˆ˜[YH˜[ÙNÂˆH[ÙHY]Ü‹™š[˜[˜ÙTÜ][[İ[Ó^[İ]œÙ]\œ›ÜŠ[
-NÂˆH[ÙHY]Ü‹™š[˜[˜ÙTÜ][[İ[Ó^[İ]œÙ]\œ›ÜŠ[
-NÂˆYˆ
-Z\Õ˜[Y\ÛÑ]J]JJHÂˆY]Ü‹™š[˜[˜ÙQ[Q]S^[İ]œÙ]\œ›ÜŠÙ]İš[™Ê‹œİš[™Ë™š[˜[˜ÙWÙ]WÚ[˜[Y
-JNÂˆ˜[YH˜[ÙNÂˆH[ÙHÂˆY]Ü‹™š[˜[˜ÙQ[Q]S^[İ]œÙ]\œ›ÜŠ[
-NÂˆBˆ™]\›ˆ˜[YÈ[[İ[ˆ[ÂˆB‚ˆš]˜]HİX›Hİ\İÛTÜ]İ[
-İš[™È[œ]
-HÂˆİX›Hİ[HÂˆHÂˆ›Üˆ
-İš[™È\ˆ[œ]œÜ]
-‹ŠJHÂˆ[Ù\\˜]ÜˆH\›\İ[™^ÙŠ	Î‰ÊNÂˆYˆ
-Ù\\˜]ÜˆH
-H™]\›ˆİX›K“˜SÂˆİX›H˜[YHHİX›Kœ\œÙQİX›J\œİXœİš[™ÊÙ\\˜]Üˆ
-ÈJKš[J
-JNÂˆYˆ
-QİX›Kš\Ñš[š]J˜[YJH˜[YH
-H™]\›ˆİX›K“˜SÂˆİ[
-ÏH˜[YNÂˆBˆ™]\›ˆİ[ÂˆHØ]Ú
-[X™\‘›Ü›X]^Ù\[Ûˆ\œ›ÜŠHÈ™]\›ˆİX›K“˜SÈBˆB‚ˆš]˜]Hİš[™Ö×HØYXØÛİ[Ê
-HÂˆÙ]İš[™ÏˆXØÛİ[ÈH™]È[šÙY\ÚÙ]Š
-NÂˆ›Üˆ
-İš[™ÈY˜][XØÛİ[ˆÙ]™\Ûİ\˜Ù\Ê
-K™Ù]İš[™Ğ\œ˜^J‹˜\œ˜^K™š[˜[˜ÙWØXØÛİ[ÙY˜][ÊJHÂˆXØÛİ[Ë˜Y
-Y˜][XØÛİ[
-NÂˆBˆXØÛİ[Ë˜Y[
-š[˜[˜ÙT™Y™\™[˜Ù\Ê
-K™Ù]İš[™ÔÙ]
-ÑVWĞPĞÓÕS•Ë™]È[šÙY\ÚÙ]Š
-JJNÂˆ™]\›ˆXØÛİ[ËĞ\œ˜^J™]Èİš[™ÖÌJNÂˆB‚ˆš]˜]H›ÚY™[Y[X™\XØÛİ[
-İš[™ÈXØÛİ[
-HÂˆYˆ
-XØÛİ[š\Ñ[\J
-JHÂˆ™]\›ÂˆBˆÙ]İš[™ÏˆXØÛİ[ÈH™]È[šÙY\ÚÙ]Šˆš[˜[˜ÙT™Y™\™[˜Ù\Ê
-K™Ù]İš[™ÔÙ]
-ÑVWĞPĞÓÕS•Ë™]È[šÙY\ÚÙ]Š
-JBˆ
-NÂˆXØÛİ[Ë˜Y
-XØÛİ[
-NÂˆš[˜[˜ÙT™Y™\™[˜Ù\Ê
-K™Y]
+        final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogBinding.getRoot())
+                .create();
 
-Kœ]İš[™ÔÙ]
-ÑVWĞPĞÓÕS•ËXØÛİ[ÊK˜\J
-NÂˆB‚ˆš]˜]HÚ\™Y™Y™\™[˜Ù\Èš[˜[˜ÙT™Y™\™[˜Ù\Ê
-HÂˆ™]\›ˆ™\]Z\™PÛÛ^
+        dialogBinding.financeEntryDateInput.setOnClickListener(v -> showDatePicker(
+                dialogBinding.financeEntryDateInput
+        ));
+        dialogBinding.financeEntryDateLayout.setEndIconOnClickListener(v -> showDatePicker(
+                dialogBinding.financeEntryDateInput
+        ));
+        dialogBinding.cancelFinanceButton.setOnClickListener(v -> dialog.dismiss());
+        dialogBinding.saveFinanceButton.setOnClickListener(v -> {
+            Double amount = validateEditor(dialogBinding);
+            if (amount == null) {
+                return;
+            }
 
-K™Ù]Ú\™Y™Y™\™[˜Ù\Ê’SSÑWÔ‘Q”ËÛÛ^“SÑWÔ’UUJNÂˆB‚ˆš]˜]HİX›H[ÛPYÙ]
+            FinanceEntry entry = isNewEntry ? new FinanceEntry() : existingEntry;
+            entry.entryType = dialogBinding.financeTypeGroup.getCheckedRadioButtonId() == R.id.type_income_button
+                    ? FinanceEntry.TYPE_INCOME
+                    : FinanceEntry.TYPE_EXPENSE;
+            entry.amount = amount;
+            entry.category = dialogBinding.financeCategoryInput.getText().toString().trim();
+            entry.note = dialogBinding.financeNoteInput.getText().toString().trim();
+            entry.transactionDate = dialogBinding.financeEntryDateInput.getText().toString().trim();
+            entry.accountName = dialogBinding.financeAccountInput.getText().toString().trim();
+            entry.paymentMethod = dialogBinding.financePaymentMethodInput.getText().toString().trim();
+            entry.isRecurring = dialogBinding.financeRecurringSwitch.isChecked();
+            entry.isShared = dialogBinding.financeSharedSwitch.isChecked();
+            entry.paidByName = dialogBinding.financePaidByInput.getText().toString().trim();
+            entry.splitType = dialogBinding.financeSplitTypeInput.getText().toString().trim();
+            entry.participantNames = dialogBinding.financeParticipantsInput.getText().toString().trim();
+            entry.splitAmounts = dialogBinding.financeSplitAmountsInput.getText().toString().trim();
+            entry.settlementStatus = dialogBinding.financeSettlementInput.getText().toString().trim();
+            if (!"NONE".equals(entry.splitType)) entry.isShared = true;
+            rememberAccount(entry.accountName);
 
-HÂˆ™]\›ˆİX›K›Û™Ğš]ÕÑİX›Jš[˜[˜ÙT™Y™\™[˜Ù\Ê
-K™Ù]Û™ÊˆÑVWÓSÓ•WĞ•QÑUİX›K™İX›UÔ˜]ÓÛ™Ğš]Ê
-Bˆ
-JNÂˆB‚ˆš]˜]H›ÚYÚİĞYÙ]Y]ÜŠ
-HÂˆY]^[œ]H™]ÈY]^
-™\]Z\™PÛÛ^
+            repository.save(entry, () -> {
+                if (binding == null) {
+                    return;
+                }
+                dialog.dismiss();
+                refreshData();
+                Snackbar.make(
+                        binding.getRoot(),
+                        isNewEntry ? R.string.finance_entry_added : R.string.finance_entry_updated,
+                        Snackbar.LENGTH_SHORT
+                ).show();
+            });
+        });
+        dialog.show();
+    }
 
-JNÂˆ[œ]œÙ][œ]\J[™›ÚY^’[œ]\K•TWĞÓTÔ×Ó•SP‘T‚ˆ[™›ÚY^’[œ]\K•TWÓ•SP‘T—Ñ“Q×ÑPÒSPS
-NÂˆİX›HYÙ]H[ÛPYÙ]
+    private void updateCategoryChoices(
+            @NonNull DialogFinanceEntryBinding editor,
+            @NonNull String[] categories
+    ) {
+        editor.financeCategoryInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                R.layout.item_form_dropdown,
+                categories
+        ));
+    }
 
-NÂˆYˆ
-YÙ]ˆ
-HÂˆ[œ]œÙ]^
-İš[™Ë˜[YSÙŠYÙ]
-JNÂˆBˆ[Y[™ÈHÙ]™\Ûİ\˜Ù\Ê
-K™Ù][Y[œÚ[Û”^[Ú^™J‹™[Y[‹œÜXÙWÌŒ
-NÂˆ[œ]œÙ]Y[™ÊY[™ËY[™ÈÈ‹Y[™ËY[™ÈÈŠNÂˆš[˜[[™›ÚY˜\ÛÛ\]˜\[\X[ÙÈX[ÙÈH™]ÈX]\šX[[\X[ÙĞZ[\Š™\]Z\™PÛÛ^
+    @Nullable
+    private Double validateEditor(DialogFinanceEntryBinding editor) {
+        String amountText = editor.financeAmountInput.getText().toString().trim();
+        String category = editor.financeCategoryInput.getText().toString().trim();
+        String date = editor.financeEntryDateInput.getText().toString().trim();
+        String account = editor.financeAccountInput.getText().toString().trim();
+        String paymentMethod = editor.financePaymentMethodInput.getText().toString().trim();
+        boolean valid = true;
+        Double amount = null;
 
-JBˆœÙ]]J‹œİš[™Ë™š[˜[˜ÙWØYÙ]
-BˆœÙ]Y\ÜØYÙJ‹œİš[™Ë™š[˜[˜ÙWØYÙ]Ü›Û\
-BˆœÙ]šY]Ê[œ]
-BˆœÙ]™YØ]]™P]ÛŠ‹œİš[™Ë˜Ø[˜Ù[[
-BˆœÙ]ÜÚ]]™P]ÛŠ‹œİš[™ËœØ]™K[
-Bˆ˜Ü™X]J
-NÂˆX[ÙËœÙ]Û”ÚİÓ\İ[™\ŠYÛ›Ü™YOˆX[ÙË™Ù]]ÛŠ[™›ÚY˜\ÛÛ\]˜\[\X[ÙË•UÓ—ÔÔÒUU‘JBˆœÙ]ÛÛXÚÓ\İ[™\ŠˆOˆÂˆHÂˆİX›H˜[YHHİX›Kœ\œÙQİX›J[œ]™Ù]^
+        try {
+            amount = Double.parseDouble(amountText);
+            if (!Double.isFinite(amount) || amount <= 0) {
+                throw new NumberFormatException();
+            }
+            editor.financeAmountLayout.setError(null);
+        } catch (NumberFormatException exception) {
+            editor.financeAmountLayout.setError(getString(R.string.finance_amount_invalid));
+            valid = false;
+        }
+        valid &= requireText(editor.financeCategoryLayout, category, R.string.finance_category_required);
+        valid &= requireText(editor.financeAccountLayout, account, R.string.finance_account_required);
+        valid &= requireText(editor.financePaymentMethodLayout, paymentMethod, R.string.finance_payment_required);
+        String splitType = editor.financeSplitTypeInput.getText().toString().trim();
+        String participants = editor.financeParticipantsInput.getText().toString().trim();
+        if (!"NONE".equals(splitType)) {
+            valid &= requireText(editor.financeParticipantsLayout, participants,
+                    R.string.finance_participants_required);
+            if (participants.split(",").length < 2) {
+                editor.financeParticipantsLayout.setError(getString(R.string.finance_participants_minimum));
+                valid = false;
+            }
+        } else {
+            editor.financeParticipantsLayout.setError(null);
+        }
+        if ("CUSTOM".equals(splitType) && amount != null) {
+            double splitTotal = customSplitTotal(editor.financeSplitAmountsInput.getText().toString());
+            if (Math.abs(splitTotal - amount) > 0.01D) {
+                editor.financeSplitAmountsLayout.setError(getString(
+                        R.string.finance_split_total_error, currencyFormatter.format(amount)));
+                valid = false;
+            } else editor.financeSplitAmountsLayout.setError(null);
+        } else editor.financeSplitAmountsLayout.setError(null);
+        if (!isValidIsoDate(date)) {
+            editor.financeEntryDateLayout.setError(getString(R.string.finance_date_invalid));
+            valid = false;
+        } else {
+            editor.financeEntryDateLayout.setError(null);
+        }
+        return valid ? amount : null;
+    }
 
-KÔİš[™Ê
-Kš[J
-JNÂˆYˆ
-QİX›Kš\Ñš[š]J˜[YJH˜[YH
-HÂˆ›İÈ™]È[X™\‘›Ü›X]^Ù\[ÛŠ
-NÂˆBˆš[˜[˜ÙT™Y™\™[˜Ù\Ê
-K™Y]
+    private double customSplitTotal(String input) {
+        double total = 0D;
+        try {
+            for (String part : input.split(",")) {
+                int separator = part.lastIndexOf(':');
+                if (separator <= 0) return Double.NaN;
+                double value = Double.parseDouble(part.substring(separator + 1).trim());
+                if (!Double.isFinite(value) || value < 0) return Double.NaN;
+                total += value;
+            }
+            return total;
+        } catch (NumberFormatException error) { return Double.NaN; }
+    }
 
-Kœ]Û™ÊˆÑVWÓSÓ•WĞ•QÑUİX›K™İX›UÔ˜]ÓÛ™Ğš]Ê˜[YJBˆ
-K˜\J
-NÂˆX[ÙË™\ÛZ\ÜÊ
-NÂˆ\]TÛX\[œÚYÚÊ
-NÂˆÛ˜XÚØ˜\‹›XZÙJš[™[™Ë™Ù]›Ûİ
+    private String[] loadAccounts() {
+        Set<String> accounts = new LinkedHashSet<>();
+        for (String defaultAccount : getResources().getStringArray(R.array.finance_account_defaults)) {
+            accounts.add(defaultAccount);
+        }
+        accounts.addAll(financePreferences().getStringSet(KEY_ACCOUNTS, new LinkedHashSet<>()));
+        return accounts.toArray(new String[0]);
+    }
 
-K‹œİš[™Ë™š[˜[˜ÙWØYÙ]ÜØ]™YÛ˜XÚØ˜\‹“S‘ÕÔÒÔ•
-KœÚİÊ
-NÂˆHØ]Ú
-[X™\‘›Ü›X]^Ù\[Ûˆ^Ù\[ÛŠHÂˆ[œ]œÙ]\œ›ÜŠÙ]İš[™Ê‹œİš[™Ë™š[˜[˜ÙWØYÙ]Ú[˜[Y
-JNÂˆBˆJJNÂˆX[ÙËœÚİÊ
-NÂˆB‚ˆš]˜]H›ÚYÚİÓ[ÛT™\Ü
+    private void rememberAccount(String account) {
+        if (account.isEmpty()) {
+            return;
+        }
+        Set<String> accounts = new LinkedHashSet<>(
+                financePreferences().getStringSet(KEY_ACCOUNTS, new LinkedHashSet<>())
+        );
+        accounts.add(account);
+        financePreferences().edit().putStringSet(KEY_ACCOUNTS, accounts).apply();
+    }
 
-HÂˆİX›H˜[[˜ÙHH]\İİ[[X\Kš[˜ÛÛYHH]\İİ[[X\K™^[œÙNÂˆİX›HYÙ]H[ÛPYÙ]
+    private SharedPreferences financePreferences() {
+        return requireContext().getSharedPreferences(FINANCE_PREFS, Context.MODE_PRIVATE);
+    }
 
-NÂˆİš[™È[ÛH™]ÈÚ[\Q]Q›Ü›X]
-“SSSH^^^H‹ØØ[K™Ù]Y˜][
+    private double monthlyBudget() {
+        return Double.longBitsToDouble(financePreferences().getLong(
+                KEY_MONTHLY_BUDGET, Double.doubleToRawLongBits(0D)
+        ));
+    }
 
-JK™›Ü›X]
-™]È]J
-JNÂˆ™]ÈX]\šX[[\X[ÙĞZ[\Š™\]Z\™PÛÛ^
+    private void showBudgetEditor() {
+        EditText input = new EditText(requireContext());
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
+                | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        double budget = monthlyBudget();
+        if (budget > 0) {
+            input.setText(String.valueOf(budget));
+        }
+        int padding = getResources().getDimensionPixelSize(R.dimen.space_20);
+        input.setPadding(padding, padding / 2, padding, padding / 2);
+        final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.finance_budget)
+                .setMessage(R.string.finance_budget_prompt)
+                .setView(input)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.save, null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> {
+                    try {
+                        double value = Double.parseDouble(input.getText().toString().trim());
+                        if (!Double.isFinite(value) || value < 0) {
+                            throw new NumberFormatException();
+                        }
+                        financePreferences().edit().putLong(
+                                KEY_MONTHLY_BUDGET, Double.doubleToRawLongBits(value)
+                        ).apply();
+                        dialog.dismiss();
+                        updateSmartInsights();
+                        Snackbar.make(binding.getRoot(), R.string.finance_budget_saved, Snackbar.LENGTH_SHORT).show();
+                    } catch (NumberFormatException exception) {
+                        input.setError(getString(R.string.finance_budget_invalid));
+                    }
+                }));
+        dialog.show();
+    }
 
-JBˆœÙ]]JÙ]İš[™Ê‹œİš[™Ë™š[˜[˜ÙWÜ™\Üİ]K[Û
-JBˆœÙ]Y\ÜØYÙJÙ]İš[™Êˆ‹œİš[™Ë™š[˜[˜ÙWÜ™\ÜØ›ÙKˆİ\œ™[˜ŞQ›Ü›X]\‹™›Ü›X]
-]\İİ[[X\Kš[˜ÛÛYJKˆİ\œ™[˜ŞQ›Ü›X]\‹™›Ü›X]
-]\İİ[[X\K™^[œÙJKˆİ\œ™[˜ŞQ›Ü›X]\‹™›Ü›X]
-˜[[˜ÙJKˆİ\œ™[˜ŞQ›Ü›X]\‹™›Ü›X]
-YÙ]
-Kˆİ\œ™[˜ŞQ›Ü›X]\‹™›Ü›X]
-YÙ]H]\İİ[[X\K™^[œÙJBˆ
-JBˆœÙ]ÜÚ]]™P]ÛŠ[™›ÚY”‹œİš[™Ë›ÚË[
-BˆœÚİÊ
-NÂˆB‚ˆš]˜]H›ÛÛX[ˆ™\]Z\™U^
-^[œ]^[İ]^[İ]İš[™È˜[YK[\œ›Ü“Y\ÜØYÙJHÂˆYˆ
-^][Ëš\Ñ[\J˜[YJJHÂˆ^[İ]œÙ]\œ›ÜŠÙ]İš[™Ê\œ›Ü“Y\ÜØYÙJJNÂˆ™]\›ˆ˜[ÙNÂˆBˆ^[İ]œÙ]\œ›ÜŠ[
-NÂˆ™]\›ˆYNÂˆB‚ˆš]˜]H›ÚYÚİÑ]TXÚÙ\ŠY]^]R[œ]
-HÂˆØ[[™\ˆØ[[™\ˆHØ[[™\‹™Ù][œİ[˜ÙJ
-NÂˆİš[™È˜[YHH]R[œ]™Ù]^
+    private void showMonthlyReport() {
+        double balance = latestSummary.income - latestSummary.expense;
+        double budget = monthlyBudget();
+        String month = new SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(new Date());
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.finance_report_title, month))
+                .setMessage(getString(
+                        R.string.finance_report_body,
+                        currencyFormatter.format(latestSummary.income),
+                        currencyFormatter.format(latestSummary.expense),
+                        currencyFormatter.format(balance),
+                        currencyFormatter.format(budget),
+                        currencyFormatter.format(budget - latestSummary.expense)
+                ))
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
 
-KÔİš[™Ê
-Kš[J
-NÂˆYˆ
-\Õ˜[Y\ÛÑ]J˜[YJJHÂˆHÂˆ]H\œÙY]HH™]ÈÚ[\Q]Q›Ü›X]
-TÓ×ÑUWÔUT“‹ØØ[K•TÊKœ\œÙJ˜[YJNÂˆYˆ
-\œÙY]HOH[
-HÂˆØ[[™\‹œÙ][YJ\œÙY]JNÂˆBˆHØ]Ú
-\œÙQ^Ù\[ÛˆYÛ›Ü™Y
-HÂˆËÈH]H˜[Y]ÜˆÙY\ÈH[œ]ØY™K‚ˆBˆB‚ˆ™]È]TXÚÙ\‘X[ÙÊˆ™\]Z\™PÛÛ^
+    private boolean requireText(TextInputLayout layout, String value, int errorMessage) {
+        if (TextUtils.isEmpty(value)) {
+            layout.setError(getString(errorMessage));
+            return false;
+        }
+        layout.setError(null);
+        return true;
+    }
 
-Kˆ
-šY]ËYX\‹[Û^SÙ“[Û
-HOˆ]R[œ]œÙ]^
-İš[™Ë™›Ü›X]
-ˆØØ[K•TË‰LIL™IL™‹YX\‹[Û
-ÈK^SÙ“[Ûˆ
-JKˆØ[[™\‹™Ù]
-Ø[[™\‹–QPTŠKˆØ[[™\‹™Ù]
-Ø[[™\‹“SÓ•
-KˆØ[[™\‹™Ù]
-Ø[[™\‹‘VWÓÑ—ÓSÓ•
-Bˆ
-KœÚİÊ
-NÂˆB‚ˆš]˜]Hİš[™ÈÙ^P\Ò\ÛÑ]J
-HÂˆ™]\›ˆ™]ÈÚ[\Q]Q›Ü›X]
-TÓ×ÑUWÔUT“‹ØØ[K•TÊK™›Ü›X]
-™]È]J
-JNÂˆB‚ˆš]˜]H›ÛÛX[ˆ\Õ˜[Y\ÛÑ]Jİš[™È˜[YJHÂˆYˆ
-˜[YKš\Ñ[\J
-JHÂˆ™]\›ˆ˜[ÙNÂˆBˆÚ[\Q]Q›Ü›X]›Ü›X]\ˆH™]ÈÚ[\Q]Q›Ü›X]
-TÓ×ÑUWÔUT“‹ØØ[K•TÊNÂˆ›Ü›X]\‹œÙ][šY[
-˜[ÙJNÂˆHÂˆ›Ü›X]\‹œ\œÙJ˜[YJNÂˆ™]\›ˆYNÂˆHØ]Ú
-\œÙQ^Ù\[Ûˆ^Ù\[ÛŠHÂˆ™]\›ˆ˜[ÙNÂˆBˆB‚ˆš]˜]H›ÚYÛÛ™š\›Q[]Jš[˜[˜ÙQ[H[JHÂˆ™]ÈX]\šX[[\X[ÙĞZ[\Š™\]Z\™PÛÛ^
+    private void showDatePicker(EditText dateInput) {
+        Calendar calendar = Calendar.getInstance();
+        String value = dateInput.getText().toString().trim();
+        if (isValidIsoDate(value)) {
+            try {
+                Date parsedDate = new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US).parse(value);
+                if (parsedDate != null) {
+                    calendar.setTime(parsedDate);
+                }
+            } catch (ParseException ignored) {
+                // The date validator keeps the input safe.
+            }
+        }
 
-JBˆœÙ]]J‹œİš[™Ë™[]WÙš[˜[˜ÙWÙ[Wİ]JBˆœÙ]Y\ÜØYÙJÙ]İš[™Ê‹œİš[™Ë™[]WÙš[˜[˜ÙWÙ[WÛY\ÜØYÙK[K˜Ø]YÛÜJJBˆœÙ]™YØ]]™P]ÛŠ‹œİš[™Ë˜Ø[˜Ù[[
-BˆœÙ]ÜÚ]]™P]ÛŠ‹œİš[™Ë˜ÛÛ™š\›WÙ[]K
-X[ÙËÚXÚ
-HOˆ™\ÜÚ]ÜK™[]J[K
+        new DatePickerDialog(
+                requireContext(),
+                (view, year, month, dayOfMonth) -> dateInput.setText(String.format(
+                        Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth
+                )),
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+        ).show();
+    }
 
-HOˆÂˆYˆ
-š[™[™ÈOH[
-HÂˆ™]\›ÂˆBˆ™Yœ™\Ú]J
-NÂˆÛ˜XÚØ˜\‹›XZÙJš[™[™Ë™Ù]›Ûİ
+    private String todayAsIsoDate() {
+        return new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US).format(new Date());
+    }
 
-K‹œİš[™Ë™š[˜[˜ÙWÙ[WÙ[]YÛ˜XÚØ˜\‹“S‘ÕÔÒÔ•
-KœÚİÊ
-NÂˆJJBˆœÚİÊ
-NÂˆB‚ˆİ™\œšYBˆX›XÈ›ÚYÛ‘\İ›ŞUšY]Ê
-HÂˆš[™[™ÈH[Âˆİ\\‹›Û‘\İ›ŞUšY]Ê
-NÂˆBŸB
+    private boolean isValidIsoDate(String value) {
+        if (value.isEmpty()) {
+            return false;
+        }
+        SimpleDateFormat formatter = new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US);
+        formatter.setLenient(false);
+        try {
+            formatter.parse(value);
+            return true;
+        } catch (ParseException exception) {
+            return false;
+        }
+    }
+
+    private void confirmDelete(FinanceEntry entry) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.delete_finance_entry_title)
+                .setMessage(getString(R.string.delete_finance_entry_message, entry.category))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.confirm_delete, (dialog, which) -> repository.delete(entry, () -> {
+                    if (binding == null) {
+                        return;
+                    }
+                    refreshData();
+                    Snackbar.make(binding.getRoot(), R.string.finance_entry_deleted, Snackbar.LENGTH_SHORT).show();
+                }))
+                .show();
+    }
+
+    @Override
+    public void onDestroyView() {
+        binding = null;
+        super.onDestroyView();
+    }
+}
