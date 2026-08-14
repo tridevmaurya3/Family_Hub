@@ -28,6 +28,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -132,6 +133,15 @@ public final class BackupRestoreActivity extends AppCompatActivity {
     private void bindActions() {
         findViewById(R.id.buttonBackupBack).setOnClickListener(
                 ignored -> finish()
+        );
+        findViewById(R.id.buttonBackupNotifications).setOnClickListener(
+                ignored -> startActivity(new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE,
+                                MainActivity.ROUTE_REMINDERS))
+        );
+        findViewById(R.id.buttonBackupProfile).setOnClickListener(
+                ignored -> startActivity(new Intent(
+                        this, ProfileSettingsActivity.class))
         );
         findViewById(R.id.buttonChooseBackupFolder).setOnClickListener(
                 ignored -> folderPicker.launch(preferences.destinationTreeUri())

@@ -62,6 +62,27 @@
                         android:layout_marginTop="@dimen/space_2"
                         android:text="@string/backup_subtitle" />
                 </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/buttonBackupNotifications"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_button"
+                    android:contentDescription="@string/reminders_title"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_bell"
+                    app:tint="@color/fh_primary" />
+
+                <ImageButton
+                    android:id="@+id/buttonBackupProfile"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:background="@drawable/bg_icon_button"
+                    android:contentDescription="@string/more_profile_title"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_profile_person"
+                    app:tint="@color/fh_primary" />
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView

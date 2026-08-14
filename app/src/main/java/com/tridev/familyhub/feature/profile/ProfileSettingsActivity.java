@@ -29,6 +29,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 /** Account profile, local avatar and app preference screen. */
 public final class ProfileSettingsActivity extends AppCompatActivity {
@@ -74,6 +75,12 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         darkThemeSwitch = findViewById(R.id.switchProfileDarkTheme);
 
         findViewById(R.id.buttonProfileBack).setOnClickListener(v -> finish());
+        findViewById(R.id.buttonProfileNotifications).setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE,
+                                MainActivity.ROUTE_REMINDERS)));
+        findViewById(R.id.buttonProfileHeaderProfile).setOnClickListener(v ->
+                findViewById(R.id.inputProfileName).requestFocus());
         findViewById(R.id.buttonProfileChangePhoto).setOnClickListener(v ->
                 photoPicker.launch("image/*"));
         findViewById(R.id.buttonProfileRemovePhoto).setOnClickListener(v -> {
