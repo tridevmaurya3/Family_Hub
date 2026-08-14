@@ -28,6 +28,7 @@ import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.repository.ReminderRepository;
 import com.tridev.familyhub.databinding.DialogReminderBinding;
 import com.tridev.familyhub.databinding.FragmentRemindersBinding;
+import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.reminders.adapter.ReminderAdapter;
 
 import java.text.SimpleDateFormat;
@@ -56,6 +57,9 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        binding.remindersOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
+                R.string.feature_menu_title,
+                clickedView -> ((MainActivity) requireActivity()).showFeatureMenu());
         repository = new ReminderRepository(requireContext());
         reminderAdapter = new ReminderAdapter(new ReminderAdapter.ReminderActionListener() {
             @Override

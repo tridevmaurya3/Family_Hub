@@ -33,6 +33,7 @@ import com.tridev.familyhub.databinding.DialogMemberEditorBinding;
 import com.tridev.familyhub.databinding.FragmentFamilyBinding;
 import com.tridev.familyhub.feature.family.adapter.FamilyMemberAdapter;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -98,6 +99,9 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        binding.familyOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
+                R.string.feature_menu_title,
+                clickedView -> ((MainActivity) requireActivity()).showFeatureMenu());
         repository = new FamilyMemberRepository(requireContext());
         familyAccountRepository = new FamilyAccountRepository();
         memberAdapter = new FamilyMemberAdapter(new FamilyMemberAdapter.MemberActionListener() {

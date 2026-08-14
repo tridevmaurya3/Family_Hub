@@ -26,6 +26,7 @@ import com.tridev.familyhub.data.repository.NotesRepository;
 import com.tridev.familyhub.databinding.DialogNoteBinding;
 import com.tridev.familyhub.databinding.FragmentNotesBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -63,6 +64,9 @@ public class NotesFragment extends Fragment implements AddActionHost {
             @Nullable Bundle savedInstanceState
     ) {
         super.onViewCreated(view, savedInstanceState);
+        binding.notesOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
+                R.string.feature_menu_title,
+                clickedView -> ((MainActivity) requireActivity()).showFeatureMenu());
         repository = new NotesRepository(requireContext());
         adapter = new NotesAdapter(new NotesAdapter.NoteActionListener() {
             @Override

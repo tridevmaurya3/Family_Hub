@@ -29,6 +29,7 @@ import com.tridev.familyhub.data.repository.PlannerRepository;
 import com.tridev.familyhub.databinding.DialogPlannerBinding;
 import com.tridev.familyhub.databinding.FragmentPlannerBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -77,6 +78,9 @@ public class PlannerFragment extends Fragment implements AddActionHost {
             @Nullable Bundle savedInstanceState
     ) {
         super.onViewCreated(view, savedInstanceState);
+        binding.plannerOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
+                R.string.feature_menu_title,
+                clickedView -> ((MainActivity) requireActivity()).showFeatureMenu());
         repository = new PlannerRepository(requireContext());
         memberRepository = new FamilyMemberRepository(requireContext());
         adapter = new PlannerAdapter(new PlannerAdapter.ActionListener() {
