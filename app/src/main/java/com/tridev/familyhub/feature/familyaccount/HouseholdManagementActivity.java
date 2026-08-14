@@ -1,5 +1,6 @@
 package com.tridev.familyhub.feature.familyaccount;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,6 +18,8 @@ import com.tridev.familyhub.data.repository.HouseholdRepository;
 import com.tridev.familyhub.databinding.ActivityHouseholdManagementBinding;
 import com.tridev.familyhub.databinding.DialogHouseholdEditorBinding;
 import com.tridev.familyhub.databinding.ItemHouseholdBinding;
+import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +42,12 @@ public class HouseholdManagementActivity extends AppCompatActivity {
 
         binding.buttonBack.setOnClickListener(v ->
                 getOnBackPressedDispatcher().onBackPressed());
+        binding.buttonNotifications.setOnClickListener(v ->
+                startActivity(new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE,
+                                MainActivity.ROUTE_REMINDERS)));
+        binding.buttonProfile.setOnClickListener(v ->
+                startActivity(new Intent(this, ProfileSettingsActivity.class)));
         binding.buttonRefreshHouseholds.setOnClickListener(v -> loadSession());
         binding.buttonAddHousehold.setOnClickListener(v ->
                 showCreateHousehold());

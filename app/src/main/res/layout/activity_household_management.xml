@@ -15,26 +15,30 @@
         android:paddingEnd="@dimen/screen_padding_horizontal"
         android:paddingBottom="@dimen/space_32">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/button_back"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/touch_target_min"
-            android:text="@string/action_back" />
-
-        <TextView
-            style="@style/TextAppearance.FamilyHub.Heading"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/household_title" />
-
-        <TextView
-            style="@style/TextAppearance.FamilyHub.Body"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_4"
-            android:text="@string/household_subtitle"
-            android:textColor="@color/fh_text_secondary" />
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/fh_surface" app:strokeColor="@color/fh_outline_variant">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:gravity="center_vertical" android:orientation="horizontal" android:padding="@dimen/space_8">
+                <ImageButton android:id="@+id/button_back" android:layout_width="36dp" android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_button" android:contentDescription="@string/action_back"
+                    android:padding="9dp" android:src="@drawable/ic_arrow_back" app:tint="@color/fh_primary" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_8" android:layout_weight="1" android:orientation="vertical">
+                    <TextView style="@style/TextAppearance.FamilyHub.Heading" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:text="@string/household_title" android:textSize="16sp" />
+                    <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:text="@string/household_subtitle" android:textSize="10sp" />
+                </LinearLayout>
+                <ImageButton android:id="@+id/button_notifications" android:layout_width="36dp" android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_button" android:contentDescription="@string/reminders_title"
+                    android:padding="9dp" android:src="@drawable/ic_bell" app:tint="@color/fh_primary" />
+                <ImageButton android:id="@+id/button_profile" android:layout_width="36dp" android:layout_height="36dp"
+                    android:layout_marginStart="@dimen/space_4" android:background="@drawable/bg_icon_button"
+                    android:contentDescription="@string/more_profile_title" android:padding="9dp"
+                    android:src="@drawable/ic_profile_person" app:tint="@color/fh_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <ProgressBar
             android:id="@+id/progress_households"
