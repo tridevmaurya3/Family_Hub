@@ -1,11 +1,14 @@
 package com.tridev.familyhub.feature.grocery;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,11 +19,14 @@ import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 
+import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,6 +38,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Existing purchases are baselined on first install/update and are NOT imported
  * retrospectively. Only later completed purchase cycles are offered to
  * MoneyManagerPro.
+ *
+ * For a newly completed local purchase, the current foreground Family Hub
+ * activity shows an optional MoneyManager Bank/Credit Card picker. This covers
+ * the main Grocery page, Shopping Mode and widget purchase checkpoint without
+ * rewriting those existing flows.
  *
  * Remote purchases made by another signed-in family member are not pushed into
  * this device owner's personal MoneyManager ledger. Family Hub Finance continues
@@ -50,14 +61,54 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             Executors.newSingleThreadExecutor();
 
     private final AtomicBoolean scanQueued = new AtomicBoolean(false);
+    private final Set<String> promptingKeys = Collections.newSetFromMap(
+            new ConcurrentHashMap<>());
+
     @Nullable private Context appContext;
     @Nullable private InvalidationTracker.Observer observer;
+    @NonNull private volatile WeakReference<Activity> foregroundActivity =
+            new WeakReference<>(null);
 
     @Override
     public boolean onCreate() {
         Context context = getContext();
         if (context == null) return false;
         appContext = context.getApplicationContext();
+
+        if (appContext instanceof Application) {
+            ((Application) appContext).registerActivityLifecycleCallbacks(
+                    new Application.ActivityLifecycleCallbacks() {
+                        @Override public void onActivityCreated(
+                                @NonNull Activity activity,
+                                @Nullable Bundle savedInstanceState) { }
+                        @Override public void onActivityStarted(
+                                @NonNull Activity activity) { }
+                        @Override public void onActivityResumed(
+                                @NonNull Activity activity) {
+                            foregroundActivity = new WeakReference<>(activity);
+                            scheduleScan(false);
+                        }
+                        @Override public void onActivityPaused(
+                                @NonNull Activity activity) {
+                            Activity current = foregroundActivity.get();
+                            if (current == activity) {
+                                foregroundActivity = new WeakReference<>(null);
+                            }
+                        }
+                        @Override public void onActivityStopped(
+                                @NonNull Activity activity) { }
+                        @Override public void onActivitySaveInstanceState(
+                                @NonNull Activity activity,
+                                @NonNull Bundle outState) { }
+                        @Override public void onActivityDestroyed(
+                                @NonNull Activity activity) {
+                            Activity current = foregroundActivity.get();
+                            if (current == activity) {
+                                foregroundActivity = new WeakReference<>(null);
+                            }
+                        }
+                    });
+        }
 
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(appContext);
         observer = new InvalidationTracker.Observer("grocery_items") {
@@ -131,15 +182,30 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                     continue;
                 }
 
-                GroceryMoneyManagerBridge.Result result =
-                        GroceryMoneyManagerBridge.sendPurchase(context, item);
-                if (result.accepted) {
-                    remember(preferences, key, currentEvent,
-                            GroceryMoneyManagerBridge.sourceRecordIdFor(item),
-                            item.purchaseCount, true);
+                Activity activity = foregroundActivity.get();
+                if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+                    // Wait for the next Activity resume instead of guessing a
+                    // payment account while Family Hub is not visibly in use.
+                    continue;
                 }
-                // If MoneyManager is absent/locked/signed differently, do not
-                // mark it sent. A later app start/table change can retry safely.
+                if (!promptingKeys.add(key)) continue;
+
+                GroceryMoneyManagerAccountPicker.chooseForCompletedPurchase(
+                        activity,
+                        item,
+                        () -> EXECUTOR.execute(() -> {
+                            try {
+                                GroceryMoneyManagerBridge.Result result =
+                                        GroceryMoneyManagerBridge.sendPurchase(context, item);
+                                if (result.accepted) {
+                                    remember(preferences, key, currentEvent,
+                                            GroceryMoneyManagerBridge.sourceRecordIdFor(item),
+                                            item.purchaseCount, true);
+                                }
+                            } finally {
+                                promptingKeys.remove(key);
+                            }
+                        }));
                 continue;
             }
 
