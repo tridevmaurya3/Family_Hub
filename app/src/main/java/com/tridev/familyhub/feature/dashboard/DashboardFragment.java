@@ -536,7 +536,7 @@ public class DashboardFragment extends Fragment {
                     renderFinance(data.getStats());
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
-                    renderPrioritySummary(data.getStats());
+                    renderPrioritySummary(data);
                     renderReminder(data);
                     renderBirthday(data);
                     renderBill(data);
@@ -552,7 +552,8 @@ public class DashboardFragment extends Fragment {
         );
     }
 
-    private void renderPrioritySummary(@NonNull DashboardStats stats) {
+    private void renderPrioritySummary(@NonNull DashboardData data) {
+        DashboardStats stats = data.getStats();
         int pending = stats.getPlannerOpen() + stats.getGroceryPending();
         int upcoming = stats.getUpcomingReminders();
         int urgent = stats.getDocumentsExpiringSoon()
@@ -569,6 +570,10 @@ public class DashboardFragment extends Fragment {
         binding.dashboardUrgentSource.setText(getString(
                 R.string.dashboard_urgent_breakdown,
                 stats.getDocumentsExpiringSoon(), stats.getVehiclesDueSoon()));
+        String owners = data.getPriorityOwners();
+        binding.dashboardPriorityOwners.setText(owners.isEmpty()
+                ? R.string.dashboard_priority_no_owner
+                : getString(R.string.dashboard_priority_owner_names, owners));
         binding.dashboardPendingCard.setOnClickListener(v ->
                 openPendingPriority(stats));
         binding.dashboardUpcomingCard.setOnClickListener(v -> {

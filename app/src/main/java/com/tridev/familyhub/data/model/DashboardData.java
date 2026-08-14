@@ -38,6 +38,9 @@ public class DashboardData {
 
     private long nextBillTriggerAt;
 
+    @NonNull
+    private String priorityOwners = "";
+
     public DashboardData() {
         stats = new DashboardStats();
         nextReminder = null;
@@ -140,6 +143,15 @@ public class DashboardData {
 
     public boolean hasUpcomingBill() {
         return nextBillReminder != null && nextBillTriggerAt > 0L;
+    }
+
+    @NonNull
+    public String getPriorityOwners() {
+        return priorityOwners;
+    }
+
+    public void setPriorityOwners(@NonNull String priorityOwners) {
+        this.priorityOwners = priorityOwners;
     }
 
     public double getIncome() {

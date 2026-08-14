@@ -20,6 +20,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -180,6 +182,25 @@ public class DashboardRepository {
                 stats.setGroceryPurchased(
                         database.groceryItemDao().countPurchased()
                 );
+                Set<String> priorityOwners = new LinkedHashSet<>();
+                boolean wholeFamilyPriority = false;
+                for (com.tridev.familyhub.data.local.entity.PlannerItem item
+                        : database.plannerItemDao().getAll()) {
+                    if (item.isCompleted) continue;
+                    String owner = item.assignedMemberName.trim();
+                    if (owner.isEmpty()) wholeFamilyPriority = true;
+                    else priorityOwners.add(owner);
+                }
+                for (com.tridev.familyhub.data.local.entity.GroceryItem item
+                        : database.groceryItemDao().getAll()) {
+                    if (item.isPurchased) continue;
+                    String owner = item.assignedMemberName.trim();
+                    if (owner.isEmpty()) wholeFamilyPriority = true;
+                    else priorityOwners.add(owner);
+                }
+                if (wholeFamilyPriority) priorityOwners.add("Whole family");
+                dashboardData.setPriorityOwners(
+                        android.text.TextUtils.join(", ", priorityOwners));
                 stats.setDocumentsExpiringSoon(
                         database.documentDao().countExpiringBy(thirtyDaysFromNow)
                 );
