@@ -31,7 +31,10 @@ public final class GroceryMoneyManagerAccountPicker {
             GroceryMoneyManagerBridge.AccountCatalog catalog =
                     GroceryMoneyManagerBridge.loadAccountCatalog(activity);
             activity.runOnUiThread(() -> {
-                if (activity.isFinishing() || activity.isDestroyed()) return;
+                if (activity.isFinishing() || activity.isDestroyed()) {
+                    continueSync.run();
+                    return;
+                }
                 if (!catalog.available || catalog.choices.isEmpty()) {
                     GroceryMoneyManagerBridge.rememberNextPurchaseAccount(
                             activity, item, null);
