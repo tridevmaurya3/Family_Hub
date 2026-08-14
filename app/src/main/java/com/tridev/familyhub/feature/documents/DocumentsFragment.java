@@ -208,11 +208,13 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         });
         binding.documentsBackButton.setOnClickListener(clickedView -> {
             if (requireActivity() instanceof MainActivity) {
-                ((MainActivity) requireActivity()).openHome();
-            } else {
-                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                ((MainActivity) requireActivity()).showFeatureMenu();
             }
         });
+        binding.documentsNotificationButton.setOnClickListener(clickedView ->
+                ((MainActivity) requireActivity()).openTab(R.id.nav_reminders));
+        binding.documentsProfileButton.setOnClickListener(clickedView ->
+                ((MainActivity) requireActivity()).openProfile());
         binding.buttonMissingDocumentsChecklist.setOnClickListener(
                 clickedView -> runProtected(this::showMissingDocumentsChecklist));
         binding.buttonDocumentsPdf.setOnClickListener(v -> runProtected(() -> exportInventory(true)));

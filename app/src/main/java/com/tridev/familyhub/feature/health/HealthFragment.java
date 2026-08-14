@@ -103,11 +103,13 @@ public class HealthFragment extends Fragment implements AddActionHost {
         binding.healthRecyclerView.setAdapter(adapter);
         binding.healthBackButton.setOnClickListener(clickedView -> {
             if (requireActivity() instanceof MainActivity) {
-                ((MainActivity) requireActivity()).openHome();
-            } else {
-                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                ((MainActivity) requireActivity()).showFeatureMenu();
             }
         });
+        binding.healthNotificationButton.setOnClickListener(clickedView ->
+                ((MainActivity) requireActivity()).openTab(R.id.nav_reminders));
+        binding.healthProfileButton.setOnClickListener(clickedView ->
+                ((MainActivity) requireActivity()).openProfile());
         binding.emptyAddHealthButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );

@@ -93,11 +93,13 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         binding.vehicleRecyclerView.setAdapter(adapter);
         binding.vehicleBackButton.setOnClickListener(clickedView -> {
             if (requireActivity() instanceof MainActivity) {
-                ((MainActivity) requireActivity()).openHome();
-            } else {
-                requireActivity().getOnBackPressedDispatcher().onBackPressed();
+                ((MainActivity) requireActivity()).showFeatureMenu();
             }
         });
+        binding.vehicleNotificationButton.setOnClickListener(clickedView ->
+                ((MainActivity) requireActivity()).openTab(R.id.nav_reminders));
+        binding.vehicleProfileButton.setOnClickListener(clickedView ->
+                ((MainActivity) requireActivity()).openProfile());
         binding.emptyAddVehicleButton.setOnClickListener(
                 clickedView -> prepareEditor(null)
         );
