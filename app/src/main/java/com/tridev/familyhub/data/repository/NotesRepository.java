@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.UUID;
 
 /** Repository boundary for local text notes and checklists. */
 public class NotesRepository {
@@ -51,6 +52,7 @@ public class NotesRepository {
     /** Starts family-scoped inbound sync and refreshes the visible page on changes. */
     public void startRealtimeSync(@NonNull ActionCallback onChanged) {
         stopRealtimeSync();
+        retryPendingSharedNotes();
         subscriber = new FamilyCollaborationSubscriber("notes",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
@@ -70,6 +72,17 @@ public class NotesRepository {
                     }
                 });
         subscriber.start();
+    }
+
+    /** Retries local-first shares that were saved while Firebase was unavailable. */
+    private void retryPendingSharedNotes() {
+        DATABASE_EXECUTOR.execute(() -> {
+            for (NoteEntry pending : noteDao.getPendingShared()) {
+                if (pending.isShared && pending.familyId.isEmpty()) {
+                    publish(pending);
+                }
+            }
+        });
     }
 
     public void stopRealtimeSync() {
@@ -115,6 +128,10 @@ public class NotesRepository {
                 noteDao.update(note);
             }
             if (note.isShared) {
+                if (note.cloudId.isEmpty()) {
+                    note.cloudId = UUID.randomUUID().toString();
+                    noteDao.update(note);
+                }
                 publish(note);
             } else {
                 String previousFamilyId = note.familyId;
@@ -188,6 +205,7 @@ public class NotesRepository {
             note.updatedAt = remoteUpdatedAt;
             note.updatedByUid = stringValue(snapshot, "updatedByUid");
             if (insert) note.id = noteDao.insert(note); else noteDao.update(note);
+            com.tridev.familyhub.feature.notes.NoteReminderScheduler.sync(appContext, note);
             mainHandler.post(onChanged::onComplete);
         });
     }

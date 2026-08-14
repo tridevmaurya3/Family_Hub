@@ -38,6 +38,9 @@ public interface NoteDao {
     @Query("SELECT * FROM notes WHERE cloudId = :cloudId LIMIT 1")
     NoteEntry getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM notes WHERE isShared = 1 AND familyId = ''")
+    List<NoteEntry> getPendingShared();
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(NoteEntry note);
 
