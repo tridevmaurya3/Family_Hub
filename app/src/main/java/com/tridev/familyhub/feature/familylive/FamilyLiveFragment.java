@@ -975,9 +975,9 @@ public class FamilyLiveFragment extends Fragment {
                     .snippet(getString(stale
                             ? R.string.family_live_map_marker_stale
                             : R.string.family_live_map_marker_live))
-                    .icon(BitmapDescriptorFactory.defaultMarker(stale
-                            ? BitmapDescriptorFactory.HUE_ORANGE
-                            : BitmapDescriptorFactory.HUE_GREEN))
+                    .icon(FamilyMemberMarkerFactory.create(displayName,
+                            null, ContextCompat.getColor(requireContext(), stale
+                                    ? R.color.fh_warning : R.color.fh_success)))
                     .alpha(stale ? 0.72F : 1F);
             googleMap.addMarker(marker);
             bounds.include(position);

@@ -5,9 +5,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.net.NetworkCapabilities;
 import android.os.Bundle;
 import android.text.Editable;
@@ -43,6 +46,8 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.SafePlace;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.model.FamilyLiveCloudMember;
 import com.tridev.familyhub.data.repository.FamilyLiveRepository;
 import com.tridev.familyhub.data.repository.SafePlaceRepository;
@@ -55,6 +60,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.io.InputStream;
+import java.util.concurrent.Executors;
 
 /**
  * Dedicated lifecycle-safe map for authorised Family Live memberships.
@@ -79,6 +86,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private final Map<Marker, FamilyLiveCloudMember> markerMembers =
             new HashMap<>();
     private final Map<String, Marker> memberMarkers = new HashMap<>();
+    private final Map<String, Bitmap> memberPhotos = new HashMap<>();
 
     @NonNull
     private List<FamilyLiveCloudMember> members = new ArrayList<>();
@@ -172,6 +180,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         bindSearch();
 
         familyRepository = new FamilyLiveRepository(this);
+        loadMemberPhotos();
         safePlaceRepository = new SafePlaceRepository(this);
         safePlaceRepository.loadAll(places -> {
             safePlaces = new ArrayList<>(places);
@@ -450,9 +459,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
                             ? R.string.family_live_map_marker_stale
                             : R.string.family_live_map_marker_live))
                     .alpha(stale ? 0.68F : 1F)
-                    .icon(BitmapDescriptorFactory.defaultMarker(
-                            normalMarkerHue(member, current, stale)
-                    )));
+                    .icon(memberMarker(member, current, stale, false)));
 
             if (marker == null) {
                 continue;
@@ -461,9 +468,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
             markerMembers.put(marker, member);
             memberMarkers.put(member.uid, marker);
             if (member.uid.equals(selectedMemberUid)) {
-                marker.setIcon(BitmapDescriptorFactory.defaultMarker(
-                        BitmapDescriptorFactory.HUE_RED
-                ));
+                marker.setIcon(memberMarker(member, current, stale, true));
                 selectedMarker = marker;
             }
             shown++;
@@ -564,9 +569,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
         restoreSelectedMarkerAppearance();
         selectedMemberUid = member.uid;
         selectedMarker = marker;
-        marker.setIcon(BitmapDescriptorFactory.defaultMarker(
-                BitmapDescriptorFactory.HUE_RED
-        ));
+        marker.setIcon(memberMarker(member, isCurrentUser(member.uid),
+                isStale(member), true));
 
         if (accuracyCircle != null) {
             accuracyCircle.remove();
@@ -610,9 +614,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
         clearComparisonOnly();
         comparisonMarker = targetMarker;
         comparisonTargetUid = targetMember.uid;
-        targetMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
-                BitmapDescriptorFactory.HUE_MAGENTA
-        ));
+        targetMarker.setIcon(memberMarker(targetMember,
+                isCurrentUser(targetMember.uid), isStale(targetMember), true));
 
         comparisonLine = map.addPolyline(new PolylineOptions()
                 .add(selectedMarker.getPosition(), targetMarker.getPosition())
@@ -1176,13 +1179,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
             selectedMarker = null;
             return;
         }
-        selectedMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
-                normalMarkerHue(
-                        previous,
-                        isCurrentUser(previous.uid),
-                        isStale(previous)
-                )
-        ));
+        selectedMarker.setIcon(memberMarker(previous,
+                isCurrentUser(previous.uid), isStale(previous), false));
     }
 
     private void restoreComparisonMarkerAppearance() {
@@ -1194,13 +1192,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
             comparisonMarker = null;
             return;
         }
-        comparisonMarker.setIcon(BitmapDescriptorFactory.defaultMarker(
-                normalMarkerHue(
-                        previous,
-                        isCurrentUser(previous.uid),
-                        isStale(previous)
-                )
-        ));
+        comparisonMarker.setIcon(memberMarker(previous,
+                isCurrentUser(previous.uid), isStale(previous), false));
     }
 
     private boolean isStale(@NonNull FamilyLiveCloudMember member) {
@@ -1223,6 +1216,44 @@ public final class FamilyMapActivity extends AppCompatActivity {
             return BitmapDescriptorFactory.HUE_ORANGE;
         }
         return BitmapDescriptorFactory.HUE_GREEN;
+    }
+
+    @NonNull
+    private com.google.android.gms.maps.model.BitmapDescriptor memberMarker(
+            @NonNull FamilyLiveCloudMember member,
+            boolean current,
+            boolean stale,
+            boolean selected
+    ) {
+        int color = ContextCompat.getColor(this, selected
+                ? R.color.fh_error
+                : current ? R.color.fh_info
+                : stale ? R.color.fh_warning : R.color.fh_success);
+        return FamilyMemberMarkerFactory.create(displayName(member),
+                memberPhotos.get(member.displayName.trim().toLowerCase(Locale.ROOT)), color);
+    }
+
+    private void loadMemberPhotos() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            Map<String, Bitmap> loaded = new HashMap<>();
+            for (FamilyMember member : FamilyHubDatabase.getInstance(this)
+                    .familyMemberDao().getAll()) {
+                if (member.profilePhotoUri.trim().isEmpty()) continue;
+                try (InputStream stream = getContentResolver().openInputStream(
+                        Uri.parse(member.profilePhotoUri))) {
+                    Bitmap bitmap = BitmapFactory.decodeStream(stream);
+                    if (bitmap != null) loaded.put(
+                            member.name.trim().toLowerCase(Locale.ROOT), bitmap);
+                } catch (Exception ignored) {
+                    // Initials remain available when a legacy photo URI cannot be opened.
+                }
+            }
+            runOnUiThread(() -> {
+                memberPhotos.clear();
+                memberPhotos.putAll(loaded);
+                renderMarkers();
+            });
+        });
     }
 
     @Nullable
