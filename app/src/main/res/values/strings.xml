@@ -1455,6 +1455,12 @@ Sharing: %12$s</string>
     <string name="finance_smart_insight_detail">%1$d transactions • Top: %2$s (%3$s)\n%4$d recurring • %5$d shared • %6$d accounts • Projected: %7$s</string>
     <string name="finance_report_title">Finance report · %1$s</string>
     <string name="finance_report_body">Income: %1$s\nExpense: %2$s\nBalance: %3$s\nBudget: %4$s\nRemaining budget: %5$s</string>
+    <string name="finance_report_options">Finance report</string>
+    <string name="finance_export_pdf">PDF</string>
+    <string name="finance_export_excel">Excel</string>
+    <string name="finance_share_pdf">Share PDF</string>
+    <string name="finance_export_empty">No transactions are visible in the selected filter.</string>
+    <string name="finance_export_error">Finance report could not be created.</string>
     <string name="finance_account_required">Choose or enter an account</string>
     <string name="finance_payment_required">Choose a payment method</string>
     <string name="finance_budget_invalid">Enter a valid budget amount</string>

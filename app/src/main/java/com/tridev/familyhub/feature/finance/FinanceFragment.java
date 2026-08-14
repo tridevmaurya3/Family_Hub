@@ -2,7 +2,9 @@ package com.tridev.familyhub.feature.finance;
 
 import android.app.DatePickerDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -19,6 +21,7 @@ import android.text.InputType;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.core.content.FileProvider;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -50,6 +53,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.File;
+import java.util.concurrent.Executors;
 
 /** Complete local income and expense feature. */
 public class FinanceFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
@@ -64,6 +69,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     private FinanceRepository repository;
     private FinanceSummary latestSummary = new FinanceSummary();
     @NonNull private List<FinanceEntry> latestEntries = new ArrayList<>();
+    @NonNull private List<FinanceEntry> visibleEntries = new ArrayList<>();
     private int selectedFinanceFilter = R.id.finance_filter_all;
     private boolean financeHeaderCollapsed;
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -122,7 +128,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         );
         binding.emptyAddFinanceButton.setOnClickListener(v -> showEntryEditor(null));
         binding.financeBudgetButton.setOnClickListener(v -> showBudgetEditor());
-        binding.financeReportButton.setOnClickListener(v -> showMonthlyReport());
+        binding.financeReportButton.setOnClickListener(v -> showReportOptions());
         binding.financeManageAccountsButton.setOnClickListener(v -> showAccountEditor());
         binding.financeSearchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -294,6 +300,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             if (include) filtered.add(entry);
         }
         entryAdapter.submitList(filtered);
+        visibleEntries = new ArrayList<>(filtered);
         boolean isEmpty = filtered.isEmpty();
         binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
         binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
@@ -755,6 +762,58 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                 ))
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
+    }
+
+    private void showReportOptions() {
+        if (visibleEntries.isEmpty()) {
+            Snackbar.make(binding.getRoot(), R.string.finance_export_empty,
+                    Snackbar.LENGTH_SHORT).show();
+            return;
+        }
+        String[] options = {
+                getString(R.string.finance_export_pdf),
+                getString(R.string.finance_export_excel),
+                getString(R.string.finance_share_pdf)
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.finance_report_options)
+                .setItems(options, (dialog, which) -> exportFinanceReport(
+                        which != 1, which == 2))
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void exportFinanceReport(boolean pdf, boolean share) {
+        Context context = requireContext().getApplicationContext();
+        List<FinanceEntry> reportRows = new ArrayList<>(visibleEntries);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                File folder = new File(context.getCacheDir(), "finance_reports");
+                if (!folder.exists() && !folder.mkdirs()) throw new java.io.IOException();
+                String stamp = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US)
+                        .format(new Date());
+                File file = new File(folder, "Finance_Report_" + stamp
+                        + (pdf ? ".pdf" : ".xls"));
+                if (pdf) FinanceReportExporter.pdf(file, reportRows);
+                else FinanceReportExporter.excel(file, reportRows);
+                if (isAdded()) requireActivity().runOnUiThread(() -> shareFinanceFile(
+                        file, pdf ? "application/pdf" : "application/vnd.ms-excel", share));
+            } catch (Exception error) {
+                if (isAdded()) requireActivity().runOnUiThread(() -> Snackbar.make(
+                        binding.getRoot(), R.string.finance_export_error,
+                        Snackbar.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void shareFinanceFile(File file, String mime, boolean directShare) {
+        Uri uri = FileProvider.getUriForFile(requireContext(),
+                requireContext().getPackageName() + ".backupfiles", file);
+        Intent intent = new Intent(Intent.ACTION_SEND).setType(mime)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, getString(directShare
+                ? R.string.finance_share_pdf : R.string.finance_report_options)));
     }
 
     private boolean requireText(TextInputLayout layout, String value, int errorMessage) {
