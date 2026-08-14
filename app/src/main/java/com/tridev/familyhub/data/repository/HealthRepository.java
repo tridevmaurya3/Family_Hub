@@ -115,8 +115,30 @@ public class HealthRepository {
             List<HealthRecordWithMember> records = trimmedQuery.isEmpty()
                     ? healthRecordDao.getAllWithMember()
                     : healthRecordDao.searchWithMember(trimmedQuery);
+            reconcileDocumentLinks(records);
             mainHandler.post(() -> callback.onRecordsLoaded(records));
         });
+    }
+
+    private void reconcileDocumentLinks(
+            @NonNull List<HealthRecordWithMember> records
+    ) {
+        for (HealthRecordWithMember item : records) {
+            HealthRecord record = item.record;
+            if (record.linkedDocumentId <= 0L) continue;
+            DocumentEntry document = documentDao.getById(record.linkedDocumentId);
+            String currentTitle = document == null || document.deletedAt > 0L
+                    ? "" : document.title;
+            long currentId = currentTitle.isEmpty()
+                    ? 0L : record.linkedDocumentId;
+            if (record.linkedDocumentId == currentId
+                    && record.linkedDocumentTitle.equals(currentTitle)) {
+                continue;
+            }
+            record.linkedDocumentId = currentId;
+            record.linkedDocumentTitle = currentTitle;
+            healthRecordDao.update(record);
+        }
     }
 
     public void loadMembers(@NonNull MembersCallback callback) {

@@ -104,8 +104,30 @@ public class VehicleRepository {
             List<VehicleWithOwner> vehicles = trimmedQuery.isEmpty()
                     ? vehicleDao.getAllWithOwner()
                     : vehicleDao.searchWithOwner(trimmedQuery);
+            reconcileDocumentLinks(vehicles);
             mainHandler.post(() -> callback.onVehiclesLoaded(vehicles));
         });
+    }
+
+    private void reconcileDocumentLinks(
+            @NonNull List<VehicleWithOwner> vehicles
+    ) {
+        for (VehicleWithOwner item : vehicles) {
+            Vehicle vehicle = item.vehicle;
+            if (vehicle.linkedDocumentId <= 0L) continue;
+            DocumentEntry document = documentDao.getById(vehicle.linkedDocumentId);
+            String currentTitle = document == null || document.deletedAt > 0L
+                    ? "" : document.title;
+            long currentId = currentTitle.isEmpty()
+                    ? 0L : vehicle.linkedDocumentId;
+            if (vehicle.linkedDocumentId == currentId
+                    && vehicle.linkedDocumentTitle.equals(currentTitle)) {
+                continue;
+            }
+            vehicle.linkedDocumentId = currentId;
+            vehicle.linkedDocumentTitle = currentTitle;
+            vehicleDao.update(vehicle);
+        }
     }
 
     public void loadMembers(@NonNull MembersCallback callback) {

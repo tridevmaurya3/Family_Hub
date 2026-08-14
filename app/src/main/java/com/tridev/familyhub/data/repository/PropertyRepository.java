@@ -98,8 +98,30 @@ public class PropertyRepository {
             List<PropertyWithOwner> properties = trimmedQuery.isEmpty()
                     ? propertyDao.getAllWithOwner()
                     : propertyDao.searchWithOwner(trimmedQuery);
+            reconcileDocumentLinks(properties);
             mainHandler.post(() -> callback.onPropertiesLoaded(properties));
         });
+    }
+
+    private void reconcileDocumentLinks(
+            @NonNull List<PropertyWithOwner> properties
+    ) {
+        for (PropertyWithOwner item : properties) {
+            PropertyEntry property = item.property;
+            if (property.linkedDocumentId <= 0L) continue;
+            DocumentEntry document = documentDao.getById(property.linkedDocumentId);
+            String currentTitle = document == null || document.deletedAt > 0L
+                    ? "" : document.title;
+            long currentId = currentTitle.isEmpty()
+                    ? 0L : property.linkedDocumentId;
+            if (property.linkedDocumentId == currentId
+                    && property.linkedDocumentTitle.equals(currentTitle)) {
+                continue;
+            }
+            property.linkedDocumentId = currentId;
+            property.linkedDocumentTitle = currentTitle;
+            propertyDao.update(property);
+        }
     }
 
     public void loadMembers(@NonNull MembersCallback callback) {
