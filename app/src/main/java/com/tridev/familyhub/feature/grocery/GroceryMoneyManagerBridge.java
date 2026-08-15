@@ -144,6 +144,12 @@ public final class GroceryMoneyManagerBridge {
                 : ref;
     }
 
+    /**
+     * Post one finalized Grocery purchase. The exact account/card and Expense
+     * category refs are revalidated against MoneyManager's live master catalog
+     * immediately before submission. This prevents a stale overlay/default ref
+     * from creating a NEEDS_REVIEW event that could otherwise look successful.
+     */
     @NonNull
     public static Result sendPurchase(@NonNull Context context, @NonNull GroceryItem item) {
         double amount = item.actualCost > 0D ? item.actualCost : item.estimatedCost;
@@ -152,15 +158,42 @@ public final class GroceryMoneyManagerBridge {
             return new Result(false, "SKIPPED", "Purchase is incomplete or has no amount");
         }
 
+        String selectedAccount = selectedAccountRef(context, item);
+        String selectedCategory = selectedCategoryRef(context, item);
+        if (selectedAccount.isEmpty() || selectedCategory.isEmpty()) {
+            return new Result(false, "MAPPING_REQUIRED",
+                    "Choose a MoneyManager account/card and Expense category");
+        }
+
+        MoneyManagerMasterCatalogBridge.Catalog liveCatalog =
+                MoneyManagerMasterCatalogBridge.load(context);
+        if (!liveCatalog.available) {
+            return new Result(false, "UNAVAILABLE",
+                    liveCatalog.reason.isEmpty()
+                            ? "MoneyManager master catalog is unavailable"
+                            : liveCatalog.reason);
+        }
+
+        MoneyManagerMasterCatalogBridge.Choice accountChoice =
+                MoneyManagerMasterCatalogBridge.findByRef(
+                        liveCatalog.accounts, selectedAccount);
+        MoneyManagerMasterCatalogBridge.Choice categoryChoice =
+                MoneyManagerMasterCatalogBridge.findByRef(
+                        liveCatalog.expenseCategories, selectedCategory);
+        if (accountChoice == null) {
+            return new Result(false, "MAPPING_REQUIRED",
+                    "Selected Grocery account/card is no longer in MoneyManager master catalog");
+        }
+        if (categoryChoice == null) {
+            return new Result(false, "MAPPING_REQUIRED",
+                    "Selected Grocery Expense category is no longer in MoneyManager master catalog");
+        }
+
         String eventId = eventIdFor(item);
         String sourceRecordId = sourceRecordIdFor(item);
         String merchant = metadata(item.storeName, 120);
-        String selectedAccount = selectedAccountRef(context, item);
-        String selectedCategory = selectedCategoryRef(context, item);
-        String accountHint = selectedAccount.isEmpty()
-                ? "unassigned:" + eventId.substring(Math.max(0, eventId.length() - 24))
-                : selectedAccount;
-        String categoryHint = selectedCategory.isEmpty() ? "Grocery" : selectedCategory;
+        String accountHint = accountChoice.ref;
+        String categoryHint = categoryChoice.ref;
 
         Bundle extras = new Bundle();
         extras.putString("event_id", eventId);
@@ -248,12 +281,19 @@ public final class GroceryMoneyManagerBridge {
             }
             String status = safe(response.getString("status"));
             String reason = safe(response.getString("reason"));
-            boolean accepted = !("REJECTED".equals(status)
-                    || "FAILED".equals(status) || "UNAVAILABLE".equals(status));
-            return new Result(accepted, status, reason);
+            return new Result(isFinalizedStatus(status), status, reason);
         } catch (RuntimeException unavailable) {
             return new Result(false, "UNAVAILABLE", "MoneyManager bridge is unavailable");
         }
+    }
+
+    private static boolean isFinalizedStatus(@Nullable String status) {
+        String value = safe(status).toUpperCase(Locale.ROOT);
+        return "POSTED".equals(value)
+                || "RECONCILED".equals(value)
+                || "DUPLICATE".equals(value)
+                || "CANCELLED".equals(value)
+                || "PRESERVED".equals(value);
     }
 
     private static long toMinor(double amount) {
