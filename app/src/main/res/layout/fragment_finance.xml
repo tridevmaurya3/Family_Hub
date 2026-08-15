@@ -4,470 +4,485 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_page_three_tone"
-    android:paddingStart="@dimen/screen_padding_horizontal"
-    android:paddingTop="@dimen/compact_page_top_padding"
-    android:paddingEnd="@dimen/screen_padding_horizontal">
+    android:background="@drawable/bg_page_three_tone">
 
-    <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
-        android:id="@+id/finance_overview"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:overviewAccentColor="@color/fh_module_finance"
-        app:overviewContainerColor="@color/fh_module_finance_container"
-        app:overviewDetail="@string/finance_subtitle"
-        app:overviewIcon="@drawable/ic_wallet"
-        app:overviewTitle="@string/finance_title" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/month_summary_card"
-        style="@style/Widget.FamilyHub.Card.Flat"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_overview">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="@dimen/card_padding">
-
-            <TextView
-                style="@style/TextAppearance.FamilyHub.Overline"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/this_month"
-                android:textColor="@color/fh_module_finance" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_10"
-                android:orientation="horizontal">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/space_4"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="@color/fh_error_container"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardElevation="0dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="vertical"
-                        android:padding="@dimen/space_10">
-
-                        <TextView
-                            style="@style/TextAppearance.FamilyHub.Caption"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/finance_expense"
-                            android:textColor="@color/fh_on_error_container" />
-
-                        <TextView
-                            android:id="@+id/month_expense_value"
-                            style="@style/TextAppearance.FamilyHub.BodyStrong"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/space_6"
-                            android:textColor="@color/fh_error" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_4"
-                    android:layout_marginEnd="@dimen/space_4"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="@color/fh_success_container"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardElevation="0dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="vertical"
-                        android:padding="@dimen/space_10">
-
-                        <TextView
-                            style="@style/TextAppearance.FamilyHub.Caption"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/finance_income"
-                            android:textColor="@color/fh_on_success_container" />
-
-                        <TextView
-                            android:id="@+id/month_income_value"
-                            style="@style/TextAppearance.FamilyHub.BodyStrong"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/space_6"
-                            android:textColor="@color/fh_success" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_4"
-                    android:layout_weight="1.15"
-                    app:cardBackgroundColor="@color/fh_info_container"
-                    app:cardCornerRadius="@dimen/radius_12"
-                    app:cardElevation="0dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="64dp"
-                        android:orientation="vertical"
-                        android:padding="@dimen/space_10">
-
-                        <TextView
-                            style="@style/TextAppearance.FamilyHub.Caption"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/finance_balance"
-                            android:textColor="@color/fh_on_info_container" />
-
-                        <TextView
-                            android:id="@+id/month_balance_value"
-                            style="@style/TextAppearance.FamilyHub.BodyStrong"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/space_6"
-                            android:textColor="@color/fh_info" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/finance_accounts_card"
-        style="@style/Widget.FamilyHub.Card.Flat"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8"
-        app:cardBackgroundColor="@color/fh_success_container"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/month_summary_card">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:gravity="center_vertical" android:orientation="horizontal" android:padding="@dimen/space_10">
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                <TextView style="@style/TextAppearance.FamilyHub.BodyStrong" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/finance_linked_accounts" />
-                <TextView android:id="@+id/finance_accounts_summary" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4" android:text="@string/finance_accounts_loading" />
-            </LinearLayout>
-            <com.google.android.material.button.MaterialButton android:id="@+id/finance_manage_accounts_button"
-                style="@style/Widget.FamilyHub.Button.Action" android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min" android:text="@string/manage" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/finance_smart_health_card"
-        style="@style/Widget.FamilyHub.Card.Flat"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8"
-        app:cardBackgroundColor="@color/fh_info_container"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_accounts_card"
-        app:strokeColor="@color/fh_outline_variant">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="@dimen/space_10">
-
-            <TextView
-                style="@style/TextAppearance.FamilyHub.Overline"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/finance_smart_health"
-                android:textColor="@color/fh_info" />
-
-            <TextView
-                android:id="@+id/finance_budget_health_title"
-                style="@style/TextAppearance.FamilyHub.BodyStrong"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:text="@string/finance_health_waiting"
-                android:textColor="@color/fh_on_surface" />
-
-            <com.google.android.material.progressindicator.LinearProgressIndicator
-                android:id="@+id/finance_budget_progress"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_6"
-                android:max="100"
-                android:progress="0"
-                app:indicatorColor="@color/fh_module_finance"
-                app:trackColor="@color/fh_surface_variant"
-                app:trackCornerRadius="4dp"
-                app:trackThickness="6dp" />
-
-            <TextView
-                android:id="@+id/finance_budget_health_detail"
-                style="@style/TextAppearance.FamilyHub.Caption"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:maxLines="2"
-                android:text="@string/finance_health_detail_waiting"
-                android:textColor="@color/fh_text_secondary" />
-
-            <TextView
-                android:id="@+id/finance_smart_insight_detail"
-                style="@style/TextAppearance.FamilyHub.Caption"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:maxLines="3"
-                android:text="@string/finance_insight_waiting"
-                android:textColor="@color/fh_text_secondary" />
-
-        </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
-    <LinearLayout
-        android:id="@+id/finance_insights_actions"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8"
-        android:orientation="horizontal"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_smart_health_card">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/finance_budget_button"
-            style="@style/Widget.FamilyHub.Button.Outlined"
-            android:layout_width="0dp"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginEnd="@dimen/space_4"
-            android:layout_weight="1"
-            android:text="@string/finance_budget" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/finance_report_button"
-            style="@style/Widget.FamilyHub.Button.Outlined"
-            android:layout_width="0dp"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginStart="@dimen/space_4"
-            android:layout_weight="1"
-            android:text="@string/finance_monthly_report" />
-
-    </LinearLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/finance_search_layout"
-        style="@style/Widget.FamilyHub.TextInputLayout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_16"
-        android:hint="@string/search_finance_entries"
-        app:endIconMode="clear_text"
-        app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="@color/fh_module_finance"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_analytics_card">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/finance_search_input"
-            style="@style/TextAppearance.FamilyHub.Body"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1"
-            android:textColor="@color/fh_on_surface" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <HorizontalScrollView
-        android:id="@+id/finance_filter_scroll"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_6"
-        android:scrollbars="none"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_search_layout">
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/finance_filter_group"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:chipSpacingHorizontal="@dimen/space_6"
-            app:selectionRequired="true"
-            app:singleSelection="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/finance_filter_all"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/finance_filter_all" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/finance_filter_today"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/finance_filter_today" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/finance_filter_week"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/finance_filter_week" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/finance_filter_month"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/finance_filter_month" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/finance_filter_income"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/finance_income" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/finance_filter_expense"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/finance_expense" />
-
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/finance_analytics_card"
-        style="@style/Widget.FamilyHub.Card.Flat"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8"
-        app:cardBackgroundColor="@color/fh_module_finance_container"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_insights_actions">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="vertical" android:padding="@dimen/space_10">
-            <TextView style="@style/TextAppearance.FamilyHub.BodyStrong" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/finance_analytics_title" />
-            <TextView android:id="@+id/finance_analytics_summary" style="@style/TextAppearance.FamilyHub.Caption"
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4" android:maxLines="5"
-                android:text="@string/finance_analytics_loading" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/finance_recycler_view"
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/finance_page_scroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:nestedScrollingEnabled="true"
+        android:fillViewport="true"
         android:overScrollMode="ifContentScrolls"
-        android:paddingTop="@dimen/space_16"
-        android:paddingBottom="88dp"
+        android:scrollbars="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_filter_scroll" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/finance_empty_state"
-        style="@style/Widget.FamilyHub.Card.Flat"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/compact_section_spacing"
-        android:visibility="gone"
-        app:cardBackgroundColor="@color/fh_module_finance_container"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/finance_filter_scroll"
-        app:strokeColor="@color/fh_module_finance">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:orientation="vertical"
-            android:padding="@dimen/compact_empty_state_padding">
+            android:paddingStart="@dimen/screen_padding_horizontal"
+            android:paddingTop="@dimen/compact_page_top_padding"
+            android:paddingEnd="@dimen/screen_padding_horizontal"
+            android:paddingBottom="96dp">
 
-            <ImageView
-                android:layout_width="@dimen/compact_empty_state_icon_size"
-                android:layout_height="@dimen/compact_empty_state_icon_size"
-                android:background="@drawable/bg_placeholder_icon"
-                android:contentDescription="@null"
-                android:padding="@dimen/compact_empty_state_icon_padding"
-                android:src="@drawable/ic_wallet"
-                app:tint="@color/fh_module_finance" />
-
-            <TextView
-                style="@style/TextAppearance.FamilyHub.SectionTitle"
-                android:layout_width="wrap_content"
+            <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
+                android:id="@+id/finance_overview"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/compact_section_spacing"
-                android:gravity="center"
-                android:text="@string/no_finance_entries_title" />
+                app:overviewAccentColor="@color/fh_module_finance"
+                app:overviewContainerColor="@color/fh_module_finance_container"
+                app:overviewDetail="@string/finance_subtitle"
+                app:overviewIcon="@drawable/ic_wallet"
+                app:overviewTitle="@string/finance_title" />
 
-            <TextView
-                style="@style/TextAppearance.FamilyHub.Body"
-                android:layout_width="wrap_content"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/month_summary_card"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/compact_section_spacing">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/card_padding">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Overline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/this_month"
+                        android:textColor="@color/fh_module_finance" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_10"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="@dimen/space_4"
+                            android:layout_weight="1"
+                            app:cardBackgroundColor="@color/fh_error_container"
+                            app:cardCornerRadius="@dimen/radius_12"
+                            app:cardElevation="0dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="64dp"
+                                android:orientation="vertical"
+                                android:padding="@dimen/space_10">
+
+                                <TextView
+                                    style="@style/TextAppearance.FamilyHub.Caption"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/finance_expense"
+                                    android:textColor="@color/fh_on_error_container" />
+
+                                <TextView
+                                    android:id="@+id/month_expense_value"
+                                    style="@style/TextAppearance.FamilyHub.BodyStrong"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_6"
+                                    android:textColor="@color/fh_error" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_4"
+                            android:layout_marginEnd="@dimen/space_4"
+                            android:layout_weight="1"
+                            app:cardBackgroundColor="@color/fh_success_container"
+                            app:cardCornerRadius="@dimen/radius_12"
+                            app:cardElevation="0dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="64dp"
+                                android:orientation="vertical"
+                                android:padding="@dimen/space_10">
+
+                                <TextView
+                                    style="@style/TextAppearance.FamilyHub.Caption"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/finance_income"
+                                    android:textColor="@color/fh_on_success_container" />
+
+                                <TextView
+                                    android:id="@+id/month_income_value"
+                                    style="@style/TextAppearance.FamilyHub.BodyStrong"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_6"
+                                    android:textColor="@color/fh_success" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_4"
+                            android:layout_weight="1.15"
+                            app:cardBackgroundColor="@color/fh_info_container"
+                            app:cardCornerRadius="@dimen/radius_12"
+                            app:cardElevation="0dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="64dp"
+                                android:orientation="vertical"
+                                android:padding="@dimen/space_10">
+
+                                <TextView
+                                    style="@style/TextAppearance.FamilyHub.Caption"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/finance_balance"
+                                    android:textColor="@color/fh_on_info_container" />
+
+                                <TextView
+                                    android:id="@+id/month_balance_value"
+                                    style="@style/TextAppearance.FamilyHub.BodyStrong"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/space_6"
+                                    android:textColor="@color/fh_info" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/finance_accounts_card"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
-                android:gravity="center"
-                android:text="@string/no_finance_entries_detail"
-                android:textAlignment="center" />
+                app:cardBackgroundColor="@color/fh_success_container">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/empty_add_finance_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
-                android:layout_width="wrap_content"
-                android:layout_height="@dimen/button_height"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="@dimen/space_10">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/TextAppearance.FamilyHub.BodyStrong"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/finance_linked_accounts" />
+
+                        <TextView
+                            android:id="@+id/finance_accounts_summary"
+                            style="@style/TextAppearance.FamilyHub.Caption"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:text="@string/finance_accounts_loading" />
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/finance_manage_accounts_button"
+                        style="@style/Widget.FamilyHub.Button.Action"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/touch_target_min"
+                        android:text="@string/manage" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/finance_smart_health_card"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                app:cardBackgroundColor="@color/fh_info_container"
+                app:strokeColor="@color/fh_outline_variant">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_10">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Overline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_smart_health"
+                        android:textColor="@color/fh_info" />
+
+                    <TextView
+                        android:id="@+id/finance_budget_health_title"
+                        style="@style/TextAppearance.FamilyHub.BodyStrong"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:text="@string/finance_health_waiting"
+                        android:textColor="@color/fh_on_surface" />
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/finance_budget_progress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_6"
+                        android:max="100"
+                        android:progress="0"
+                        app:indicatorColor="@color/fh_module_finance"
+                        app:trackColor="@color/fh_surface_variant"
+                        app:trackCornerRadius="4dp"
+                        app:trackThickness="6dp" />
+
+                    <TextView
+                        android:id="@+id/finance_budget_health_detail"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:maxLines="2"
+                        android:text="@string/finance_health_detail_waiting"
+                        android:textColor="@color/fh_text_secondary" />
+
+                    <TextView
+                        android:id="@+id/finance_smart_insight_detail"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:maxLines="3"
+                        android:text="@string/finance_insight_waiting"
+                        android:textColor="@color/fh_text_secondary" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:id="@+id/finance_insights_actions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/finance_budget_button"
+                    style="@style/Widget.FamilyHub.Button.Outlined"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginEnd="@dimen/space_4"
+                    android:layout_weight="1"
+                    android:text="@string/finance_budget" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/finance_report_button"
+                    style="@style/Widget.FamilyHub.Button.Outlined"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:layout_weight="1"
+                    android:text="@string/finance_monthly_report" />
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/finance_analytics_card"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                app:cardBackgroundColor="@color/fh_module_finance_container">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_10">
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.BodyStrong"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_analytics_title" />
+
+                    <TextView
+                        android:id="@+id/finance_analytics_summary"
+                        style="@style/TextAppearance.FamilyHub.Caption"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:maxLines="5"
+                        android:text="@string/finance_analytics_loading" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/finance_search_layout"
+                style="@style/Widget.FamilyHub.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                android:hint="@string/search_finance_entries"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/fh_module_finance">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/finance_search_input"
+                    style="@style/TextAppearance.FamilyHub.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textColor="@color/fh_on_surface" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/finance_filter_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_6"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/finance_filter_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:chipSpacingHorizontal="@dimen/space_6"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/finance_filter_all"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/finance_filter_all" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/finance_filter_today"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_filter_today" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/finance_filter_week"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_filter_week" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/finance_filter_month"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_filter_month" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/finance_filter_income"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_income" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/finance_filter_expense"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/finance_expense" />
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/finance_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clipToPadding="false"
+                android:nestedScrollingEnabled="false"
+                android:overScrollMode="never"
+                android:paddingTop="@dimen/space_12"
+                android:paddingBottom="@dimen/space_8" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/finance_empty_state"
+                style="@style/Widget.FamilyHub.Card.Flat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/compact_section_spacing"
-                android:text="@string/add_finance_entry"
-                app:icon="@drawable/ic_add"
-                app:iconGravity="textStart"
-                app:iconPadding="@dimen/space_6" />
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/fh_module_finance_container"
+                app:strokeColor="@color/fh_module_finance">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="@dimen/compact_empty_state_padding">
+
+                    <ImageView
+                        android:layout_width="@dimen/compact_empty_state_icon_size"
+                        android:layout_height="@dimen/compact_empty_state_icon_size"
+                        android:background="@drawable/bg_placeholder_icon"
+                        android:contentDescription="@null"
+                        android:padding="@dimen/compact_empty_state_icon_padding"
+                        android:src="@drawable/ic_wallet"
+                        app:tint="@color/fh_module_finance" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.SectionTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/compact_section_spacing"
+                        android:gravity="center"
+                        android:text="@string/no_finance_entries_title" />
+
+                    <TextView
+                        style="@style/TextAppearance.FamilyHub.Body"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:gravity="center"
+                        android:text="@string/no_finance_entries_detail"
+                        android:textAlignment="center" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/empty_add_finance_button"
+                        style="@style/Widget.FamilyHub.Button.Primary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_height"
+                        android:layout_marginTop="@dimen/compact_section_spacing"
+                        android:text="@string/add_finance_entry"
+                        app:icon="@drawable/ic_add"
+                        app:iconGravity="textStart"
+                        app:iconPadding="@dimen/space_6" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
