@@ -82,14 +82,27 @@ public final class FinanceMoneyManagerBridge {
         String eventId = eventIdFor(entry);
         long occurredAt = occurredAt(entry);
 
+        // Resolve from MoneyManager's live master catalog when a remembered ref
+        // is not available. Expense and Income categories are resolved against
+        // their own type so an old cross-type preference can never be reused.
         String accountRef = MoneyManagerMasterCatalogBridge.accountRefForLabel(
                 context, entry.accountName);
-        String categoryRef = MoneyManagerMasterCatalogBridge.categoryRefForLabel(
-                context, entry.category);
-        String accountHint = accountRef.isEmpty()
-                ? metadata(entry.accountName, 160) : accountRef;
-        String categoryHint = categoryRef.isEmpty()
-                ? metadata(entry.category, 80) : categoryRef;
+        String categoryRef = MoneyManagerMasterCatalogBridge.categoryRefForFinanceLabel(
+                context, entry.category, income);
+
+        if (accountRef.isEmpty()) {
+            return new Result(false, false, "NEEDS_REVIEW",
+                    "Selected Family Finance account/card is not in MoneyManager master catalog");
+        }
+        if (categoryRef.isEmpty()) {
+            return new Result(false, false, "NEEDS_REVIEW",
+                    income
+                            ? "Selected Income category is not in MoneyManager master catalog"
+                            : "Selected Expense category is not in MoneyManager master catalog");
+        }
+
+        String accountHint = accountRef;
+        String categoryHint = categoryRef;
         String paymentMethod = metadata(entry.paymentMethod, 80);
 
         Bundle extras = new Bundle();
@@ -148,7 +161,9 @@ public final class FinanceMoneyManagerBridge {
             String status = safe(response.getString("status"));
             String reason = safe(response.getString("reason"));
             boolean accepted = !("REJECTED".equals(status)
-                    || "FAILED".equals(status) || "UNAVAILABLE".equals(status));
+                    || "FAILED".equals(status)
+                    || "UNAVAILABLE".equals(status)
+                    || "NEEDS_REVIEW".equals(status));
             return new Result(accepted, "PRESERVED".equals(status), status, reason);
         } catch (RuntimeException unavailable) {
             return new Result(false, false, "UNAVAILABLE",
