@@ -15,19 +15,28 @@ import androidx.annotation.Nullable;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ui.SemanticValueStyler;
 
+import java.text.NumberFormat;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Wires Grocery and Finance dialogs to MoneyManager master data. */
+/** Wires Grocery and Finance surfaces to MoneyManager master data. */
 public final class MoneyManagerFormAutoBinder implements Application.ActivityLifecycleCallbacks {
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final long SUMMARY_REFRESH_GUARD_MS = 1_500L;
+
     private final Map<View, Boolean> boundViews =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private final Map<View, Long> summaryRefreshAt =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private final Map<View, Boolean> summaryLoading =
             Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<Activity, ViewTreeObserver.OnGlobalLayoutListener> listeners =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -47,8 +56,53 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
     }
 
     private void scan(@NonNull Activity activity, @NonNull View root) {
+        bindFinanceMasterSummary(activity, root);
         bindGrocery(activity, root);
         bindFinance(activity, root);
+    }
+
+    /**
+     * Keeps the visible Finance dashboard aligned with MoneyManager even when
+     * Family Hub refreshes its local account card after a realtime DB update.
+     * No aggregate is persisted or uploaded by this binder.
+     */
+    private void bindFinanceMasterSummary(@NonNull Activity activity, @NonNull View root) {
+        TextView expense = root.findViewById(R.id.month_expense_value);
+        TextView income = root.findViewById(R.id.month_income_value);
+        TextView remaining = root.findViewById(R.id.month_balance_value);
+        TextView accounts = root.findViewById(R.id.finance_accounts_summary);
+        if (expense == null || income == null || remaining == null || accounts == null) return;
+
+        long now = System.currentTimeMillis();
+        Long last = summaryRefreshAt.get(accounts);
+        if (last != null && now - last < SUMMARY_REFRESH_GUARD_MS) return;
+        if (summaryLoading.put(accounts, Boolean.TRUE) != null) return;
+        summaryRefreshAt.put(accounts, now);
+
+        EXECUTOR.execute(() -> {
+            MoneyManagerFinanceSummaryBridge.Summary master =
+                    MoneyManagerFinanceSummaryBridge.loadCurrentMonth(activity);
+            activity.runOnUiThread(() -> {
+                summaryLoading.remove(accounts);
+                if (activity.isFinishing() || activity.isDestroyed() || !master.available) return;
+
+                NumberFormat formatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
+                expense.setText(formatter.format(master.expense));
+                income.setText(formatter.format(master.income));
+                remaining.setText(formatter.format(master.remaining));
+                SemanticValueStyler.apply(expense, -master.expense);
+                SemanticValueStyler.apply(income, master.income);
+                SemanticValueStyler.apply(remaining, master.remaining);
+
+                String accountText = "MoneyManager • " + master.accountCount + " accounts";
+                if (master.activeCardCount > 0) {
+                    accountText += " + " + master.activeCardCount + " cards";
+                }
+                accountText += " • " + formatter.format(master.totalAccountBalance);
+                accounts.setText(accountText);
+                accounts.setContentDescription("Synced from MoneyManager • " + master.periodLabel);
+            });
+        });
     }
 
     private void bindGrocery(@NonNull Activity activity, @NonNull View root) {
