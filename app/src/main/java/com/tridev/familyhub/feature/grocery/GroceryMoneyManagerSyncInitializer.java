@@ -23,8 +23,10 @@ import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -40,12 +42,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Reliability rules:
  * - Room invalidations that arrive while a scan is already running are never lost;
  *   a pending rescan is executed immediately after the current scan.
- * - When the Grocery purchase-completion UI already stored an exact MoneyManager
- *   account/card ref and expense-category ref, the purchase is posted directly
- *   from the worker thread. A foreground Activity is NOT required. This is
- *   essential for the floating Grocery overlay, which is a Service.
- * - If exact selections are not available, the existing foreground picker remains
- *   the safe fallback; the bridge never guesses or auto-creates finance masters.
+ * - A new local purchase first attempts a direct, type-safe MoneyManager post.
+ *   The bridge revalidates the selected account/card and Expense category against
+ *   MoneyManager's live master catalog, so the floating overlay does not depend
+ *   on a stale cached catalog snapshot.
+ * - NEEDS_REVIEW, QUEUED and mapping-required responses are not treated as a
+ *   finalized send and therefore never clear the item's pending selections.
+ * - If exact selections are missing, the foreground picker remains the safe
+ *   fallback; the bridge never guesses or auto-creates finance masters.
+ * - Undo and full item deletion both cancel only the exact previously-finalized
+ *   Grocery event. Failed cancellation state is retained for a later retry.
+ * - Monthly reset keeps purchaseCount unchanged and therefore never cancels the
+ *   previous month's legitimate expense.
  * - Remote purchases made by another family member are not pushed into this
  *   device owner's personal MoneyManager ledger.
  */
@@ -129,7 +137,6 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         if (context == null) return;
 
         if (!scanQueued.compareAndSet(false, true)) {
-            // Do not lose a Room invalidation while an older snapshot is being scanned.
             rescanRequested.set(true);
             return;
         }
@@ -144,8 +151,6 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 } while (rescanRequested.get());
             } finally {
                 scanQueued.set(false);
-                // Close the tiny race where an invalidation arrives after the final
-                // loop condition but before scanQueued is released.
                 if (rescanRequested.get()) {
                     scheduleScan(false);
                 }
@@ -182,9 +187,13 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             // Local-only Family Hub stays eligible for same-device integration.
         }
 
+        Set<String> existingKeys = new HashSet<>();
+
         for (GroceryItem item : items) {
             if (item == null || item.id <= 0L) continue;
             String key = itemPreferenceKey(item);
+            existingKeys.add(key);
+
             String previousEvent = safe(preferences.getString(PREFIX_EVENT + key, ""));
             String previousSource = safe(preferences.getString(PREFIX_SOURCE + key, ""));
             int previousCount = preferences.getInt(PREFIX_COUNT + key, 0);
@@ -192,7 +201,11 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
 
             if (item.isPurchased && item.purchasedAt > 0L) {
                 String currentEvent = GroceryMoneyManagerBridge.eventIdFor(item);
-                if (currentEvent.equals(previousEvent)) continue;
+                if (currentEvent.equals(previousEvent)) {
+                    // Includes the intentional first-install baseline. Never import
+                    // an already-existing purchase retrospectively.
+                    continue;
+                }
 
                 if (!belongsToThisDeviceUser(item, currentUser)) {
                     remember(preferences, key, currentEvent,
@@ -201,25 +214,26 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                     continue;
                 }
 
-                // The floating overlay and the normal purchase-completion editor
-                // persist exact MoneyManager refs before marking the item purchased.
-                // In that case post immediately; requiring an Activity here was the
-                // reason overlay purchases could remain local-only.
-                if (hasExactMoneyManagerSelections(context, item)) {
-                    GroceryMoneyManagerBridge.Result result =
-                            GroceryMoneyManagerBridge.sendPurchase(context, item);
-                    if (result.accepted) {
-                        remember(preferences, key, currentEvent,
-                                GroceryMoneyManagerBridge.sourceRecordIdFor(item),
-                                item.purchaseCount, true);
-                    }
+                GroceryMoneyManagerBridge.Result direct =
+                        GroceryMoneyManagerBridge.sendPurchase(context, item);
+                if (direct.accepted) {
+                    remember(preferences, key, currentEvent,
+                            GroceryMoneyManagerBridge.sourceRecordIdFor(item),
+                            item.purchaseCount, true);
+                    continue;
+                }
+
+                if (!"MAPPING_REQUIRED".equals(direct.status)) {
+                    // MoneyManager unavailable/review/queued states remain untouched.
+                    // A later Room invalidation/process resume retries the exact same
+                    // deterministic event without creating a duplicate.
                     continue;
                 }
 
                 Activity activity = foregroundActivity.get();
                 if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
-                    // Exact refs are absent. Wait for a visible Activity so the user
-                    // can choose safely instead of guessing an account/category.
+                    // The floating overlay already exposes account/category fields.
+                    // If they were left unresolved, wait rather than guessing.
                     continue;
                 }
                 if (!promptingKeys.add(key)) continue;
@@ -246,23 +260,52 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             if (!previousEvent.isEmpty()) {
                 boolean explicitUndo = item.purchaseCount < previousCount;
                 if (explicitUndo && previousSent && !previousSource.isEmpty()) {
-                    GroceryMoneyManagerBridge.cancelPurchase(
-                            context, previousEvent, previousSource);
+                    GroceryMoneyManagerBridge.Result cancelled =
+                            GroceryMoneyManagerBridge.cancelPurchase(
+                                    context, previousEvent, previousSource);
+                    if (!cancelled.accepted) {
+                        // Retain the exact original identity and retry later.
+                        continue;
+                    }
                 }
-                // Monthly reset keeps purchaseCount unchanged and therefore does
-                // not cancel the previous month's legitimate expense.
                 clearRemembered(preferences, key);
             }
         }
+
+        cancelAndPruneDeletedItems(context, preferences, existingKeys);
     }
 
-    private boolean hasExactMoneyManagerSelections(
+    /**
+     * A purchased Grocery item can be removed completely (Delete/Clear Purchased)
+     * rather than first being unchecked. In that case the Room row no longer
+     * exists, so cancellation must be driven from the retained event/source state.
+     */
+    private void cancelAndPruneDeletedItems(
             @NonNull Context context,
-            @NonNull GroceryItem item) {
-        String accountRef = GroceryMoneyManagerBridge.selectedAccountRef(context, item);
-        String categoryRef = GroceryMoneyManagerBridge.selectedCategoryRef(context, item);
-        return accountRef.matches("(account|card):[0-9]+")
-                && categoryRef.matches("category:[0-9]+");
+            @NonNull SharedPreferences preferences,
+            @NonNull Set<String> existingKeys) {
+        Map<String, ?> all = preferences.getAll();
+        for (String prefKey : all.keySet()) {
+            if (!prefKey.startsWith(PREFIX_EVENT)) continue;
+            String key = prefKey.substring(PREFIX_EVENT.length());
+            if (existingKeys.contains(key)) continue;
+
+            String eventId = safe(preferences.getString(PREFIX_EVENT + key, ""));
+            String sourceRecordId = safe(preferences.getString(PREFIX_SOURCE + key, ""));
+            boolean sent = preferences.getBoolean(PREFIX_SENT + key, false);
+
+            if (sent && !eventId.isEmpty() && !sourceRecordId.isEmpty()) {
+                GroceryMoneyManagerBridge.Result cancelled =
+                        GroceryMoneyManagerBridge.cancelPurchase(
+                                context, eventId, sourceRecordId);
+                if (!cancelled.accepted) {
+                    // MoneyManager may be temporarily unavailable. Keep state so
+                    // a later scan can finish the exact same safe cancellation.
+                    continue;
+                }
+            }
+            clearRemembered(preferences, key);
+        }
     }
 
     private boolean belongsToThisDeviceUser(
