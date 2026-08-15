@@ -12,18 +12,18 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Local read-only bridge for STEP 13C account/card aggregates.
+ * Local read-only bridge for MoneyManager account/card aggregates.
  *
- * Only current-month totals grouped by MoneyManager account/card labels are
- * requested. No transaction rows, notes, merchant data, SMS bodies or balances
- * by individual account are copied into Family Hub.
+ * STEP 13D uses the same selected Month/Year as the Family Hub finance summary.
+ * No transaction rows, notes, merchant data, SMS bodies or balances by
+ * individual account are copied into Family Hub.
  */
 public final class MoneyManagerAccountAnalyticsBridge {
 
     private static final String AUTHORITY =
             "com.example.moneymanagerpro.tridev.accountanalytics";
     private static final Uri ENDPOINT = Uri.parse("content://" + AUTHORITY);
-    private static final String METHOD = "get_account_breakdown_v1";
+    private static final String METHOD = "get_period_finance_v1";
 
     public static final class AccountTotal {
         @NonNull public final String label;
@@ -82,13 +82,27 @@ public final class MoneyManagerAccountAnalyticsBridge {
 
     private MoneyManagerAccountAnalyticsBridge() { }
 
-    /** Call from a worker thread. */
+    /**
+     * Kept for existing callers. In STEP 13D this means the selected period,
+     * defaulting to the real current month.
+     */
     @NonNull
     public static Snapshot loadCurrentMonth(@NonNull Context context) {
+        MoneyManagerFinancePeriodStore.Selection selected =
+                MoneyManagerFinancePeriodStore.get(context);
+        return loadPeriod(context, selected.year, selected.month);
+    }
+
+    /** Call from a worker thread. */
+    @NonNull
+    public static Snapshot loadPeriod(@NonNull Context context, int year, int month) {
         try {
+            Bundle request = new Bundle();
+            request.putInt("year", year);
+            request.putInt("month", month);
             Bundle response = context.getApplicationContext()
                     .getContentResolver()
-                    .call(ENDPOINT, METHOD, null, null);
+                    .call(ENDPOINT, METHOD, null, request);
             if (response == null || !"OK".equals(safe(response.getString("status")))) {
                 return Snapshot.unavailable(response == null
                         ? "MoneyManager did not return account analytics"
