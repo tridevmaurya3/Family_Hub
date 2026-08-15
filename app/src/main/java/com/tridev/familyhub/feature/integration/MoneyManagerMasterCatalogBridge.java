@@ -15,13 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Read-only MoneyManager master catalog for Family Hub forms.
- *
- * It exposes only display labels + stable canonical refs for active accounts,
- * credit cards and Income/Expense categories. Balances and transactions are not
- * read by Family Hub.
- */
+/** Read-only MoneyManager master catalog for Family Hub forms. */
 public final class MoneyManagerMasterCatalogBridge {
 
     public static final String AUTHORITY =
@@ -31,6 +25,8 @@ public final class MoneyManagerMasterCatalogBridge {
     private static final String PREFS = "money_manager_master_catalog_v1";
     private static final String ACCOUNT_PREFIX = "account_label_";
     private static final String CATEGORY_PREFIX = "category_label_";
+    private static final String GROCERY_ACCOUNT = "grocery_default_account";
+    private static final String GROCERY_CATEGORY = "grocery_default_category";
 
     public static final class Choice {
         @NonNull public final String ref;
@@ -51,12 +47,10 @@ public final class MoneyManagerMasterCatalogBridge {
         @NonNull public final List<Choice> incomeCategories;
         @NonNull public final String reason;
 
-        private Catalog(
-                boolean available,
-                @NonNull List<Choice> accounts,
-                @NonNull List<Choice> expenseCategories,
-                @NonNull List<Choice> incomeCategories,
-                @NonNull String reason) {
+        private Catalog(boolean available, @NonNull List<Choice> accounts,
+                        @NonNull List<Choice> expenseCategories,
+                        @NonNull List<Choice> incomeCategories,
+                        @NonNull String reason) {
             this.available = available;
             this.accounts = Collections.unmodifiableList(accounts);
             this.expenseCategories = Collections.unmodifiableList(expenseCategories);
@@ -84,7 +78,6 @@ public final class MoneyManagerMasterCatalogBridge {
                         ? "MoneyManager is unavailable"
                         : safe(response.getString("reason")));
             }
-
             ArrayList<String> accountRefs = response.getStringArrayList("account_refs");
             ArrayList<String> accountLabels = response.getStringArrayList("account_labels");
             ArrayList<String> categoryRefs = response.getStringArrayList("category_refs");
@@ -98,8 +91,8 @@ public final class MoneyManagerMasterCatalogBridge {
                     String ref = safe(accountRefs.get(i)).toLowerCase(Locale.ROOT);
                     String label = safe(accountLabels.get(i));
                     if (ref.matches("(account|card):[0-9]+") && !label.isEmpty()) {
-                        accounts.add(new Choice(ref, label, ref.startsWith("card:")
-                                ? "Credit Card" : "Account"));
+                        accounts.add(new Choice(ref, label,
+                                ref.startsWith("card:") ? "Credit Card" : "Account"));
                     }
                 }
             }
@@ -126,41 +119,60 @@ public final class MoneyManagerMasterCatalogBridge {
         }
     }
 
-    public static void rememberAccountChoice(
-            @NonNull Context context,
-            @Nullable String label,
-            @Nullable String ref) {
+    public static void rememberAccountChoice(Context context, @Nullable String label,
+                                             @Nullable String ref) {
         remember(context, ACCOUNT_PREFIX, label, ref, "(account|card):[0-9]+");
     }
 
-    public static void rememberCategoryChoice(
-            @NonNull Context context,
-            @Nullable String label,
-            @Nullable String ref) {
+    public static void rememberCategoryChoice(Context context, @Nullable String label,
+                                              @Nullable String ref) {
         remember(context, CATEGORY_PREFIX, label, ref, "category:[0-9]+");
     }
 
     @NonNull
-    public static String accountRefForLabel(
-            @NonNull Context context,
-            @Nullable String label) {
+    public static String accountRefForLabel(Context context, @Nullable String label) {
         return remembered(context, ACCOUNT_PREFIX, label, "(account|card):[0-9]+");
     }
 
     @NonNull
-    public static String categoryRefForLabel(
-            @NonNull Context context,
-            @Nullable String label) {
+    public static String categoryRefForLabel(Context context, @Nullable String label) {
         return remembered(context, CATEGORY_PREFIX, label, "category:[0-9]+");
     }
 
+    public static void rememberGroceryDefaultAccount(
+            @NonNull Context context, @Nullable String ref) {
+        rememberDirect(context, GROCERY_ACCOUNT, ref, "(account|card):[0-9]+");
+    }
+
+    public static void rememberGroceryDefaultCategory(
+            @NonNull Context context, @Nullable String ref) {
+        rememberDirect(context, GROCERY_CATEGORY, ref, "category:[0-9]+");
+    }
+
+    @NonNull
+    public static String groceryDefaultAccountRef(@NonNull Context context) {
+        return direct(context, GROCERY_ACCOUNT, "(account|card):[0-9]+");
+    }
+
+    @NonNull
+    public static String groceryDefaultCategoryRef(@NonNull Context context) {
+        return direct(context, GROCERY_CATEGORY, "category:[0-9]+");
+    }
+
     @Nullable
-    public static Choice findByLabel(
-            @NonNull List<Choice> choices,
-            @Nullable String label) {
+    public static Choice findByLabel(@NonNull List<Choice> choices, @Nullable String label) {
         String wanted = safe(label);
         for (Choice choice : choices) {
             if (choice.label.equalsIgnoreCase(wanted)) return choice;
+        }
+        return null;
+    }
+
+    @Nullable
+    public static Choice findByRef(@NonNull List<Choice> choices, @Nullable String ref) {
+        String wanted = safe(ref).toLowerCase(Locale.ROOT);
+        for (Choice choice : choices) {
+            if (choice.ref.equalsIgnoreCase(wanted)) return choice;
         }
         return null;
     }
@@ -172,40 +184,50 @@ public final class MoneyManagerMasterCatalogBridge {
         return labels;
     }
 
-    private static void remember(
-            Context context,
-            String prefix,
-            @Nullable String label,
-            @Nullable String ref,
-            String allowedPattern) {
+    private static void remember(Context context, String prefix, @Nullable String label,
+                                 @Nullable String ref, String allowedPattern) {
         String cleanLabel = safe(label);
         String cleanRef = safe(ref).toLowerCase(Locale.ROOT);
         if (cleanLabel.isEmpty() || !cleanRef.matches(allowedPattern)) return;
-        context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putString(prefix + sha256(normalize(cleanLabel)), cleanRef).apply();
+        prefs(context).edit()
+                .putString(prefix + sha256(normalize(cleanLabel)), cleanRef).apply();
     }
 
     @NonNull
-    private static String remembered(
-            Context context,
-            String prefix,
-            @Nullable String label,
-            String allowedPattern) {
+    private static String remembered(Context context, String prefix, @Nullable String label,
+                                     String allowedPattern) {
         String cleanLabel = safe(label);
         if (cleanLabel.isEmpty()) return "";
-        String value = safe(context.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        String value = safe(prefs(context)
                 .getString(prefix + sha256(normalize(cleanLabel)), ""))
                 .toLowerCase(Locale.ROOT);
         return value.matches(allowedPattern) ? value : "";
     }
 
+    private static void rememberDirect(Context context, String key, @Nullable String ref,
+                                       String allowedPattern) {
+        String value = safe(ref).toLowerCase(Locale.ROOT);
+        SharedPreferences.Editor editor = prefs(context).edit();
+        if (value.matches(allowedPattern)) editor.putString(key, value);
+        else editor.remove(key);
+        editor.apply();
+    }
+
+    @NonNull
+    private static String direct(Context context, String key, String allowedPattern) {
+        String value = safe(prefs(context).getString(key, "")).toLowerCase(Locale.ROOT);
+        return value.matches(allowedPattern) ? value : "";
+    }
+
+    private static SharedPreferences prefs(Context context) {
+        return context.getApplicationContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
     @NonNull
     private static String normalize(@Nullable String value) {
-        return safe(value).toLowerCase(Locale.ROOT)
-                .replace('•', ' ')
-                .replaceAll("\\s+", " ")
-                .trim();
+        return safe(value).toLowerCase(Locale.ROOT).replace('•', ' ')
+                .replaceAll("\\s+", " ").trim();
     }
 
     @NonNull
