@@ -171,6 +171,7 @@ public final class AppLockActivity extends AppCompatActivity {
         pinInput.setMaxLines(1);
         pinInput.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setGravity(Gravity.CENTER);
         pinInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
         pinInput.setMaxEms(4);
         pinLayout.addView(pinInput, new LinearLayout.LayoutParams(
