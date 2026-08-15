@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,28 +20,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * STEP 8 - privacy-safe same-device bridge from Family Hub Grocery to
- * MoneyManagerPro.
- *
- * Only structured purchase metadata is sent. Item notes, family member details,
- * contacts and any other private Family Hub content are never included.
- *
- * MoneyManager verifies the real Android Binder caller UID, exact Family Hub
- * package and matching app signature before accepting these calls.
- */
+/** Privacy-safe Grocery -> MoneyManager bridge using stable master refs. */
 public final class GroceryMoneyManagerBridge {
 
-    private static final String AUTHORITY =
-            "com.example.moneymanagerpro.tridev.finance";
+    private static final String AUTHORITY = MoneyManagerMasterCatalogBridge.AUTHORITY;
     private static final Uri ENDPOINT = Uri.parse("content://" + AUTHORITY);
+    private static final String METHOD_ACCEPT_V1 = "accept_family_event_v1";
+    private static final String METHOD_CANCEL_V1 = "cancel_family_grocery_v1";
 
-    private static final String METHOD_ACCEPT_V1 = "accept_finance_event_v1";
-    private static final String METHOD_CANCEL_V1 = "cancel_finance_event_v1";
-    private static final String METHOD_ACCOUNT_CATALOG_V1 = "get_account_catalog_v1";
-
-    private static final String ACCOUNT_PREFS = "grocery_money_manager_account_v1";
+    private static final String PREFS = "grocery_money_manager_master_v2";
     private static final String ACCOUNT_PREFIX = "next_account_";
+    private static final String CATEGORY_PREFIX = "next_category_";
 
     private GroceryMoneyManagerBridge() { }
 
@@ -56,6 +46,7 @@ public final class GroceryMoneyManagerBridge {
         }
     }
 
+    /** Backward-compatible account catalog used by the existing purchase picker. */
     public static final class AccountChoice {
         public final String canonicalRef;
         public final String label;
@@ -71,102 +62,77 @@ public final class GroceryMoneyManagerBridge {
         public final List<AccountChoice> choices;
         public final String reason;
 
-        private AccountCatalog(
-                boolean available,
-                List<AccountChoice> choices,
-                String reason) {
+        private AccountCatalog(boolean available, List<AccountChoice> choices, String reason) {
             this.available = available;
             this.choices = Collections.unmodifiableList(choices);
             this.reason = safe(reason);
         }
     }
 
-    /** Deterministic id so retrying the same purchase cannot create duplicates. */
     @NonNull
     public static String eventIdFor(@NonNull GroceryItem item) {
         return "family_grocery_" + sha256(sourceRecordIdFor(item));
     }
 
-    /** Stable for one concrete purchase cycle and changes on the next purchase. */
     @NonNull
     public static String sourceRecordIdFor(@NonNull GroceryItem item) {
         String itemKey = item.cloudId == null || item.cloudId.trim().isEmpty()
                 ? "local-" + item.id
                 : "cloud-" + item.cloudId.trim();
-        long purchasedAt = item.purchasedAt > 0L
-                ? item.purchasedAt : item.updatedAt;
+        long purchasedAt = item.purchasedAt > 0L ? item.purchasedAt : item.updatedAt;
         return safeStructured("grocery:" + itemKey + ":" + purchasedAt, 160);
     }
 
-    /**
-     * Reads only MoneyManager's active account/card labels and stable refs. No
-     * balances, transaction history or other finance data is exposed.
-     * Call from a worker thread.
-     */
     @NonNull
     public static AccountCatalog loadAccountCatalog(@NonNull Context context) {
-        try {
-            Bundle response = context.getApplicationContext()
-                    .getContentResolver()
-                    .call(ENDPOINT, METHOD_ACCOUNT_CATALOG_V1, null, null);
-            if (response == null || !"OK".equals(safe(response.getString("status")))) {
-                return new AccountCatalog(false, new ArrayList<>(),
-                        response == null
-                                ? "MoneyManager is unavailable"
-                                : safe(response.getString("reason")));
-            }
-
-            ArrayList<String> refs = response.getStringArrayList("account_refs");
-            ArrayList<String> labels = response.getStringArrayList("account_labels");
-            List<AccountChoice> choices = new ArrayList<>();
-            if (refs != null && labels != null) {
-                int count = Math.min(refs.size(), labels.size());
-                for (int index = 0; index < count; index++) {
-                    String ref = safe(refs.get(index)).toLowerCase(Locale.ROOT);
-                    String label = safe(labels.get(index));
-                    if ((!ref.matches("account:[0-9]+")
-                            && !ref.matches("card:[0-9]+"))
-                            || label.isEmpty()) continue;
-                    choices.add(new AccountChoice(ref, label));
-                }
-            }
-            return new AccountCatalog(true, choices,
-                    safe(response.getString("reason")));
-        } catch (RuntimeException unavailable) {
-            return new AccountCatalog(false, new ArrayList<>(),
-                    "MoneyManager account list is unavailable");
+        MoneyManagerMasterCatalogBridge.Catalog catalog =
+                MoneyManagerMasterCatalogBridge.load(context);
+        List<AccountChoice> choices = new ArrayList<>();
+        for (MoneyManagerMasterCatalogBridge.Choice choice : catalog.accounts) {
+            choices.add(new AccountChoice(choice.ref, choice.label));
         }
+        return new AccountCatalog(catalog.available, choices, catalog.reason);
     }
 
-    /**
-     * Stores one explicit user choice for the NEXT purchase cycle of this item.
-     * It is consumed only after MoneyManager accepts that purchase event.
-     */
     public static void rememberNextPurchaseAccount(
             @NonNull Context context,
             @NonNull GroceryItem item,
             @Nullable String canonicalRef) {
-        String ref = safe(canonicalRef).toLowerCase(Locale.ROOT);
-        SharedPreferences preferences = context.getApplicationContext()
-                .getSharedPreferences(ACCOUNT_PREFS, Context.MODE_PRIVATE);
-        String key = ACCOUNT_PREFIX + stableItemKey(item);
-        if (!ref.matches("(account|card):[0-9]+")) {
-            preferences.edit().remove(key).apply();
-            return;
-        }
-        preferences.edit().putString(key, ref).apply();
+        rememberRef(context, ACCOUNT_PREFIX, item, canonicalRef, "(account|card):[0-9]+");
     }
 
-    /**
-     * Sends one completed purchase. If the user selected a MoneyManager
-     * Bank/Credit Card during purchase completion, the stable account/card ref is
-     * sent and can post immediately. Otherwise a purchase-specific unassigned
-     * hint is used, forcing review instead of guessing an account.
-     */
+    public static void rememberNextPurchaseCategory(
+            @NonNull Context context,
+            @NonNull GroceryItem item,
+            @Nullable String canonicalRef) {
+        rememberRef(context, CATEGORY_PREFIX, item, canonicalRef, "category:[0-9]+");
+    }
+
+    public static void rememberNextPurchaseSelections(
+            @NonNull Context context,
+            @NonNull GroceryItem item,
+            @Nullable String accountRef,
+            @Nullable String categoryRef) {
+        rememberNextPurchaseAccount(context, item, accountRef);
+        rememberNextPurchaseCategory(context, item, categoryRef);
+    }
+
     @NonNull
-    public static Result sendPurchase(
+    public static String selectedAccountRef(
             @NonNull Context context,
             @NonNull GroceryItem item) {
+        return pendingRef(context, ACCOUNT_PREFIX, item, "(account|card):[0-9]+");
+    }
+
+    @NonNull
+    public static String selectedCategoryRef(
+            @NonNull Context context,
+            @NonNull GroceryItem item) {
+        return pendingRef(context, CATEGORY_PREFIX, item, "category:[0-9]+");
+    }
+
+    @NonNull
+    public static Result sendPurchase(@NonNull Context context, @NonNull GroceryItem item) {
         double amount = item.actualCost > 0D ? item.actualCost : item.estimatedCost;
         long amountMinor = toMinor(amount);
         if (!item.isPurchased || item.purchasedAt <= 0L || amountMinor <= 0L) {
@@ -176,37 +142,34 @@ public final class GroceryMoneyManagerBridge {
         String eventId = eventIdFor(item);
         String sourceRecordId = sourceRecordIdFor(item);
         String merchant = metadata(item.storeName, 120);
-        String selectedAccount = pendingAccount(context, item);
+        String selectedAccount = selectedAccountRef(context, item);
+        String selectedCategory = selectedCategoryRef(context, item);
         String accountHint = selectedAccount.isEmpty()
                 ? "unassigned:" + eventId.substring(Math.max(0, eventId.length() - 24))
                 : selectedAccount;
+        String categoryHint = selectedCategory.isEmpty() ? "Grocery" : selectedCategory;
 
         Bundle extras = new Bundle();
         extras.putString("event_id", eventId);
         extras.putString("source_record_id", sourceRecordId);
         extras.putString("event_type", "GROCERY_PURCHASE");
         extras.putString("direction", "DEBIT");
+        extras.putString("scope", "FAMILY");
         extras.putLong("amount_minor", amountMinor);
         extras.putString("currency", "INR");
         extras.putLong("occurred_at", item.purchasedAt);
         extras.putString("account_hint", accountHint);
         extras.putString("merchant_hint", merchant);
-        extras.putString("category_hint", "Grocery");
+        extras.putString("category_hint", categoryHint);
         extras.putString("fingerprint", sha256(
-                sourceRecordId + "|" + amountMinor + "|" + merchant.toLowerCase(Locale.ROOT)));
+                sourceRecordId + "|" + amountMinor + "|" + accountHint + "|"
+                        + categoryHint + "|" + merchant.toLowerCase(Locale.ROOT)));
 
         Result result = call(context, METHOD_ACCEPT_V1, extras);
-        if (result.accepted) {
-            clearPendingAccount(context, item);
-        }
+        if (result.accepted) clearSelections(context, item);
         return result;
     }
 
-    /**
-     * Cancels only the integration event for the exact purchase cycle. On the
-     * MoneyManager side an auto-created Family Hub row may be removed, but an
-     * existing/manual ledger row is never deleted.
-     */
     @NonNull
     public static Result cancelPurchase(
             @NonNull Context context,
@@ -218,25 +181,40 @@ public final class GroceryMoneyManagerBridge {
         return call(context, METHOD_CANCEL_V1, extras);
     }
 
-    @NonNull
-    private static String pendingAccount(
-            @NonNull Context context,
-            @NonNull GroceryItem item) {
-        String value = context.getApplicationContext()
-                .getSharedPreferences(ACCOUNT_PREFS, Context.MODE_PRIVATE)
-                .getString(ACCOUNT_PREFIX + stableItemKey(item), "");
-        String ref = safe(value).toLowerCase(Locale.ROOT);
-        return ref.matches("(account|card):[0-9]+") ? ref : "";
+    private static void rememberRef(
+            Context context,
+            String prefix,
+            GroceryItem item,
+            @Nullable String canonicalRef,
+            String pattern) {
+        String ref = safe(canonicalRef).toLowerCase(Locale.ROOT);
+        SharedPreferences preferences = context.getApplicationContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String key = prefix + stableItemKey(item);
+        if (!ref.matches(pattern)) {
+            preferences.edit().remove(key).apply();
+            return;
+        }
+        preferences.edit().putString(key, ref).apply();
     }
 
-    private static void clearPendingAccount(
-            @NonNull Context context,
-            @NonNull GroceryItem item) {
-        context.getApplicationContext()
-                .getSharedPreferences(ACCOUNT_PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .remove(ACCOUNT_PREFIX + stableItemKey(item))
-                .apply();
+    @NonNull
+    private static String pendingRef(
+            Context context,
+            String prefix,
+            GroceryItem item,
+            String pattern) {
+        String value = context.getApplicationContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getString(prefix + stableItemKey(item), "");
+        String ref = safe(value).toLowerCase(Locale.ROOT);
+        return ref.matches(pattern) ? ref : "";
+    }
+
+    private static void clearSelections(@NonNull Context context, @NonNull GroceryItem item) {
+        String suffix = stableItemKey(item);
+        context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().remove(ACCOUNT_PREFIX + suffix).remove(CATEGORY_PREFIX + suffix).apply();
     }
 
     @NonNull
@@ -248,13 +226,9 @@ public final class GroceryMoneyManagerBridge {
     }
 
     @NonNull
-    private static Result call(
-            @NonNull Context context,
-            @NonNull String method,
-            @NonNull Bundle extras) {
+    private static Result call(Context context, String method, Bundle extras) {
         try {
-            Bundle response = context.getApplicationContext()
-                    .getContentResolver()
+            Bundle response = context.getApplicationContext().getContentResolver()
                     .call(ENDPOINT, method, null, extras);
             if (response == null) {
                 return new Result(false, "UNAVAILABLE", "MoneyManager did not return a response");
@@ -262,12 +236,9 @@ public final class GroceryMoneyManagerBridge {
             String status = safe(response.getString("status"));
             String reason = safe(response.getString("reason"));
             boolean accepted = !("REJECTED".equals(status)
-                    || "FAILED".equals(status)
-                    || "UNAVAILABLE".equals(status));
+                    || "FAILED".equals(status) || "UNAVAILABLE".equals(status));
             return new Result(accepted, status, reason);
         } catch (RuntimeException unavailable) {
-            // Family Hub remains fully usable if MoneyManager is absent, locked,
-            // signed differently or temporarily unavailable.
             return new Result(false, "UNAVAILABLE", "MoneyManager bridge is unavailable");
         }
     }
@@ -275,10 +246,8 @@ public final class GroceryMoneyManagerBridge {
     private static long toMinor(double amount) {
         if (!Double.isFinite(amount) || amount <= 0D) return 0L;
         try {
-            return BigDecimal.valueOf(amount)
-                    .movePointRight(2)
-                    .setScale(0, RoundingMode.HALF_UP)
-                    .longValueExact();
+            return BigDecimal.valueOf(amount).movePointRight(2)
+                    .setScale(0, RoundingMode.HALF_UP).longValueExact();
         } catch (ArithmeticException invalid) {
             return 0L;
         }
@@ -286,22 +255,16 @@ public final class GroceryMoneyManagerBridge {
 
     @NonNull
     private static String metadata(@Nullable String value, int maxLength) {
-        String safe = value == null ? "" : value.trim()
-                .replace('\n', ' ')
-                .replace('\r', ' ')
+        String clean = safe(value).replace('\n', ' ').replace('\r', ' ')
                 .replaceAll("\\s+", " ");
-        return safe.length() <= maxLength
-                ? safe : safe.substring(0, maxLength).trim();
+        return clean.length() <= maxLength ? clean : clean.substring(0, maxLength).trim();
     }
 
     @NonNull
     private static String safeStructured(@Nullable String value, int maxLength) {
-        String safe = safe(value)
-                .replace('\n', ' ')
-                .replace('\r', ' ')
+        String clean = safe(value).replace('\n', ' ').replace('\r', ' ')
                 .replaceAll("[^A-Za-z0-9:_\\-]", "_");
-        return safe.length() <= maxLength
-                ? safe : safe.substring(0, maxLength);
+        return clean.length() <= maxLength ? clean : clean.substring(0, maxLength);
     }
 
     @NonNull
