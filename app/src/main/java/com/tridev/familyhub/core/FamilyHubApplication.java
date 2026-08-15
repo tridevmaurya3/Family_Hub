@@ -15,6 +15,7 @@ import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
 import com.tridev.familyhub.feature.integration.MoneyManagerAccountAnalyticsBinder;
 import com.tridev.familyhub.feature.integration.MoneyManagerFinancePeriodBinder;
 import com.tridev.familyhub.feature.integration.MoneyManagerFormAutoBinder;
+import com.tridev.familyhub.feature.integration.MoneyManagerYearAnalyticsBinder;
 import com.tridev.familyhub.feature.journey.FamilyJourneyRecorder;
 import com.tridev.familyhub.feature.sos.FamilySosLiveMonitor;
 import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
@@ -44,6 +45,7 @@ public class FamilyHubApplication extends Application {
         MoneyManagerFormAutoBinder.register(this);
         MoneyManagerAccountAnalyticsBinder.register(this);
         MoneyManagerFinancePeriodBinder.register(this);
+        MoneyManagerYearAnalyticsBinder.register(this);
         FamilyJourneyRecorder.start(this);
         FamilySosLiveMonitor.start(this);
         FamilyAutomationRuntime.start(this);
