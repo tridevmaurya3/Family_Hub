@@ -72,6 +72,46 @@
                 android:inputType="none"
                 android:textSize="13sp" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/grocery_money_account_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/money_manager_paid_from">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/grocery_money_account_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:textSize="13sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/grocery_money_category_layout"
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="@string/money_manager_expense_category">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/grocery_money_category_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:textSize="13sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/grocery_money_catalog_status"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/money_manager_catalog_loading"
+            android:textColor="@color/fh_on_surface_variant" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.FamilyHub.Form.Dropdown"
             android:layout_width="match_parent"
