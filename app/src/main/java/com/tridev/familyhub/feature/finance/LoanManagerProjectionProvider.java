@@ -22,10 +22,12 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * STEP 10 - receives only finalized FAMILY loan-payment projections.
+ * Receives only finalized FAMILY loan-payment projections.
  *
  * LoanManager is verified by Binder UID + exact package + pinned signing
- * certificate. The deterministic cloudId makes retries idempotent.
+ * certificate. Idempotency is anchored to the stable LoanManager loanId +
+ * paymentId identity, not to a reconciliation event id that may legitimately
+ * change when MoneyManager repairs a stale canonical link.
  */
 public final class LoanManagerProjectionProvider extends ContentProvider {
 
@@ -59,9 +61,34 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
             long occurredAt = extras.getLong("occurred_at", 0L);
             if (amount <= 0L || occurredAt <= 0L) throw new IllegalArgumentException();
 
-            String cloudId = "loan_projection_" + sha256(eventId).substring(0, 32);
             FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
-            FinanceEntry existing = database.financeEntryDao().getByCloudId(cloudId);
+
+            // First use the stable LoanManager payment identity. Older builds used
+            // eventId for cloudId, so this lookup also recognises and preserves an
+            // already-created legacy projection instead of creating a duplicate.
+            FinanceEntry existing = database.financeEntryDao()
+                    .getLoanManagerProjection(loanId, paymentId);
+            if (existing != null) {
+                // Refresh publication on retry. The local row remains the same
+                // payment even if MoneyManager changed its canonical event id.
+                existing.amount = amount;
+                existing.category = category.isEmpty() ? "Loan EMI" : category;
+                existing.transactionDate = new SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                        .format(new Date(occurredAt));
+                existing.accountName = loanName.isEmpty() ? "Loan Payment" : loanName;
+                existing.paymentMethod = "LoanManagerPro";
+                existing.isShared = true;
+                existing.recurrenceStatus = "POSTED";
+                existing.updatedByName = lenderName;
+                existing.note = "[LoanManagerProjection] event=" + eventId
+                        + " loan=" + loanId + " payment=" + paymentId;
+                new FinanceRepository(context).save(existing, () -> { });
+                return response("ACCEPTED", "Existing family loan payment projection refreshed");
+            }
+
+            String cloudId = "loan_payment_"
+                    + sha256(loanId + "|" + paymentId).substring(0, 32);
+            existing = database.financeEntryDao().getByCloudId(cloudId);
             if (existing != null) {
                 return response("ACCEPTED", "Family loan payment is already projected");
             }
@@ -90,8 +117,8 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
             entry.id = database.financeEntryDao().insert(entry);
             if (entry.id <= 0L) return response("FAILED", "Family finance row was not created");
 
-            // Reuse the existing Family Finance publisher so active household
-            // membership/familyId and realtime cloud sharing remain canonical.
+            // Reuse the Family Finance publisher so active household membership,
+            // familyId and realtime cloud sharing remain canonical.
             new FinanceRepository(context).save(entry, () -> { });
             return response("ACCEPTED", "Finalized loan payment projected to Family Hub Finance");
         } catch (RuntimeException invalid) {
