@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import com.google.firebase.database.DatabaseException;
 import com.google.firebase.database.FirebaseDatabase;
 import com.tridev.familyhub.backup.BackupScheduler;
+import com.tridev.familyhub.core.security.FamilyHubAppLockManager;
 import com.tridev.familyhub.feature.automation.FamilyAutomationLiveMonitor;
 import com.tridev.familyhub.feature.automation.FamilyAutomationRuntime;
 import com.tridev.familyhub.feature.automation.FamilyAutomationScheduler;
@@ -18,6 +19,7 @@ import com.tridev.familyhub.feature.integration.MoneyManagerFormAutoBinder;
 import com.tridev.familyhub.feature.integration.MoneyManagerSmartFinanceInsightBinder;
 import com.tridev.familyhub.feature.integration.MoneyManagerYearAnalyticsBinder;
 import com.tridev.familyhub.feature.journey.FamilyJourneyRecorder;
+import com.tridev.familyhub.feature.security.ProfileAppSecurityInjector;
 import com.tridev.familyhub.feature.sos.FamilySosLiveMonitor;
 import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
 import com.tridev.familyhub.geofence.FamilyAlertCloudSyncScheduler;
@@ -44,6 +46,13 @@ public class FamilyHubApplication extends Application {
         ThemeModeController.applySavedMode(this);
 
         applicationContext = getApplicationContext();
+
+        // UI-only security. Register before normal screens so a protected user
+        // cannot expose Family Hub after the selected inactivity timeout. This
+        // does not pause/stop providers, workers, location, SOS or sync services.
+        FamilyHubAppLockManager.register(this);
+        ProfileAppSecurityInjector.register(this);
+
         enableFirebaseOfflinePersistence();
         BackupScheduler.sync(this);
         DocumentExpiryScheduler.sync(this);
