@@ -131,12 +131,64 @@ public final class MoneyManagerMasterCatalogBridge {
 
     @NonNull
     public static String accountRefForLabel(Context context, @Nullable String label) {
-        return remembered(context, ACCOUNT_PREFIX, label, "(account|card):[0-9]+");
+        String remembered = remembered(context, ACCOUNT_PREFIX, label,
+                "(account|card):[0-9]+");
+        if (!remembered.isEmpty()) return remembered;
+
+        Catalog catalog = load(context);
+        if (!catalog.available) return "";
+        Choice choice = findUniqueAccountByVisibleLabel(catalog.accounts, label);
+        if (choice == null) return "";
+        rememberAccountChoice(context, label, choice.ref);
+        rememberAccountChoice(context, choice.label, choice.ref);
+        return choice.ref;
     }
 
     @NonNull
     public static String categoryRefForLabel(Context context, @Nullable String label) {
-        return remembered(context, CATEGORY_PREFIX, label, "category:[0-9]+");
+        String remembered = remembered(context, CATEGORY_PREFIX, label,
+                "category:[0-9]+");
+        if (!remembered.isEmpty()) return remembered;
+
+        Catalog catalog = load(context);
+        if (!catalog.available) return "";
+        Choice choice = findUniqueCategoryByLabel(catalog.expenseCategories, label);
+        if (choice == null) choice = findUniqueCategoryByLabel(catalog.incomeCategories, label);
+        if (choice == null) return "";
+        rememberCategoryChoice(context, label, choice.ref);
+        rememberCategoryChoice(context, choice.label, choice.ref);
+        return choice.ref;
+    }
+
+    /**
+     * Resolve a Finance category against the correct MoneyManager type. This is
+     * used by Finance posting so an Expense can never accidentally reuse an
+     * Income category mapping (or vice versa).
+     */
+    @NonNull
+    public static String categoryRefForFinanceLabel(
+            @NonNull Context context,
+            @Nullable String label,
+            boolean income) {
+        Catalog catalog = load(context);
+        if (catalog.available) {
+            List<Choice> choices = income
+                    ? catalog.incomeCategories : catalog.expenseCategories;
+            Choice exact = findUniqueCategoryByLabel(choices, label);
+            if (exact != null) {
+                rememberCategoryChoice(context, label, exact.ref);
+                rememberCategoryChoice(context, exact.label, exact.ref);
+                return exact.ref;
+            }
+        }
+
+        // Only fall back to a remembered mapping when the live catalog is not
+        // available. When the catalog is available but the label does not exist
+        // in the requested type, fail closed instead of posting to the wrong type.
+        if (!catalog.available) {
+            return remembered(context, CATEGORY_PREFIX, label, "category:[0-9]+");
+        }
+        return "";
     }
 
     public static void rememberGroceryDefaultAccount(
@@ -182,6 +234,59 @@ public final class MoneyManagerMasterCatalogBridge {
         String[] labels = new String[choices.size()];
         for (int i = 0; i < choices.size(); i++) labels[i] = choices.get(i).label;
         return labels;
+    }
+
+    @Nullable
+    private static Choice findUniqueCategoryByLabel(
+            @NonNull List<Choice> choices,
+            @Nullable String label) {
+        String wanted = normalize(label);
+        if (wanted.isEmpty()) return null;
+        Choice match = null;
+        for (Choice choice : choices) {
+            if (!normalize(choice.label).equals(wanted)) continue;
+            if (match != null && !match.ref.equals(choice.ref)) return null;
+            match = choice;
+        }
+        return match;
+    }
+
+    @Nullable
+    private static Choice findUniqueAccountByVisibleLabel(
+            @NonNull List<Choice> choices,
+            @Nullable String label) {
+        String wanted = normalize(label);
+        if (wanted.isEmpty()) return null;
+        Choice exact = null;
+        Choice base = null;
+        int baseMatches = 0;
+        for (Choice choice : choices) {
+            String full = normalize(choice.label);
+            if (full.equals(wanted)) {
+                exact = choice;
+                break;
+            }
+            String baseLabel = normalize(stripAccountTypeSuffix(choice.label));
+            if (baseLabel.equals(wanted)) {
+                base = choice;
+                baseMatches++;
+            }
+        }
+        if (exact != null) return exact;
+        return baseMatches == 1 ? base : null;
+    }
+
+    @NonNull
+    private static String stripAccountTypeSuffix(@Nullable String label) {
+        String value = safe(label);
+        int separator = value.lastIndexOf('•');
+        if (separator <= 0) return value;
+        String suffix = value.substring(separator + 1).trim();
+        if ("account".equalsIgnoreCase(suffix)
+                || "credit card".equalsIgnoreCase(suffix)) {
+            return value.substring(0, separator).trim();
+        }
+        return value;
     }
 
     private static void remember(Context context, String prefix, @Nullable String label,
