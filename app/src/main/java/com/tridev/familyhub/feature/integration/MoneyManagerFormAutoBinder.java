@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
@@ -31,12 +32,15 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private static final long SUMMARY_REFRESH_GUARD_MS = 1_500L;
+    private static final String ANALYTICS_PREFIX = "MoneyManager • ";
 
     private final Map<View, Boolean> boundViews =
             Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<View, Long> summaryRefreshAt =
             Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<View, Boolean> summaryLoading =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private final Map<View, String> familyAnalyticsText =
             Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<Activity, ViewTreeObserver.OnGlobalLayoutListener> listeners =
             Collections.synchronizedMap(new WeakHashMap<>());
@@ -71,7 +75,17 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
         TextView income = root.findViewById(R.id.month_income_value);
         TextView remaining = root.findViewById(R.id.month_balance_value);
         TextView accounts = root.findViewById(R.id.finance_accounts_summary);
+        TextView analytics = root.findViewById(R.id.finance_analytics_summary);
+        View analyticsCard = root.findViewById(R.id.finance_analytics_card);
         if (expense == null || income == null || remaining == null || accounts == null) return;
+
+        if (analytics != null) {
+            String currentAnalytics = analytics.getText() == null
+                    ? "" : analytics.getText().toString().trim();
+            if (!currentAnalytics.isEmpty() && !currentAnalytics.startsWith(ANALYTICS_PREFIX)) {
+                familyAnalyticsText.put(analytics, currentAnalytics);
+            }
+        }
 
         long now = System.currentTimeMillis();
         Long last = summaryRefreshAt.get(accounts);
@@ -101,8 +115,128 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
                 accountText += " • " + formatter.format(master.totalAccountBalance);
                 accounts.setText(accountText);
                 accounts.setContentDescription("Synced from MoneyManager • " + master.periodLabel);
+
+                if (analytics != null) {
+                    String familyInsight = familyAnalyticsText.get(analytics);
+                    analytics.setMaxLines(8);
+                    analytics.setText(compactAnalytics(master, formatter, familyInsight));
+                    analytics.setContentDescription(
+                            "MoneyManager category analytics • " + master.periodLabel);
+                    View.OnClickListener detailsClick = clicked -> showAnalyticsDetails(
+                            activity, master, formatter, familyInsight);
+                    analytics.setOnClickListener(detailsClick);
+                    if (analyticsCard != null) analyticsCard.setOnClickListener(detailsClick);
+                }
             });
         });
+    }
+
+    @NonNull
+    private String compactAnalytics(
+            @NonNull MoneyManagerFinanceSummaryBridge.Summary master,
+            @NonNull NumberFormat formatter,
+            @Nullable String familyInsight) {
+        StringBuilder text = new StringBuilder(ANALYTICS_PREFIX)
+                .append(master.periodLabel.isEmpty() ? "Current month" : master.periodLabel)
+                .append('\n')
+                .append("Expense categories • ")
+                .append(compactCategories(master.expenseCategories, formatter, 4));
+
+        if (!master.incomeCategories.isEmpty()) {
+            text.append('\n')
+                    .append("Income categories • ")
+                    .append(compactCategories(master.incomeCategories, formatter, 2));
+        }
+
+        String local = cleanInsight(familyInsight);
+        if (!local.isEmpty()) {
+            text.append('\n').append("Family insight • ").append(limit(local, 180));
+        }
+        text.append('\n').append("Tap for full category breakdown");
+        return text.toString();
+    }
+
+    @NonNull
+    private String compactCategories(
+            @NonNull List<MoneyManagerFinanceSummaryBridge.CategoryTotal> categories,
+            @NonNull NumberFormat formatter,
+            int limit) {
+        if (categories.isEmpty()) return "No entries";
+        StringBuilder text = new StringBuilder();
+        int shown = Math.min(Math.max(1, limit), categories.size());
+        for (int index = 0; index < shown; index++) {
+            if (index > 0) text.append(" • ");
+            MoneyManagerFinanceSummaryBridge.CategoryTotal item = categories.get(index);
+            text.append(item.label).append(' ').append(formatter.format(item.amount));
+        }
+        if (categories.size() > shown) {
+            text.append(" • +").append(categories.size() - shown).append(" more");
+        }
+        return text.toString();
+    }
+
+    private void showAnalyticsDetails(
+            @NonNull Activity activity,
+            @NonNull MoneyManagerFinanceSummaryBridge.Summary master,
+            @NonNull NumberFormat formatter,
+            @Nullable String familyInsight) {
+        if (activity.isFinishing() || activity.isDestroyed()) return;
+
+        StringBuilder body = new StringBuilder()
+                .append("MoneyManager • ")
+                .append(master.periodLabel.isEmpty() ? "Current month" : master.periodLabel)
+                .append("\n\nExpense categories\n");
+        appendCategoryDetails(body, master.expenseCategories, formatter);
+        body.append("\nExpense total • ").append(formatter.format(master.expense));
+
+        body.append("\n\nIncome categories\n");
+        appendCategoryDetails(body, master.incomeCategories, formatter);
+        body.append("\nIncome total • ").append(formatter.format(master.income));
+        body.append("\nRemaining • ").append(formatter.format(master.remaining));
+
+        String local = cleanInsight(familyInsight);
+        if (!local.isEmpty()) {
+            body.append("\n\nFamily Hub insight\n").append(local);
+        }
+        body.append("\n\nRead-only aggregate from MoneyManager; individual transactions are not shared.");
+
+        new MaterialAlertDialogBuilder(activity)
+                .setTitle("Finance Analytics")
+                .setMessage(body.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void appendCategoryDetails(
+            @NonNull StringBuilder body,
+            @NonNull List<MoneyManagerFinanceSummaryBridge.CategoryTotal> categories,
+            @NonNull NumberFormat formatter) {
+        if (categories.isEmpty()) {
+            body.append("No entries");
+            return;
+        }
+        for (MoneyManagerFinanceSummaryBridge.CategoryTotal item : categories) {
+            body.append("• ").append(item.label)
+                    .append(" — ").append(formatter.format(item.amount)).append('\n');
+        }
+        if (body.length() > 0 && body.charAt(body.length() - 1) == '\n') {
+            body.setLength(body.length() - 1);
+        }
+    }
+
+    @NonNull
+    private String cleanInsight(@Nullable String value) {
+        if (value == null) return "";
+        String clean = value.trim();
+        if (clean.isEmpty()
+                || clean.equalsIgnoreCase("Loading…")
+                || clean.equalsIgnoreCase("Loading...")) return "";
+        return clean.replace('\n', ' ').replace('\r', ' ').replaceAll("\\s+", " ");
+    }
+
+    @NonNull
+    private String limit(@NonNull String value, int max) {
+        return value.length() <= max ? value : value.substring(0, max).trim() + "…";
     }
 
     private void bindGrocery(@NonNull Activity activity, @NonNull View root) {
