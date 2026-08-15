@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="money_manager_paid_from">Paid from • MoneyManager</string>
+    <string name="money_manager_expense_category">Expense category • MoneyManager</string>
+    <string name="money_manager_finance_account">Account / card • MoneyManager</string>
+    <string name="money_manager_finance_category">Category • MoneyManager</string>
+    <string name="money_manager_catalog_loading">Loading MoneyManager…</string>
+    <string name="money_manager_catalog_unavailable">MoneyManager catalog unavailable • entry will go to Review</string>
+    <string name="money_manager_choose_later">Choose later in MoneyManager</string>
+</resources>
