@@ -332,7 +332,15 @@ public class FinanceRepository {
                     for (FinanceEntry local : financeEntryDao.getSharedForFamily(familyId)) {
                         if (!local.cloudId.isEmpty() && !remoteIds.contains(local.cloudId)
                                 && System.currentTimeMillis() - local.updatedAt > 30_000L) {
-                            financeEntryDao.deleteByCloudId(local.cloudId);
+                            if (isDurableExternalProjection(local)) {
+                                // LoanManager projections originate from a trusted local app and
+                                // may reach Room before the asynchronous Firebase publish finishes.
+                                // A temporarily missing cloud snapshot must not erase the canonical
+                                // local projection; retry publication instead.
+                                publishShared(local);
+                            } else {
+                                financeEntryDao.deleteByCloudId(local.cloudId);
+                            }
                         }
                     }
                     mainHandler.post(onChanged::onComplete);
@@ -341,6 +349,13 @@ public class FinanceRepository {
             @Override public void onCancelled(@NonNull DatabaseError error) { }
         };
         sharedEntriesReference.addValueEventListener(sharedEntriesListener);
+    }
+
+    private static boolean isDurableExternalProjection(@Nullable FinanceEntry entry) {
+        if (entry == null) return false;
+        if ("LoanManagerPro".equalsIgnoreCase(entry.paymentMethod)) return true;
+        String note = entry.note == null ? "" : entry.note.trim();
+        return note.startsWith("[LoanManagerProjection]");
     }
 
     private static Map<String, Object> toCloudValues(FinanceEntry entry) {
