@@ -2,7 +2,6 @@ package com.tridev.familyhub.core.security;
 
 import android.app.Activity;
 import android.app.Application;
-import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,6 +14,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.view.WindowCallbackWrapper;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.main.SplashActivity;
 import com.tridev.familyhub.feature.security.AppLockActivity;
@@ -35,6 +36,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     private long lastInteractionElapsedRealtime;
     private boolean sessionUnlocked;
     private boolean lockNavigationInProgress;
+    @NonNull private String unlockedUid = "";
 
     private final Runnable timeoutRunnable = () -> {
         Activity activity = activeActivity.get();
@@ -53,6 +55,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         FamilyHubAppLockManager manager = instance;
         if (manager == null) return;
         manager.sessionUnlocked = true;
+        manager.unlockedUid = currentUid();
         manager.lockNavigationInProgress = false;
         manager.markInteractionNow();
         Activity activity = manager.activeActivity.get();
@@ -66,6 +69,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         FamilyHubAppLockManager manager = instance;
         if (manager == null) return;
         manager.sessionUnlocked = false;
+        manager.unlockedUid = "";
         manager.lockNavigationInProgress = false;
         manager.lastInteractionElapsedRealtime = 0L;
         manager.cancelTimeout();
@@ -78,6 +82,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
             return;
         }
         manager.sessionUnlocked = false;
+        manager.unlockedUid = "";
         manager.lockNow(activity);
     }
 
@@ -93,8 +98,15 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
             return;
         }
 
+        String uid = currentUid();
+        if (!uid.equals(unlockedUid)) {
+            sessionUnlocked = false;
+            lastInteractionElapsedRealtime = 0L;
+        }
+
         if (!AppSecurityStore.isProtectionEnabled(activity)) {
             sessionUnlocked = true;
+            unlockedUid = uid;
             lockNavigationInProgress = false;
             markInteractionNow();
             cancelTimeout();
@@ -115,6 +127,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         long timeout = timeoutMillis(activity);
         if (elapsed >= timeout) {
             sessionUnlocked = false;
+            unlockedUid = "";
             lockNow(activity);
             return;
         }
@@ -139,7 +152,8 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     public void onUserInteraction(@NonNull Activity activity) {
         Activity current = activeActivity.get();
         if (current != activity || isEntryOrLockActivity(activity)
-                || !sessionUnlocked || !AppSecurityStore.isProtectionEnabled(activity)
+                || !sessionUnlocked || !currentUid().equals(unlockedUid)
+                || !AppSecurityStore.isProtectionEnabled(activity)
                 || lockNavigationInProgress) {
             return;
         }
@@ -154,6 +168,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
             return;
         }
         sessionUnlocked = false;
+        unlockedUid = "";
         lockNavigationInProgress = true;
         cancelTimeout();
         activity.startActivity(AppLockActivity.intentForOverlay(activity));
@@ -188,6 +203,17 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
 
     private void cancelTimeout() {
         mainHandler.removeCallbacks(timeoutRunnable);
+    }
+
+    @NonNull
+    private static String currentUid() {
+        try {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            String uid = user == null ? "" : user.getUid();
+            return uid == null ? "" : uid.trim();
+        } catch (RuntimeException unavailable) {
+            return "";
+        }
     }
 
     @Override public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle state) { }
