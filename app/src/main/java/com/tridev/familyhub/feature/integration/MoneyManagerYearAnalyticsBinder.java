@@ -25,12 +25,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * STEP 13E yearly Finance dashboard binder.
+ * STEP 13E/13F yearly Finance dashboard binder.
  *
  * A compact annual MoneyManager summary is injected into the existing Finance
- * Analytics card. Tapping it opens a 12-month Income/Expense/Remaining
- * comparison. Aggregates are read-only and are never persisted to Family Hub
- * Room/Firebase.
+ * Analytics card. STEP 13F compares the selected year with the previous year
+ * using the same read-only MoneyManager yearly aggregate endpoint. No
+ * transaction rows, notes, merchant data, account numbers or SMS bodies are
+ * copied into Family Hub Room/Firebase.
  */
 public final class MoneyManagerYearAnalyticsBinder
         implements Application.ActivityLifecycleCallbacks {
@@ -42,8 +43,20 @@ public final class MoneyManagerYearAnalyticsBinder
             Collections.synchronizedMap(new WeakHashMap<>());
     private final Map<TextView, Integer> loadedYears =
             Collections.synchronizedMap(new WeakHashMap<>());
-    private final Map<TextView, MoneyManagerYearAnalyticsBridge.Snapshot> snapshots =
+    private final Map<TextView, Comparison> comparisons =
             Collections.synchronizedMap(new WeakHashMap<>());
+
+    private static final class Comparison {
+        @NonNull final MoneyManagerYearAnalyticsBridge.Snapshot current;
+        @NonNull final MoneyManagerYearAnalyticsBridge.Snapshot previous;
+
+        private Comparison(
+                @NonNull MoneyManagerYearAnalyticsBridge.Snapshot current,
+                @NonNull MoneyManagerYearAnalyticsBridge.Snapshot previous) {
+            this.current = current;
+            this.previous = previous;
+        }
+    }
 
     public static void register(@NonNull Application application) {
         application.registerActivityLifecycleCallbacks(new MoneyManagerYearAnalyticsBinder());
@@ -78,16 +91,16 @@ public final class MoneyManagerYearAnalyticsBinder
                 MoneyManagerFinancePeriodStore.get(activity);
         Integer loadedYear = loadedYears.get(yearly);
         if (loadedYear == null || loadedYear != selected.year) {
-            loadYear(activity, yearly, selected.year);
+            loadComparison(activity, yearly, selected.year);
         }
 
         TextView finalYearly = yearly;
         yearly.setOnClickListener(v -> {
-            MoneyManagerYearAnalyticsBridge.Snapshot snapshot = snapshots.get(finalYearly);
-            if (snapshot != null && snapshot.available) {
-                showDetails(activity, snapshot);
+            Comparison comparison = comparisons.get(finalYearly);
+            if (comparison != null && comparison.current.available) {
+                showDetails(activity, comparison);
             } else {
-                loadYear(activity, finalYearly,
+                loadComparison(activity, finalYearly,
                         MoneyManagerFinancePeriodStore.get(activity).year);
             }
         });
@@ -114,8 +127,8 @@ public final class MoneyManagerYearAnalyticsBinder
                 dp(activity, 10), dp(activity, 8));
         view.setClickable(true);
         view.setFocusable(true);
-        view.setContentDescription("MoneyManager yearly finance comparison");
-        view.setText("Loading MoneyManager yearly summary…");
+        view.setContentDescription("MoneyManager yearly finance and year over year comparison");
+        view.setText("Loading MoneyManager yearly comparison…");
 
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -126,17 +139,23 @@ public final class MoneyManagerYearAnalyticsBinder
         return view;
     }
 
-    private void loadYear(
+    private void loadComparison(
             @NonNull Activity activity,
             @NonNull TextView view,
             int year) {
         loadedYears.put(view, year);
-        snapshots.remove(view);
+        comparisons.remove(view);
         view.setText("Year " + year + " • Loading MoneyManager comparison…");
 
         EXECUTOR.execute(() -> {
-            MoneyManagerYearAnalyticsBridge.Snapshot snapshot =
+            MoneyManagerYearAnalyticsBridge.Snapshot current =
                     MoneyManagerYearAnalyticsBridge.loadYear(activity, year);
+            MoneyManagerYearAnalyticsBridge.Snapshot previous = year > 2000
+                    ? MoneyManagerYearAnalyticsBridge.loadYear(activity, year - 1)
+                    : MoneyManagerYearAnalyticsBridge.Snapshot.unavailable(
+                            year - 1, "Previous year is outside supported range");
+            Comparison comparison = new Comparison(current, previous);
+
             activity.runOnUiThread(() -> {
                 if (activity.isFinishing() || activity.isDestroyed()) return;
                 Integer requested = loadedYears.get(view);
@@ -144,13 +163,13 @@ public final class MoneyManagerYearAnalyticsBinder
                         MoneyManagerFinancePeriodStore.get(activity);
                 if (requested == null || requested != year || selected.year != year) return;
 
-                snapshots.put(view, snapshot);
-                if (snapshot.available) {
-                    renderCompact(view, snapshot);
+                comparisons.put(view, comparison);
+                if (current.available) {
+                    renderCompact(view, comparison);
                 } else {
-                    String reason = snapshot.reason.isEmpty()
+                    String reason = current.reason.isEmpty()
                             ? "MoneyManager yearly summary unavailable"
-                            : snapshot.reason;
+                            : current.reason;
                     view.setText("Year " + year + " • " + reason + " • Tap to retry");
                 }
             });
@@ -159,78 +178,162 @@ public final class MoneyManagerYearAnalyticsBinder
 
     private void renderCompact(
             @NonNull TextView view,
-            @NonNull MoneyManagerYearAnalyticsBridge.Snapshot snapshot) {
-        String text = "Year " + snapshot.year
-                + " • Income " + money(snapshot.totalIncome)
-                + " • Expense " + money(snapshot.totalExpense)
-                + " • Saving " + money(snapshot.totalRemaining)
-                + "\nTap for 12-month comparison";
-        view.setText(text);
+            @NonNull Comparison comparison) {
+        MoneyManagerYearAnalyticsBridge.Snapshot current = comparison.current;
+        StringBuilder text = new StringBuilder();
+        text.append("Year ").append(current.year)
+                .append(" • Income ").append(money(current.totalIncome))
+                .append(" • Expense ").append(money(current.totalExpense))
+                .append(" • Saving ").append(money(current.totalRemaining));
+
+        if (comparison.previous.available) {
+            text.append('\n')
+                    .append("vs ").append(comparison.previous.year)
+                    .append(" • Income ").append(changeLabel(
+                            current.totalIncome, comparison.previous.totalIncome))
+                    .append(" • Expense ").append(changeLabel(
+                            current.totalExpense, comparison.previous.totalExpense))
+                    .append(" • Saving ").append(changeLabel(
+                            current.totalRemaining, comparison.previous.totalRemaining));
+        }
+        text.append("\nTap for 12-month + year-over-year comparison");
+        view.setText(text.toString());
     }
 
     private void showDetails(
             @NonNull Activity activity,
-            @NonNull MoneyManagerYearAnalyticsBridge.Snapshot snapshot) {
+            @NonNull Comparison comparison) {
         if (activity.isFinishing() || activity.isDestroyed()) return;
 
+        MoneyManagerYearAnalyticsBridge.Snapshot current = comparison.current;
+        MoneyManagerYearAnalyticsBridge.Snapshot previous = comparison.previous;
         StringBuilder message = new StringBuilder();
-        message.append("Total Income  ").append(money(snapshot.totalIncome)).append('\n')
-                .append("Total Expense  ").append(money(snapshot.totalExpense)).append('\n')
-                .append("Total Saving  ").append(money(snapshot.totalRemaining)).append('\n')
+        message.append(current.year).append(" totals\n")
+                .append("Income  ").append(money(current.totalIncome)).append('\n')
+                .append("Expense  ").append(money(current.totalExpense)).append('\n')
+                .append("Saving  ").append(money(current.totalRemaining)).append('\n')
                 .append("Posted income/expense entries  ")
-                .append(snapshot.transactionCount).append("\n\n")
-                .append("Month-to-month comparison\n");
+                .append(current.transactionCount).append("\n\n");
+
+        if (previous.available) {
+            message.append("Year-over-year • vs ").append(previous.year).append('\n')
+                    .append("Income change  ").append(changeLabel(
+                            current.totalIncome, previous.totalIncome))
+                    .append(" • ").append(moneyDelta(
+                            current.totalIncome - previous.totalIncome)).append('\n')
+                    .append("Expense change  ").append(changeLabel(
+                            current.totalExpense, previous.totalExpense))
+                    .append(" • ").append(moneyDelta(
+                            current.totalExpense - previous.totalExpense)).append('\n')
+                    .append("Saving change  ").append(changeLabel(
+                            current.totalRemaining, previous.totalRemaining))
+                    .append(" • ").append(moneyDelta(
+                            current.totalRemaining - previous.totalRemaining))
+                    .append("\n\n");
+        }
+
+        message.append("Month-to-month comparison\n");
 
         int bestSavingMonth = -1;
         int highestExpenseMonth = -1;
+        int biggestExpenseRiseMonth = -1;
+        int biggestExpenseDropMonth = -1;
         double bestSaving = -Double.MAX_VALUE;
         double highestExpense = -1D;
+        double biggestExpenseRise = 0D;
+        double biggestExpenseDrop = 0D;
 
         for (int index = 0; index < 12; index++) {
-            String label = safeMonth(snapshot, index);
-            int count = snapshot.monthTransactionCounts[index];
-            if (count <= 0) {
+            String label = safeMonth(current, index);
+            int count = current.monthTransactionCounts[index];
+            int previousCount = previous.available
+                    ? previous.monthTransactionCounts[index]
+                    : 0;
+            if (count <= 0 && previousCount <= 0) {
                 message.append(label).append("  — no activity\n");
                 continue;
             }
 
-            double saving = snapshot.monthRemaining[index];
-            double expense = snapshot.monthExpense[index];
+            double saving = current.monthRemaining[index];
+            double expense = current.monthExpense[index];
             message.append(label)
-                    .append("  In ").append(money(snapshot.monthIncome[index]))
+                    .append("  In ").append(money(current.monthIncome[index]))
                     .append(" • Out ").append(money(expense))
-                    .append(" • Save ").append(money(saving))
-                    .append('\n');
+                    .append(" • Save ").append(money(saving));
 
-            if (saving > bestSaving) {
+            if (previous.available) {
+                double expenseDelta = expense - previous.monthExpense[index];
+                message.append(" • Out vs ").append(previous.year).append(' ')
+                        .append(moneyDelta(expenseDelta));
+
+                if (expenseDelta > biggestExpenseRise) {
+                    biggestExpenseRise = expenseDelta;
+                    biggestExpenseRiseMonth = index;
+                }
+                if (expenseDelta < biggestExpenseDrop) {
+                    biggestExpenseDrop = expenseDelta;
+                    biggestExpenseDropMonth = index;
+                }
+            }
+            message.append('\n');
+
+            if (count > 0 && saving > bestSaving) {
                 bestSaving = saving;
                 bestSavingMonth = index;
             }
-            if (expense > highestExpense) {
+            if (count > 0 && expense > highestExpense) {
                 highestExpense = expense;
                 highestExpenseMonth = index;
             }
         }
 
-        if (bestSavingMonth >= 0 || highestExpenseMonth >= 0) {
-            message.append("\nYear insight\n");
+        if (bestSavingMonth >= 0 || highestExpenseMonth >= 0
+                || biggestExpenseRiseMonth >= 0 || biggestExpenseDropMonth >= 0) {
+            message.append("\nTrend insight\n");
             if (bestSavingMonth >= 0) {
                 message.append("Best saving month • ")
-                        .append(safeMonth(snapshot, bestSavingMonth))
+                        .append(safeMonth(current, bestSavingMonth))
                         .append(" • ").append(money(bestSaving)).append('\n');
             }
             if (highestExpenseMonth >= 0) {
                 message.append("Highest expense month • ")
-                        .append(safeMonth(snapshot, highestExpenseMonth))
-                        .append(" • ").append(money(highestExpense));
+                        .append(safeMonth(current, highestExpenseMonth))
+                        .append(" • ").append(money(highestExpense)).append('\n');
+            }
+            if (biggestExpenseRiseMonth >= 0) {
+                message.append("Largest expense rise vs ").append(previous.year).append(" • ")
+                        .append(safeMonth(current, biggestExpenseRiseMonth))
+                        .append(" • ").append(moneyDelta(biggestExpenseRise)).append('\n');
+            }
+            if (biggestExpenseDropMonth >= 0) {
+                message.append("Largest expense reduction vs ").append(previous.year).append(" • ")
+                        .append(safeMonth(current, biggestExpenseDropMonth))
+                        .append(" • ").append(moneyDelta(biggestExpenseDrop));
             }
         }
 
         new MaterialAlertDialogBuilder(activity)
-                .setTitle("MoneyManager • " + snapshot.year + " yearly finance")
+                .setTitle("MoneyManager • " + current.year + " finance trend")
                 .setMessage(message.toString().trim())
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
+    }
+
+    @NonNull
+    private String changeLabel(double current, double previous) {
+        double delta = current - previous;
+        if (Math.abs(previous) < 0.005D) {
+            if (Math.abs(current) < 0.005D) return "0%";
+            return delta > 0D ? "new" : "changed";
+        }
+        double percent = (delta / Math.abs(previous)) * 100D;
+        return String.format(Locale.ENGLISH, "%+.1f%%", percent);
+    }
+
+    @NonNull
+    private String moneyDelta(double value) {
+        if (Math.abs(value) < 0.005D) return "₹0";
+        return (value > 0D ? "+" : "−") + money(Math.abs(value));
     }
 
     @NonNull
