@@ -33,6 +33,7 @@ import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 public class MoreFragment extends Fragment {
 
     private FragmentMoreBinding binding;
+    private boolean themeChangeInProgress;
 
     @Nullable
     @Override
@@ -67,18 +68,7 @@ public class MoreFragment extends Fragment {
                 }
         );
 
-        boolean darkThemeEnabled =
-                (getResources().getConfiguration().uiMode
-                        & Configuration.UI_MODE_NIGHT_MASK)
-                        == Configuration.UI_MODE_NIGHT_YES;
-        binding.switchDarkTheme.setChecked(darkThemeEnabled);
-        binding.switchDarkTheme.setOnCheckedChangeListener(
-                (button, enabled) -> AppCompatDelegate.setDefaultNightMode(
-                        enabled
-                                ? AppCompatDelegate.MODE_NIGHT_YES
-                                : AppCompatDelegate.MODE_NIGHT_NO
-                )
-        );
+        configureThemeSwitch();
 
         binding.cardBackupRestore.setOnClickListener(
                 clickedView -> startActivity(new Intent(
@@ -103,6 +93,38 @@ public class MoreFragment extends Fragment {
                         FamilyManagementActivity.class
                 )));
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
+    }
+
+    private void configureThemeSwitch() {
+        int configuredMode = AppCompatDelegate.getDefaultNightMode();
+        boolean darkThemeEnabled;
+        if (configuredMode == AppCompatDelegate.MODE_NIGHT_YES) {
+            darkThemeEnabled = true;
+        } else if (configuredMode == AppCompatDelegate.MODE_NIGHT_NO) {
+            darkThemeEnabled = false;
+        } else {
+            darkThemeEnabled =
+                    (getResources().getConfiguration().uiMode
+                            & Configuration.UI_MODE_NIGHT_MASK)
+                            == Configuration.UI_MODE_NIGHT_YES;
+        }
+
+        binding.switchDarkTheme.setChecked(darkThemeEnabled);
+        binding.switchDarkTheme.setEnabled(true);
+        binding.switchDarkTheme.setOnCheckedChangeListener((button, enabled) -> {
+            if (themeChangeInProgress) return;
+            int requestedMode = enabled
+                    ? AppCompatDelegate.MODE_NIGHT_YES
+                    : AppCompatDelegate.MODE_NIGHT_NO;
+            if (AppCompatDelegate.getDefaultNightMode() == requestedMode) return;
+
+            themeChangeInProgress = true;
+            binding.switchDarkTheme.setEnabled(false);
+            binding.switchDarkTheme.post(() -> {
+                if (!isAdded()) return;
+                AppCompatDelegate.setDefaultNightMode(requestedMode);
+            });
+        });
     }
 
     /** Removes feature duplicates; modules are available from the hamburger. */
