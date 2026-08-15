@@ -38,6 +38,11 @@ public class FamilyHubApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // Theme is applied exactly once from a single persisted preference before
+        // any Activity/Fragment is created. UI switches only update this source.
+        ThemeModeController.applySavedMode(this);
+
         applicationContext = getApplicationContext();
         enableFirebaseOfflinePersistence();
         BackupScheduler.sync(this);
