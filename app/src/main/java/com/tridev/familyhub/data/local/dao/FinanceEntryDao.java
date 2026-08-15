@@ -38,6 +38,12 @@ public interface FinanceEntryDao {
     @Query("SELECT * FROM finance_entries WHERE cloudId = :cloudId LIMIT 1")
     FinanceEntry getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM finance_entries "
+            + "WHERE paymentMethod = 'LoanManagerPro' "
+            + "AND note LIKE '% loan=' || :loanId || ' payment=' || :paymentId || '%' "
+            + "ORDER BY id DESC LIMIT 1")
+    FinanceEntry getLoanManagerProjection(String loanId, String paymentId);
+
     @Query("SELECT * FROM finance_entries WHERE isShared = 1 AND familyId = :familyId")
     List<FinanceEntry> getSharedForFamily(String familyId);
 
