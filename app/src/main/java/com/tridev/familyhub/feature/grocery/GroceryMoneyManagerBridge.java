@@ -46,7 +46,6 @@ public final class GroceryMoneyManagerBridge {
         }
     }
 
-    /** Backward-compatible account catalog used by the existing purchase picker. */
     public static final class AccountChoice {
         public final String canonicalRef;
         public final String label;
@@ -99,6 +98,10 @@ public final class GroceryMoneyManagerBridge {
             @NonNull GroceryItem item,
             @Nullable String canonicalRef) {
         rememberRef(context, ACCOUNT_PREFIX, item, canonicalRef, "(account|card):[0-9]+");
+        String ref = safe(canonicalRef).toLowerCase(Locale.ROOT);
+        if (ref.matches("(account|card):[0-9]+")) {
+            MoneyManagerMasterCatalogBridge.rememberGroceryDefaultAccount(context, ref);
+        }
     }
 
     public static void rememberNextPurchaseCategory(
@@ -106,6 +109,10 @@ public final class GroceryMoneyManagerBridge {
             @NonNull GroceryItem item,
             @Nullable String canonicalRef) {
         rememberRef(context, CATEGORY_PREFIX, item, canonicalRef, "category:[0-9]+");
+        String ref = safe(canonicalRef).toLowerCase(Locale.ROOT);
+        if (ref.matches("category:[0-9]+")) {
+            MoneyManagerMasterCatalogBridge.rememberGroceryDefaultCategory(context, ref);
+        }
     }
 
     public static void rememberNextPurchaseSelections(
@@ -121,14 +128,20 @@ public final class GroceryMoneyManagerBridge {
     public static String selectedAccountRef(
             @NonNull Context context,
             @NonNull GroceryItem item) {
-        return pendingRef(context, ACCOUNT_PREFIX, item, "(account|card):[0-9]+");
+        String ref = pendingRef(context, ACCOUNT_PREFIX, item, "(account|card):[0-9]+");
+        return ref.isEmpty()
+                ? MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(context)
+                : ref;
     }
 
     @NonNull
     public static String selectedCategoryRef(
             @NonNull Context context,
             @NonNull GroceryItem item) {
-        return pendingRef(context, CATEGORY_PREFIX, item, "category:[0-9]+");
+        String ref = pendingRef(context, CATEGORY_PREFIX, item, "category:[0-9]+");
+        return ref.isEmpty()
+                ? MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(context)
+                : ref;
     }
 
     @NonNull
