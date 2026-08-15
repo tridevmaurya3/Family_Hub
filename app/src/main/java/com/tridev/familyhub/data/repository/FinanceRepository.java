@@ -1,6 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -55,6 +56,9 @@ public class FinanceRepository {
     public interface AccountsCallback { void onLoaded(List<FinanceAccount> accounts); }
 
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
+    private static final String SYNC_PREFS = "finance_sync_preferences";
+    private static final String KEY_DELETED_EXTERNAL_PROJECTIONS =
+            "deleted_external_projection_ids";
 
     private final Context appContext;
     private final FinanceEntryDao financeEntryDao;
@@ -203,12 +207,15 @@ public class FinanceRepository {
 
     public void delete(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (isDurableExternalProjection(entry) && !safe(entry.cloudId).isEmpty()) {
+                markExternalProjectionDeleted(entry.cloudId);
+            }
             GroceryItem linkedGrocery = groceryItemDao.getByFinanceEntryId(entry.id);
             financeEntryDao.delete(entry);
             groceryItemDao.resetLinkedPurchase(entry.id, System.currentTimeMillis());
             publishLinkedGroceryReset(linkedGrocery);
             if (entry.isShared) {
-                removeShared(entry.familyId, entry.cloudId);
+                removeSharedForEntry(entry);
             }
             mainHandler.post(callback::onComplete);
         });
@@ -251,7 +258,6 @@ public class FinanceRepository {
         values.put("purchased", false);
         values.put("buyingStatus", GroceryItem.STATUS_PENDING);
         values.put("purchasedAt", 0L);
-        values.put("purchasedByName", "");
         values.put("updatedAt", now);
         values.put("serverUpdatedAt", ServerValue.TIMESTAMP);
         FirebaseDatabase.getInstance().getReference("sharedShopping")
@@ -286,12 +292,16 @@ public class FinanceRepository {
     }
 
     private void publishShared(@NonNull FinanceEntry entry) {
+        if (isDurableExternalProjection(entry)
+                && isExternalProjectionDeleted(entry.cloudId)) return;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
         new FamilyAccountRepository().loadSession(
                 new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
                     @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
                         if (state == null || !state.isActive() || state.familyId == null) return;
+                        if (isDurableExternalProjection(entry)
+                                && isExternalProjectionDeleted(entry.cloudId)) return;
                         entry.familyId = state.familyId;
                         entry.updatedByUid = user.getUid();
                         String displayName = user.getDisplayName();
@@ -301,7 +311,15 @@ public class FinanceRepository {
                         FirebaseDatabase.getInstance().getReference()
                                 .child("sharedModules").child(state.familyId)
                                 .child("finance").child(entry.cloudId).setValue(values);
-                        DATABASE_EXECUTOR.execute(() -> financeEntryDao.update(entry));
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!isExternalProjectionDeleted(entry.cloudId)) {
+                                FinanceEntry current = financeEntryDao.getByCloudId(entry.cloudId);
+                                if (current != null) {
+                                    entry.id = current.id;
+                                    financeEntryDao.update(entry);
+                                }
+                            }
+                        });
                     }
                     @Override public void onError(@NonNull Exception error) { }
                 });
@@ -315,40 +333,130 @@ public class FinanceRepository {
         sharedEntriesListener = new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
                 DATABASE_EXECUTOR.execute(() -> {
+                    boolean changed = false;
                     Set<String> remoteIds = new HashSet<>();
                     for (DataSnapshot child : snapshot.getChildren()) {
                         FinanceEntry remote = fromSnapshot(child, familyId);
                         if (remote == null) continue;
+                        if (isExternalProjectionDeleted(remote.cloudId)) {
+                            FinanceEntry localDeleted = financeEntryDao.getByCloudId(remote.cloudId);
+                            if (localDeleted != null) {
+                                financeEntryDao.deleteByCloudId(remote.cloudId);
+                                changed = true;
+                            }
+                            DatabaseReference reference = sharedEntriesReference;
+                            if (reference != null) {
+                                reference.child(remote.cloudId).removeValue();
+                            }
+                            continue;
+                        }
                         remoteIds.add(remote.cloudId);
                         FinanceEntry local = financeEntryDao.getByCloudId(remote.cloudId);
                         if (local == null) {
                             financeEntryDao.insert(remote);
-                        } else if (remote.updatedAt >= local.updatedAt) {
+                            changed = true;
+                        } else if (remote.updatedAt > local.updatedAt) {
                             remote.id = local.id;
                             remote.createdAt = local.createdAt == 0 ? remote.createdAt : local.createdAt;
                             financeEntryDao.update(remote);
+                            changed = true;
                         }
                     }
                     for (FinanceEntry local : financeEntryDao.getSharedForFamily(familyId)) {
-                        if (!local.cloudId.isEmpty() && !remoteIds.contains(local.cloudId)
+                        if (local.cloudId.isEmpty()) continue;
+                        if (isExternalProjectionDeleted(local.cloudId)) {
+                            financeEntryDao.deleteByCloudId(local.cloudId);
+                            changed = true;
+                            continue;
+                        }
+                        if (!remoteIds.contains(local.cloudId)
                                 && System.currentTimeMillis() - local.updatedAt > 30_000L) {
                             if (isDurableExternalProjection(local)) {
-                                // LoanManager projections originate from a trusted local app and
-                                // may reach Room before the asynchronous Firebase publish finishes.
-                                // A temporarily missing cloud snapshot must not erase the canonical
-                                // local projection; retry publication instead.
+                                // A trusted external projection can arrive locally before its
+                                // asynchronous cloud write. Retry only when the user has not
+                                // explicitly deleted this payment from Family Hub Finance.
                                 publishShared(local);
                             } else {
                                 financeEntryDao.deleteByCloudId(local.cloudId);
+                                changed = true;
                             }
                         }
                     }
-                    mainHandler.post(onChanged::onComplete);
+                    if (changed) {
+                        mainHandler.post(onChanged::onComplete);
+                    }
                 });
             }
             @Override public void onCancelled(@NonNull DatabaseError error) { }
         };
         sharedEntriesReference.addValueEventListener(sharedEntriesListener);
+    }
+
+    public static void clearExternalProjectionDeletion(
+            @NonNull Context context,
+            @Nullable String cloudId
+    ) {
+        String id = safe(cloudId);
+        if (id.isEmpty()) return;
+        synchronized (FinanceRepository.class) {
+            SharedPreferences prefs = context.getApplicationContext()
+                    .getSharedPreferences(SYNC_PREFS, Context.MODE_PRIVATE);
+            Set<String> ids = new HashSet<>(prefs.getStringSet(
+                    KEY_DELETED_EXTERNAL_PROJECTIONS, new HashSet<>()));
+            if (ids.remove(id)) {
+                prefs.edit().putStringSet(KEY_DELETED_EXTERNAL_PROJECTIONS, ids).apply();
+            }
+        }
+    }
+
+    private void markExternalProjectionDeleted(@NonNull String cloudId) {
+        String id = safe(cloudId);
+        if (id.isEmpty()) return;
+        synchronized (FinanceRepository.class) {
+            SharedPreferences prefs = appContext.getSharedPreferences(
+                    SYNC_PREFS, Context.MODE_PRIVATE);
+            Set<String> ids = new HashSet<>(prefs.getStringSet(
+                    KEY_DELETED_EXTERNAL_PROJECTIONS, new HashSet<>()));
+            ids.add(id);
+            prefs.edit().putStringSet(KEY_DELETED_EXTERNAL_PROJECTIONS, ids).apply();
+        }
+    }
+
+    private boolean isExternalProjectionDeleted(@Nullable String cloudId) {
+        String id = safe(cloudId);
+        if (id.isEmpty()) return false;
+        synchronized (FinanceRepository.class) {
+            SharedPreferences prefs = appContext.getSharedPreferences(
+                    SYNC_PREFS, Context.MODE_PRIVATE);
+            Set<String> ids = prefs.getStringSet(
+                    KEY_DELETED_EXTERNAL_PROJECTIONS, new HashSet<>());
+            return ids != null && ids.contains(id);
+        }
+    }
+
+    private void removeSharedForEntry(@NonNull FinanceEntry entry) {
+        String cloudId = safe(entry.cloudId);
+        if (cloudId.isEmpty()) return;
+        DatabaseReference activeReference = sharedEntriesReference;
+        if (activeReference != null) {
+            activeReference.child(cloudId).removeValue();
+            return;
+        }
+        String familyId = safe(entry.familyId);
+        if (!familyId.isEmpty()) {
+            removeShared(familyId, cloudId);
+            return;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+        new FamilyAccountRepository().loadSession(
+                new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
+                    @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
+                        if (state == null || !state.isActive() || state.familyId == null) return;
+                        removeShared(state.familyId, cloudId);
+                    }
+                    @Override public void onError(@NonNull Exception error) { }
+                });
     }
 
     private static boolean isDurableExternalProjection(@Nullable FinanceEntry entry) {
@@ -470,5 +578,10 @@ public class FinanceRepository {
         if (familyId.isEmpty() || cloudId.isEmpty()) return;
         FirebaseDatabase.getInstance().getReference().child("sharedModules").child(familyId)
                 .child("finance").child(cloudId).removeValue();
+    }
+
+    @NonNull
+    private static String safe(@Nullable String value) {
+        return value == null ? "" : value.trim();
     }
 }
