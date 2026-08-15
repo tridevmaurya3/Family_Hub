@@ -21,6 +21,7 @@ public final class ThemeModeController {
 
     private static long lastAppliedAt;
     private static boolean lastRequestedDark;
+    private static boolean hasUserRequest;
 
     private ThemeModeController() {
     }
@@ -35,7 +36,8 @@ public final class ThemeModeController {
             AppCompatDelegate.setDefaultNightMode(desiredMode);
         }
         lastRequestedDark = dark;
-        lastAppliedAt = SystemClock.elapsedRealtime();
+        lastAppliedAt = 0L;
+        hasUserRequest = false;
     }
 
     public static boolean isDarkEnabled(@NonNull Context context) {
@@ -61,7 +63,8 @@ public final class ThemeModeController {
         }
 
         long now = SystemClock.elapsedRealtime();
-        if (now - lastAppliedAt < RAPID_CHANGE_GUARD_MS
+        if (hasUserRequest
+                && now - lastAppliedAt < RAPID_CHANGE_GUARD_MS
                 && lastRequestedDark != dark) {
             // Reject stale restored-view callbacks that try to immediately undo
             // the user's most recent theme selection during recreation.
@@ -71,6 +74,7 @@ public final class ThemeModeController {
         prefs(context).edit().putBoolean(KEY_DARK, dark).commit();
         lastRequestedDark = dark;
         lastAppliedAt = now;
+        hasUserRequest = true;
 
         if (currentMode != desiredMode) {
             AppCompatDelegate.setDefaultNightMode(desiredMode);
