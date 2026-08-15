@@ -1,8 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <bitmap
-            android:src="@drawable/family_hub_app_icon"
-            android:gravity="fill" />
-    </item>
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Fluent Family Hub mark: self-contained vector, no bitmap dependency. -->
+    <path
+        android:fillColor="#0F6CBD"
+        android:pathData="M54,15 L94,47 L87.5,55 L82,50.6 L82,91 L26,91 L26,50.6 L20.5,55 L14,47 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 L72,44.4 L72,81 L36,81 L36,44.4 Z" />
+
+    <!-- Adult -->
+    <path
+        android:fillColor="#0F6CBD"
+        android:pathData="M46,43 C50.4,43 54,46.6 54,51 C54,55.4 50.4,59 46,59 C41.6,59 38,55.4 38,51 C38,46.6 41.6,43 46,43 Z" />
+    <path
+        android:fillColor="#0F6CBD"
+        android:pathData="M33,76 C33,67.6 38.8,61 46,61 C53.2,61 59,67.6 59,76 Z" />
+
+    <!-- Child / second family member -->
+    <path
+        android:fillColor="#0F7A5A"
+        android:pathData="M64,49 C67.9,49 71,52.1 71,56 C71,59.9 67.9,63 64,63 C60.1,63 57,59.9 57,56 C57,52.1 60.1,49 64,49 Z" />
+    <path
+        android:fillColor="#0F7A5A"
+        android:pathData="M54,78 C54,70.7 58.5,65 64,65 C69.5,65 74,70.7 74,78 Z" />
+</vector>
