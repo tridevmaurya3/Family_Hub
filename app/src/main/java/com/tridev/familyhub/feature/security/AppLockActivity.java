@@ -381,7 +381,6 @@ public final class AppLockActivity extends AppCompatActivity {
     private MaterialButton button(String label, boolean primary) {
         MaterialButton button = new MaterialButton(this);
         button.setText(label);
-        button.setTextAllCaps(false);
         button.setTextSize(13f);
         button.setCornerRadius(dp(22));
         if (!primary) {
