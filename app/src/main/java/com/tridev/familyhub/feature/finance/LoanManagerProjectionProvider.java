@@ -69,8 +69,10 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
             FinanceEntry existing = database.financeEntryDao()
                     .getLoanManagerProjection(loanId, paymentId);
             if (existing != null) {
-                // Refresh publication on retry. The local row remains the same
-                // payment even if MoneyManager changed its canonical event id.
+                // A fresh call from the trusted LoanManager source is the only
+                // operation allowed to revive a projection the Family Hub user
+                // previously deleted intentionally.
+                FinanceRepository.clearExternalProjectionDeletion(context, existing.cloudId);
                 existing.amount = amount;
                 existing.category = category.isEmpty() ? "Loan EMI" : category;
                 existing.transactionDate = new SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -88,6 +90,7 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
 
             String cloudId = "loan_payment_"
                     + sha256(loanId + "|" + paymentId).substring(0, 32);
+            FinanceRepository.clearExternalProjectionDeletion(context, cloudId);
             existing = database.financeEntryDao().getByCloudId(cloudId);
             if (existing != null) {
                 return response("ACCEPTED", "Family loan payment is already projected");
