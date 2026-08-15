@@ -9,6 +9,10 @@ import android.widget.ArrayAdapter;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.tridev.familyhub.R;
@@ -34,10 +38,12 @@ public class HouseholdManagementActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         binding = ActivityHouseholdManagementBinding.inflate(
                 getLayoutInflater()
         );
         setContentView(binding.getRoot());
+        applySystemBarInsets();
         repository = new HouseholdRepository();
 
         binding.buttonBack.setOnClickListener(v ->
@@ -52,6 +58,28 @@ public class HouseholdManagementActivity extends AppCompatActivity {
         binding.buttonAddHousehold.setOnClickListener(v ->
                 showCreateHousehold());
         loadSession();
+    }
+
+    private void applySystemBarInsets() {
+        View content = findViewById(android.R.id.content);
+        int initialLeft = content.getPaddingLeft();
+        int initialTop = content.getPaddingTop();
+        int initialRight = content.getPaddingRight();
+        int initialBottom = content.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(content, (view, windowInsets) -> {
+            Insets safe = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+            view.setPadding(
+                    initialLeft + safe.left,
+                    initialTop + safe.top,
+                    initialRight + safe.right,
+                    initialBottom + safe.bottom
+            );
+            return WindowInsetsCompat.CONSUMED;
+        });
+        ViewCompat.requestApplyInsets(content);
     }
 
     private void loadSession() {
