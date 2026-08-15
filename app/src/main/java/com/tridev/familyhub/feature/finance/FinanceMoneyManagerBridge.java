@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
+import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,22 +20,15 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
-/**
- * STEP 9 - privacy-safe Family Hub Finance -> MoneyManagerPro bridge.
- *
- * Only structured finance metadata is sent. Free-form Family Hub notes,
- * participant names, split details and other family data are deliberately not
- * included in the IPC payload.
- */
+/** Privacy-safe Family Hub Finance -> MoneyManager bridge. */
 public final class FinanceMoneyManagerBridge {
 
-    private static final String AUTHORITY =
-            "com.example.moneymanagerpro.tridev.finance";
-    private static final Uri ENDPOINT = Uri.parse("content://" + AUTHORITY);
-
-    private static final String METHOD_ACCEPT_V1 = "accept_finance_event_v1";
-    private static final String METHOD_CANCEL_FINANCE_V1 =
-            "cancel_family_finance_event_v1";
+    private static final Uri COMPANION_ENDPOINT = Uri.parse(
+            "content://" + MoneyManagerMasterCatalogBridge.AUTHORITY);
+    private static final Uri LEGACY_ENDPOINT = Uri.parse(
+            "content://com.example.moneymanagerpro.tridev.finance");
+    private static final String METHOD_ACCEPT_V1 = "accept_family_event_v1";
+    private static final String METHOD_CANCEL_FINANCE_V1 = "cancel_family_finance_event_v1";
 
     private FinanceMoneyManagerBridge() { }
 
@@ -44,11 +38,7 @@ public final class FinanceMoneyManagerBridge {
         public final String status;
         public final String reason;
 
-        private Result(
-                boolean accepted,
-                boolean preservedLedger,
-                String status,
-                String reason) {
+        private Result(boolean accepted, boolean preservedLedger, String status, String reason) {
             this.accepted = accepted;
             this.preservedLedger = preservedLedger;
             this.status = safe(status);
@@ -56,11 +46,6 @@ public final class FinanceMoneyManagerBridge {
         }
     }
 
-    /**
-     * One deterministic event id per saved version of one Family Finance row.
-     * An edit gets a new event id; the initializer first cancels/supersedes the
-     * previous version so an edit cannot silently create a second ledger row.
-     */
     @NonNull
     public static String eventIdFor(@NonNull FinanceEntry entry) {
         return "family_finance_" + sha256(sourceRecordIdFor(entry));
@@ -69,8 +54,7 @@ public final class FinanceMoneyManagerBridge {
     @NonNull
     public static String sourceRecordIdFor(@NonNull FinanceEntry entry) {
         String record = entry.cloudId == null || entry.cloudId.trim().isEmpty()
-                ? "local-" + entry.id
-                : "cloud-" + entry.cloudId.trim();
+                ? "local-" + entry.id : "cloud-" + entry.cloudId.trim();
         long version = entry.updatedAt > 0L ? entry.updatedAt : entry.createdAt;
         return structured("finance:" + record + ":" + version, 160);
     }
@@ -78,8 +62,7 @@ public final class FinanceMoneyManagerBridge {
     @NonNull
     public static String stableEntryKey(@NonNull FinanceEntry entry) {
         String record = entry.cloudId == null || entry.cloudId.trim().isEmpty()
-                ? "local:" + entry.id
-                : "cloud:" + entry.cloudId.trim();
+                ? "local:" + entry.id : "cloud:" + entry.cloudId.trim();
         return sha256(record).substring(0, 24);
     }
 
@@ -89,22 +72,26 @@ public final class FinanceMoneyManagerBridge {
             @NonNull FinanceEntry entry,
             boolean forceReview) {
         if (!isPostable(entry)) {
-            return new Result(false, false, "SKIPPED",
-                    "Family Finance entry is not postable");
+            return new Result(false, false, "SKIPPED", "Family Finance entry is not postable");
         }
-
         long amountMinor = toMinor(entry.amount);
         if (amountMinor <= 0L) {
-            return new Result(false, false, "SKIPPED",
-                    "Family Finance amount is missing");
+            return new Result(false, false, "SKIPPED", "Family Finance amount is missing");
         }
 
         boolean income = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
         String sourceRecordId = sourceRecordIdFor(entry);
         String eventId = eventIdFor(entry);
         long occurredAt = occurredAt(entry);
-        String accountHint = metadata(entry.accountName, 160);
-        String categoryHint = metadata(entry.category, 80);
+
+        String accountRef = MoneyManagerMasterCatalogBridge.accountRefForLabel(
+                context, entry.accountName);
+        String categoryRef = MoneyManagerMasterCatalogBridge.categoryRefForLabel(
+                context, entry.category);
+        String accountHint = accountRef.isEmpty()
+                ? metadata(entry.accountName, 160) : accountRef;
+        String categoryHint = categoryRef.isEmpty()
+                ? metadata(entry.category, 80) : categoryRef;
         String paymentMethod = metadata(entry.paymentMethod, 80);
 
         Bundle extras = new Bundle();
@@ -118,8 +105,6 @@ public final class FinanceMoneyManagerBridge {
         extras.putString("currency", "INR");
         extras.putLong("occurred_at", occurredAt);
         extras.putString("account_hint", accountHint);
-        // Do not expose entry.note. paymentMethod is structured, low-sensitivity
-        // metadata and can still help reconciliation.
         extras.putString("merchant_hint", paymentMethod);
         extras.putString("category_hint", categoryHint);
         extras.putString("fingerprint", sha256(
@@ -128,9 +113,10 @@ public final class FinanceMoneyManagerBridge {
                         + accountHint.toLowerCase(Locale.ROOT) + "|"
                         + categoryHint.toLowerCase(Locale.ROOT)));
 
-        return call(context, METHOD_ACCEPT_V1, extras);
+        return call(COMPANION_ENDPOINT, context, METHOD_ACCEPT_V1, extras);
     }
 
+    /** Kept for source compatibility with older edit/delete flows. */
     @NonNull
     public static Result cancel(
             @NonNull Context context,
@@ -139,26 +125,25 @@ public final class FinanceMoneyManagerBridge {
         Bundle extras = new Bundle();
         extras.putString("event_id", structured(eventId, 120));
         extras.putString("source_record_id", structured(sourceRecordId, 160));
-        return call(context, METHOD_CANCEL_FINANCE_V1, extras);
+        return call(LEGACY_ENDPOINT, context, METHOD_CANCEL_FINANCE_V1, extras);
     }
 
     public static boolean isPostable(@Nullable FinanceEntry entry) {
         if (entry == null || entry.id <= 0L || entry.amount <= 0D) return false;
         if (!FinanceEntry.TYPE_EXPENSE.equals(entry.entryType)
                 && !FinanceEntry.TYPE_INCOME.equals(entry.entryType)) return false;
-        // Scheduled recurring rows are not real ledger activity yet.
         return !"UPCOMING".equalsIgnoreCase(safe(entry.recurrenceStatus));
     }
 
     @NonNull
     private static Result call(
+            @NonNull Uri endpoint,
             @NonNull Context context,
             @NonNull String method,
             @NonNull Bundle extras) {
         try {
-            Bundle response = context.getApplicationContext()
-                    .getContentResolver()
-                    .call(ENDPOINT, method, null, extras);
+            Bundle response = context.getApplicationContext().getContentResolver()
+                    .call(endpoint, method, null, extras);
             if (response == null) {
                 return new Result(false, false, "UNAVAILABLE",
                         "MoneyManager did not return a response");
@@ -166,28 +151,19 @@ public final class FinanceMoneyManagerBridge {
             String status = safe(response.getString("status"));
             String reason = safe(response.getString("reason"));
             boolean accepted = !("REJECTED".equals(status)
-                    || "FAILED".equals(status)
-                    || "UNAVAILABLE".equals(status));
-            return new Result(
-                    accepted,
-                    "PRESERVED".equals(status),
-                    status,
-                    reason);
+                    || "FAILED".equals(status) || "UNAVAILABLE".equals(status));
+            return new Result(accepted, "PRESERVED".equals(status), status, reason);
         } catch (RuntimeException unavailable) {
-            // Family Hub stays usable when MoneyManager is missing, locked or
-            // signed with a different certificate.
             return new Result(false, false, "UNAVAILABLE",
                     "MoneyManager bridge is unavailable");
         }
     }
 
     private static long occurredAt(@NonNull FinanceEntry entry) {
-        long fallback = entry.createdAt > 0L
-                ? entry.createdAt
+        long fallback = entry.createdAt > 0L ? entry.createdAt
                 : (entry.updatedAt > 0L ? entry.updatedAt : System.currentTimeMillis());
         String dateText = safe(entry.transactionDate);
         if (dateText.isEmpty()) return fallback;
-
         SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
         parser.setLenient(false);
         try {
@@ -210,10 +186,8 @@ public final class FinanceMoneyManagerBridge {
     private static long toMinor(double amount) {
         if (!Double.isFinite(amount) || amount <= 0D) return 0L;
         try {
-            return BigDecimal.valueOf(amount)
-                    .movePointRight(2)
-                    .setScale(0, RoundingMode.HALF_UP)
-                    .longValueExact();
+            return BigDecimal.valueOf(amount).movePointRight(2)
+                    .setScale(0, RoundingMode.HALF_UP).longValueExact();
         } catch (ArithmeticException invalid) {
             return 0L;
         }
@@ -221,29 +195,23 @@ public final class FinanceMoneyManagerBridge {
 
     @NonNull
     private static String metadata(@Nullable String value, int maxLength) {
-        String clean = safe(value)
-                .replace('\n', ' ')
-                .replace('\r', ' ')
+        String clean = safe(value).replace('\n', ' ').replace('\r', ' ')
                 .replaceAll("\\s+", " ");
-        return clean.length() <= maxLength
-                ? clean : clean.substring(0, maxLength).trim();
+        return clean.length() <= maxLength ? clean : clean.substring(0, maxLength).trim();
     }
 
     @NonNull
     private static String structured(@Nullable String value, int maxLength) {
-        String clean = safe(value)
-                .replace('\n', ' ')
-                .replace('\r', ' ')
+        String clean = safe(value).replace('\n', ' ').replace('\r', ' ')
                 .replaceAll("[^A-Za-z0-9:_\\-]", "_");
-        return clean.length() <= maxLength
-                ? clean : clean.substring(0, maxLength);
+        return clean.length() <= maxLength ? clean : clean.substring(0, maxLength);
     }
 
     @NonNull
     private static String sha256(@NonNull String value) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            byte[] bytes = MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8));
             StringBuilder output = new StringBuilder(bytes.length * 2);
             for (byte current : bytes) {
                 output.append(String.format(Locale.US, "%02x", current & 0xff));
