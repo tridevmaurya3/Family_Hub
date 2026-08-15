@@ -4,6 +4,24 @@ plugins {
     id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
+def familyHubIconSource = file('icon-source/family_hub_app_icon.b64')
+def generatedFamilyHubIconResDir = file("$buildDir/generated/familyHubIconRes")
+def generateFamilyHubIcon = tasks.register('generateFamilyHubIcon') {
+    inputs.file(familyHubIconSource)
+    outputs.file(new File(generatedFamilyHubIconResDir,
+            'drawable-nodpi/family_hub_app_icon.jpg'))
+    doLast {
+        File drawableDir = new File(generatedFamilyHubIconResDir, 'drawable-nodpi')
+        if (!drawableDir.exists() && !drawableDir.mkdirs()) {
+            throw new GradleException('Unable to create generated Family Hub icon directory')
+        }
+        File output = new File(drawableDir, 'family_hub_app_icon.jpg')
+        output.bytes = java.util.Base64.decoder.decode(
+                familyHubIconSource.getText('UTF-8').trim()
+        )
+    }
+}
+
 android {
     namespace 'com.tridev.familyhub'
     compileSdk 36
@@ -18,6 +36,12 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
+    sourceSets {
+        main {
+            res.srcDir generatedFamilyHubIconResDir
+        }
+    }
+
     buildFeatures {
         viewBinding true
         buildConfig true
@@ -27,6 +51,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn generateFamilyHubIcon
 }
 
 dependencies {
