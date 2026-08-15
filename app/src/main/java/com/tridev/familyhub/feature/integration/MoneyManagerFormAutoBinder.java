@@ -23,10 +23,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Wires existing Family Hub dialogs to MoneyManager master data without
- * replacing the Grocery/Finance feature logic.
- */
+/** Wires Grocery and Finance dialogs to MoneyManager master data. */
 public final class MoneyManagerFormAutoBinder implements Application.ActivityLifecycleCallbacks {
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
@@ -150,7 +147,7 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
                 account.setAdapter(new ArrayAdapter<>(activity,
                         R.layout.item_form_dropdown,
                         MoneyManagerMasterCatalogBridge.labels(catalog.accounts)));
-                accountLayout.setHint(R.string.money_manager_finance_account);
+                accountLayout.setHint(activity.getString(R.string.money_manager_finance_account));
                 accountLayout.setHelperText("Synced from MoneyManager");
 
                 String currentAccount = account.getText() == null
@@ -193,7 +190,7 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
         String current = input.getText() == null ? "" : input.getText().toString().trim();
         input.setAdapter(new ArrayAdapter<>(activity, R.layout.item_form_dropdown,
                 MoneyManagerMasterCatalogBridge.labels(choices)));
-        layout.setHint(R.string.money_manager_finance_category);
+        layout.setHint(activity.getString(R.string.money_manager_finance_category));
         layout.setHelperText(income
                 ? "MoneyManager Income categories"
                 : "MoneyManager Expense categories");
