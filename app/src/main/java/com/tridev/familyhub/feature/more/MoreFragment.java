@@ -1,7 +1,6 @@
 package com.tridev.familyhub.feature.more;
 
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -12,7 +11,6 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -24,6 +22,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.BuildConfig;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.backup.BackupRestoreActivity;
+import com.tridev.familyhub.core.ThemeModeController;
 import com.tridev.familyhub.databinding.FragmentMoreBinding;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
@@ -33,7 +32,6 @@ import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 public class MoreFragment extends Fragment {
 
     private FragmentMoreBinding binding;
-    private boolean themeChangeInProgress;
 
     @Nullable
     @Override
@@ -68,7 +66,7 @@ public class MoreFragment extends Fragment {
                 }
         );
 
-        configureThemeSwitch();
+        prepareThemeSwitch();
 
         binding.cardBackupRestore.setOnClickListener(
                 clickedView -> startActivity(new Intent(
@@ -95,35 +93,50 @@ public class MoreFragment extends Fragment {
         binding.buttonLogout.setOnClickListener(clickedView -> confirmLogout());
     }
 
-    private void configureThemeSwitch() {
-        int configuredMode = AppCompatDelegate.getDefaultNightMode();
-        boolean darkThemeEnabled;
-        if (configuredMode == AppCompatDelegate.MODE_NIGHT_YES) {
-            darkThemeEnabled = true;
-        } else if (configuredMode == AppCompatDelegate.MODE_NIGHT_NO) {
-            darkThemeEnabled = false;
-        } else {
-            darkThemeEnabled =
-                    (getResources().getConfiguration().uiMode
-                            & Configuration.UI_MODE_NIGHT_MASK)
-                            == Configuration.UI_MODE_NIGHT_YES;
-        }
+    @Override
+    public void onResume() {
+        super.onResume();
+        attachStableThemeListener();
+    }
 
-        binding.switchDarkTheme.setChecked(darkThemeEnabled);
+    @Override
+    public void onPause() {
+        if (binding != null) {
+            binding.switchDarkTheme.setOnCheckedChangeListener(null);
+        }
+        super.onPause();
+    }
+
+    private void prepareThemeSwitch() {
+        binding.switchDarkTheme.setSaveEnabled(false);
+        binding.switchDarkTheme.setSaveFromParentEnabled(false);
+        binding.switchDarkTheme.setOnCheckedChangeListener(null);
+        binding.switchDarkTheme.setChecked(
+                ThemeModeController.isDarkEnabled(requireContext())
+        );
+        binding.switchDarkTheme.setEnabled(true);
+    }
+
+    private void attachStableThemeListener() {
+        if (binding == null) return;
+        binding.switchDarkTheme.setOnCheckedChangeListener(null);
+        binding.switchDarkTheme.setChecked(
+                ThemeModeController.isDarkEnabled(requireContext())
+        );
         binding.switchDarkTheme.setEnabled(true);
         binding.switchDarkTheme.setOnCheckedChangeListener((button, enabled) -> {
-            if (themeChangeInProgress) return;
-            int requestedMode = enabled
-                    ? AppCompatDelegate.MODE_NIGHT_YES
-                    : AppCompatDelegate.MODE_NIGHT_NO;
-            if (AppCompatDelegate.getDefaultNightMode() == requestedMode) return;
-
-            themeChangeInProgress = true;
-            binding.switchDarkTheme.setEnabled(false);
-            binding.switchDarkTheme.post(() -> {
-                if (!isAdded()) return;
-                AppCompatDelegate.setDefaultNightMode(requestedMode);
-            });
+            button.setEnabled(false);
+            boolean changed = ThemeModeController.requestMode(
+                    requireContext(),
+                    enabled
+            );
+            if (!changed) {
+                button.post(() -> {
+                    if (!isAdded() || binding == null) return;
+                    prepareThemeSwitch();
+                    attachStableThemeListener();
+                });
+            }
         });
     }
 
