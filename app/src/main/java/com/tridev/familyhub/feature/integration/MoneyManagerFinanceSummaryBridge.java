@@ -16,14 +16,14 @@ import java.util.List;
  *
  * The summary is read directly from MoneyManagerPro on this device and is never
  * uploaded to Family Hub cloud/shared finance. No individual transaction rows,
- * notes or per-account balances are requested. STEP 13B additionally reads
- * current-month category aggregates only.
+ * notes or per-account balances are requested. STEP 13D makes the selected
+ * Month/Year local and shared by summary/category/account analytics.
  */
 public final class MoneyManagerFinanceSummaryBridge {
 
     private static final Uri ENDPOINT = Uri.parse(
-            "content://" + MoneyManagerMasterCatalogBridge.AUTHORITY);
-    private static final String METHOD = "get_finance_summary_v1";
+            "content://com.example.moneymanagerpro.tridev.accountanalytics");
+    private static final String METHOD = "get_period_finance_v1";
 
     public static final class CategoryTotal {
         @NonNull public final String label;
@@ -98,12 +98,26 @@ public final class MoneyManagerFinanceSummaryBridge {
 
     private MoneyManagerFinanceSummaryBridge() { }
 
-    /** Call from a worker thread. */
+    /**
+     * Kept for existing callers. In STEP 13D this means the period currently
+     * selected in Family Hub, defaulting to the real current month.
+     */
     @NonNull
     public static Summary loadCurrentMonth(@NonNull Context context) {
+        MoneyManagerFinancePeriodStore.Selection selected =
+                MoneyManagerFinancePeriodStore.get(context);
+        return loadPeriod(context, selected.year, selected.month);
+    }
+
+    /** Call from a worker thread. */
+    @NonNull
+    public static Summary loadPeriod(@NonNull Context context, int year, int month) {
         try {
+            Bundle request = new Bundle();
+            request.putInt("year", year);
+            request.putInt("month", month);
             Bundle response = context.getApplicationContext().getContentResolver()
-                    .call(ENDPOINT, METHOD, null, null);
+                    .call(ENDPOINT, METHOD, null, request);
             if (response == null || !"OK".equals(safe(response.getString("status")))) {
                 return Summary.unavailable(response == null
                         ? "MoneyManager did not return a finance summary"
