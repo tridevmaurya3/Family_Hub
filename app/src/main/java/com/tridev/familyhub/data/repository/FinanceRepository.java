@@ -15,6 +15,7 @@ import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.FinanceAccount;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.feature.integration.MoneyManagerFinanceSummaryBridge;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -55,6 +56,7 @@ public class FinanceRepository {
 
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
 
+    private final Context appContext;
     private final FinanceEntryDao financeEntryDao;
     private final FinanceAccountDao financeAccountDao;
     private final GroceryItemDao groceryItemDao;
@@ -64,9 +66,10 @@ public class FinanceRepository {
     private int sharedSyncGeneration;
 
     public FinanceRepository(Context context) {
-        financeEntryDao = FamilyHubDatabase.getInstance(context).financeEntryDao();
-        financeAccountDao = FamilyHubDatabase.getInstance(context).financeAccountDao();
-        groceryItemDao = FamilyHubDatabase.getInstance(context).groceryItemDao();
+        appContext = context.getApplicationContext();
+        financeEntryDao = FamilyHubDatabase.getInstance(appContext).financeEntryDao();
+        financeAccountDao = FamilyHubDatabase.getInstance(appContext).financeAccountDao();
+        groceryItemDao = FamilyHubDatabase.getInstance(appContext).groceryItemDao();
     }
 
     public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
@@ -78,11 +81,27 @@ public class FinanceRepository {
         });
     }
 
+    /**
+     * MoneyManager is the canonical monthly ledger when the trusted local bridge
+     * is available. Family Hub's local Room summary remains an offline fallback
+     * only; the MoneyManager aggregate is never copied into Firebase/shared data.
+     */
     public void loadCurrentMonthSummary(@NonNull SummaryCallback callback) {
         String monthPrefix = new SimpleDateFormat("yyyy-MM", Locale.US).format(new Date());
         DATABASE_EXECUTOR.execute(() -> {
-            FinanceSummary summary = financeEntryDao.getMonthSummary(monthPrefix);
-            mainHandler.post(() -> callback.onSummaryLoaded(summary));
+            MoneyManagerFinanceSummaryBridge.Summary master =
+                    MoneyManagerFinanceSummaryBridge.loadCurrentMonth(appContext);
+            FinanceSummary summary;
+            if (master.available) {
+                summary = new FinanceSummary();
+                summary.income = master.income;
+                summary.expense = master.expense;
+            } else {
+                summary = financeEntryDao.getMonthSummary(monthPrefix);
+                if (summary == null) summary = new FinanceSummary();
+            }
+            FinanceSummary delivered = summary;
+            mainHandler.post(() -> callback.onSummaryLoaded(delivered));
         });
     }
 
