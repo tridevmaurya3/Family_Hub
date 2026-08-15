@@ -386,6 +386,7 @@ public final class AppSecurityActivity extends AppCompatActivity {
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        input.setGravity(Gravity.CENTER);
         return input;
     }
 
