@@ -1,7 +1,6 @@
 package com.tridev.familyhub.feature.profile;
 
 import android.content.Intent;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -16,7 +15,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -31,6 +29,7 @@ import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.FirebaseDatabase;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ThemeModeController;
 import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.familyaccount.FamilyManagementActivity;
 import com.tridev.familyhub.feature.main.MainActivity;
@@ -45,7 +44,6 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     private TextView roleView;
     private ProgressBar progress;
     private MaterialSwitch darkThemeSwitch;
-    private boolean themeChangeInProgress;
 
     private final ActivityResultLauncher<String> photoPicker =
             registerForActivityResult(
@@ -111,9 +109,23 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         findViewById(R.id.buttonProfileLogout).setOnClickListener(v ->
                 confirmLogout());
 
-        configureThemeSwitch();
+        prepareThemeSwitch();
         renderProfilePhoto();
         loadProfile();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        attachStableThemeListener();
+    }
+
+    @Override
+    protected void onPause() {
+        if (darkThemeSwitch != null) {
+            darkThemeSwitch.setOnCheckedChangeListener(null);
+        }
+        super.onPause();
     }
 
     private void applySystemBarInsets() {
@@ -138,41 +150,35 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         ViewCompat.requestApplyInsets(content);
     }
 
-    private void configureThemeSwitch() {
-        int configuredMode = AppCompatDelegate.getDefaultNightMode();
-        boolean darkThemeEnabled;
-        if (configuredMode == AppCompatDelegate.MODE_NIGHT_YES) {
-            darkThemeEnabled = true;
-        } else if (configuredMode == AppCompatDelegate.MODE_NIGHT_NO) {
-            darkThemeEnabled = false;
-        } else {
-            darkThemeEnabled =
-                    (getResources().getConfiguration().uiMode
-                            & Configuration.UI_MODE_NIGHT_MASK)
-                            == Configuration.UI_MODE_NIGHT_YES;
-        }
+    /**
+     * Never allow Android view-state restoration to become the theme source of truth.
+     * Listener is intentionally attached only in onResume(), after hierarchy restore.
+     */
+    private void prepareThemeSwitch() {
+        darkThemeSwitch.setSaveEnabled(false);
+        darkThemeSwitch.setSaveFromParentEnabled(false);
+        darkThemeSwitch.setOnCheckedChangeListener(null);
+        darkThemeSwitch.setChecked(ThemeModeController.isDarkEnabled(this));
+        darkThemeSwitch.setEnabled(true);
+    }
 
-        darkThemeSwitch.setChecked(darkThemeEnabled);
+    private void attachStableThemeListener() {
+        if (darkThemeSwitch == null) return;
+        darkThemeSwitch.setOnCheckedChangeListener(null);
+        darkThemeSwitch.setChecked(ThemeModeController.isDarkEnabled(this));
         darkThemeSwitch.setEnabled(true);
         darkThemeSwitch.setOnCheckedChangeListener((button, enabled) -> {
-            if (themeChangeInProgress) {
-                return;
+            button.setEnabled(false);
+            boolean changed = ThemeModeController.requestMode(this, enabled);
+            if (!changed) {
+                button.post(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    button.setOnCheckedChangeListener(null);
+                    button.setChecked(ThemeModeController.isDarkEnabled(this));
+                    button.setEnabled(true);
+                    attachStableThemeListener();
+                });
             }
-            int requestedMode = enabled
-                    ? AppCompatDelegate.MODE_NIGHT_YES
-                    : AppCompatDelegate.MODE_NIGHT_NO;
-            if (AppCompatDelegate.getDefaultNightMode() == requestedMode) {
-                return;
-            }
-
-            themeChangeInProgress = true;
-            darkThemeSwitch.setEnabled(false);
-            darkThemeSwitch.post(() -> {
-                if (isFinishing() || isDestroyed()) {
-                    return;
-                }
-                AppCompatDelegate.setDefaultNightMode(requestedMode);
-            });
         });
     }
 
