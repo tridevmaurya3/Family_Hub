@@ -22,7 +22,8 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Receives only finalized FAMILY loan-payment projections.
+ * Receives finalized FAMILY loan-payment projections and source-authoritative
+ * deletion requests from trusted LoanManagerPro.
  *
  * LoanManager is verified by Binder UID + exact package + pinned signing
  * certificate. Idempotency is anchored to the stable LoanManager loanId +
@@ -33,6 +34,8 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
 
     public static final String AUTHORITY =
             "com.tridev.familyhub.tridev.loanprojection";
+    private static final String METHOD_ACCEPT = "accept_finalized_loan_payment_v1";
+    private static final String METHOD_DELETE = "delete_loan_payment_v1";
 
     @Override
     public boolean onCreate() {
@@ -46,7 +49,12 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
         Context context = getContext();
         if (context == null) return response("FAILED", "Family Hub unavailable");
         if (!trustedCaller(context)) return response("REJECTED", "LoanManager caller is not trusted");
-        if (!"accept_finalized_loan_payment_v1".equals(method) || extras == null) {
+        if (extras == null) return response("REJECTED", "Loan projection payload is missing");
+
+        if (METHOD_DELETE.equals(method)) {
+            return deleteProjection(context, extras);
+        }
+        if (!METHOD_ACCEPT.equals(method)) {
             return response("REJECTED", "Unsupported projection request");
         }
 
@@ -88,8 +96,7 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
                 return response("ACCEPTED", "Existing family loan payment projection refreshed");
             }
 
-            String cloudId = "loan_payment_"
-                    + sha256(loanId + "|" + paymentId).substring(0, 32);
+            String cloudId = cloudIdFor(loanId, paymentId);
             FinanceRepository.clearExternalProjectionDeletion(context, cloudId);
             existing = database.financeEntryDao().getByCloudId(cloudId);
             if (existing != null) {
@@ -129,6 +136,30 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
         }
     }
 
+    @NonNull
+    private Bundle deleteProjection(@NonNull Context context, @NonNull Bundle extras) {
+        try {
+            String loanId = structured(extras.getString("loan_id"), 40, false);
+            String paymentId = structured(extras.getString("payment_id"), 40, false);
+            FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
+            FinanceEntry existing = database.financeEntryDao()
+                    .getLoanManagerProjection(loanId, paymentId);
+            if (existing == null) {
+                // Idempotent source delete: if Room already has no projection,
+                // there is no local finance row to resurrect.
+                return response("ACCEPTED", "Family loan payment projection is already absent");
+            }
+
+            // FinanceRepository.delete records the durable external-projection
+            // tombstone before removing Room/Firebase data, so realtime sync cannot
+            // resurrect a source-deleted LoanManager payment.
+            new FinanceRepository(context).delete(existing, () -> { });
+            return response("ACCEPTED", "Family loan payment projection deletion accepted");
+        } catch (RuntimeException invalid) {
+            return response("REJECTED", "Loan projection delete failed validation");
+        }
+    }
+
     private boolean trustedCaller(@NonNull Context context) {
         return LoanManagerProjectionTrust.verifyCaller(context, Binder.getCallingUid());
     }
@@ -153,6 +184,11 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
         String safe = value == null ? "" : value.trim();
         safe = safe.replace('\n', ' ').replace('\r', ' ').replaceAll("\\s+", " ");
         return safe.length() <= max ? safe : safe.substring(0, max).trim();
+    }
+
+    @NonNull
+    private String cloudIdFor(@NonNull String loanId, @NonNull String paymentId) {
+        return "loan_payment_" + sha256(loanId + "|" + paymentId).substring(0, 32);
     }
 
     private String sha256(@NonNull String value) {
