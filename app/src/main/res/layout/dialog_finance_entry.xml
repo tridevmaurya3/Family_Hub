@@ -118,11 +118,11 @@
             android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/finance_account">
 
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            <com.tridev.familyhub.feature.integration.MoneyManagerFinanceDialogAccountView
                 android:id="@+id/finance_account_input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapWords"
+                android:inputType="none"
                 android:maxLines="1" />
 
         </com.google.android.material.textfield.TextInputLayout>
