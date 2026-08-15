@@ -43,6 +43,8 @@ import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
+import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
+import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +83,8 @@ public class GroceryOverlayService extends Service {
     private GroceryRepository repository;
     private FamilyMemberRepository memberRepository;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
+    private volatile MoneyManagerMasterCatalogBridge.Catalog moneyCatalog =
+            MoneyManagerMasterCatalogBridge.Catalog.unavailable("Loading MoneyManager");
     private String visibleListType = GroceryItem.LIST_DAILY;
     private String pendingVoiceText = "";
     private String overlaySearchQuery = "";
@@ -111,6 +115,8 @@ public class GroceryOverlayService extends Service {
             familyMembers.clear();
             familyMembers.addAll(members);
         });
+        new Thread(() -> moneyCatalog = MoneyManagerMasterCatalogBridge.load(this),
+                "GroceryMoneyMasterCatalog").start();
         repository.startRealtimeSync(this::refreshPanel);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         androidx.core.content.ContextCompat.registerReceiver(this,
@@ -323,6 +329,19 @@ public class GroceryOverlayService extends Service {
         detailsTwo.addView(labelledField(
                 getString(R.string.grocery_overlay_price), price), priceParams);
         overlayFormDetails.addView(detailsTwo);
+
+        LinearLayout moneyRow = new LinearLayout(this);
+        moneyRow.setOrientation(LinearLayout.HORIZONTAL);
+        Spinner moneyAccount = moneyAccountSpinner();
+        moneyRow.addView(labelledField(
+                getString(R.string.money_manager_paid_from), moneyAccount), weightedField());
+        Spinner moneyCategory = moneyCategorySpinner();
+        LinearLayout.LayoutParams moneyCategoryParams = weightedField();
+        moneyCategoryParams.setMarginStart(dp(8));
+        moneyRow.addView(labelledField(
+                getString(R.string.money_manager_expense_category), moneyCategory),
+                moneyCategoryParams);
+        overlayFormDetails.addView(moneyRow);
 
         LinearLayout detailsThree = new LinearLayout(this);
         detailsThree.setOrientation(LinearLayout.HORIZONTAL);
@@ -563,6 +582,7 @@ public class GroceryOverlayService extends Service {
                         android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }
+            rememberMoneyDefaults(moneyAccount, moneyCategory);
             GroceryItem item = new GroceryItem();
             item.name = name;
             item.listType = selectedListType[0];
@@ -684,32 +704,32 @@ public class GroceryOverlayService extends Service {
             });
             if (collapsed) continue;
             for (GroceryItem item : group.getValue()) {
-            CheckBox row = new CheckBox(this);
-            String detail = (shownHere + 1) + ".  " + item.name;
-            if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
-            if (!item.assignedMemberName.isEmpty()) {
-                detail += "  •  " + item.assignedMemberName;
-            }
-            row.setText(detail);
-            row.setTextSize(13f);
-            row.setTextColor(Color.rgb(36, 36, 36));
-            row.setMinHeight(dp(38));
-            row.setPadding(dp(6), 0, dp(6), 0);
-            row.setBackground(roundedFill(
-                    GroceryItem.LIST_MONTHLY.equals(listType)
-                            ? Color.rgb(246, 241, 252)
-                            : Color.rgb(237, 249, 243), 10));
-            row.setOnCheckedChangeListener((button, checked) -> {
-                if (checked) {
-                    button.setChecked(false);
-                    showInlinePurchaseEditor(item);
+                CheckBox row = new CheckBox(this);
+                String detail = (shownHere + 1) + ".  " + item.name;
+                if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
+                if (!item.assignedMemberName.isEmpty()) {
+                    detail += "  •  " + item.assignedMemberName;
                 }
-            });
-            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
-            rowParams.bottomMargin = dp(3);
-            itemContainer.addView(row, rowParams);
-            shownHere++;
+                row.setText(detail);
+                row.setTextSize(13f);
+                row.setTextColor(Color.rgb(36, 36, 36));
+                row.setMinHeight(dp(38));
+                row.setPadding(dp(6), 0, dp(6), 0);
+                row.setBackground(roundedFill(
+                        GroceryItem.LIST_MONTHLY.equals(listType)
+                                ? Color.rgb(246, 241, 252)
+                                : Color.rgb(237, 249, 243), 10));
+                row.setOnCheckedChangeListener((button, checked) -> {
+                    if (checked) {
+                        button.setChecked(false);
+                        showInlinePurchaseEditor(item);
+                    }
+                });
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
+                rowParams.bottomMargin = dp(3);
+                itemContainer.addView(row, rowParams);
+                shownHere++;
             }
         }
         if (count == 0) {
@@ -799,6 +819,19 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(labelledField(
                 getString(R.string.grocery_category), category), fullEditorField());
 
+        LinearLayout moneyRow = new LinearLayout(this);
+        moneyRow.setOrientation(LinearLayout.HORIZONTAL);
+        Spinner moneyAccount = moneyAccountSpinner();
+        moneyRow.addView(labelledField(
+                getString(R.string.money_manager_paid_from), moneyAccount), weightedField());
+        Spinner moneyCategory = moneyCategorySpinner();
+        LinearLayout.LayoutParams moneyCategoryParams = weightedField();
+        moneyCategoryParams.setMarginStart(dp(8));
+        moneyRow.addView(labelledField(
+                getString(R.string.money_manager_expense_category), moneyCategory),
+                moneyCategoryParams);
+        itemContainer.addView(moneyRow);
+
         TextView historyInsight = text("", 10, false);
         historyInsight.setTextColor(Color.rgb(15, 108, 89));
         historyInsight.setPadding(dp(8), 0, dp(8), 0);
@@ -830,8 +863,10 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(actions, actionsParams);
 
         cancel.setOnClickListener(v -> refreshPanel());
-        skip.setOnClickListener(v -> repository.setPurchased(
-                item, true, () -> showFloatingUndo(item)));
+        skip.setOnClickListener(v -> {
+            rememberPurchaseMoneySelections(item, moneyAccount, moneyCategory);
+            repository.setPurchased(item, true, () -> showFloatingUndo(item));
+        });
         save.setOnClickListener(v -> {
             String priceText = price.getText().toString().trim();
             if (!priceText.isEmpty()) {
@@ -852,8 +887,66 @@ public class GroceryOverlayService extends Service {
             }
             item.category = String.valueOf(category.getSelectedItem());
             item.storeName = store.getText().toString().trim();
+            rememberPurchaseMoneySelections(item, moneyAccount, moneyCategory);
             repository.setPurchased(item, true, () -> showFloatingUndo(item));
         });
+    }
+
+    private Spinner moneyAccountSpinner() {
+        List<MoneyManagerMasterCatalogBridge.Choice> choices = moneyCatalog.accounts;
+        String[] labels = new String[choices.size() + 1];
+        labels[0] = getString(R.string.money_manager_choose_later);
+        for (int i = 0; i < choices.size(); i++) labels[i + 1] = choices.get(i).label;
+        Spinner spinner = compactSpinner(labels);
+        String savedRef = MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(this);
+        for (int i = 0; i < choices.size(); i++) {
+            if (choices.get(i).ref.equalsIgnoreCase(savedRef)) {
+                spinner.setSelection(i + 1);
+                break;
+            }
+        }
+        return spinner;
+    }
+
+    private Spinner moneyCategorySpinner() {
+        List<MoneyManagerMasterCatalogBridge.Choice> choices = moneyCatalog.expenseCategories;
+        String[] labels = new String[choices.size() + 1];
+        labels[0] = getString(R.string.money_manager_choose_later);
+        for (int i = 0; i < choices.size(); i++) labels[i + 1] = choices.get(i).label;
+        Spinner spinner = compactSpinner(labels);
+        String savedRef = MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(this);
+        for (int i = 0; i < choices.size(); i++) {
+            if (choices.get(i).ref.equalsIgnoreCase(savedRef)) {
+                spinner.setSelection(i + 1);
+                break;
+            }
+        }
+        return spinner;
+    }
+
+    private void rememberMoneyDefaults(Spinner account, Spinner category) {
+        int accountIndex = account.getSelectedItemPosition() - 1;
+        int categoryIndex = category.getSelectedItemPosition() - 1;
+        String accountRef = accountIndex >= 0 && accountIndex < moneyCatalog.accounts.size()
+                ? moneyCatalog.accounts.get(accountIndex).ref : "";
+        String categoryRef = categoryIndex >= 0
+                && categoryIndex < moneyCatalog.expenseCategories.size()
+                ? moneyCatalog.expenseCategories.get(categoryIndex).ref : "";
+        MoneyManagerMasterCatalogBridge.rememberGroceryDefaultAccount(this, accountRef);
+        MoneyManagerMasterCatalogBridge.rememberGroceryDefaultCategory(this, categoryRef);
+    }
+
+    private void rememberPurchaseMoneySelections(
+            GroceryItem item, Spinner account, Spinner category) {
+        int accountIndex = account.getSelectedItemPosition() - 1;
+        int categoryIndex = category.getSelectedItemPosition() - 1;
+        String accountRef = accountIndex >= 0 && accountIndex < moneyCatalog.accounts.size()
+                ? moneyCatalog.accounts.get(accountIndex).ref : "";
+        String categoryRef = categoryIndex >= 0
+                && categoryIndex < moneyCatalog.expenseCategories.size()
+                ? moneyCatalog.expenseCategories.get(categoryIndex).ref : "";
+        GroceryMoneyManagerBridge.rememberNextPurchaseSelections(
+                this, item, accountRef, categoryRef);
     }
 
     private void showFloatingUndo(GroceryItem item) {
@@ -1014,7 +1107,6 @@ public class GroceryOverlayService extends Service {
                 : R.string.grocery_overlay_hide_form);
         LinearLayout.LayoutParams params =
                 (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
-        // The panel keeps its full height; compact form space goes to the list.
         params.height = 0;
         params.weight = 1f;
         overlayItemScroll.setLayoutParams(params);
