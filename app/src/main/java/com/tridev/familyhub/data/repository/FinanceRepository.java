@@ -258,6 +258,7 @@ public class FinanceRepository {
         values.put("purchased", false);
         values.put("buyingStatus", GroceryItem.STATUS_PENDING);
         values.put("purchasedAt", 0L);
+        values.put("purchasedByName", "");
         values.put("updatedAt", now);
         values.put("serverUpdatedAt", ServerValue.TIMESTAMP);
         FirebaseDatabase.getInstance().getReference("sharedShopping")
