@@ -12,6 +12,7 @@ import com.tridev.familyhub.feature.automation.FamilyAutomationLiveMonitor;
 import com.tridev.familyhub.feature.automation.FamilyAutomationRuntime;
 import com.tridev.familyhub.feature.automation.FamilyAutomationScheduler;
 import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
+import com.tridev.familyhub.feature.integration.MoneyManagerFormAutoBinder;
 import com.tridev.familyhub.feature.journey.FamilyJourneyRecorder;
 import com.tridev.familyhub.feature.sos.FamilySosLiveMonitor;
 import com.tridev.familyhub.geofence.SafePlaceGeofenceSyncScheduler;
@@ -37,9 +38,8 @@ public class FamilyHubApplication extends Application {
         enableFirebaseOfflinePersistence();
         BackupScheduler.sync(this);
         DocumentExpiryScheduler.sync(this);
-        registerActivityLifecycleCallbacks(
-                new FamilyLivePrecisionActivityCallbacks()
-        );
+        registerActivityLifecycleCallbacks(new FamilyLivePrecisionActivityCallbacks());
+        MoneyManagerFormAutoBinder.register(this);
         FamilyJourneyRecorder.start(this);
         FamilySosLiveMonitor.start(this);
         FamilyAutomationRuntime.start(this);
@@ -65,12 +65,6 @@ public class FamilyHubApplication extends Application {
         }
     }
 
-    /**
-     * Re-registers durable sync, service recovery and heartbeat diagnostics
-     * after Android recreates the app process. Sharing is never enabled here
-     * unless the user had already enabled it earlier or a saved automation
-     * schedule is currently active.
-     */
     private void restoreFamilyLiveSafetyNets() {
         if (!LocationSharingStore.isSharingEnabled(this)) {
             return;
