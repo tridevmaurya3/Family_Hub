@@ -44,6 +44,7 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             Executors.newSingleThreadExecutor();
 
     private final AtomicBoolean scanQueued = new AtomicBoolean(false);
+    private final AtomicBoolean rescanRequested = new AtomicBoolean(false);
     @Nullable private Context appContext;
     @Nullable private InvalidationTracker.Observer observer;
 
@@ -67,12 +68,28 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
 
     private void scheduleScan() {
         Context context = appContext;
-        if (context == null || !scanQueued.compareAndSet(false, true)) return;
+        if (context == null) return;
+
+        if (!scanQueued.compareAndSet(false, true)) {
+            // Never lose a Room invalidation that arrives while the current scan
+            // is still reading/sending entries.
+            rescanRequested.set(true);
+            return;
+        }
+
         EXECUTOR.execute(() -> {
             try {
-                scan(context);
+                do {
+                    rescanRequested.set(false);
+                    scan(context);
+                } while (rescanRequested.get());
             } finally {
                 scanQueued.set(false);
+                // Close the tiny race between the last loop check and releasing
+                // scanQueued. If another invalidation landed there, run again.
+                if (rescanRequested.get()) {
+                    scheduleScan();
+                }
             }
         });
     }
@@ -114,7 +131,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             }
 
             String currentEvent = FinanceMoneyManagerBridge.eventIdFor(entry);
-            String currentSource = FinanceMoneyManagerBridge.sourceRecordIdFor(entry);
             String previousEvent = safe(preferences.getString(
                     PREFIX_EVENT + key, ""));
             boolean pending = preferences.getBoolean(PREFIX_PENDING + key, false);
