@@ -13,6 +13,7 @@ import com.tridev.familyhub.feature.automation.FamilyAutomationRuntime;
 import com.tridev.familyhub.feature.automation.FamilyAutomationScheduler;
 import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
 import com.tridev.familyhub.feature.integration.MoneyManagerAccountAnalyticsBinder;
+import com.tridev.familyhub.feature.integration.MoneyManagerFinancePeriodBinder;
 import com.tridev.familyhub.feature.integration.MoneyManagerFormAutoBinder;
 import com.tridev.familyhub.feature.journey.FamilyJourneyRecorder;
 import com.tridev.familyhub.feature.sos.FamilySosLiveMonitor;
@@ -42,6 +43,7 @@ public class FamilyHubApplication extends Application {
         registerActivityLifecycleCallbacks(new FamilyLivePrecisionActivityCallbacks());
         MoneyManagerFormAutoBinder.register(this);
         MoneyManagerAccountAnalyticsBinder.register(this);
+        MoneyManagerFinancePeriodBinder.register(this);
         FamilyJourneyRecorder.start(this);
         FamilySosLiveMonitor.start(this);
         FamilyAutomationRuntime.start(this);
