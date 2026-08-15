@@ -25,8 +25,6 @@ public final class FinanceMoneyManagerBridge {
 
     private static final Uri COMPANION_ENDPOINT = Uri.parse(
             "content://" + MoneyManagerMasterCatalogBridge.AUTHORITY);
-    private static final Uri LEGACY_ENDPOINT = Uri.parse(
-            "content://com.example.moneymanagerpro.tridev.finance");
     private static final String METHOD_ACCEPT_V1 = "accept_family_event_v1";
     private static final String METHOD_CANCEL_FINANCE_V1 = "cancel_family_finance_event_v1";
 
@@ -116,7 +114,6 @@ public final class FinanceMoneyManagerBridge {
         return call(COMPANION_ENDPOINT, context, METHOD_ACCEPT_V1, extras);
     }
 
-    /** Kept for source compatibility with older edit/delete flows. */
     @NonNull
     public static Result cancel(
             @NonNull Context context,
@@ -125,7 +122,7 @@ public final class FinanceMoneyManagerBridge {
         Bundle extras = new Bundle();
         extras.putString("event_id", structured(eventId, 120));
         extras.putString("source_record_id", structured(sourceRecordId, 160));
-        return call(LEGACY_ENDPOINT, context, METHOD_CANCEL_FINANCE_V1, extras);
+        return call(COMPANION_ENDPOINT, context, METHOD_CANCEL_FINANCE_V1, extras);
     }
 
     public static boolean isPostable(@Nullable FinanceEntry entry) {
