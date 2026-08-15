@@ -103,7 +103,7 @@
                 android:textSize="13sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
+        <com.tridev.familyhub.feature.grocery.GroceryMoneyManagerDialogCatalogView
             android:id="@+id/grocery_money_catalog_status"
             style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="match_parent"
