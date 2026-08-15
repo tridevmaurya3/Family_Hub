@@ -32,21 +32,22 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * STEP 8 bootstrap for Family Hub Grocery -> MoneyManagerPro.
+ * STEP 8 / STEP 13H reliability bootstrap for Family Hub Grocery -> MoneyManagerPro.
  *
- * It observes the existing grocery Room table without changing its schema.
- * Existing purchases are baselined on first install/update and are NOT imported
- * retrospectively. Only later completed purchase cycles are offered to
- * MoneyManagerPro.
+ * Existing purchases are baselined and are never imported retrospectively.
+ * New local purchase cycles are observed from Room and offered to MoneyManager.
  *
- * For a newly completed local purchase, the current foreground Family Hub
- * activity shows an optional MoneyManager Bank/Credit Card picker. This covers
- * the main Grocery page, Shopping Mode and widget purchase checkpoint without
- * rewriting those existing flows.
- *
- * Remote purchases made by another signed-in family member are not pushed into
- * this device owner's personal MoneyManager ledger. Family Hub Finance continues
- * to hold the shared family expense independently.
+ * Reliability rules:
+ * - Room invalidations that arrive while a scan is already running are never lost;
+ *   a pending rescan is executed immediately after the current scan.
+ * - When the Grocery purchase-completion UI already stored an exact MoneyManager
+ *   account/card ref and expense-category ref, the purchase is posted directly
+ *   from the worker thread. A foreground Activity is NOT required. This is
+ *   essential for the floating Grocery overlay, which is a Service.
+ * - If exact selections are not available, the existing foreground picker remains
+ *   the safe fallback; the bridge never guesses or auto-creates finance masters.
+ * - Remote purchases made by another family member are not pushed into this
+ *   device owner's personal MoneyManager ledger.
  */
 public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -61,6 +62,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             Executors.newSingleThreadExecutor();
 
     private final AtomicBoolean scanQueued = new AtomicBoolean(false);
+    private final AtomicBoolean rescanRequested = new AtomicBoolean(false);
     private final Set<String> promptingKeys = Collections.newSetFromMap(
             new ConcurrentHashMap<>());
 
@@ -124,12 +126,29 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
 
     private void scheduleScan(boolean startup) {
         Context context = appContext;
-        if (context == null || !scanQueued.compareAndSet(false, true)) return;
+        if (context == null) return;
+
+        if (!scanQueued.compareAndSet(false, true)) {
+            // Do not lose a Room invalidation while an older snapshot is being scanned.
+            rescanRequested.set(true);
+            return;
+        }
+
         EXECUTOR.execute(() -> {
+            boolean firstPass = true;
             try {
-                scan(context, startup);
+                do {
+                    rescanRequested.set(false);
+                    scan(context, firstPass && startup);
+                    firstPass = false;
+                } while (rescanRequested.get());
             } finally {
                 scanQueued.set(false);
+                // Close the tiny race where an invalidation arrives after the final
+                // loop condition but before scanQueued is released.
+                if (rescanRequested.get()) {
+                    scheduleScan(false);
+                }
             }
         });
     }
@@ -182,10 +201,25 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                     continue;
                 }
 
+                // The floating overlay and the normal purchase-completion editor
+                // persist exact MoneyManager refs before marking the item purchased.
+                // In that case post immediately; requiring an Activity here was the
+                // reason overlay purchases could remain local-only.
+                if (hasExactMoneyManagerSelections(context, item)) {
+                    GroceryMoneyManagerBridge.Result result =
+                            GroceryMoneyManagerBridge.sendPurchase(context, item);
+                    if (result.accepted) {
+                        remember(preferences, key, currentEvent,
+                                GroceryMoneyManagerBridge.sourceRecordIdFor(item),
+                                item.purchaseCount, true);
+                    }
+                    continue;
+                }
+
                 Activity activity = foregroundActivity.get();
                 if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
-                    // Wait for the next Activity resume instead of guessing a
-                    // payment account while Family Hub is not visibly in use.
+                    // Exact refs are absent. Wait for a visible Activity so the user
+                    // can choose safely instead of guessing an account/category.
                     continue;
                 }
                 if (!promptingKeys.add(key)) continue;
@@ -220,6 +254,15 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 clearRemembered(preferences, key);
             }
         }
+    }
+
+    private boolean hasExactMoneyManagerSelections(
+            @NonNull Context context,
+            @NonNull GroceryItem item) {
+        String accountRef = GroceryMoneyManagerBridge.selectedAccountRef(context, item);
+        String categoryRef = GroceryMoneyManagerBridge.selectedCategoryRef(context, item);
+        return accountRef.matches("(account|card):[0-9]+")
+                && categoryRef.matches("category:[0-9]+");
     }
 
     private boolean belongsToThisDeviceUser(
