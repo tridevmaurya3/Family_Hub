@@ -17,6 +17,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.materialswitch.MaterialSwitch;
@@ -41,6 +45,7 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     private TextView roleView;
     private ProgressBar progress;
     private MaterialSwitch darkThemeSwitch;
+    private boolean themeChangeInProgress;
 
     private final ActivityResultLauncher<String> photoPicker =
             registerForActivityResult(
@@ -64,7 +69,9 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_profile_settings);
+        applySystemBarInsets();
 
         profilePhoto = findViewById(R.id.imageProfilePhoto);
         nameInput = findViewById(R.id.inputProfileName);
@@ -104,20 +111,69 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         findViewById(R.id.buttonProfileLogout).setOnClickListener(v ->
                 confirmLogout());
 
-        boolean darkThemeEnabled =
-                (getResources().getConfiguration().uiMode
-                        & Configuration.UI_MODE_NIGHT_MASK)
-                        == Configuration.UI_MODE_NIGHT_YES;
-        darkThemeSwitch.setChecked(darkThemeEnabled);
-        darkThemeSwitch.setOnCheckedChangeListener((button, enabled) ->
-                AppCompatDelegate.setDefaultNightMode(
-                        enabled
-                                ? AppCompatDelegate.MODE_NIGHT_YES
-                                : AppCompatDelegate.MODE_NIGHT_NO
-                ));
-
+        configureThemeSwitch();
         renderProfilePhoto();
         loadProfile();
+    }
+
+    private void applySystemBarInsets() {
+        View content = findViewById(android.R.id.content);
+        int initialLeft = content.getPaddingLeft();
+        int initialTop = content.getPaddingTop();
+        int initialRight = content.getPaddingRight();
+        int initialBottom = content.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(content, (view, windowInsets) -> {
+            Insets safe = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                            | WindowInsetsCompat.Type.displayCutout()
+            );
+            view.setPadding(
+                    initialLeft + safe.left,
+                    initialTop + safe.top,
+                    initialRight + safe.right,
+                    initialBottom + safe.bottom
+            );
+            return WindowInsetsCompat.CONSUMED;
+        });
+        ViewCompat.requestApplyInsets(content);
+    }
+
+    private void configureThemeSwitch() {
+        int configuredMode = AppCompatDelegate.getDefaultNightMode();
+        boolean darkThemeEnabled;
+        if (configuredMode == AppCompatDelegate.MODE_NIGHT_YES) {
+            darkThemeEnabled = true;
+        } else if (configuredMode == AppCompatDelegate.MODE_NIGHT_NO) {
+            darkThemeEnabled = false;
+        } else {
+            darkThemeEnabled =
+                    (getResources().getConfiguration().uiMode
+                            & Configuration.UI_MODE_NIGHT_MASK)
+                            == Configuration.UI_MODE_NIGHT_YES;
+        }
+
+        darkThemeSwitch.setChecked(darkThemeEnabled);
+        darkThemeSwitch.setEnabled(true);
+        darkThemeSwitch.setOnCheckedChangeListener((button, enabled) -> {
+            if (themeChangeInProgress) {
+                return;
+            }
+            int requestedMode = enabled
+                    ? AppCompatDelegate.MODE_NIGHT_YES
+                    : AppCompatDelegate.MODE_NIGHT_NO;
+            if (AppCompatDelegate.getDefaultNightMode() == requestedMode) {
+                return;
+            }
+
+            themeChangeInProgress = true;
+            darkThemeSwitch.setEnabled(false);
+            darkThemeSwitch.post(() -> {
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                AppCompatDelegate.setDefaultNightMode(requestedMode);
+            });
+        });
     }
 
     private void renderProfilePhoto() {
