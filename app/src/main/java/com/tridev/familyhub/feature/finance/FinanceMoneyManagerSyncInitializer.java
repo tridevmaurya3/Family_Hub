@@ -30,6 +30,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Grocery-owned rows and finalized LoanManager projections are excluded so
  * MoneyManager never receives an echo of a transaction it already finalized.
+ * Family-owned Income/Expense deletions are forwarded to MoneyManager using the
+ * original deterministic event identity. MoneyManager decides whether its row
+ * is integration-owned and therefore removable, or whether external/manual
+ * evidence requires the canonical ledger row to be preserved.
  */
 public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -71,8 +75,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         if (context == null) return;
 
         if (!scanQueued.compareAndSet(false, true)) {
-            // Never lose a Room invalidation that arrives while the current scan
-            // is still reading/sending entries.
             rescanRequested.set(true);
             return;
         }
@@ -85,8 +87,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                 } while (rescanRequested.get());
             } finally {
                 scanQueued.set(false);
-                // Close the tiny race between the last loop check and releasing
-                // scanQueued. If another invalidation landed there, run again.
                 if (rescanRequested.get()) {
                     scheduleScan();
                 }
@@ -149,7 +149,7 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             sendAndRemember(context, preferences, key, entry, forceReview);
         }
 
-        pruneDeletedSourceState(preferences, existingKeys);
+        cancelAndPruneDeletedSourceState(context, preferences, existingKeys);
     }
 
     private void sendAndRemember(
@@ -190,8 +190,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                 .startsWith("grocery_")) return false;
         if (entry.note != null && entry.note.startsWith("[Grocery] ")) return false;
 
-        // STEP 10: this row is already a projection of a MoneyManager-finalized
-        // loan payment. Never send it back into MoneyManager and create a loop.
         if (entry.note != null
                 && entry.note.startsWith("[LoanManagerProjection] ")) return false;
         if (entry.cloudId != null
@@ -219,22 +217,41 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         }
     }
 
-    private void pruneDeletedSourceState(
+    private void cancelAndPruneDeletedSourceState(
+            @NonNull Context context,
             @NonNull SharedPreferences preferences,
             @NonNull Set<String> existingKeys) {
         Map<String, ?> all = preferences.getAll();
-        SharedPreferences.Editor editor = null;
         for (String prefKey : all.keySet()) {
             if (!prefKey.startsWith(PREFIX_EVENT)) continue;
             String key = prefKey.substring(PREFIX_EVENT.length());
             if (existingKeys.contains(key)) continue;
-            if (editor == null) editor = preferences.edit();
-            editor.remove(PREFIX_EVENT + key)
+
+            String eventId = safe(preferences.getString(PREFIX_EVENT + key, ""));
+            String sourceRecordId = safe(preferences.getString(PREFIX_SOURCE + key, ""));
+
+            boolean canPrune;
+            if (eventId.isEmpty() || sourceRecordId.isEmpty()) {
+                canPrune = true;
+            } else {
+                FinanceMoneyManagerBridge.Result result =
+                        FinanceMoneyManagerBridge.cancel(context, eventId, sourceRecordId);
+                canPrune = result.accepted;
+            }
+
+            if (!canPrune) {
+                // Keep the original event identity. A later Room invalidation or
+                // process restart will retry cancellation when MoneyManager is ready.
+                continue;
+            }
+
+            preferences.edit()
+                    .remove(PREFIX_EVENT + key)
                     .remove(PREFIX_SOURCE + key)
                     .remove(PREFIX_PENDING + key)
-                    .remove(PREFIX_FORCE_REVIEW + key);
+                    .remove(PREFIX_FORCE_REVIEW + key)
+                    .apply();
         }
-        if (editor != null) editor.apply();
     }
 
     @NonNull
