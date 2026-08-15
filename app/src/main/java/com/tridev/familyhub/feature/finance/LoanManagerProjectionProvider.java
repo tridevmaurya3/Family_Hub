@@ -3,12 +3,10 @@ package com.tridev.familyhub.feature.finance;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Bundle;
-import android.os.Process;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -26,14 +24,13 @@ import java.util.Locale;
 /**
  * STEP 10 - receives only finalized FAMILY loan-payment projections.
  *
- * LoanManager is verified by Binder UID + exact package + same signing
+ * LoanManager is verified by Binder UID + exact package + pinned signing
  * certificate. The deterministic cloudId makes retries idempotent.
  */
 public final class LoanManagerProjectionProvider extends ContentProvider {
 
     public static final String AUTHORITY =
             "com.tridev.familyhub.tridev.loanprojection";
-    private static final String TRUSTED_PACKAGE = "com.tridev.loanmanagerpro";
 
     @Override
     public boolean onCreate() {
@@ -103,20 +100,7 @@ public final class LoanManagerProjectionProvider extends ContentProvider {
     }
 
     private boolean trustedCaller(@NonNull Context context) {
-        int uid = Binder.getCallingUid();
-        PackageManager pm = context.getPackageManager();
-        String[] packages = pm.getPackagesForUid(uid);
-        boolean packageMatch = false;
-        if (packages != null) {
-            for (String packageName : packages) {
-                if (TRUSTED_PACKAGE.equals(packageName)) {
-                    packageMatch = true;
-                    break;
-                }
-            }
-        }
-        return packageMatch
-                && pm.checkSignatures(uid, Process.myUid()) == PackageManager.SIGNATURE_MATCH;
+        return LoanManagerProjectionTrust.verifyCaller(context, Binder.getCallingUid());
     }
 
     private Bundle response(@NonNull String status, @NonNull String reason) {
