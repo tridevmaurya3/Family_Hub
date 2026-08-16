@@ -26,6 +26,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.RadioButton;
@@ -228,12 +229,16 @@ public class GroceryOverlayService extends Service {
             closePanel();
             return;
         }
+        FrameLayout panelRoot = new FrameLayout(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(14), dp(12), dp(14), dp(12));
+        root.setPadding(dp(14), dp(12), dp(18), dp(18));
         root.setBackground(panelGradient());
         root.setElevation(dp(12));
         root.setFocusableInTouchMode(true);
+        panelRoot.addView(root, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
         root.setOnKeyListener((view, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_BACK
                     && event.getAction() == KeyEvent.ACTION_UP) {
@@ -297,7 +302,48 @@ public class GroceryOverlayService extends Service {
         });
         LinearLayout typeBlock = labelledField(
                 getString(R.string.grocery_list_type), listTypeGroup);
-        root.addView(typeBlock);
+        LinearLayout listTypeControls = new LinearLayout(this);
+        listTypeControls.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);
+        listTypeControls.addView(typeBlock, new LinearLayout.LayoutParams(
+                0, dp(56), 1f));
+
+        Button opacityToggle = compactAction("◐",
+                Color.rgb(15, 108, 189), Color.rgb(232, 243, 252));
+        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
+        LinearLayout.LayoutParams opacityToggleParams = new LinearLayout.LayoutParams(
+                dp(46), dp(38));
+        opacityToggleParams.setMarginStart(dp(8));
+        opacityToggleParams.bottomMargin = dp(2);
+        listTypeControls.addView(opacityToggle, opacityToggleParams);
+        root.addView(listTypeControls);
+
+        LinearLayout opacityPanel = new LinearLayout(this);
+        opacityPanel.setOrientation(LinearLayout.VERTICAL);
+        opacityPanel.setPadding(dp(8), dp(2), dp(8), dp(2));
+        opacityPanel.setBackground(roundedFill(Color.rgb(242, 248, 253), 10));
+        opacityPanel.setVisibility(View.GONE);
+        TextView opacityLabel = text(getString(
+                R.string.grocery_overlay_opacity), 10, false);
+        opacityPanel.addView(opacityLabel, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
+        SeekBar opacity = new SeekBar(this);
+        int savedProgress = Math.round((stripView.getAlpha() - 0.35f) / 0.65f * 100f);
+        opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
+        opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+            @Override public void onStopTrackingTouch(SeekBar seekBar) { }
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float alpha = 0.35f + (progress / 100f) * 0.65f;
+                stripView.setAlpha(alpha);
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                        .putFloat("alpha", alpha).apply();
+            }
+        });
+        opacityPanel.addView(opacity, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
+        opacityToggle.setOnClickListener(v -> opacityPanel.setVisibility(
+                opacityPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        root.addView(opacityPanel);
 
         LinearLayout detailsOne = new LinearLayout(this);
         detailsOne.setOrientation(LinearLayout.HORIZONTAL);
@@ -528,30 +574,15 @@ public class GroceryOverlayService extends Service {
         final int maxPanelHeight = screenHeight - dp(98);
         final int minPanelWidth = Math.min(maxPanelWidth, dp(300));
         final int minPanelHeight = Math.min(maxPanelHeight, dp(420));
-        overlayListCompactHeight = dp(150);
-        overlayListExpandedHeight = dp(250);
-        LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0, 1f);
-        listParams.topMargin = dp(10);
-        root.addView(overlayItemScroll, listParams);
 
-        overlayFormCollapsed = false;
-        overlayFormToggle.setOnClickListener(v ->
-                setOverlayFormCollapsed(!overlayFormCollapsed));
-        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY,
-                oldScrollX, oldScrollY) -> {
-            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) {
-                setOverlayFormCollapsed(true);
-            }
-        });
-
-        TextView resizeGrip = text(getString(R.string.grocery_overlay_resize), 10, true);
-        resizeGrip.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        resizeGrip.setTextColor(Color.rgb(15, 108, 189));
-        resizeGrip.setPadding(dp(8), 0, dp(8), 0);
-        resizeGrip.setBackground(roundedFill(Color.rgb(232, 243, 252), 10));
-        resizeGrip.setOnTouchListener(new View.OnTouchListener() {
+        TextView resizeCorner = text("↘", 18, true);
+        resizeCorner.setGravity(Gravity.CENTER);
+        resizeCorner.setTextColor(Color.rgb(15, 108, 189));
+        resizeCorner.setContentDescription(getString(R.string.grocery_overlay_resize));
+        resizeCorner.setBackground(rounded(Color.rgb(232, 243, 252),
+                Color.rgb(190, 216, 236), 14));
+        resizeCorner.setElevation(dp(4));
+        resizeCorner.setOnTouchListener(new View.OnTouchListener() {
             private int startWidth;
             private int startHeight;
             private float downX;
@@ -588,29 +619,30 @@ public class GroceryOverlayService extends Service {
                 return true;
             }
         });
-        LinearLayout.LayoutParams resizeParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(32));
-        resizeParams.topMargin = dp(4);
-        root.addView(resizeGrip, resizeParams);
+        FrameLayout.LayoutParams cornerParams = new FrameLayout.LayoutParams(
+                dp(34), dp(34), Gravity.END | Gravity.BOTTOM);
+        cornerParams.setMargins(0, 0, dp(4), dp(4));
+        panelRoot.addView(resizeCorner, cornerParams);
 
-        TextView opacityLabel = text(getString(
-                R.string.grocery_overlay_opacity), 11, false);
-        root.addView(opacityLabel);
-        SeekBar opacity = new SeekBar(this);
-        int savedProgress = Math.round((stripView.getAlpha() - 0.35f) / 0.65f * 100f);
-        opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
-        opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onStartTrackingTouch(SeekBar seekBar) { }
-            @Override public void onStopTrackingTouch(SeekBar seekBar) { }
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float alpha = 0.35f + (progress / 100f) * 0.65f;
-                stripView.setAlpha(alpha);
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                        .putFloat("alpha", alpha).apply();
+        overlayListCompactHeight = dp(150);
+        overlayListExpandedHeight = dp(250);
+        LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0, 1f);
+        listParams.topMargin = dp(10);
+        root.addView(overlayItemScroll, listParams);
+
+        overlayFormCollapsed = false;
+        overlayFormToggle.setOnClickListener(v ->
+                setOverlayFormCollapsed(!overlayFormCollapsed));
+        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY,
+                oldScrollX, oldScrollY) -> {
+            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) {
+                setOverlayFormCollapsed(true);
             }
         });
-        root.addView(opacity, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
+
+
 
         voice.setOnClickListener(v -> {
             pendingVoiceText = input.getText().toString();
@@ -672,7 +704,7 @@ public class GroceryOverlayService extends Service {
             });
         });
 
-        panelView = root;
+        panelView = panelRoot;
         int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getInt("panel_width", maxPanelWidth);
         int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE)
