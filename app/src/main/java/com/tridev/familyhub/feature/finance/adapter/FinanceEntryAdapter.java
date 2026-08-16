@@ -1,6 +1,5 @@
 package com.tridev.familyhub.feature.finance.adapter;
 
-import android.content.Context;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -12,6 +11,7 @@ import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.SemanticValueStyler;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.databinding.ItemFinanceEntryBinding;
+import com.tridev.familyhub.feature.finance.FinanceEntrySourceClassifier;
 
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -21,7 +21,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-/** Renders local finance entries and routes edit/delete actions to the screen. */
+/** Renders finance entries and makes each entry's origin visible. */
 public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapter.EntryViewHolder> {
 
     public interface EntryActionListener {
@@ -32,9 +32,12 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
 
     private final List<FinanceEntry> entries = new ArrayList<>();
     private final EntryActionListener listener;
-    private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
-    private final SimpleDateFormat storedDateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-    private final SimpleDateFormat displayDateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+    private final NumberFormat currencyFormatter =
+            NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
+    private final SimpleDateFormat storedDateFormat =
+            new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+    private final SimpleDateFormat displayDateFormat =
+            new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
 
     public FinanceEntryAdapter(EntryActionListener listener) {
         this.listener = listener;
@@ -82,7 +85,8 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
                     : R.drawable.bg_expense_avatar);
             binding.entryCategory.setText(entry.category);
             binding.entryDetails.setText(details(entry));
-            binding.entryAmount.setText((isIncome ? "+" : "−") + currencyFormatter.format(entry.amount));
+            binding.entryAmount.setText((isIncome ? "+" : "−")
+                    + currencyFormatter.format(entry.amount));
             SemanticValueStyler.apply(
                     binding.entryAmount,
                     isIncome ? entry.amount : -entry.amount
@@ -95,8 +99,12 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
         private String details(FinanceEntry entry) {
             String date = displayDate(entry.transactionDate);
             StringBuilder detail = new StringBuilder(date)
-                    .append(" · ").append(entry.accountName)
-                    .append(" · ").append(entry.paymentMethod);
+                    .append(" · ")
+                    .append(FinanceEntrySourceClassifier.displayLabel(entry))
+                    .append(" · ")
+                    .append(entry.accountName)
+                    .append(" · ")
+                    .append(entry.paymentMethod);
             if (entry.isRecurring) {
                 detail.append(" · Monthly");
                 if ("UPCOMING".equals(entry.recurrenceStatus)) {
@@ -112,9 +120,13 @@ public class FinanceEntryAdapter extends RecyclerView.Adapter<FinanceEntryAdapte
                 }
             }
             if (!"NONE".equals(entry.splitType) && !TextUtils.isEmpty(entry.participantNames)) {
-                detail.append(" · ").append(entry.splitType.equals("EQUAL") ? "Equal split" : "Custom split")
-                        .append(" · ").append(entry.settlementStatus.replace('_', ' '));
-                if (!TextUtils.isEmpty(entry.paidByName)) detail.append(" · Paid by ").append(entry.paidByName);
+                detail.append(" · ")
+                        .append(entry.splitType.equals("EQUAL") ? "Equal split" : "Custom split")
+                        .append(" · ")
+                        .append(entry.settlementStatus.replace('_', ' '));
+                if (!TextUtils.isEmpty(entry.paidByName)) {
+                    detail.append(" · Paid by ").append(entry.paidByName);
+                }
             }
             if (!TextUtils.isEmpty(entry.note)) {
                 detail.append(" · ").append(entry.note);
