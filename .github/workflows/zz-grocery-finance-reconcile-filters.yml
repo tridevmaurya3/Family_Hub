@@ -1,0 +1,622 @@
+name: Grocery Finance Reconcile Filters
+
+on:
+  push:
+    paths:
+      - '.github/workflows/zz-grocery-finance-reconcile-filters.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Add guarded grocery finance reconciliation workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply guarded Grocery and Finance patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 anchor, found {count}')
+              return text.replace(old, new, 1)
+
+          # GroceryRepository: self-heal missing Grocery -> Family Finance links.
+          path = Path('app/src/main/java/com/tridev/familyhub/data/repository/GroceryRepository.java')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(text,
+          '''        firebaseRoot = FirebaseDatabase.getInstance().getReference();
+              }
+
+              /** Starts one family-scoped realtime listener; safe to call repeatedly. */''',
+          '''        firebaseRoot = FirebaseDatabase.getInstance().getReference();
+              }
+
+              /**
+               * Reconciles Grocery purchase links from another repository boundary (for
+               * example Finance screen refresh). Must be called from a background thread.
+               * Existing financeEntryId/cloudId identities are reused, so this is idempotent.
+               */
+              public static void reconcileFinanceLinksNow(@NonNull Context context) {
+                  GroceryRepository repository = new GroceryRepository(context);
+                  repository.reconcileFinanceLinksInternal();
+              }
+
+              /** Starts one family-scoped realtime listener; safe to call repeatedly. */''',
+          'GroceryRepository static reconciliation')
+
+          text = replace_once(text,
+          '''        DATABASE_EXECUTOR.execute(() -> {
+                  resetMonthlyMastersIfNeeded();
+                  String trimmedQuery = query.trim();''',
+          '''        DATABASE_EXECUTOR.execute(() -> {
+                  resetMonthlyMastersIfNeeded();
+                  reconcileFinanceLinksInternal();
+                  String trimmedQuery = query.trim();''',
+          'GroceryRepository load reconciliation')
+
+          text = replace_once(text,
+          '''    private void linkFinance(@NonNull GroceryItem item) {''',
+          '''    private void reconcileFinanceLinksInternal() {
+                  for (GroceryItem item : groceryItemDao.getAll()) {
+                      long previousFinanceEntryId = item.financeEntryId;
+                      linkFinance(item);
+                      if (previousFinanceEntryId != item.financeEntryId) {
+                          groceryItemDao.update(item);
+                      }
+                  }
+              }
+
+              @NonNull
+              private String financeFamilyId(@NonNull GroceryItem item) {
+                  if (!activeFamilyId.isEmpty()) return activeFamilyId;
+                  return item.familyId == null ? "" : item.familyId.trim();
+              }
+
+              private void linkFinance(@NonNull GroceryItem item) {''',
+          'GroceryRepository internal reconciliation')
+
+          text = replace_once(text,
+          '''            entry.isShared = true;
+                  entry.cloudId = linkedCloudId;
+                  entry.familyId = activeFamilyId;
+                  entry.updatedByUid = user == null ? "" : user.getUid();''',
+          '''            entry.isShared = true;
+                  entry.cloudId = linkedCloudId;
+                  entry.familyId = financeFamilyId(item);
+                  entry.updatedByUid = user == null ? "" : user.getUid();''',
+          'GroceryRepository family identity')
+
+          text = replace_once(text,
+          '''    private String linkedFinanceCloudId(@NonNull GroceryItem item) {
+                  if (activeFamilyId.isEmpty() || item.cloudId.isEmpty()) return "";
+                  return "grocery_" + item.cloudId;
+              }''',
+          '''    private String linkedFinanceCloudId(@NonNull GroceryItem item) {
+                  if (financeFamilyId(item).isEmpty() || item.cloudId.isEmpty()) return "";
+                  return "grocery_" + item.cloudId;
+              }''',
+          'GroceryRepository stable cloud link')
+          path.write_text(text, encoding='utf-8')
+
+          # FinanceRepository: repair Grocery-linked rows before returning Finance list.
+          path = Path('app/src/main/java/com/tridev/familyhub/data/repository/FinanceRepository.java')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(text,
+          '''    public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
+                  DATABASE_EXECUTOR.execute(() -> {
+                      List<FinanceEntry> entries = searchQuery.trim().isEmpty()''',
+          '''    public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
+                  DATABASE_EXECUTOR.execute(() -> {
+                      GroceryRepository.reconcileFinanceLinksNow(appContext);
+                      List<FinanceEntry> entries = searchQuery.trim().isEmpty()''',
+          'FinanceRepository Grocery reconciliation')
+          path.write_text(text, encoding='utf-8')
+
+          # GroceryFragment: visible Collapse/Expand control and header-state feedback.
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(text,
+          '''    @NonNull private String activeCategoryFilter = "";
+              @Nullable private android.widget.EditText activeDialogVoiceInput;''',
+          '''    @NonNull private String activeCategoryFilter = "";
+              @Nullable private com.google.android.material.chip.Chip groceryCategoryToggleChip;
+              @Nullable private android.widget.EditText activeDialogVoiceInput;''',
+          'GroceryFragment grouping field')
+
+          text = replace_once(text,
+          '''                    public void onBuying(@NonNull GroceryItem item) {
+                              repository.setBuyingStatus(item,
+                                      GroceryItem.STATUS_BUYING,
+                                      () -> loadItems(currentQuery()));
+                          }
+                      }
+              );''',
+          '''                    public void onBuying(@NonNull GroceryItem item) {
+                              repository.setBuyingStatus(item,
+                                      GroceryItem.STATUS_BUYING,
+                                      () -> loadItems(currentQuery()));
+                          }
+
+                          @Override
+                          public void onGroupingChanged(boolean allCollapsed) {
+                              updateGroceryGroupingChip(allCollapsed);
+                          }
+                      }
+              );''',
+          'GroceryFragment grouping callback')
+
+          text = replace_once(text,
+          '''        binding.groceryFilterGroup.clearCheck();
+                  binding.filterAll.setVisibility(View.GONE);
+
+                  binding.filterDaily.setOnClickListener(v -> {''',
+          '''        binding.groceryFilterGroup.clearCheck();
+                  binding.filterAll.setVisibility(View.GONE);
+                  ensureGroceryGroupingChip();
+
+                  binding.filterDaily.setOnClickListener(v -> {''',
+          'GroceryFragment grouping setup')
+
+          text = replace_once(text,
+          '''    private void syncPrimaryFilterChips() {''',
+          '''    private void ensureGroceryGroupingChip() {
+                  if (binding == null || groceryCategoryToggleChip != null) return;
+                  com.google.android.material.chip.Chip chip =
+                          new com.google.android.material.chip.Chip(requireContext());
+                  chip.setCheckable(false);
+                  chip.setClickable(true);
+                  chip.setText(R.string.grocery_collapse_categories);
+                  chip.setChipBackgroundColorResource(R.color.fh_info_container);
+                  chip.setTextColor(ContextCompat.getColor(
+                          requireContext(), R.color.fh_module_grocery));
+                  chip.setOnClickListener(v ->
+                          updateGroceryGroupingChip(adapter.toggleAllCategories()));
+                  groceryCategoryToggleChip = chip;
+                  binding.groceryFilterGroup.addView(chip);
+              }
+
+              private void updateGroceryGroupingChip(boolean allCollapsed) {
+                  if (groceryCategoryToggleChip == null) return;
+                  groceryCategoryToggleChip.setText(allCollapsed
+                          ? R.string.grocery_expand_categories
+                          : R.string.grocery_collapse_categories);
+              }
+
+              private void syncPrimaryFilterChips() {''',
+          'GroceryFragment grouping methods')
+
+          text = replace_once(text,
+          '''                adapter.submitList(visibleItems, spent, budgets);
+                      });''',
+          '''                adapter.submitList(visibleItems, spent, budgets);
+                          updateGroceryGroupingChip(
+                                  adapter.areAllCurrentCategoriesCollapsed());
+                      });''',
+          'GroceryFragment grouping refresh')
+          path.write_text(text, encoding='utf-8')
+
+          # FinanceFragment: combined local search + date/type + source + category filters.
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/finance/FinanceFragment.java')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(text,
+          '''import android.widget.ArrayAdapter;
+              import android.widget.EditText;
+              import android.widget.LinearLayout;
+              import android.text.InputType;''',
+          '''import android.widget.ArrayAdapter;
+              import android.widget.EditText;
+              import android.widget.HorizontalScrollView;
+              import android.widget.LinearLayout;
+              import android.widget.PopupMenu;
+              import android.text.InputType;''',
+          'FinanceFragment widget imports')
+
+          text = replace_once(text,
+          '''import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+              import com.google.android.material.snackbar.Snackbar;
+              import com.google.android.material.textfield.TextInputLayout;''',
+          '''import com.google.android.material.chip.Chip;
+              import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+              import com.google.android.material.snackbar.Snackbar;
+              import com.google.android.material.textfield.TextInputLayout;''',
+          'FinanceFragment Chip import')
+
+          text = replace_once(text,
+          '''    private int selectedFinanceFilter = R.id.finance_filter_all;
+              private boolean financeHeaderCollapsed;''',
+          '''    private int selectedFinanceFilter = R.id.finance_filter_all;
+              @NonNull private String selectedFinanceSource =
+                      FinanceEntrySourceClassifier.SOURCE_ALL;
+              @NonNull private String selectedFinanceCategory = "";
+              @Nullable private Chip financeSourceChip;
+              @Nullable private Chip financeCategoryChip;
+              private boolean financeHeaderCollapsed;''',
+          'FinanceFragment filter fields')
+
+          text = replace_once(text,
+          '''            @Override
+                      public void afterTextChanged(Editable searchText) {
+                          loadEntries(searchText.toString());
+                      }
+                  });''',
+          '''            @Override
+                      public void afterTextChanged(Editable searchText) {
+                          applyFinanceFilters();
+                      }
+                  });''',
+          'FinanceFragment local search')
+
+          text = replace_once(text,
+          '''        binding.financeFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+                  selectedFinanceFilter = checkedIds.isEmpty()
+                          ? R.id.finance_filter_all : checkedIds.get(0);
+                  applyFinanceFilters();
+              });
+              refreshData();''',
+          '''        binding.financeFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+                  selectedFinanceFilter = checkedIds.isEmpty()
+                          ? R.id.finance_filter_all : checkedIds.get(0);
+                  applyFinanceFilters();
+              });
+              setupAdvancedFinanceFilters();
+              refreshData();''',
+          'FinanceFragment advanced filter setup call')
+
+          old_block = '''    private void loadEntries(String query) {
+                  repository.loadEntries(query, entries -> {
+                      if (binding == null) {
+                          return;
+                      }
+                      if (query.trim().isEmpty()) {
+                          latestEntries = new ArrayList<>(entries);
+                          updateSmartInsights();
+                          updateAnalytics();
+                      }
+                      applyFinanceFilters(entries);
+                  });
+              }
+
+              private void applyFinanceFilters() {
+                  String query = binding.financeSearchInput.getText().toString().trim();
+                  if (!query.isEmpty()) {
+                      loadEntries(query);
+                      return;
+                  }
+                  applyFinanceFilters(latestEntries);
+              }
+
+              private void applyFinanceFilters(@NonNull List<FinanceEntry> source) {
+                  List<FinanceEntry> filtered = new ArrayList<>();
+                  Calendar start = Calendar.getInstance();
+                  start.set(Calendar.HOUR_OF_DAY, 0);
+                  start.set(Calendar.MINUTE, 0);
+                  start.set(Calendar.SECOND, 0);
+                  start.set(Calendar.MILLISECOND, 0);
+                  if (selectedFinanceFilter == R.id.finance_filter_week) {
+                      start.set(Calendar.DAY_OF_WEEK, start.getFirstDayOfWeek());
+                  } else if (selectedFinanceFilter == R.id.finance_filter_month) {
+                      start.set(Calendar.DAY_OF_MONTH, 1);
+                  }
+                  String startDate = new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US)
+                          .format(start.getTime());
+                  String today = todayAsIsoDate();
+                  for (FinanceEntry entry : source) {
+                      boolean include;
+                      if (selectedFinanceFilter == R.id.finance_filter_today) {
+                          include = today.equals(entry.transactionDate);
+                      } else if (selectedFinanceFilter == R.id.finance_filter_week
+                              || selectedFinanceFilter == R.id.finance_filter_month) {
+                          include = entry.transactionDate.compareTo(startDate) >= 0
+                                  && entry.transactionDate.compareTo(today) <= 0;
+                      } else if (selectedFinanceFilter == R.id.finance_filter_income) {
+                          include = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
+                      } else if (selectedFinanceFilter == R.id.finance_filter_expense) {
+                          include = FinanceEntry.TYPE_EXPENSE.equals(entry.entryType);
+                      } else {
+                          include = true;
+                      }
+                      if (include) filtered.add(entry);
+                  }
+                  entryAdapter.submitList(filtered);
+                  visibleEntries = new ArrayList<>(filtered);
+                  boolean isEmpty = filtered.isEmpty();
+                  binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+                  binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+              }
+'''
+          new_block = '''    private void loadEntries(String query) {
+                  repository.loadEntries("", entries -> {
+                      if (binding == null) return;
+                      latestEntries = new ArrayList<>(entries);
+                      updateSmartInsights();
+                      updateAnalytics();
+                      applyFinanceFilters(entries);
+                  });
+              }
+
+              private void setupAdvancedFinanceFilters() {
+                  View parentView = (View) binding.financeFilterScroll.getParent();
+                  if (!(parentView instanceof LinearLayout)) return;
+                  LinearLayout parent = (LinearLayout) parentView;
+                  HorizontalScrollView scroll = new HorizontalScrollView(requireContext());
+                  scroll.setHorizontalScrollBarEnabled(false);
+                  scroll.setFillViewport(false);
+
+                  LinearLayout row = new LinearLayout(requireContext());
+                  row.setOrientation(LinearLayout.HORIZONTAL);
+                  row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                  int top = getResources().getDimensionPixelSize(R.dimen.space_4);
+                  row.setPadding(0, top, 0, 0);
+
+                  financeSourceChip = advancedFilterChip(getString(
+                          R.string.finance_source_chip,
+                          getString(R.string.finance_source_all)));
+                  financeCategoryChip = advancedFilterChip(getString(
+                          R.string.finance_category_chip,
+                          getString(R.string.finance_category_all)));
+                  Chip reset = advancedFilterChip(getString(R.string.finance_reset_filters));
+
+                  financeSourceChip.setOnClickListener(this::showFinanceSourceMenu);
+                  financeCategoryChip.setOnClickListener(this::showFinanceCategoryMenu);
+                  reset.setOnClickListener(v -> resetFinanceFilters());
+
+                  addAdvancedFilterChip(row, financeSourceChip);
+                  addAdvancedFilterChip(row, financeCategoryChip);
+                  addAdvancedFilterChip(row, reset);
+                  scroll.addView(row, new HorizontalScrollView.LayoutParams(
+                          HorizontalScrollView.LayoutParams.WRAP_CONTENT,
+                          HorizontalScrollView.LayoutParams.WRAP_CONTENT));
+
+                  int index = parent.indexOfChild(binding.financeFilterScroll);
+                  parent.addView(scroll, index + 1, new LinearLayout.LayoutParams(
+                          LinearLayout.LayoutParams.MATCH_PARENT,
+                          LinearLayout.LayoutParams.WRAP_CONTENT));
+              }
+
+              @NonNull
+              private Chip advancedFilterChip(@NonNull String text) {
+                  Chip chip = new Chip(requireContext());
+                  chip.setCheckable(false);
+                  chip.setClickable(true);
+                  chip.setText(text);
+                  chip.setChipBackgroundColorResource(R.color.fh_info_container);
+                  return chip;
+              }
+
+              private void addAdvancedFilterChip(@NonNull LinearLayout row,
+                                                 @NonNull Chip chip) {
+                  LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                          LinearLayout.LayoutParams.WRAP_CONTENT,
+                          LinearLayout.LayoutParams.WRAP_CONTENT);
+                  params.setMarginEnd(getResources().getDimensionPixelSize(R.dimen.space_6));
+                  row.addView(chip, params);
+              }
+
+              private void showFinanceSourceMenu(@NonNull View anchor) {
+                  PopupMenu popup = new PopupMenu(requireContext(), anchor);
+                  String[] keys = {
+                          FinanceEntrySourceClassifier.SOURCE_ALL,
+                          FinanceEntrySourceClassifier.SOURCE_GROCERY,
+                          FinanceEntrySourceClassifier.SOURCE_LOAN_MANAGER,
+                          FinanceEntrySourceClassifier.SOURCE_MONEY_MANAGER,
+                          FinanceEntrySourceClassifier.SOURCE_DIRECT,
+                          FinanceEntrySourceClassifier.SOURCE_OTHER
+                  };
+                  int[] labels = {
+                          R.string.finance_source_all,
+                          R.string.finance_source_grocery,
+                          R.string.finance_source_loan_manager,
+                          R.string.finance_source_money_manager,
+                          R.string.finance_source_direct,
+                          R.string.finance_source_other
+                  };
+                  popup.getMenu().setGroupCheckable(1, true, true);
+                  for (int i = 0; i < keys.length; i++) {
+                      android.view.MenuItem item = popup.getMenu().add(1, 30_000 + i,
+                              i, labels[i]);
+                      item.setCheckable(true);
+                      item.setChecked(keys[i].equals(selectedFinanceSource));
+                  }
+                  popup.setOnMenuItemClickListener(item -> {
+                      int index = item.getItemId() - 30_000;
+                      if (index < 0 || index >= keys.length) return false;
+                      selectedFinanceSource = keys[index];
+                      item.setChecked(true);
+                      updateAdvancedFinanceFilterLabels();
+                      applyFinanceFilters();
+                      return true;
+                  });
+                  popup.show();
+              }
+
+              private void showFinanceCategoryMenu(@NonNull View anchor) {
+                  PopupMenu popup = new PopupMenu(requireContext(), anchor);
+                  java.util.TreeSet<String> categories =
+                          new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+                  for (FinanceEntry entry : latestEntries) {
+                      if (entry.category != null && !entry.category.trim().isEmpty()) {
+                          categories.add(entry.category.trim());
+                      }
+                  }
+                  List<String> values = new ArrayList<>();
+                  values.add("");
+                  values.addAll(categories);
+                  popup.getMenu().setGroupCheckable(2, true, true);
+                  for (int i = 0; i < values.size(); i++) {
+                      String value = values.get(i);
+                      android.view.MenuItem item = popup.getMenu().add(2, 31_000 + i,
+                              i, value.isEmpty()
+                                      ? getString(R.string.finance_category_all)
+                                      : value);
+                      item.setCheckable(true);
+                      item.setChecked(value.equalsIgnoreCase(selectedFinanceCategory));
+                  }
+                  popup.setOnMenuItemClickListener(item -> {
+                      int index = item.getItemId() - 31_000;
+                      if (index < 0 || index >= values.size()) return false;
+                      selectedFinanceCategory = values.get(index);
+                      item.setChecked(true);
+                      updateAdvancedFinanceFilterLabels();
+                      applyFinanceFilters();
+                      return true;
+                  });
+                  popup.show();
+              }
+
+              private void resetFinanceFilters() {
+                  selectedFinanceSource = FinanceEntrySourceClassifier.SOURCE_ALL;
+                  selectedFinanceCategory = "";
+                  selectedFinanceFilter = R.id.finance_filter_all;
+                  binding.financeFilterGroup.check(R.id.finance_filter_all);
+                  binding.financeSearchInput.setText("");
+                  updateAdvancedFinanceFilterLabels();
+                  applyFinanceFilters();
+              }
+
+              private void updateAdvancedFinanceFilterLabels() {
+                  if (financeSourceChip != null) {
+                      financeSourceChip.setText(getString(R.string.finance_source_chip,
+                              financeSourceLabel(selectedFinanceSource)));
+                  }
+                  if (financeCategoryChip != null) {
+                      financeCategoryChip.setText(getString(R.string.finance_category_chip,
+                              selectedFinanceCategory.isEmpty()
+                                      ? getString(R.string.finance_category_all)
+                                      : selectedFinanceCategory));
+                  }
+              }
+
+              @NonNull
+              private String financeSourceLabel(@NonNull String source) {
+                  if (FinanceEntrySourceClassifier.SOURCE_GROCERY.equals(source)) {
+                      return getString(R.string.finance_source_grocery);
+                  }
+                  if (FinanceEntrySourceClassifier.SOURCE_LOAN_MANAGER.equals(source)) {
+                      return getString(R.string.finance_source_loan_manager);
+                  }
+                  if (FinanceEntrySourceClassifier.SOURCE_MONEY_MANAGER.equals(source)) {
+                      return getString(R.string.finance_source_money_manager);
+                  }
+                  if (FinanceEntrySourceClassifier.SOURCE_DIRECT.equals(source)) {
+                      return getString(R.string.finance_source_direct);
+                  }
+                  if (FinanceEntrySourceClassifier.SOURCE_OTHER.equals(source)) {
+                      return getString(R.string.finance_source_other);
+                  }
+                  return getString(R.string.finance_source_all);
+              }
+
+              private void applyFinanceFilters() {
+                  applyFinanceFilters(latestEntries);
+              }
+
+              private void applyFinanceFilters(@NonNull List<FinanceEntry> source) {
+                  List<FinanceEntry> filtered = new ArrayList<>();
+                  Calendar start = Calendar.getInstance();
+                  start.set(Calendar.HOUR_OF_DAY, 0);
+                  start.set(Calendar.MINUTE, 0);
+                  start.set(Calendar.SECOND, 0);
+                  start.set(Calendar.MILLISECOND, 0);
+                  if (selectedFinanceFilter == R.id.finance_filter_week) {
+                      start.set(Calendar.DAY_OF_WEEK, start.getFirstDayOfWeek());
+                  } else if (selectedFinanceFilter == R.id.finance_filter_month) {
+                      start.set(Calendar.DAY_OF_MONTH, 1);
+                  }
+                  String startDate = new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US)
+                          .format(start.getTime());
+                  String today = todayAsIsoDate();
+                  String query = binding.financeSearchInput.getText() == null
+                          ? "" : binding.financeSearchInput.getText().toString().trim();
+
+                  for (FinanceEntry entry : source) {
+                      if (!matchesFinanceSearch(entry, query)) continue;
+                      boolean include;
+                      if (selectedFinanceFilter == R.id.finance_filter_today) {
+                          include = today.equals(entry.transactionDate);
+                      } else if (selectedFinanceFilter == R.id.finance_filter_week
+                              || selectedFinanceFilter == R.id.finance_filter_month) {
+                          include = entry.transactionDate.compareTo(startDate) >= 0
+                                  && entry.transactionDate.compareTo(today) <= 0;
+                      } else if (selectedFinanceFilter == R.id.finance_filter_income) {
+                          include = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
+                      } else if (selectedFinanceFilter == R.id.finance_filter_expense) {
+                          include = FinanceEntry.TYPE_EXPENSE.equals(entry.entryType);
+                      } else {
+                          include = true;
+                      }
+                      if (include && !FinanceEntrySourceClassifier.matches(
+                              entry, selectedFinanceSource)) {
+                          include = false;
+                      }
+                      if (include && !selectedFinanceCategory.isEmpty()
+                              && !selectedFinanceCategory.equalsIgnoreCase(entry.category)) {
+                          include = false;
+                      }
+                      if (include) filtered.add(entry);
+                  }
+                  entryAdapter.submitList(filtered);
+                  visibleEntries = new ArrayList<>(filtered);
+                  boolean isEmpty = filtered.isEmpty();
+                  binding.financeRecyclerView.setVisibility(
+                          isEmpty ? View.GONE : View.VISIBLE);
+                  binding.financeEmptyState.setVisibility(
+                          isEmpty ? View.VISIBLE : View.GONE);
+              }
+
+              private boolean matchesFinanceSearch(@NonNull FinanceEntry entry,
+                                                   @NonNull String query) {
+                  if (query.isEmpty()) return true;
+                  String needle = query.toLowerCase(Locale.ROOT);
+                  return containsFinanceText(entry.category, needle)
+                          || containsFinanceText(entry.note, needle)
+                          || containsFinanceText(entry.entryType, needle)
+                          || containsFinanceText(entry.accountName, needle)
+                          || containsFinanceText(entry.paymentMethod, needle)
+                          || containsFinanceText(entry.paidByName, needle)
+                          || containsFinanceText(entry.participantNames, needle)
+                          || containsFinanceText(
+                                  FinanceEntrySourceClassifier.displayLabel(entry), needle);
+              }
+
+              private boolean containsFinanceText(@Nullable String value,
+                                                  @NonNull String needle) {
+                  return value != null
+                          && value.toLowerCase(Locale.ROOT).contains(needle);
+              }
+'''
+          text = replace_once(text, old_block, new_block,
+                              'FinanceFragment filter engine')
+          path.write_text(text, encoding='utf-8')
+
+      - name: Verify guarded patch scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --name-only
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = "app/src/main/java/com/tridev/familyhub/data/repository/FinanceRepository.java app/src/main/java/com/tridev/familyhub/data/repository/GroceryRepository.java app/src/main/java/com/tridev/familyhub/feature/finance/FinanceFragment.java app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java "
+          grep -q 'reconcileFinanceLinksNow' app/src/main/java/com/tridev/familyhub/data/repository/FinanceRepository.java
+          grep -q 'setupAdvancedFinanceFilters' app/src/main/java/com/tridev/familyhub/feature/finance/FinanceFragment.java
+          grep -q 'ensureGroceryGroupingChip' app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java
+
+      - name: Commit guarded patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/tridev/familyhub/data/repository/FinanceRepository.java \
+                  app/src/main/java/com/tridev/familyhub/data/repository/GroceryRepository.java \
+                  app/src/main/java/com/tridev/familyhub/feature/finance/FinanceFragment.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java
+          git commit -m 'Repair Grocery finance links and add advanced filters'
+          git push origin HEAD:main
