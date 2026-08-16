@@ -1,0 +1,67 @@
+name: One-shot Grocery Overlay Upgrade Retry
+
+on:
+  push:
+    paths:
+      - '.github/workflows/zz-one-shot-grocery-overlay-upgrade-retry.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Retry guarded grocery overlay upgrade'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Reuse guarded patch with corrected current count
+        shell: python
+        run: |
+          from pathlib import Path
+          import textwrap
+
+          workflow = Path('.github/workflows/zz-one-shot-grocery-overlay-upgrade.yml').read_text(encoding='utf-8')
+          marker = '      - name: Apply guarded grocery improvements\n'
+          section = workflow.index(marker)
+          run_marker = '        run: |\n'
+          script_start = workflow.index(run_marker, section) + len(run_marker)
+          script_end = workflow.index('\n      - name: Validate patch scope', script_start)
+          script = textwrap.dedent(workflow[script_start:script_end])
+          script = script.replace('if category_count != 2:', 'if category_count != 3:')
+          script = script.replace('expected 2, found {category_count}', 'expected 3, found {category_count}')
+          exec(compile(script, 'grocery_patch.py', 'exec'), {})
+
+      - name: Validate patch scope
+        run: |
+          git diff --check
+          CHANGED="$(git status --short | sed 's/^...//')"
+          echo "$CHANGED"
+          test "$(echo "$CHANGED" | sed '/^$/d' | wc -l)" -eq 8
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryAdapter.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryMoneyManagerDialogCatalogView.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryOptionCatalog.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/integration/MoneyManagerMasterCatalogBridge.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/res/layout/dialog_grocery.xml'
+          echo "$CHANGED" | grep -qx 'app/src/main/res/values/arrays_grocery_enhanced.xml'
+
+      - name: Commit grocery improvements
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryAdapter.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryMoneyManagerDialogCatalogView.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryOptionCatalog.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java \
+                  app/src/main/java/com/tridev/familyhub/feature/integration/MoneyManagerMasterCatalogBridge.java \
+                  app/src/main/res/layout/dialog_grocery.xml \
+                  app/src/main/res/values/arrays_grocery_enhanced.xml
+          git commit -m "Improve grocery overlay options and live catalog sync"
+          git push origin HEAD:main
