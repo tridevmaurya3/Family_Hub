@@ -1,0 +1,86 @@
+name: Grocery Corner Overlay Polish
+
+on:
+  push:
+    paths:
+      - '.github/workflows/zz-grocery-corner-overlay-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Add guarded grocery corner overlay polish workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply guarded overlay UI polish
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
+          text = path.read_text(encoding='utf-8')
+
+          def once(old, new, label):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              text = text.replace(old, new, 1)
+
+          once('import android.widget.AutoCompleteTextView;\n',
+               'import android.widget.AutoCompleteTextView;\nimport android.widget.FrameLayout;\n',
+               'FrameLayout import')
+
+          once('''        LinearLayout root = new LinearLayout(this);\n        root.setOrientation(LinearLayout.VERTICAL);\n        root.setPadding(dp(14), dp(12), dp(14), dp(12));''',
+               '''        FrameLayout panelRoot = new FrameLayout(this);\n        LinearLayout root = new LinearLayout(this);\n        root.setOrientation(LinearLayout.VERTICAL);\n        root.setPadding(dp(14), dp(12), dp(18), dp(18));''',
+               'panel root')
+
+          once('''        root.setFocusableInTouchMode(true);\n        root.setOnKeyListener((view, keyCode, event) -> {''',
+               '''        root.setFocusableInTouchMode(true);\n        panelRoot.addView(root, new FrameLayout.LayoutParams(\n                FrameLayout.LayoutParams.MATCH_PARENT,\n                FrameLayout.LayoutParams.MATCH_PARENT));\n        root.setOnKeyListener((view, keyCode, event) -> {''',
+               'attach content root')
+
+          old_type = '''        LinearLayout typeBlock = labelledField(\n                getString(R.string.grocery_list_type), listTypeGroup);\n        root.addView(typeBlock);'''
+          new_type = '''        LinearLayout typeBlock = labelledField(\n                getString(R.string.grocery_list_type), listTypeGroup);\n        LinearLayout listTypeControls = new LinearLayout(this);\n        listTypeControls.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);\n        listTypeControls.addView(typeBlock, new LinearLayout.LayoutParams(\n                0, dp(56), 1f));\n\n        Button opacityToggle = compactAction("◐",\n                Color.rgb(15, 108, 189), Color.rgb(232, 243, 252));\n        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));\n        LinearLayout.LayoutParams opacityToggleParams = new LinearLayout.LayoutParams(\n                dp(46), dp(38));\n        opacityToggleParams.setMarginStart(dp(8));\n        opacityToggleParams.bottomMargin = dp(2);\n        listTypeControls.addView(opacityToggle, opacityToggleParams);\n        root.addView(listTypeControls);\n\n        LinearLayout opacityPanel = new LinearLayout(this);\n        opacityPanel.setOrientation(LinearLayout.VERTICAL);\n        opacityPanel.setPadding(dp(8), dp(2), dp(8), dp(2));\n        opacityPanel.setBackground(roundedFill(Color.rgb(242, 248, 253), 10));\n        opacityPanel.setVisibility(View.GONE);\n        TextView opacityLabel = text(getString(\n                R.string.grocery_overlay_opacity), 10, false);\n        opacityPanel.addView(opacityLabel, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));\n        SeekBar opacity = new SeekBar(this);\n        int savedProgress = Math.round((stripView.getAlpha() - 0.35f) / 0.65f * 100f);\n        opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));\n        opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {\n            @Override public void onStartTrackingTouch(SeekBar seekBar) { }\n            @Override public void onStopTrackingTouch(SeekBar seekBar) { }\n            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {\n                float alpha = 0.35f + (progress / 100f) * 0.65f;\n                stripView.setAlpha(alpha);\n                getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n                        .putFloat("alpha", alpha).apply();\n            }\n        });\n        opacityPanel.addView(opacity, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));\n        opacityToggle.setOnClickListener(v -> opacityPanel.setVisibility(\n                opacityPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));\n        root.addView(opacityPanel);'''
+          once(old_type, new_type, 'compact opacity controls')
+
+          pattern = re.compile(r'''\n        TextView resizeGrip = text\(getString\(R\.string\.grocery_overlay_resize\), 10, true\);.*?\n        root\.addView\(resizeGrip, resizeParams\);\n''', re.S)
+          text, count = pattern.subn('\n', text, count=1)
+          if count != 1:
+              raise SystemExit(f'remove resize bar: expected 1 match, found {count}')
+
+          pattern = re.compile(r'''\n        TextView opacityLabel = text\(getString\(\n                R\.string\.grocery_overlay_opacity\), 11, false\);.*?\n        root\.addView\(opacity, new LinearLayout\.LayoutParams\(\n                LinearLayout\.LayoutParams\.MATCH_PARENT, dp\(40\)\)\);\n''', re.S)
+          text, count = pattern.subn('\n', text, count=1)
+          if count != 1:
+              raise SystemExit(f'remove old opacity footer: expected 1 match, found {count}')
+
+          old_bounds = '''        final int minPanelWidth = Math.min(maxPanelWidth, dp(300));\n        final int minPanelHeight = Math.min(maxPanelHeight, dp(420));\n        overlayListCompactHeight = dp(150);'''
+          new_bounds = '''        final int minPanelWidth = Math.min(maxPanelWidth, dp(300));\n        final int minPanelHeight = Math.min(maxPanelHeight, dp(420));\n\n        TextView resizeCorner = text("↘", 18, true);\n        resizeCorner.setGravity(Gravity.CENTER);\n        resizeCorner.setTextColor(Color.rgb(15, 108, 189));\n        resizeCorner.setContentDescription(getString(R.string.grocery_overlay_resize));\n        resizeCorner.setBackground(rounded(Color.rgb(232, 243, 252),\n                Color.rgb(190, 216, 236), 14));\n        resizeCorner.setElevation(dp(4));\n        resizeCorner.setOnTouchListener(new View.OnTouchListener() {\n            private int startWidth;\n            private int startHeight;\n            private float downX;\n            private float downY;\n\n            @Override\n            public boolean onTouch(View view, MotionEvent event) {\n                if (panelParams == null || panelView == null) return false;\n                if (event.getAction() == MotionEvent.ACTION_DOWN) {\n                    startWidth = panelParams.width;\n                    startHeight = panelParams.height;\n                    downX = event.getRawX();\n                    downY = event.getRawY();\n                    return true;\n                }\n                if (event.getAction() == MotionEvent.ACTION_MOVE) {\n                    panelParams.width = clamp(startWidth\n                            + Math.round(event.getRawX() - downX),\n                            minPanelWidth, maxPanelWidth);\n                    panelParams.height = clamp(startHeight\n                            + Math.round(event.getRawY() - downY),\n                            minPanelHeight, maxPanelHeight);\n                    windowManager.updateViewLayout(panelView, panelParams);\n                    return true;\n                }\n                if (event.getAction() == MotionEvent.ACTION_UP\n                        || event.getAction() == MotionEvent.ACTION_CANCEL) {\n                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n                            .putInt("panel_width", panelParams.width)\n                            .putInt("panel_height", panelParams.height)\n                            .apply();\n                    return true;\n                }\n                return true;\n            }\n        });\n        FrameLayout.LayoutParams cornerParams = new FrameLayout.LayoutParams(\n                dp(34), dp(34), Gravity.END | Gravity.BOTTOM);\n        cornerParams.setMargins(0, 0, dp(4), dp(4));\n        panelRoot.addView(resizeCorner, cornerParams);\n\n        overlayListCompactHeight = dp(150);'''
+          once(old_bounds, new_bounds, 'corner resize handle')
+
+          once('        panelView = root;\n', '        panelView = panelRoot;\n', 'panel view wrapper')
+
+          path.write_text(text, encoding='utf-8')
+      - name: Verify scope and syntax anchors
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff -- app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          test "$(git diff --name-only | wc -l)" -eq 1
+          grep -q 'panelView = panelRoot;' app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          grep -q 'Button opacityToggle' app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          ! grep -q 'TextView resizeGrip = text' app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          git commit -m 'Polish grocery overlay corner controls'
+          git push origin main
