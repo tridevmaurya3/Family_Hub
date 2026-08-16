@@ -25,6 +25,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.RadioButton;
@@ -44,6 +45,7 @@ import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
+import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.ArrayList;
@@ -71,6 +73,7 @@ public class GroceryOverlayService extends Service {
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams stripParams;
+    private WindowManager.LayoutParams panelParams;
     private View stripView;
     private View panelView;
     private LinearLayout itemContainer;
@@ -85,6 +88,8 @@ public class GroceryOverlayService extends Service {
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private volatile MoneyManagerMasterCatalogBridge.Catalog moneyCatalog =
             MoneyManagerMasterCatalogBridge.Catalog.unavailable("Loading MoneyManager");
+    private volatile boolean moneyCatalogRefreshing;
+    @Nullable private Runnable pendingMoneyCatalogAction;
     private String visibleListType = GroceryItem.LIST_DAILY;
     private String pendingVoiceText = "";
     private String overlaySearchQuery = "";
@@ -265,12 +270,6 @@ public class GroceryOverlayService extends Service {
         overlayFormDetails = new LinearLayout(this);
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
 
-        TextView subtitle = text(getString(R.string.grocery_overlay_subtitle),
-                11, false);
-        subtitle.setTextColor(Color.rgb(91, 101, 114));
-        overlayFormDetails.addView(subtitle, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(22)));
-
         final String[] selectedListType = {visibleListType};
         RadioGroup listTypeGroup = new RadioGroup(this);
         listTypeGroup.setOrientation(RadioGroup.HORIZONTAL);
@@ -318,7 +317,7 @@ public class GroceryOverlayService extends Service {
         LinearLayout detailsTwo = new LinearLayout(this);
         detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
         Spinner category = compactSpinner(
-                getResources().getStringArray(R.array.grocery_category_labels));
+                GroceryOptionCatalog.categoryLabels(this));
         detailsTwo.addView(labelledField(
                 getString(R.string.grocery_category), category), weightedField());
         EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
@@ -342,6 +341,7 @@ public class GroceryOverlayService extends Service {
                 getString(R.string.money_manager_expense_category), moneyCategory),
                 moneyCategoryParams);
         overlayFormDetails.addView(moneyRow);
+        attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
         LinearLayout detailsThree = new LinearLayout(this);
         detailsThree.setOrientation(LinearLayout.HORIZONTAL);
@@ -379,6 +379,7 @@ public class GroceryOverlayService extends Service {
         input.setCursorVisible(true);
         input.setClickable(true);
         input.setTextSize(13f);
+        input.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         input.setHint(R.string.grocery_overlay_add_hint);
         input.setPadding(dp(12), 0, dp(8), 0);
         input.setBackground(rounded(Color.rgb(248, 249, 250),
@@ -474,8 +475,7 @@ public class GroceryOverlayService extends Service {
         toolsParams.topMargin = dp(6);
         root.addView(listTools, toolsParams);
 
-        String[] categoryLabels = getResources().getStringArray(
-                R.array.grocery_category_labels);
+        String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
         categoryFilter.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(this, categoryFilter);
             popup.getMenu().setGroupCheckable(1, true, true);
@@ -523,6 +523,11 @@ public class GroceryOverlayService extends Service {
                 ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT));
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        final int maxPanelWidth = screenWidth - dp(24);
+        final int maxPanelHeight = screenHeight - dp(98);
+        final int minPanelWidth = Math.min(maxPanelWidth, dp(300));
+        final int minPanelHeight = Math.min(maxPanelHeight, dp(420));
         overlayListCompactHeight = dp(150);
         overlayListExpandedHeight = dp(250);
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
@@ -540,6 +545,53 @@ public class GroceryOverlayService extends Service {
                 setOverlayFormCollapsed(true);
             }
         });
+
+        TextView resizeGrip = text(getString(R.string.grocery_overlay_resize), 10, true);
+        resizeGrip.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        resizeGrip.setTextColor(Color.rgb(15, 108, 189));
+        resizeGrip.setPadding(dp(8), 0, dp(8), 0);
+        resizeGrip.setBackground(roundedFill(Color.rgb(232, 243, 252), 10));
+        resizeGrip.setOnTouchListener(new View.OnTouchListener() {
+            private int startWidth;
+            private int startHeight;
+            private float downX;
+            private float downY;
+
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                if (panelParams == null || panelView == null) return false;
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    startWidth = panelParams.width;
+                    startHeight = panelParams.height;
+                    downX = event.getRawX();
+                    downY = event.getRawY();
+                    return true;
+                }
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    panelParams.width = clamp(startWidth
+                            + Math.round(event.getRawX() - downX),
+                            minPanelWidth, maxPanelWidth);
+                    panelParams.height = clamp(startHeight
+                            + Math.round(event.getRawY() - downY),
+                            minPanelHeight, maxPanelHeight);
+                    windowManager.updateViewLayout(panelView, panelParams);
+                    return true;
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP
+                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                            .putInt("panel_width", panelParams.width)
+                            .putInt("panel_height", panelParams.height)
+                            .apply();
+                    return true;
+                }
+                return true;
+            }
+        });
+        LinearLayout.LayoutParams resizeParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(32));
+        resizeParams.topMargin = dp(4);
+        root.addView(resizeGrip, resizeParams);
 
         TextView opacityLabel = text(getString(
                 R.string.grocery_overlay_opacity), 11, false);
@@ -621,12 +673,16 @@ public class GroceryOverlayService extends Service {
         });
 
         panelView = root;
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        WindowManager.LayoutParams params = overlayParams(
-                screenWidth - dp(24), screenHeight - dp(98), false);
-        params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        params.y = dp(74);
-        windowManager.addView(panelView, params);
+        int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getInt("panel_width", maxPanelWidth);
+        int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getInt("panel_height", maxPanelHeight);
+        panelParams = overlayParams(
+                clamp(savedPanelWidth, minPanelWidth, maxPanelWidth),
+                clamp(savedPanelHeight, minPanelHeight, maxPanelHeight), false);
+        panelParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        panelParams.y = dp(74);
+        windowManager.addView(panelView, panelParams);
         root.requestFocus();
         refreshPanel();
         input.requestFocus();
@@ -668,8 +724,11 @@ public class GroceryOverlayService extends Service {
         titleParams.topMargin = alreadyShown == 0 ? 0 : dp(6);
         itemContainer.addView(sectionTitle, titleParams);
 
+        List<GroceryItem> ordered = new ArrayList<>(items);
+        ordered.sort((left, right) -> Integer.compare(
+                priorityRank(left), priorityRank(right)));
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
-        for (GroceryItem item : items) {
+        for (GroceryItem item : ordered) {
             if (item.isPurchased || !listType.equals(item.listType)
                     || !matchesOverlayFilters(item)) {
                 continue;
@@ -710,15 +769,24 @@ public class GroceryOverlayService extends Service {
                 if (!item.assignedMemberName.isEmpty()) {
                     detail += "  •  " + item.assignedMemberName;
                 }
+                if (GroceryItem.PRIORITY_URGENT.equals(item.priority)) {
+                    detail += "  •  " + getString(R.string.grocery_priority_urgent);
+                } else if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) {
+                    detail += "  •  " + getString(R.string.grocery_priority_high);
+                }
                 row.setText(detail);
                 row.setTextSize(13f);
                 row.setTextColor(Color.rgb(36, 36, 36));
                 row.setMinHeight(dp(38));
                 row.setPadding(dp(6), 0, dp(6), 0);
-                row.setBackground(roundedFill(
-                        GroceryItem.LIST_MONTHLY.equals(listType)
-                                ? Color.rgb(246, 241, 252)
-                                : Color.rgb(237, 249, 243), 10));
+                int rowFill = GroceryItem.PRIORITY_URGENT.equals(item.priority)
+                        ? Color.rgb(255, 238, 240)
+                        : GroceryItem.PRIORITY_HIGH.equals(item.priority)
+                        ? Color.rgb(255, 247, 229)
+                        : GroceryItem.LIST_MONTHLY.equals(listType)
+                        ? Color.rgb(246, 241, 252)
+                        : Color.rgb(237, 249, 243);
+                row.setBackground(roundedFill(rowFill, 10));
                 row.setOnCheckedChangeListener((button, checked) -> {
                     if (checked) {
                         button.setChecked(false);
@@ -743,6 +811,12 @@ public class GroceryOverlayService extends Service {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         }
         return alreadyShown + shownHere;
+    }
+
+    private int priorityRank(GroceryItem item) {
+        if (GroceryItem.PRIORITY_URGENT.equals(item.priority)) return 0;
+        if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) return 1;
+        return 2;
     }
 
     private boolean matchesOverlaySearch(GroceryItem item) {
@@ -786,7 +860,9 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(labelledField(
                 getString(R.string.grocery_actual_cost), price), fullEditorField());
 
-        EditText store = compactInput(getString(R.string.grocery_store_hint));
+        AutoCompleteTextView store = compactAutoComplete(
+                getString(R.string.grocery_store_hint),
+                GroceryOptionCatalog.storePresets(this));
         store.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         store.setText(item.storeName);
@@ -812,8 +888,7 @@ public class GroceryOverlayService extends Service {
                 getString(R.string.grocery_quantity_unit), unit), unitParams);
         itemContainer.addView(quantityRow);
 
-        String[] categories = getResources().getStringArray(
-                R.array.grocery_category_labels);
+        String[] categories = GroceryOptionCatalog.categoryLabels(this);
         Spinner category = compactSpinner(categories);
         selectSpinner(category, categories, item.category);
         itemContainer.addView(labelledField(
@@ -831,6 +906,7 @@ public class GroceryOverlayService extends Service {
                 getString(R.string.money_manager_expense_category), moneyCategory),
                 moneyCategoryParams);
         itemContainer.addView(moneyRow);
+        attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
         TextView historyInsight = text("", 10, false);
         historyInsight.setTextColor(Color.rgb(15, 108, 89));
@@ -922,6 +998,85 @@ public class GroceryOverlayService extends Service {
             }
         }
         return spinner;
+    }
+
+    private void attachLiveMoneyCatalog(Spinner account, Spinner category) {
+        View.OnTouchListener refreshBeforeOpen = (view, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                refreshMoneyCatalog(account, category, view::performClick);
+                return true;
+            }
+            return true;
+        };
+        account.setOnTouchListener(refreshBeforeOpen);
+        category.setOnTouchListener(refreshBeforeOpen);
+        refreshMoneyCatalog(account, category, null);
+    }
+
+    private void refreshMoneyCatalog(Spinner account, Spinner category,
+                                     @Nullable Runnable afterRefresh) {
+        if (afterRefresh != null) pendingMoneyCatalogAction = afterRefresh;
+        if (moneyCatalogRefreshing) return;
+        moneyCatalogRefreshing = true;
+
+        MoneyManagerMasterCatalogBridge.Catalog before = moneyCatalog;
+        String accountRef = selectedMoneyRef(account, before.accounts);
+        String categoryRef = selectedMoneyRef(category, before.expenseCategories);
+        if (accountRef.isEmpty()) {
+            accountRef = MoneyManagerMasterCatalogBridge
+                    .groceryDefaultAccountRef(this);
+        }
+        if (categoryRef.isEmpty()) {
+            categoryRef = MoneyManagerMasterCatalogBridge
+                    .groceryDefaultCategoryRef(this);
+        }
+        final String wantedAccountRef = accountRef;
+        final String wantedCategoryRef = categoryRef;
+
+        new Thread(() -> {
+            MoneyManagerMasterCatalogBridge.Catalog fresh =
+                    MoneyManagerMasterCatalogBridge.load(this);
+            new android.os.Handler(getMainLooper()).post(() -> {
+                moneyCatalogRefreshing = false;
+                if (panelView != null && fresh.available) {
+                    moneyCatalog = fresh;
+                    bindMoneySpinner(account, fresh.accounts, wantedAccountRef);
+                    bindMoneySpinner(category, fresh.expenseCategories,
+                            wantedCategoryRef);
+                }
+                Runnable pending = pendingMoneyCatalogAction;
+                pendingMoneyCatalogAction = null;
+                if (panelView != null && pending != null) pending.run();
+            });
+        }, "GroceryMoneyCatalogRefresh").start();
+    }
+
+    private String selectedMoneyRef(
+            Spinner spinner,
+            List<MoneyManagerMasterCatalogBridge.Choice> choices) {
+        int index = spinner.getSelectedItemPosition() - 1;
+        return index >= 0 && index < choices.size()
+                ? choices.get(index).ref : "";
+    }
+
+    private void bindMoneySpinner(
+            Spinner spinner,
+            List<MoneyManagerMasterCatalogBridge.Choice> choices,
+            String selectedRef) {
+        String[] labels = new String[choices.size() + 1];
+        labels[0] = getString(R.string.money_manager_choose_later);
+        for (int i = 0; i < choices.size(); i++) {
+            labels[i + 1] = choices.get(i).label;
+        }
+        spinner.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, labels));
+        spinner.setSelection(0);
+        for (int i = 0; i < choices.size(); i++) {
+            if (choices.get(i).ref.equalsIgnoreCase(selectedRef)) {
+                spinner.setSelection(i + 1);
+                break;
+            }
+        }
     }
 
     private void rememberMoneyDefaults(Spinner account, Spinner category) {
@@ -1091,6 +1246,8 @@ public class GroceryOverlayService extends Service {
             overlayFormDetails = null;
             overlayItemScroll = null;
             overlayFormToggle = null;
+            panelParams = null;
+            pendingMoneyCatalogAction = null;
             overlayFormCollapsed = false;
         }
     }
@@ -1142,6 +1299,22 @@ public class GroceryOverlayService extends Service {
         input.setPadding(dp(9), 0, dp(9), 0);
         input.setBackground(rounded(Color.rgb(248, 249, 250),
                 Color.rgb(214, 220, 227), 12));
+        return input;
+    }
+
+    private AutoCompleteTextView compactAutoComplete(
+            String hint, String[] values) {
+        AutoCompleteTextView input = new AutoCompleteTextView(this);
+        input.setSingleLine(true);
+        input.setTextSize(11.5f);
+        input.setHint(hint);
+        input.setPadding(dp(9), 0, dp(9), 0);
+        input.setBackground(rounded(Color.rgb(248, 249, 250),
+                Color.rgb(214, 220, 227), 12));
+        input.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, values));
+        input.setThreshold(0);
+        input.setOnClickListener(v -> input.showDropDown());
         return input;
     }
 
@@ -1197,6 +1370,10 @@ public class GroceryOverlayService extends Service {
         drawable.setCornerRadius(dp(20));
         drawable.setStroke(dp(1), Color.rgb(214, 220, 227));
         return drawable;
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private int dp(int value) {

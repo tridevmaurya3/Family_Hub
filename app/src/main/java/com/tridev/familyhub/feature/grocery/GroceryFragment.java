@@ -290,8 +290,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         android.view.MenuItem allCategories = popup.getMenu().add(
                 2, 10_000, 5, R.string.grocery_filter_all_categories);
         allCategories.setChecked(activeCategoryFilter.isEmpty());
-        String[] categories = getResources().getStringArray(
-                R.array.grocery_category_labels);
+        String[] categories = GroceryOptionCatalog.categoryLabels(requireContext());
         for (int index = 1; index < categories.length; index++) {
             android.view.MenuItem categoryItem = popup.getMenu().add(
                     2, 10_000 + index, 5 + index, categories[index]);
@@ -463,9 +462,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] priorityLabels = getResources().getStringArray(
                 R.array.grocery_priority_labels
         );
-        String[] categoryLabels = getResources().getStringArray(
-                R.array.grocery_category_labels
-        );
+        String[] categoryLabels = GroceryOptionCatalog.categoryLabels(requireContext());
         String[] listTypeLabels = getResources().getStringArray(
                 R.array.grocery_list_type_labels
         );
@@ -502,6 +499,15 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 R.layout.item_form_dropdown,
                 quantityUnits
         ));
+        String[] storePresets = GroceryOptionCatalog.storePresets(requireContext());
+        form.groceryStoreInput.setAdapter(new ArrayAdapter<>(
+                requireContext(),
+                R.layout.item_form_dropdown,
+                storePresets
+        ));
+        form.groceryStoreInput.setThreshold(0);
+        form.groceryStoreInput.setOnClickListener(v ->
+                form.groceryStoreInput.showDropDown());
         form.groceryNameLayout.setEndIconOnClickListener(v -> {
             activeDialogVoiceInput = form.groceryNameInput;
             startVoiceAdd();
@@ -957,8 +963,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void showBudgetEditor() {
-        String[] categories = getResources().getStringArray(
-                R.array.grocery_category_labels);
+        String[] categories = GroceryOptionCatalog.categoryLabels(requireContext());
         String[] choices = new String[categories.length];
         choices[0] = getString(R.string.grocery_overall_budget);
         System.arraycopy(categories, 1, choices, 1, categories.length - 1);

@@ -56,8 +56,11 @@ public class GroceryAdapter
                            @NonNull Map<String, Double> spent,
                            @NonNull Map<String, Double> budgets) {
         rows.clear();
+        List<GroceryItem> ordered = new ArrayList<>(updated);
+        ordered.sort((left, right) -> Integer.compare(
+                priorityRank(left.priority), priorityRank(right.priority)));
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
-        for (GroceryItem item : updated) {
+        for (GroceryItem item : ordered) {
             String category = item.category.isEmpty() ? "Uncategorized" : item.category;
             grouped.computeIfAbsent(category, key -> new ArrayList<>()).add(item);
         }
@@ -77,6 +80,12 @@ public class GroceryAdapter
             for (GroceryItem item : group.getValue()) rows.add(new Row(null, item));
         }
         notifyDataSetChanged();
+    }
+
+    private static int priorityRank(String priority) {
+        if (GroceryItem.PRIORITY_URGENT.equals(priority)) return 0;
+        if (GroceryItem.PRIORITY_HIGH.equals(priority)) return 1;
+        return 2;
     }
 
     @Override public int getItemViewType(int position) {
@@ -163,6 +172,13 @@ public class GroceryAdapter
                             )
             );
             binding.groceryPriority.setText(displayPriority(item.priority));
+            int priorityColor = GroceryItem.PRIORITY_URGENT.equals(item.priority)
+                    ? R.color.fh_error
+                    : GroceryItem.PRIORITY_HIGH.equals(item.priority)
+                    ? R.color.fh_warning
+                    : R.color.fh_primary;
+            binding.groceryPriority.setTextColor(ContextCompat.getColor(
+                    binding.getRoot().getContext(), priorityColor));
             String listLabel = binding.getRoot().getContext().getString(
                     GroceryItem.LIST_MONTHLY.equals(item.listType)
                             ? R.string.grocery_list_monthly

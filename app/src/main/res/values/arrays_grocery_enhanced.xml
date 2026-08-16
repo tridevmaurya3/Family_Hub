@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="grocery_overlay_resize">↘ Drag to resize</string>
+    <string-array name="grocery_category_extra_labels">
+        <item>Baby Care</item>
+        <item>Baby Food</item>
+        <item>Bakery &amp; Bread</item>
+        <item>Beverages</item>
+        <item>Biscuits &amp; Cookies</item>
+        <item>Breakfast &amp; Cereals</item>
+        <item>Canned &amp; Packaged Food</item>
+        <item>Cleaning Supplies</item>
+        <item>Clothing &amp; Essentials</item>
+        <item>Condiments &amp; Sauces</item>
+        <item>Dairy &amp; Eggs</item>
+        <item>Dry Fruits &amp; Nuts</item>
+        <item>Frozen Food</item>
+        <item>Health &amp; Wellness</item>
+        <item>Home &amp; Household</item>
+        <item>Household Repairs</item>
+        <item>Instant Food &amp; Noodles</item>
+        <item>Kitchen Supplies</item>
+        <item>Meat &amp; Seafood</item>
+        <item>Medicines &amp; Pharmacy</item>
+        <item>Oils &amp; Ghee</item>
+        <item>Organic &amp; Healthy Food</item>
+        <item>Other Shopping</item>
+        <item>Personal Care</item>
+        <item>Pet Care</item>
+        <item>Pickles &amp; Chutneys</item>
+        <item>Puja &amp; Religious</item>
+        <item>Ready to Cook</item>
+        <item>Rice, Atta &amp; Grains</item>
+        <item>Salt, Sugar &amp; Jaggery</item>
+        <item>School Supplies</item>
+        <item>Snacks &amp; Namkeen</item>
+        <item>Spices &amp; Masala</item>
+        <item>Stationery</item>
+        <item>Sweets &amp; Desserts</item>
+        <item>Tea &amp; Coffee</item>
+        <item>Toiletries</item>
+        <item>Water &amp; Drinks</item>
+    </string-array>
+    <string-array name="grocery_store_presets">
+        <item>Local Market</item>
+        <item>Kirana Store</item>
+        <item>General Store</item>
+        <item>Grocery Store</item>
+        <item>Supermarket</item>
+        <item>Hypermarket</item>
+        <item>Wholesale Market</item>
+        <item>Sabzi Mandi / Vegetable Market</item>
+        <item>Fruit Market</item>
+        <item>Dairy / Milk Booth</item>
+        <item>Bakery</item>
+        <item>Medical Store / Pharmacy</item>
+        <item>Convenience Store</item>
+        <item>Department Store</item>
+        <item>Mall Store</item>
+        <item>Cooperative Store</item>
+        <item>Canteen</item>
+        <item>DMart</item>
+        <item>Reliance Smart Bazaar</item>
+        <item>JioMart</item>
+        <item>BigBasket</item>
+        <item>Blinkit</item>
+        <item>Zepto</item>
+        <item>Swiggy Instamart</item>
+        <item>Amazon Fresh</item>
+        <item>Flipkart Minutes</item>
+        <item>Vishal Mega Mart</item>
+        <item>More Supermarket</item>
+        <item>Spencer's</item>
+        <item>Metro / Wholesale Store</item>
+    </string-array>
+</resources>

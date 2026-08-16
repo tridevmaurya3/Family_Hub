@@ -27,7 +27,8 @@ import java.util.concurrent.Executors;
 public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextView {
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
-    private boolean bindingStarted;
+    private boolean catalogLoading;
+    private long lastRefreshAt;
 
     public GroceryMoneyManagerDialogCatalogView(@NonNull Context context) {
         super(context);
@@ -49,12 +50,22 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        bindCatalogOnce();
+        refreshCatalog();
     }
 
-    private void bindCatalogOnce() {
-        if (bindingStarted) return;
-        bindingStarted = true;
+    @Override
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        if (hasWindowFocus && isAttachedToWindow()
+                && System.currentTimeMillis() - lastRefreshAt > 750L) {
+            refreshCatalog();
+        }
+    }
+
+    private void refreshCatalog() {
+        if (catalogLoading) return;
+        catalogLoading = true;
+        lastRefreshAt = System.currentTimeMillis();
 
         View root = getRootView();
         MaterialAutoCompleteTextView account = root.findViewById(
@@ -62,6 +73,7 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
         MaterialAutoCompleteTextView category = root.findViewById(
                 R.id.grocery_money_category_input);
         if (account == null || category == null) {
+            catalogLoading = false;
             setText(R.string.money_manager_catalog_unavailable);
             return;
         }
@@ -74,7 +86,10 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
         EXECUTOR.execute(() -> {
             MoneyManagerMasterCatalogBridge.Catalog catalog =
                     MoneyManagerMasterCatalogBridge.load(appContext);
-            post(() -> applyCatalog(account, category, catalog));
+            post(() -> {
+                catalogLoading = false;
+                applyCatalog(account, category, catalog);
+            });
         });
     }
 
@@ -83,6 +98,11 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
             @NonNull MaterialAutoCompleteTextView category,
             @NonNull MoneyManagerMasterCatalogBridge.Catalog catalog) {
         if (!isAttachedToWindow()) return;
+
+        String currentAccountLabel = account.getText() == null
+                ? "" : account.getText().toString().trim();
+        String currentCategoryLabel = category.getText() == null
+                ? "" : category.getText().toString().trim();
 
         if (!catalog.available) {
             account.setEnabled(false);
@@ -105,6 +125,12 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
         account.setEnabled(!catalog.accounts.isEmpty());
         category.setEnabled(!catalog.expenseCategories.isEmpty());
 
+        MoneyManagerMasterCatalogBridge.Choice currentAccount =
+                MoneyManagerMasterCatalogBridge.findByLabel(
+                        catalog.accounts, currentAccountLabel);
+        MoneyManagerMasterCatalogBridge.Choice currentCategory =
+                MoneyManagerMasterCatalogBridge.findByLabel(
+                        catalog.expenseCategories, currentCategoryLabel);
         MoneyManagerMasterCatalogBridge.Choice savedAccount =
                 MoneyManagerMasterCatalogBridge.findByRef(
                         catalog.accounts,
@@ -113,8 +139,12 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
                 MoneyManagerMasterCatalogBridge.findByRef(
                         catalog.expenseCategories,
                         MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(getContext()));
-        if (savedAccount != null) account.setText(savedAccount.label, false);
-        if (savedCategory != null) category.setText(savedCategory.label, false);
+        MoneyManagerMasterCatalogBridge.Choice accountToShow =
+                currentAccount != null ? currentAccount : savedAccount;
+        MoneyManagerMasterCatalogBridge.Choice categoryToShow =
+                currentCategory != null ? currentCategory : savedCategory;
+        if (accountToShow != null) account.setText(accountToShow.label, false);
+        if (categoryToShow != null) category.setText(categoryToShow.label, false);
 
         account.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= catalog.accounts.size()) return;

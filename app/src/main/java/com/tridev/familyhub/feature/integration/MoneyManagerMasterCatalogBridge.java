@@ -112,6 +112,10 @@ public final class MoneyManagerMasterCatalogBridge {
                     else if ("expense".equalsIgnoreCase(type)) expense.add(choice);
                 }
             }
+            expense.sort((left, right) ->
+                    left.label.compareToIgnoreCase(right.label));
+            income.sort((left, right) ->
+                    left.label.compareToIgnoreCase(right.label));
             return new Catalog(true, accounts, expense, income,
                     safe(response.getString("reason")));
         } catch (RuntimeException unavailable) {
