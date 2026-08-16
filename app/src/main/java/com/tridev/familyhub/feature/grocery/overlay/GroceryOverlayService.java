@@ -298,7 +298,7 @@ public class GroceryOverlayService extends Service {
         });
         LinearLayout typeBlock = labelledField(
                 getString(R.string.grocery_list_type), listTypeGroup);
-        overlayFormDetails.addView(typeBlock);
+        root.addView(typeBlock);
 
         LinearLayout detailsOne = new LinearLayout(this);
         detailsOne.setOrientation(LinearLayout.HORIZONTAL);
@@ -360,7 +360,6 @@ public class GroceryOverlayService extends Service {
         detailsThree.addView(labelledField(
                 getString(R.string.grocery_assign_to), member), memberParams);
         overlayFormDetails.addView(detailsThree);
-        root.addView(overlayFormDetails);
 
         TextView quickLabel = text(getString(
                 R.string.grocery_overlay_quick_item), 11, true);
@@ -425,6 +424,7 @@ public class GroceryOverlayService extends Service {
         addParams.setMarginStart(dp(8));
         quickAdd.addView(add, addParams);
         root.addView(quickAdd);
+        root.addView(overlayFormDetails);
 
         LinearLayout listTools = new LinearLayout(this);
         listTools.setGravity(Gravity.CENTER_VERTICAL);
