@@ -83,6 +83,16 @@ public class GroceryRepository {
         firebaseRoot = FirebaseDatabase.getInstance().getReference();
     }
 
+    /**
+     * Repairs Grocery purchase links from another repository boundary, such as
+     * the Finance screen. Call only from a background thread. Existing
+     * financeEntryId/cloudId identities are reused, so the operation is idempotent.
+     */
+    public static void reconcileFinanceLinksNow(@NonNull Context context) {
+        GroceryRepository repository = new GroceryRepository(context);
+        repository.reconcileFinanceLinksInternal();
+    }
+
     /** Starts one family-scoped realtime listener; safe to call repeatedly. */
     public void startRealtimeSync(@NonNull Runnable onChanged) {
         stopListenerOnly();
@@ -126,6 +136,7 @@ public class GroceryRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             resetMonthlyMastersIfNeeded();
+            reconcileFinanceLinksInternal();
             String trimmedQuery = query.trim();
             List<GroceryItem> items = trimmedQuery.isEmpty()
                     ? groceryItemDao.getAll()
@@ -684,6 +695,22 @@ public class GroceryRepository {
         }
     }
 
+    private void reconcileFinanceLinksInternal() {
+        for (GroceryItem item : groceryItemDao.getAll()) {
+            long previousFinanceEntryId = item.financeEntryId;
+            linkFinance(item);
+            if (previousFinanceEntryId != item.financeEntryId) {
+                groceryItemDao.update(item);
+            }
+        }
+    }
+
+    @NonNull
+    private String financeFamilyId(@NonNull GroceryItem item) {
+        if (!activeFamilyId.isEmpty()) return activeFamilyId;
+        return item.familyId == null ? "" : item.familyId.trim();
+    }
+
     private void linkFinance(@NonNull GroceryItem item) {
         if (!item.isPurchased) {
             if (item.financeEntryId > 0L) {
@@ -744,7 +771,7 @@ public class GroceryRepository {
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             entry.isShared = true;
             entry.cloudId = linkedCloudId;
-            entry.familyId = activeFamilyId;
+            entry.familyId = financeFamilyId(item);
             entry.updatedByUid = user == null ? "" : user.getUid();
             entry.updatedByName = displayName(user);
         }
@@ -754,7 +781,7 @@ public class GroceryRepository {
 
     @NonNull
     private String linkedFinanceCloudId(@NonNull GroceryItem item) {
-        if (activeFamilyId.isEmpty() || item.cloudId.isEmpty()) return "";
+        if (financeFamilyId(item).isEmpty() || item.cloudId.isEmpty()) return "";
         return "grocery_" + item.cloudId;
     }
 

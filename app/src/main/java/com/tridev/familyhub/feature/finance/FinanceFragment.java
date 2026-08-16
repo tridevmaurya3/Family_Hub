@@ -15,7 +15,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.text.InputType;
 
 import androidx.annotation.NonNull;
@@ -26,6 +28,7 @@ import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.Chip;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputLayout;
@@ -71,6 +74,11 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     @NonNull private List<FinanceEntry> latestEntries = new ArrayList<>();
     @NonNull private List<FinanceEntry> visibleEntries = new ArrayList<>();
     private int selectedFinanceFilter = R.id.finance_filter_all;
+    @NonNull private String selectedFinanceSource =
+            FinanceEntrySourceClassifier.SOURCE_ALL;
+    @NonNull private String selectedFinanceCategory = "";
+    @Nullable private Chip financeSourceChip;
+    @Nullable private Chip financeCategoryChip;
     private boolean financeHeaderCollapsed;
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
@@ -155,7 +163,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
 
             @Override
             public void afterTextChanged(Editable searchText) {
-                loadEntries(searchText.toString());
+                applyFinanceFilters();
             }
         });
         binding.financeFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
@@ -163,6 +171,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                     ? R.id.finance_filter_all : checkedIds.get(0);
             applyFinanceFilters();
         });
+        setupAdvancedFinanceFilters();
         refreshData();
     }
 
@@ -260,25 +269,191 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     }
 
     private void loadEntries(String query) {
-        repository.loadEntries(query, entries -> {
-            if (binding == null) {
-                return;
-            }
-            if (query.trim().isEmpty()) {
-                latestEntries = new ArrayList<>(entries);
-                updateSmartInsights();
-                updateAnalytics();
-            }
+        repository.loadEntries("", entries -> {
+            if (binding == null) return;
+            latestEntries = new ArrayList<>(entries);
+            updateSmartInsights();
+            updateAnalytics();
             applyFinanceFilters(entries);
         });
     }
 
-    private void applyFinanceFilters() {
-        String query = binding.financeSearchInput.getText().toString().trim();
-        if (!query.isEmpty()) {
-            loadEntries(query);
-            return;
+    private void setupAdvancedFinanceFilters() {
+        View parentView = (View) binding.financeFilterScroll.getParent();
+        if (!(parentView instanceof LinearLayout)) return;
+        LinearLayout parent = (LinearLayout) parentView;
+        HorizontalScrollView scroll = new HorizontalScrollView(requireContext());
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.setFillViewport(false);
+
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int top = getResources().getDimensionPixelSize(R.dimen.space_4);
+        row.setPadding(0, top, 0, 0);
+
+        financeSourceChip = advancedFilterChip(getString(
+                R.string.finance_source_chip,
+                getString(R.string.finance_source_all)));
+        financeCategoryChip = advancedFilterChip(getString(
+                R.string.finance_category_chip,
+                getString(R.string.finance_category_all)));
+        Chip reset = advancedFilterChip(getString(R.string.finance_reset_filters));
+
+        financeSourceChip.setOnClickListener(this::showFinanceSourceMenu);
+        financeCategoryChip.setOnClickListener(this::showFinanceCategoryMenu);
+        reset.setOnClickListener(v -> resetFinanceFilters());
+
+        addAdvancedFilterChip(row, financeSourceChip);
+        addAdvancedFilterChip(row, financeCategoryChip);
+        addAdvancedFilterChip(row, reset);
+        scroll.addView(row, new HorizontalScrollView.LayoutParams(
+                HorizontalScrollView.LayoutParams.WRAP_CONTENT,
+                HorizontalScrollView.LayoutParams.WRAP_CONTENT));
+
+        int index = parent.indexOfChild(binding.financeFilterScroll);
+        parent.addView(scroll, index + 1, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+    }
+
+    @NonNull
+    private Chip advancedFilterChip(@NonNull String text) {
+        Chip chip = new Chip(requireContext());
+        chip.setCheckable(false);
+        chip.setClickable(true);
+        chip.setText(text);
+        chip.setChipBackgroundColorResource(R.color.fh_info_container);
+        return chip;
+    }
+
+    private void addAdvancedFilterChip(@NonNull LinearLayout row,
+                                       @NonNull Chip chip) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMarginEnd(getResources().getDimensionPixelSize(R.dimen.space_6));
+        row.addView(chip, params);
+    }
+
+    private void showFinanceSourceMenu(@NonNull View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        String[] keys = {
+                FinanceEntrySourceClassifier.SOURCE_ALL,
+                FinanceEntrySourceClassifier.SOURCE_GROCERY,
+                FinanceEntrySourceClassifier.SOURCE_LOAN_MANAGER,
+                FinanceEntrySourceClassifier.SOURCE_MONEY_MANAGER,
+                FinanceEntrySourceClassifier.SOURCE_DIRECT,
+                FinanceEntrySourceClassifier.SOURCE_OTHER
+        };
+        int[] labels = {
+                R.string.finance_source_all,
+                R.string.finance_source_grocery,
+                R.string.finance_source_loan_manager,
+                R.string.finance_source_money_manager,
+                R.string.finance_source_direct,
+                R.string.finance_source_other
+        };
+        popup.getMenu().setGroupCheckable(1, true, true);
+        for (int i = 0; i < keys.length; i++) {
+            android.view.MenuItem item = popup.getMenu().add(
+                    1, 30_000 + i, i, labels[i]);
+            item.setCheckable(true);
+            item.setChecked(keys[i].equals(selectedFinanceSource));
         }
+        popup.setOnMenuItemClickListener(item -> {
+            int index = item.getItemId() - 30_000;
+            if (index < 0 || index >= keys.length) return false;
+            selectedFinanceSource = keys[index];
+            item.setChecked(true);
+            updateAdvancedFinanceFilterLabels();
+            applyFinanceFilters();
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showFinanceCategoryMenu(@NonNull View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        java.util.TreeSet<String> categories =
+                new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (FinanceEntry entry : latestEntries) {
+            if (entry.category != null && !entry.category.trim().isEmpty()) {
+                categories.add(entry.category.trim());
+            }
+        }
+        List<String> values = new ArrayList<>();
+        values.add("");
+        values.addAll(categories);
+        popup.getMenu().setGroupCheckable(2, true, true);
+        for (int i = 0; i < values.size(); i++) {
+            String value = values.get(i);
+            android.view.MenuItem item = popup.getMenu().add(
+                    2, 31_000 + i, i,
+                    value.isEmpty()
+                            ? getString(R.string.finance_category_all)
+                            : value);
+            item.setCheckable(true);
+            item.setChecked(value.equalsIgnoreCase(selectedFinanceCategory));
+        }
+        popup.setOnMenuItemClickListener(item -> {
+            int index = item.getItemId() - 31_000;
+            if (index < 0 || index >= values.size()) return false;
+            selectedFinanceCategory = values.get(index);
+            item.setChecked(true);
+            updateAdvancedFinanceFilterLabels();
+            applyFinanceFilters();
+            return true;
+        });
+        popup.show();
+    }
+
+    private void resetFinanceFilters() {
+        selectedFinanceSource = FinanceEntrySourceClassifier.SOURCE_ALL;
+        selectedFinanceCategory = "";
+        selectedFinanceFilter = R.id.finance_filter_all;
+        binding.financeFilterGroup.check(R.id.finance_filter_all);
+        binding.financeSearchInput.setText("");
+        updateAdvancedFinanceFilterLabels();
+        applyFinanceFilters();
+    }
+
+    private void updateAdvancedFinanceFilterLabels() {
+        if (financeSourceChip != null) {
+            financeSourceChip.setText(getString(
+                    R.string.finance_source_chip,
+                    financeSourceLabel(selectedFinanceSource)));
+        }
+        if (financeCategoryChip != null) {
+            financeCategoryChip.setText(getString(
+                    R.string.finance_category_chip,
+                    selectedFinanceCategory.isEmpty()
+                            ? getString(R.string.finance_category_all)
+                            : selectedFinanceCategory));
+        }
+    }
+
+    @NonNull
+    private String financeSourceLabel(@NonNull String source) {
+        if (FinanceEntrySourceClassifier.SOURCE_GROCERY.equals(source)) {
+            return getString(R.string.finance_source_grocery);
+        }
+        if (FinanceEntrySourceClassifier.SOURCE_LOAN_MANAGER.equals(source)) {
+            return getString(R.string.finance_source_loan_manager);
+        }
+        if (FinanceEntrySourceClassifier.SOURCE_MONEY_MANAGER.equals(source)) {
+            return getString(R.string.finance_source_money_manager);
+        }
+        if (FinanceEntrySourceClassifier.SOURCE_DIRECT.equals(source)) {
+            return getString(R.string.finance_source_direct);
+        }
+        if (FinanceEntrySourceClassifier.SOURCE_OTHER.equals(source)) {
+            return getString(R.string.finance_source_other);
+        }
+        return getString(R.string.finance_source_all);
+    }
+
+    private void applyFinanceFilters() {
         applyFinanceFilters(latestEntries);
     }
 
@@ -297,7 +472,12 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         String startDate = new SimpleDateFormat(ISO_DATE_PATTERN, Locale.US)
                 .format(start.getTime());
         String today = todayAsIsoDate();
+        String query = binding.financeSearchInput.getText() == null
+                ? ""
+                : binding.financeSearchInput.getText().toString().trim();
+
         for (FinanceEntry entry : source) {
+            if (!matchesFinanceSearch(entry, query)) continue;
             boolean include;
             if (selectedFinanceFilter == R.id.finance_filter_today) {
                 include = today.equals(entry.transactionDate);
@@ -312,13 +492,44 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
             } else {
                 include = true;
             }
+            if (include && !FinanceEntrySourceClassifier.matches(
+                    entry, selectedFinanceSource)) {
+                include = false;
+            }
+            if (include && !selectedFinanceCategory.isEmpty()
+                    && !selectedFinanceCategory.equalsIgnoreCase(entry.category)) {
+                include = false;
+            }
             if (include) filtered.add(entry);
         }
         entryAdapter.submitList(filtered);
         visibleEntries = new ArrayList<>(filtered);
         boolean isEmpty = filtered.isEmpty();
-        binding.financeRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-        binding.financeEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        binding.financeRecyclerView.setVisibility(
+                isEmpty ? View.GONE : View.VISIBLE);
+        binding.financeEmptyState.setVisibility(
+                isEmpty ? View.VISIBLE : View.GONE);
+    }
+
+    private boolean matchesFinanceSearch(@NonNull FinanceEntry entry,
+                                         @NonNull String query) {
+        if (query.isEmpty()) return true;
+        String needle = query.toLowerCase(Locale.ROOT);
+        return containsFinanceText(entry.category, needle)
+                || containsFinanceText(entry.note, needle)
+                || containsFinanceText(entry.entryType, needle)
+                || containsFinanceText(entry.accountName, needle)
+                || containsFinanceText(entry.paymentMethod, needle)
+                || containsFinanceText(entry.paidByName, needle)
+                || containsFinanceText(entry.participantNames, needle)
+                || containsFinanceText(
+                        FinanceEntrySourceClassifier.displayLabel(entry), needle);
+    }
+
+    private boolean containsFinanceText(@Nullable String value,
+                                        @NonNull String needle) {
+        return value != null
+                && value.toLowerCase(Locale.ROOT).contains(needle);
     }
 
     private void loadSummary() {

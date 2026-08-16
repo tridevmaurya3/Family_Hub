@@ -78,6 +78,7 @@ public class FinanceRepository {
 
     public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            GroceryRepository.reconcileFinanceLinksNow(appContext);
             List<FinanceEntry> entries = searchQuery.trim().isEmpty()
                     ? financeEntryDao.getAll()
                     : financeEntryDao.search(searchQuery.trim());

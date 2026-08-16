@@ -68,6 +68,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private int activeListFilterId = R.id.filter_daily;
     private int activeStatusFilterId = R.id.filter_pending;
     @NonNull private String activeCategoryFilter = "";
+    @Nullable private com.google.android.material.chip.Chip groceryCategoryToggleChip;
     @Nullable private android.widget.EditText activeDialogVoiceInput;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -145,6 +146,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         repository.setBuyingStatus(item,
                                 GroceryItem.STATUS_BUYING,
                                 () -> loadItems(currentQuery()));
+                    }
+
+                    @Override
+                    public void onGroupingChanged(boolean allCollapsed) {
+                        updateGroceryGroupingChip(allCollapsed);
                     }
                 }
         );
@@ -244,6 +250,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryFilterGroup.setSingleSelection(false);
         binding.groceryFilterGroup.clearCheck();
         binding.filterAll.setVisibility(View.GONE);
+        ensureGroceryGroupingChip();
 
         binding.filterDaily.setOnClickListener(v -> {
             activeListFilterId = R.id.filter_daily;
@@ -266,6 +273,29 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             loadItems(currentQuery());
         });
         syncPrimaryFilterChips();
+    }
+
+    private void ensureGroceryGroupingChip() {
+        if (binding == null || groceryCategoryToggleChip != null) return;
+        com.google.android.material.chip.Chip chip =
+                new com.google.android.material.chip.Chip(requireContext());
+        chip.setCheckable(false);
+        chip.setClickable(true);
+        chip.setText(R.string.grocery_collapse_categories);
+        chip.setChipBackgroundColorResource(R.color.fh_info_container);
+        chip.setTextColor(ContextCompat.getColor(
+                requireContext(), R.color.fh_module_grocery));
+        chip.setOnClickListener(v ->
+                updateGroceryGroupingChip(adapter.toggleAllCategories()));
+        groceryCategoryToggleChip = chip;
+        binding.groceryFilterGroup.addView(chip);
+    }
+
+    private void updateGroceryGroupingChip(boolean allCollapsed) {
+        if (groceryCategoryToggleChip == null) return;
+        groceryCategoryToggleChip.setText(allCollapsed
+                ? R.string.grocery_expand_categories
+                : R.string.grocery_collapse_categories);
     }
 
     private void syncPrimaryFilterChips() {
@@ -904,6 +934,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     budgets.put(key, repository.getCategoryBudget(grocery.category));
                 }
                 adapter.submitList(visibleItems, spent, budgets);
+                updateGroceryGroupingChip(
+                        adapter.areAllCurrentCategoriesCollapsed());
             });
             renderSummary(items);
             boolean isEmpty = visibleItems.isEmpty();
