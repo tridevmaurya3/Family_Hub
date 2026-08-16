@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="grocery_collapse_categories">Collapse categories</string>
+    <string name="grocery_expand_categories">Expand categories</string>
+    <string name="grocery_purchased_on">Purchased %1$s</string>
+
+    <string name="finance_source_chip">Source: %1$s</string>
+    <string name="finance_category_chip">Category: %1$s</string>
+    <string name="finance_source_all">All sources</string>
+    <string name="finance_source_grocery">Grocery</string>
+    <string name="finance_source_loan_manager">Loan Manager</string>
+    <string name="finance_source_money_manager">MoneyManager</string>
+    <string name="finance_source_direct">Direct</string>
+    <string name="finance_source_other">Other</string>
+    <string name="finance_category_all">All categories</string>
+    <string name="finance_reset_filters">Reset filters</string>
+</resources>
