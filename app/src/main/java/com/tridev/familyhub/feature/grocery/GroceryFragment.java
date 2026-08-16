@@ -65,7 +65,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private FamilyMemberRepository memberRepository;
     private GroceryAdapter adapter;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
-    private int activeFilterId = R.id.filter_all;
+    private int activeListFilterId = R.id.filter_daily;
+    private int activeStatusFilterId = R.id.filter_pending;
     @NonNull private String activeCategoryFilter = "";
     @Nullable private android.widget.EditText activeDialogVoiceInput;
     private final NumberFormat currencyFormat =
@@ -224,14 +225,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     }
                 }
         );
-        binding.groceryFilterGroup.setOnCheckedStateChangeListener(
-                (group, checkedIds) -> {
-                    if (!checkedIds.isEmpty()) {
-                        activeFilterId = checkedIds.get(0);
-                        loadItems(currentQuery());
-                    }
-                }
-        );
+        setupPrimaryGroceryFilters();
         memberRepository.loadMembers("", members -> {
             familyMembers.clear();
             familyMembers.addAll(members);
@@ -244,39 +238,82 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         });
     }
 
+    private void setupPrimaryGroceryFilters() {
+        binding.groceryFilterScroll.setVisibility(View.VISIBLE);
+        binding.groceryFilterGroup.setSelectionRequired(false);
+        binding.groceryFilterGroup.setSingleSelection(false);
+        binding.groceryFilterGroup.clearCheck();
+        binding.filterAll.setVisibility(View.GONE);
+
+        binding.filterDaily.setOnClickListener(v -> {
+            activeListFilterId = R.id.filter_daily;
+            syncPrimaryFilterChips();
+            loadItems(currentQuery());
+        });
+        binding.filterMonthly.setOnClickListener(v -> {
+            activeListFilterId = R.id.filter_monthly;
+            syncPrimaryFilterChips();
+            loadItems(currentQuery());
+        });
+        binding.filterPending.setOnClickListener(v -> {
+            activeStatusFilterId = R.id.filter_pending;
+            syncPrimaryFilterChips();
+            loadItems(currentQuery());
+        });
+        binding.filterPurchased.setOnClickListener(v -> {
+            activeStatusFilterId = R.id.filter_purchased;
+            syncPrimaryFilterChips();
+            loadItems(currentQuery());
+        });
+        syncPrimaryFilterChips();
+    }
+
+    private void syncPrimaryFilterChips() {
+        if (binding == null) return;
+        binding.filterDaily.setChecked(activeListFilterId == R.id.filter_daily);
+        binding.filterMonthly.setChecked(activeListFilterId == R.id.filter_monthly);
+        binding.filterPending.setChecked(activeStatusFilterId == R.id.filter_pending);
+        binding.filterPurchased.setChecked(activeStatusFilterId == R.id.filter_purchased);
+    }
+
     private void showFilterMenu(@NonNull View anchor) {
         PopupMenu popup = new PopupMenu(requireContext(), anchor);
         popup.getMenu().setGroupCheckable(1, true, true);
-        popup.getMenu().add(1, R.id.filter_all, 0, R.string.grocery_filter_all);
-        popup.getMenu().add(1, R.id.filter_daily, 1, R.string.grocery_filter_daily);
-        popup.getMenu().add(1, R.id.filter_monthly, 2, R.string.grocery_filter_monthly);
-        popup.getMenu().add(1, R.id.filter_pending, 3, R.string.grocery_filter_pending);
-        popup.getMenu().add(1, R.id.filter_purchased, 4, R.string.grocery_filter_purchased);
-        popup.getMenu().add(0, View.generateViewId(), 5,
+        popup.getMenu().add(1, R.id.filter_daily, 0, R.string.grocery_filter_daily);
+        popup.getMenu().add(1, R.id.filter_monthly, 1, R.string.grocery_filter_monthly);
+        popup.getMenu().setGroupCheckable(3, true, true);
+        popup.getMenu().add(3, R.id.filter_pending, 2, R.string.grocery_filter_pending);
+        popup.getMenu().add(3, R.id.filter_purchased, 3, R.string.grocery_filter_purchased);
+        popup.getMenu().add(0, View.generateViewId(), 4,
                 R.string.grocery_filter_category_heading).setEnabled(false);
         popup.getMenu().setGroupCheckable(2, true, true);
         android.view.MenuItem allCategories = popup.getMenu().add(
-                2, 10_000, 6, R.string.grocery_filter_all_categories);
+                2, 10_000, 5, R.string.grocery_filter_all_categories);
         allCategories.setChecked(activeCategoryFilter.isEmpty());
         String[] categories = getResources().getStringArray(
                 R.array.grocery_category_labels);
         for (int index = 1; index < categories.length; index++) {
             android.view.MenuItem categoryItem = popup.getMenu().add(
-                    2, 10_000 + index, 6 + index, categories[index]);
+                    2, 10_000 + index, 5 + index, categories[index]);
             categoryItem.setChecked(categories[index]
                     .equalsIgnoreCase(activeCategoryFilter));
         }
-        android.view.MenuItem selected = popup.getMenu().findItem(activeFilterId);
-        if (selected != null) selected.setChecked(true);
+        android.view.MenuItem selectedList = popup.getMenu().findItem(activeListFilterId);
+        if (selectedList != null) selectedList.setChecked(true);
+        android.view.MenuItem selectedStatus = popup.getMenu().findItem(activeStatusFilterId);
+        if (selectedStatus != null) selectedStatus.setChecked(true);
         popup.setOnMenuItemClickListener(item -> {
             if (item.getGroupId() == 1) {
-                activeFilterId = item.getItemId();
+                activeListFilterId = item.getItemId();
+            } else if (item.getGroupId() == 3) {
+                activeStatusFilterId = item.getItemId();
             } else if (item.getGroupId() == 2) {
                 int categoryIndex = item.getItemId() - 10_000;
                 activeCategoryFilter = categoryIndex <= 0
                         ? "" : categories[categoryIndex];
             }
             item.setChecked(true);
+            syncPrimaryFilterChips();
             loadItems(currentQuery());
             return true;
         });
@@ -877,18 +914,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private List<GroceryItem> applyFilter(@NonNull List<GroceryItem> items) {
         List<GroceryItem> filtered = new ArrayList<>();
         for (GroceryItem item : items) {
-            boolean include;
-            if (activeFilterId == R.id.filter_daily) {
-                include = GroceryItem.LIST_DAILY.equals(item.listType);
-            } else if (activeFilterId == R.id.filter_monthly) {
-                include = GroceryItem.LIST_MONTHLY.equals(item.listType);
-            } else if (activeFilterId == R.id.filter_pending) {
-                include = !item.isPurchased;
-            } else if (activeFilterId == R.id.filter_purchased) {
-                include = item.isPurchased;
-            } else {
-                include = true;
-            }
+            boolean listMatches = activeListFilterId == R.id.filter_monthly
+                    ? GroceryItem.LIST_MONTHLY.equals(item.listType)
+                    : GroceryItem.LIST_DAILY.equals(item.listType);
+            boolean statusMatches = activeStatusFilterId == R.id.filter_purchased
+                    ? item.isPurchased
+                    : !item.isPurchased;
+            boolean include = listMatches && statusMatches;
             if (include && !activeCategoryFilter.isEmpty()) {
                 include = activeCategoryFilter.equalsIgnoreCase(
                         item.category == null ? "" : item.category.trim());
