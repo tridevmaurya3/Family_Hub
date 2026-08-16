@@ -1,0 +1,392 @@
+name: One-shot Grocery Overlay Upgrade
+
+on:
+  push:
+    paths:
+      - '.github/workflows/zz-one-shot-grocery-overlay-upgrade.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Add one-shot grocery overlay upgrade workflow'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply guarded grocery improvements
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              return text.replace(old, new, 1)
+
+          # New option resources: additions are merged with the existing Grocery
+          # category array at runtime, so no legacy category is removed.
+          arrays_path = Path('app/src/main/res/values/arrays_grocery_enhanced.xml')
+          arrays_path.write_text('''<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="grocery_overlay_resize">↘ Drag to resize</string>
+              <string-array name="grocery_category_extra_labels">
+                  <item>Baby Care</item>
+                  <item>Baby Food</item>
+                  <item>Bakery &amp; Bread</item>
+                  <item>Beverages</item>
+                  <item>Biscuits &amp; Cookies</item>
+                  <item>Breakfast &amp; Cereals</item>
+                  <item>Canned &amp; Packaged Food</item>
+                  <item>Cleaning Supplies</item>
+                  <item>Clothing &amp; Essentials</item>
+                  <item>Condiments &amp; Sauces</item>
+                  <item>Dairy &amp; Eggs</item>
+                  <item>Dry Fruits &amp; Nuts</item>
+                  <item>Frozen Food</item>
+                  <item>Health &amp; Wellness</item>
+                  <item>Home &amp; Household</item>
+                  <item>Household Repairs</item>
+                  <item>Instant Food &amp; Noodles</item>
+                  <item>Kitchen Supplies</item>
+                  <item>Meat &amp; Seafood</item>
+                  <item>Medicines &amp; Pharmacy</item>
+                  <item>Oils &amp; Ghee</item>
+                  <item>Organic &amp; Healthy Food</item>
+                  <item>Other Shopping</item>
+                  <item>Personal Care</item>
+                  <item>Pet Care</item>
+                  <item>Pickles &amp; Chutneys</item>
+                  <item>Puja &amp; Religious</item>
+                  <item>Ready to Cook</item>
+                  <item>Rice, Atta &amp; Grains</item>
+                  <item>Salt, Sugar &amp; Jaggery</item>
+                  <item>School Supplies</item>
+                  <item>Snacks &amp; Namkeen</item>
+                  <item>Spices &amp; Masala</item>
+                  <item>Stationery</item>
+                  <item>Sweets &amp; Desserts</item>
+                  <item>Tea &amp; Coffee</item>
+                  <item>Toiletries</item>
+                  <item>Water &amp; Drinks</item>
+              </string-array>
+              <string-array name="grocery_store_presets">
+                  <item>Local Market</item>
+                  <item>Kirana Store</item>
+                  <item>General Store</item>
+                  <item>Grocery Store</item>
+                  <item>Supermarket</item>
+                  <item>Hypermarket</item>
+                  <item>Wholesale Market</item>
+                  <item>Sabzi Mandi / Vegetable Market</item>
+                  <item>Fruit Market</item>
+                  <item>Dairy / Milk Booth</item>
+                  <item>Bakery</item>
+                  <item>Medical Store / Pharmacy</item>
+                  <item>Convenience Store</item>
+                  <item>Department Store</item>
+                  <item>Mall Store</item>
+                  <item>Cooperative Store</item>
+                  <item>Canteen</item>
+                  <item>DMart</item>
+                  <item>Reliance Smart Bazaar</item>
+                  <item>JioMart</item>
+                  <item>BigBasket</item>
+                  <item>Blinkit</item>
+                  <item>Zepto</item>
+                  <item>Swiggy Instamart</item>
+                  <item>Amazon Fresh</item>
+                  <item>Flipkart Minutes</item>
+                  <item>Vishal Mega Mart</item>
+                  <item>More Supermarket</item>
+                  <item>Spencer's</item>
+                  <item>Metro / Wholesale Store</item>
+              </string-array>
+          </resources>
+          ''', encoding='utf-8')
+
+          options_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryOptionCatalog.java')
+          options_path.write_text('''package com.tridev.familyhub.feature.grocery;
+
+          import android.content.Context;
+
+          import androidx.annotation.NonNull;
+
+          import com.tridev.familyhub.R;
+
+          import java.util.ArrayList;
+          import java.util.LinkedHashSet;
+          import java.util.List;
+          import java.util.Locale;
+          import java.util.Set;
+
+          /** Grocery-only display options. Existing saved values remain valid. */
+          public final class GroceryOptionCatalog {
+              private GroceryOptionCatalog() { }
+
+              @NonNull
+              public static String[] categoryLabels(@NonNull Context context) {
+                  String[] base = context.getResources().getStringArray(
+                          R.array.grocery_category_labels);
+                  String[] extras = context.getResources().getStringArray(
+                          R.array.grocery_category_extra_labels);
+                  List<String> result = new ArrayList<>();
+                  Set<String> seen = new LinkedHashSet<>();
+                  for (String value : base) addUnique(result, seen, value);
+                  for (String value : extras) addUnique(result, seen, value);
+                  return result.toArray(new String[0]);
+              }
+
+              @NonNull
+              public static String[] storePresets(@NonNull Context context) {
+                  return context.getResources().getStringArray(R.array.grocery_store_presets);
+              }
+
+              private static void addUnique(@NonNull List<String> out,
+                                            @NonNull Set<String> seen,
+                                            String value) {
+                  String clean = value == null ? "" : value.trim();
+                  if (clean.isEmpty()) return;
+                  String key = clean.toLowerCase(Locale.ROOT);
+                  if (seen.add(key)) out.add(clean);
+              }
+          }
+          ''', encoding='utf-8')
+
+          # MoneyManager catalog: categories only are presented alphabetically.
+          bridge_path = Path('app/src/main/java/com/tridev/familyhub/feature/integration/MoneyManagerMasterCatalogBridge.java')
+          bridge = bridge_path.read_text(encoding='utf-8')
+          bridge = replace_once(
+              bridge,
+              '''            return new Catalog(true, accounts, expense, income,\n                    safe(response.getString("reason")));''',
+              '''            expense.sort((left, right) ->\n                    left.label.compareToIgnoreCase(right.label));\n            income.sort((left, right) ->\n                    left.label.compareToIgnoreCase(right.label));\n            return new Catalog(true, accounts, expense, income,\n                    safe(response.getString("reason")));''',
+              'MoneyManager category sort')
+          bridge_path.write_text(bridge, encoding='utf-8')
+
+          # Main Grocery adapter: stable priority-first presentation inside the
+          # existing category grouping; finance/persistence semantics are untouched.
+          adapter_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryAdapter.java')
+          adapter = adapter_path.read_text(encoding='utf-8')
+          adapter = replace_once(
+              adapter,
+              '''        rows.clear();\n        Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();\n        for (GroceryItem item : updated) {''',
+              '''        rows.clear();\n        List<GroceryItem> ordered = new ArrayList<>(updated);\n        ordered.sort((left, right) -> Integer.compare(\n                priorityRank(left.priority), priorityRank(right.priority)));\n        Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();\n        for (GroceryItem item : ordered) {''',
+              'Grocery adapter priority order')
+          adapter = replace_once(
+              adapter,
+              '''    @Override public int getItemViewType(int position) {''',
+              '''    private static int priorityRank(String priority) {\n        if (GroceryItem.PRIORITY_URGENT.equals(priority)) return 0;\n        if (GroceryItem.PRIORITY_HIGH.equals(priority)) return 1;\n        return 2;\n    }\n\n    @Override public int getItemViewType(int position) {''',
+              'Grocery adapter priority helper')
+          adapter = replace_once(
+              adapter,
+              '''            binding.groceryPriority.setText(displayPriority(item.priority));''',
+              '''            binding.groceryPriority.setText(displayPriority(item.priority));\n            int priorityColor = GroceryItem.PRIORITY_URGENT.equals(item.priority)\n                    ? R.color.fh_error\n                    : GroceryItem.PRIORITY_HIGH.equals(item.priority)\n                    ? R.color.fh_warning\n                    : R.color.fh_primary;\n            binding.groceryPriority.setTextColor(ContextCompat.getColor(\n                    binding.getRoot().getContext(), priorityColor));''',
+              'Grocery adapter priority color')
+          adapter_path.write_text(adapter, encoding='utf-8')
+
+          # Main editor: enhanced local categories and editable market presets.
+          fragment_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java')
+          fragment = fragment_path.read_text(encoding='utf-8')
+          fragment, category_count = re.subn(
+              r'getResources\(\)\.getStringArray\(\s*R\.array\.grocery_category_labels\s*\)',
+              'GroceryOptionCatalog.categoryLabels(requireContext())',
+              fragment)
+          if category_count != 2:
+              raise SystemExit(f'GroceryFragment category refs: expected 2, found {category_count}')
+          fragment = replace_once(
+              fragment,
+              '''        form.groceryQuantityUnitInput.setAdapter(new ArrayAdapter<>(\n                requireContext(),\n                R.layout.item_form_dropdown,\n                quantityUnits\n        ));''',
+              '''        form.groceryQuantityUnitInput.setAdapter(new ArrayAdapter<>(\n                requireContext(),\n                R.layout.item_form_dropdown,\n                quantityUnits\n        ));\n        String[] storePresets = GroceryOptionCatalog.storePresets(requireContext());\n        form.groceryStoreInput.setAdapter(new ArrayAdapter<>(\n                requireContext(),\n                R.layout.item_form_dropdown,\n                storePresets\n        ));\n        form.groceryStoreInput.setThreshold(0);\n        form.groceryStoreInput.setOnClickListener(v ->\n                form.groceryStoreInput.showDropDown());''',
+              'Grocery editor store presets')
+          fragment_path.write_text(fragment, encoding='utf-8')
+
+          dialog_path = Path('app/src/main/res/layout/dialog_grocery.xml')
+          dialog = dialog_path.read_text(encoding='utf-8')
+          old_store = '''        <com.google.android.material.textfield.TextInputLayout\n            style="@style/Widget.FamilyHub.TextInputLayout"\n            android:layout_width="match_parent"\n            android:layout_height="wrap_content"\n            android:layout_marginTop="@dimen/form_field_spacing"\n            android:hint="@string/grocery_store_name">\n            <com.google.android.material.textfield.TextInputEditText\n                android:id="@+id/grocery_store_input"\n                android:layout_width="match_parent"\n                android:layout_height="wrap_content"\n                android:hint="@string/grocery_store_hint"\n                android:inputType="textCapWords"\n                android:maxLines="1"\n                android:textSize="13sp" />\n        </com.google.android.material.textfield.TextInputLayout>'''
+          new_store = '''        <com.google.android.material.textfield.TextInputLayout\n            style="@style/Widget.FamilyHub.Form.Dropdown"\n            android:layout_width="match_parent"\n            android:layout_height="wrap_content"\n            android:layout_marginTop="@dimen/form_field_spacing"\n            android:hint="@string/grocery_store_name">\n            <com.google.android.material.textfield.MaterialAutoCompleteTextView\n                android:id="@+id/grocery_store_input"\n                android:layout_width="match_parent"\n                android:layout_height="wrap_content"\n                android:hint="@string/grocery_store_hint"\n                android:inputType="textCapWords"\n                android:maxLines="1"\n                android:textSize="13sp" />\n        </com.google.android.material.textfield.TextInputLayout>'''
+          dialog = replace_once(dialog, old_store, new_store, 'Main Grocery store dropdown')
+          dialog_path.write_text(dialog, encoding='utf-8')
+
+          # Dialog-local MoneyManager binder: refresh on window focus return, while
+          # preserving the currently selected account/category.
+          catalog_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryMoneyManagerDialogCatalogView.java')
+          catalog = catalog_path.read_text(encoding='utf-8')
+          catalog = replace_once(
+              catalog,
+              '''    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();\n    private boolean bindingStarted;''',
+              '''    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();\n    private boolean catalogLoading;\n    private long lastRefreshAt;''',
+              'Dialog catalog fields')
+          catalog = replace_once(
+              catalog,
+              '''    @Override\n    protected void onAttachedToWindow() {\n        super.onAttachedToWindow();\n        bindCatalogOnce();\n    }\n\n    private void bindCatalogOnce() {\n        if (bindingStarted) return;\n        bindingStarted = true;''',
+              '''    @Override\n    protected void onAttachedToWindow() {\n        super.onAttachedToWindow();\n        refreshCatalog();\n    }\n\n    @Override\n    public void onWindowFocusChanged(boolean hasWindowFocus) {\n        super.onWindowFocusChanged(hasWindowFocus);\n        if (hasWindowFocus && isAttachedToWindow()\n                && System.currentTimeMillis() - lastRefreshAt > 750L) {\n            refreshCatalog();\n        }\n    }\n\n    private void refreshCatalog() {\n        if (catalogLoading) return;\n        catalogLoading = true;\n        lastRefreshAt = System.currentTimeMillis();''',
+              'Dialog catalog refresh entry')
+          catalog = replace_once(
+              catalog,
+              '''        if (account == null || category == null) {\n            setText(R.string.money_manager_catalog_unavailable);\n            return;\n        }''',
+              '''        if (account == null || category == null) {\n            catalogLoading = false;\n            setText(R.string.money_manager_catalog_unavailable);\n            return;\n        }''',
+              'Dialog catalog missing fields')
+          catalog = replace_once(
+              catalog,
+              '''            MoneyManagerMasterCatalogBridge.Catalog catalog =\n                    MoneyManagerMasterCatalogBridge.load(appContext);\n            post(() -> applyCatalog(account, category, catalog));''',
+              '''            MoneyManagerMasterCatalogBridge.Catalog catalog =\n                    MoneyManagerMasterCatalogBridge.load(appContext);\n            post(() -> {\n                catalogLoading = false;\n                applyCatalog(account, category, catalog);\n            });''',
+              'Dialog catalog completion')
+          catalog = replace_once(
+              catalog,
+              '''        if (!catalog.available) {''',
+              '''        String currentAccountLabel = account.getText() == null\n                ? "" : account.getText().toString().trim();\n        String currentCategoryLabel = category.getText() == null\n                ? "" : category.getText().toString().trim();\n\n        if (!catalog.available) {''',
+              'Dialog current selections')
+          old_saved = '''        MoneyManagerMasterCatalogBridge.Choice savedAccount =\n                MoneyManagerMasterCatalogBridge.findByRef(\n                        catalog.accounts,\n                        MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(getContext()));\n        MoneyManagerMasterCatalogBridge.Choice savedCategory =\n                MoneyManagerMasterCatalogBridge.findByRef(\n                        catalog.expenseCategories,\n                        MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(getContext()));\n        if (savedAccount != null) account.setText(savedAccount.label, false);\n        if (savedCategory != null) category.setText(savedCategory.label, false);'''
+          new_saved = '''        MoneyManagerMasterCatalogBridge.Choice currentAccount =\n                MoneyManagerMasterCatalogBridge.findByLabel(\n                        catalog.accounts, currentAccountLabel);\n        MoneyManagerMasterCatalogBridge.Choice currentCategory =\n                MoneyManagerMasterCatalogBridge.findByLabel(\n                        catalog.expenseCategories, currentCategoryLabel);\n        MoneyManagerMasterCatalogBridge.Choice savedAccount =\n                MoneyManagerMasterCatalogBridge.findByRef(\n                        catalog.accounts,\n                        MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(getContext()));\n        MoneyManagerMasterCatalogBridge.Choice savedCategory =\n                MoneyManagerMasterCatalogBridge.findByRef(\n                        catalog.expenseCategories,\n                        MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(getContext()));\n        MoneyManagerMasterCatalogBridge.Choice accountToShow =\n                currentAccount != null ? currentAccount : savedAccount;\n        MoneyManagerMasterCatalogBridge.Choice categoryToShow =\n                currentCategory != null ? currentCategory : savedCategory;\n        if (accountToShow != null) account.setText(accountToShow.label, false);\n        if (categoryToShow != null) category.setText(categoryToShow.label, false);'''
+          catalog = replace_once(catalog, old_saved, new_saved, 'Dialog preserve selections')
+          catalog_path.write_text(catalog, encoding='utf-8')
+
+          # Floating overlay changes.
+          overlay_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
+          overlay = overlay_path.read_text(encoding='utf-8')
+          overlay = replace_once(
+              overlay,
+              'import android.widget.ArrayAdapter;\n',
+              'import android.widget.ArrayAdapter;\nimport android.widget.AutoCompleteTextView;\n',
+              'Overlay AutoComplete import')
+          overlay = replace_once(
+              overlay,
+              'import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;\n',
+              'import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;\nimport com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;\n',
+              'Overlay option catalog import')
+          overlay = replace_once(
+              overlay,
+              '''    private WindowManager.LayoutParams stripParams;\n    private View stripView;\n    private View panelView;''',
+              '''    private WindowManager.LayoutParams stripParams;\n    private WindowManager.LayoutParams panelParams;\n    private View stripView;\n    private View panelView;''',
+              'Overlay panel params field')
+          overlay = replace_once(
+              overlay,
+              '''    private volatile MoneyManagerMasterCatalogBridge.Catalog moneyCatalog =\n            MoneyManagerMasterCatalogBridge.Catalog.unavailable("Loading MoneyManager");''',
+              '''    private volatile MoneyManagerMasterCatalogBridge.Catalog moneyCatalog =\n            MoneyManagerMasterCatalogBridge.Catalog.unavailable("Loading MoneyManager");\n    private volatile boolean moneyCatalogRefreshing;\n    @Nullable private Runnable pendingMoneyCatalogAction;''',
+              'Overlay catalog refresh fields')
+
+          old_subtitle = '''        TextView subtitle = text(getString(R.string.grocery_overlay_subtitle),\n                11, false);\n        subtitle.setTextColor(Color.rgb(91, 101, 114));\n        overlayFormDetails.addView(subtitle, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(22)));\n\n'''
+          overlay = replace_once(overlay, old_subtitle, '', 'Remove floating helper subtitle')
+
+          overlay, overlay_category_count = re.subn(
+              r'getResources\(\)\.getStringArray\(\s*R\.array\.grocery_category_labels\s*\)',
+              'GroceryOptionCatalog.categoryLabels(this)',
+              overlay)
+          if overlay_category_count != 3:
+              raise SystemExit(f'Overlay category refs: expected 3, found {overlay_category_count}')
+
+          overlay = replace_once(
+              overlay,
+              '''        input.setTextSize(13f);\n        input.setHint(R.string.grocery_overlay_add_hint);''',
+              '''        input.setTextSize(13f);\n        input.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);\n        input.setHint(R.string.grocery_overlay_add_hint);''',
+              'Overlay item text gravity')
+
+          overlay = replace_once(
+              overlay,
+              '''        overlayFormDetails.addView(moneyRow);\n\n        LinearLayout detailsThree''',
+              '''        overlayFormDetails.addView(moneyRow);\n        attachLiveMoneyCatalog(moneyAccount, moneyCategory);\n\n        LinearLayout detailsThree''',
+              'Overlay form live MoneyManager')
+          overlay = replace_once(
+              overlay,
+              '''        itemContainer.addView(moneyRow);\n\n        TextView historyInsight''',
+              '''        itemContainer.addView(moneyRow);\n        attachLiveMoneyCatalog(moneyAccount, moneyCategory);\n\n        TextView historyInsight''',
+              'Overlay completion live MoneyManager')
+
+          overlay = replace_once(
+              overlay,
+              '''        int screenHeight = getResources().getDisplayMetrics().heightPixels;\n        overlayListCompactHeight = dp(150);''',
+              '''        int screenHeight = getResources().getDisplayMetrics().heightPixels;\n        int screenWidth = getResources().getDisplayMetrics().widthPixels;\n        final int maxPanelWidth = screenWidth - dp(24);\n        final int maxPanelHeight = screenHeight - dp(98);\n        final int minPanelWidth = Math.min(maxPanelWidth, dp(300));\n        final int minPanelHeight = Math.min(maxPanelHeight, dp(420));\n        overlayListCompactHeight = dp(150);''',
+              'Overlay resize bounds')
+
+          resize_anchor = '''        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY,\n                oldScrollX, oldScrollY) -> {\n            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) {\n                setOverlayFormCollapsed(true);\n            }\n        });\n\n        TextView opacityLabel'''
+          resize_block = '''        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY,\n                oldScrollX, oldScrollY) -> {\n            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) {\n                setOverlayFormCollapsed(true);\n            }\n        });\n\n        TextView resizeGrip = text(getString(R.string.grocery_overlay_resize), 10, true);\n        resizeGrip.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);\n        resizeGrip.setTextColor(Color.rgb(15, 108, 189));\n        resizeGrip.setPadding(dp(8), 0, dp(8), 0);\n        resizeGrip.setBackground(roundedFill(Color.rgb(232, 243, 252), 10));\n        resizeGrip.setOnTouchListener(new View.OnTouchListener() {\n            private int startWidth;\n            private int startHeight;\n            private float downX;\n            private float downY;\n\n            @Override\n            public boolean onTouch(View view, MotionEvent event) {\n                if (panelParams == null || panelView == null) return false;\n                if (event.getAction() == MotionEvent.ACTION_DOWN) {\n                    startWidth = panelParams.width;\n                    startHeight = panelParams.height;\n                    downX = event.getRawX();\n                    downY = event.getRawY();\n                    return true;\n                }\n                if (event.getAction() == MotionEvent.ACTION_MOVE) {\n                    panelParams.width = clamp(startWidth\n                            + Math.round(event.getRawX() - downX),\n                            minPanelWidth, maxPanelWidth);\n                    panelParams.height = clamp(startHeight\n                            + Math.round(event.getRawY() - downY),\n                            minPanelHeight, maxPanelHeight);\n                    windowManager.updateViewLayout(panelView, panelParams);\n                    return true;\n                }\n                if (event.getAction() == MotionEvent.ACTION_UP\n                        || event.getAction() == MotionEvent.ACTION_CANCEL) {\n                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n                            .putInt("panel_width", panelParams.width)\n                            .putInt("panel_height", panelParams.height)\n                            .apply();\n                    return true;\n                }\n                return true;\n            }\n        });\n        LinearLayout.LayoutParams resizeParams = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(32));\n        resizeParams.topMargin = dp(4);\n        root.addView(resizeGrip, resizeParams);\n\n        TextView opacityLabel'''
+          overlay = replace_once(overlay, resize_anchor, resize_block, 'Overlay resize grip')
+
+          old_panel = '''        panelView = root;\n        int screenWidth = getResources().getDisplayMetrics().widthPixels;\n        WindowManager.LayoutParams params = overlayParams(\n                screenWidth - dp(24), screenHeight - dp(98), false);\n        params.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;\n        params.y = dp(74);\n        windowManager.addView(panelView, params);'''
+          new_panel = '''        panelView = root;\n        int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE)\n                .getInt("panel_width", maxPanelWidth);\n        int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE)\n                .getInt("panel_height", maxPanelHeight);\n        panelParams = overlayParams(\n                clamp(savedPanelWidth, minPanelWidth, maxPanelWidth),\n                clamp(savedPanelHeight, minPanelHeight, maxPanelHeight), false);\n        panelParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;\n        panelParams.y = dp(74);\n        windowManager.addView(panelView, panelParams);'''
+          overlay = replace_once(overlay, old_panel, new_panel, 'Overlay saved resize')
+
+          old_store_inline = '''        EditText store = compactInput(getString(R.string.grocery_store_hint));\n        store.setInputType(InputType.TYPE_CLASS_TEXT\n                | InputType.TYPE_TEXT_FLAG_CAP_WORDS);\n        store.setText(item.storeName);'''
+          new_store_inline = '''        AutoCompleteTextView store = compactAutoComplete(\n                getString(R.string.grocery_store_hint),\n                GroceryOptionCatalog.storePresets(this));\n        store.setInputType(InputType.TYPE_CLASS_TEXT\n                | InputType.TYPE_TEXT_FLAG_CAP_WORDS);\n        store.setText(item.storeName);'''
+          overlay = replace_once(overlay, old_store_inline, new_store_inline,
+                                 'Overlay editable market presets')
+
+          old_group = '''        Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();\n        for (GroceryItem item : items) {\n            if (item.isPurchased || !listType.equals(item.listType)'''
+          new_group = '''        List<GroceryItem> ordered = new ArrayList<>(items);\n        ordered.sort((left, right) -> Integer.compare(\n                priorityRank(left), priorityRank(right)));\n        Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();\n        for (GroceryItem item : ordered) {\n            if (item.isPurchased || !listType.equals(item.listType)'''
+          overlay = replace_once(overlay, old_group, new_group, 'Overlay priority ordering')
+
+          overlay = replace_once(
+              overlay,
+              '''                if (!item.assignedMemberName.isEmpty()) {\n                    detail += "  •  " + item.assignedMemberName;\n                }\n                row.setText(detail);''',
+              '''                if (!item.assignedMemberName.isEmpty()) {\n                    detail += "  •  " + item.assignedMemberName;\n                }\n                if (GroceryItem.PRIORITY_URGENT.equals(item.priority)) {\n                    detail += "  •  " + getString(R.string.grocery_priority_urgent);\n                } else if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) {\n                    detail += "  •  " + getString(R.string.grocery_priority_high);\n                }\n                row.setText(detail);''',
+              'Overlay priority label')
+          old_row_bg = '''                row.setBackground(roundedFill(\n                        GroceryItem.LIST_MONTHLY.equals(listType)\n                                ? Color.rgb(246, 241, 252)\n                                : Color.rgb(237, 249, 243), 10));'''
+          new_row_bg = '''                int rowFill = GroceryItem.PRIORITY_URGENT.equals(item.priority)\n                        ? Color.rgb(255, 238, 240)\n                        : GroceryItem.PRIORITY_HIGH.equals(item.priority)\n                        ? Color.rgb(255, 247, 229)\n                        : GroceryItem.LIST_MONTHLY.equals(listType)\n                        ? Color.rgb(246, 241, 252)\n                        : Color.rgb(237, 249, 243);\n                row.setBackground(roundedFill(rowFill, 10));'''
+          overlay = replace_once(overlay, old_row_bg, new_row_bg, 'Overlay priority fill')
+
+          overlay = replace_once(
+              overlay,
+              '''    private boolean matchesOverlaySearch(GroceryItem item) {''',
+              '''    private int priorityRank(GroceryItem item) {\n        if (GroceryItem.PRIORITY_URGENT.equals(item.priority)) return 0;\n        if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) return 1;\n        return 2;\n    }\n\n    private boolean matchesOverlaySearch(GroceryItem item) {''',
+              'Overlay priority helper')
+
+          money_anchor = '''    private void rememberMoneyDefaults(Spinner account, Spinner category) {'''
+          money_methods = '''    private void attachLiveMoneyCatalog(Spinner account, Spinner category) {\n        View.OnTouchListener refreshBeforeOpen = (view, event) -> {\n            if (event.getAction() == MotionEvent.ACTION_DOWN) {\n                refreshMoneyCatalog(account, category, view::performClick);\n                return true;\n            }\n            return true;\n        };\n        account.setOnTouchListener(refreshBeforeOpen);\n        category.setOnTouchListener(refreshBeforeOpen);\n        refreshMoneyCatalog(account, category, null);\n    }\n\n    private void refreshMoneyCatalog(Spinner account, Spinner category,\n                                     @Nullable Runnable afterRefresh) {\n        if (afterRefresh != null) pendingMoneyCatalogAction = afterRefresh;\n        if (moneyCatalogRefreshing) return;\n        moneyCatalogRefreshing = true;\n\n        MoneyManagerMasterCatalogBridge.Catalog before = moneyCatalog;\n        String accountRef = selectedMoneyRef(account, before.accounts);\n        String categoryRef = selectedMoneyRef(category, before.expenseCategories);\n        if (accountRef.isEmpty()) {\n            accountRef = MoneyManagerMasterCatalogBridge\n                    .groceryDefaultAccountRef(this);\n        }\n        if (categoryRef.isEmpty()) {\n            categoryRef = MoneyManagerMasterCatalogBridge\n                    .groceryDefaultCategoryRef(this);\n        }\n        final String wantedAccountRef = accountRef;\n        final String wantedCategoryRef = categoryRef;\n\n        new Thread(() -> {\n            MoneyManagerMasterCatalogBridge.Catalog fresh =\n                    MoneyManagerMasterCatalogBridge.load(this);\n            new android.os.Handler(getMainLooper()).post(() -> {\n                moneyCatalogRefreshing = false;\n                if (panelView != null && fresh.available) {\n                    moneyCatalog = fresh;\n                    bindMoneySpinner(account, fresh.accounts, wantedAccountRef);\n                    bindMoneySpinner(category, fresh.expenseCategories,\n                            wantedCategoryRef);\n                }\n                Runnable pending = pendingMoneyCatalogAction;\n                pendingMoneyCatalogAction = null;\n                if (panelView != null && pending != null) pending.run();\n            });\n        }, "GroceryMoneyCatalogRefresh").start();\n    }\n\n    private String selectedMoneyRef(\n            Spinner spinner,\n            List<MoneyManagerMasterCatalogBridge.Choice> choices) {\n        int index = spinner.getSelectedItemPosition() - 1;\n        return index >= 0 && index < choices.size()\n                ? choices.get(index).ref : "";\n    }\n\n    private void bindMoneySpinner(\n            Spinner spinner,\n            List<MoneyManagerMasterCatalogBridge.Choice> choices,\n            String selectedRef) {\n        String[] labels = new String[choices.size() + 1];\n        labels[0] = getString(R.string.money_manager_choose_later);\n        for (int i = 0; i < choices.size(); i++) {\n            labels[i + 1] = choices.get(i).label;\n        }\n        spinner.setAdapter(new ArrayAdapter<>(this,\n                android.R.layout.simple_spinner_dropdown_item, labels));\n        spinner.setSelection(0);\n        for (int i = 0; i < choices.size(); i++) {\n            if (choices.get(i).ref.equalsIgnoreCase(selectedRef)) {\n                spinner.setSelection(i + 1);\n                break;\n            }\n        }\n    }\n\n'''
+          if overlay.count(money_anchor) != 1:
+              raise SystemExit('Overlay MoneyManager method anchor missing')
+          overlay = overlay.replace(money_anchor, money_methods + money_anchor, 1)
+
+          compact_anchor = '''    private Spinner compactSpinner(String[] values) {'''
+          compact_auto = '''    private AutoCompleteTextView compactAutoComplete(\n            String hint, String[] values) {\n        AutoCompleteTextView input = new AutoCompleteTextView(this);\n        input.setSingleLine(true);\n        input.setTextSize(11.5f);\n        input.setHint(hint);\n        input.setPadding(dp(9), 0, dp(9), 0);\n        input.setBackground(rounded(Color.rgb(248, 249, 250),\n                Color.rgb(214, 220, 227), 12));\n        input.setAdapter(new ArrayAdapter<>(this,\n                android.R.layout.simple_dropdown_item_1line, values));\n        input.setThreshold(0);\n        input.setOnClickListener(v -> input.showDropDown());\n        return input;\n    }\n\n'''
+          if overlay.count(compact_anchor) != 1:
+              raise SystemExit('Overlay compact spinner anchor missing')
+          overlay = overlay.replace(compact_anchor, compact_auto + compact_anchor, 1)
+
+          overlay = replace_once(
+              overlay,
+              '''            overlayFormToggle = null;\n            overlayFormCollapsed = false;''',
+              '''            overlayFormToggle = null;\n            panelParams = null;\n            pendingMoneyCatalogAction = null;\n            overlayFormCollapsed = false;''',
+              'Overlay close resize state')
+          overlay = replace_once(
+              overlay,
+              '''    private int dp(int value) {''',
+              '''    private int clamp(int value, int min, int max) {\n        return Math.max(min, Math.min(max, value));\n    }\n\n    private int dp(int value) {''',
+              'Overlay clamp helper')
+          overlay_path.write_text(overlay, encoding='utf-8')
+
+      - name: Validate patch scope
+        run: |
+          git diff --check
+          CHANGED="$(git status --short | sed 's/^...//')"
+          echo "$CHANGED"
+          test "$(echo "$CHANGED" | sed '/^$/d' | wc -l)" -eq 8
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryAdapter.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryMoneyManagerDialogCatalogView.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryOptionCatalog.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/java/com/tridev/familyhub/feature/integration/MoneyManagerMasterCatalogBridge.java'
+          echo "$CHANGED" | grep -qx 'app/src/main/res/layout/dialog_grocery.xml'
+          echo "$CHANGED" | grep -qx 'app/src/main/res/values/arrays_grocery_enhanced.xml'
+
+      - name: Commit grocery improvements
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryAdapter.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryFragment.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryMoneyManagerDialogCatalogView.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/GroceryOptionCatalog.java \
+                  app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java \
+                  app/src/main/java/com/tridev/familyhub/feature/integration/MoneyManagerMasterCatalogBridge.java \
+                  app/src/main/res/layout/dialog_grocery.xml \
+                  app/src/main/res/values/arrays_grocery_enhanced.xml
+          git commit -m "Improve grocery overlay options and live catalog sync"
+          git push origin HEAD:main
