@@ -41,11 +41,13 @@ public final class GroceryMoneyManagerBridge {
         public final boolean accepted;
         public final String status;
         public final String reason;
+        public final String transactionId;
 
-        private Result(boolean accepted, String status, String reason) {
+        private Result(boolean accepted, String status, String reason, String transactionId) {
             this.accepted = accepted;
             this.status = safe(status);
             this.reason = safe(reason);
+            this.transactionId = safe(transactionId);
         }
     }
 
@@ -152,7 +154,13 @@ public final class GroceryMoneyManagerBridge {
         Bundle extras = buildPurchasePayload(context, item);
         if (extras == null) return purchaseValidationFailure(context, item);
         Result result = call(ENDPOINT, context, METHOD_ACCEPT_V1, extras);
-        if (result.accepted) clearSelections(context, item);
+        if (result.accepted) {
+            // Keep the exact account/category used by this purchase. These refs
+            // are required when the user later corrects amount/store/routing;
+            // falling back to a newer global default could move the old expense.
+            rememberNextPurchaseSelections(context, item,
+                    selectedAccountRef(context, item), selectedCategoryRef(context, item));
+        }
         return result;
     }
 
@@ -169,7 +177,10 @@ public final class GroceryMoneyManagerBridge {
         extras.putString("canonical_source_record_id",
                 safeStructured(canonicalSourceRecordId, 160));
         Result result = call(EDIT_ENDPOINT, context, METHOD_UPDATE_V1, extras);
-        if (result.accepted) clearSelections(context, item);
+        if (result.accepted) {
+            rememberNextPurchaseSelections(context, item,
+                    selectedAccountRef(context, item), selectedCategoryRef(context, item));
+        }
         return result;
     }
 
@@ -237,13 +248,14 @@ public final class GroceryMoneyManagerBridge {
             @NonNull GroceryItem item) {
         double amount = item.actualCost > 0D ? item.actualCost : item.estimatedCost;
         if (!item.isPurchased || item.purchasedAt <= 0L || toMinor(amount) <= 0L) {
-            return new Result(false, "SKIPPED", "Purchase is incomplete or has no amount");
+            return new Result(false, "SKIPPED",
+                    "Purchase is incomplete or has no amount", "");
         }
         String selectedAccount = selectedAccountRef(context, item);
         String selectedCategory = selectedCategoryRef(context, item);
         if (selectedAccount.isEmpty() || selectedCategory.isEmpty()) {
             return new Result(false, "MAPPING_REQUIRED",
-                    "Choose a MoneyManager account/card and Expense category");
+                    "Choose a MoneyManager account/card and Expense category", "");
         }
         MoneyManagerMasterCatalogBridge.Catalog liveCatalog =
                 MoneyManagerMasterCatalogBridge.load(context);
@@ -251,15 +263,15 @@ public final class GroceryMoneyManagerBridge {
             return new Result(false, "UNAVAILABLE",
                     liveCatalog.reason.isEmpty()
                             ? "MoneyManager master catalog is unavailable"
-                            : liveCatalog.reason);
+                            : liveCatalog.reason, "");
         }
         if (MoneyManagerMasterCatalogBridge.findByRef(
                 liveCatalog.accounts, selectedAccount) == null) {
             return new Result(false, "MAPPING_REQUIRED",
-                    "Selected Grocery account/card is no longer in MoneyManager master catalog");
+                    "Selected Grocery account/card is no longer in MoneyManager master catalog", "");
         }
         return new Result(false, "MAPPING_REQUIRED",
-                "Selected Grocery Expense category is no longer in MoneyManager master catalog");
+                "Selected Grocery Expense category is no longer in MoneyManager master catalog", "");
     }
 
     @NonNull
@@ -303,12 +315,6 @@ public final class GroceryMoneyManagerBridge {
         return ref.matches(pattern) ? ref : "";
     }
 
-    private static void clearSelections(@NonNull Context context, @NonNull GroceryItem item) {
-        String suffix = stableItemKey(item);
-        context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().remove(ACCOUNT_PREFIX + suffix).remove(CATEGORY_PREFIX + suffix).apply();
-    }
-
     @NonNull
     private static String stableItemKey(@NonNull GroceryItem item) {
         String value = item.cloudId == null || item.cloudId.trim().isEmpty()
@@ -327,21 +333,31 @@ public final class GroceryMoneyManagerBridge {
             Bundle response = context.getApplicationContext().getContentResolver()
                     .call(endpoint, method, null, extras);
             if (response == null) {
-                return new Result(false, "UNAVAILABLE", "MoneyManager did not return a response");
+                return new Result(false, "UNAVAILABLE",
+                        "MoneyManager did not return a response", "");
             }
             String status = safe(response.getString("status"));
             String reason = safe(response.getString("reason"));
-            return new Result(isFinalizedStatus(status), status, reason);
+            String transactionId = safe(response.getString("transaction_id"));
+            return new Result(isFinalizedStatus(status, transactionId),
+                    status, reason, transactionId);
         } catch (RuntimeException unavailable) {
-            return new Result(false, "UNAVAILABLE", "MoneyManager bridge is unavailable");
+            return new Result(false, "UNAVAILABLE",
+                    "MoneyManager bridge is unavailable", "");
         }
     }
 
-    private static boolean isFinalizedStatus(@Nullable String status) {
+    private static boolean isFinalizedStatus(
+            @Nullable String status,
+            @Nullable String transactionId) {
         String value = safe(status).toUpperCase(Locale.ROOT);
+        if ("DUPLICATE".equals(value)) {
+            // A duplicate queue event is final only when MoneyManager confirms
+            // that a real ledger row already represents it.
+            return !safe(transactionId).isEmpty();
+        }
         return "POSTED".equals(value)
                 || "RECONCILED".equals(value)
-                || "DUPLICATE".equals(value)
                 || "UPDATED".equals(value)
                 || "CANCELLED".equals(value)
                 || "PRESERVED".equals(value);
