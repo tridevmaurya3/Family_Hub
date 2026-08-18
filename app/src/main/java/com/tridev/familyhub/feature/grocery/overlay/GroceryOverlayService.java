@@ -103,6 +103,7 @@ public class GroceryOverlayService extends Service {
     private String overlayCategoryFilter = "";
     private boolean collapseAllCategories;
     private final Set<String> collapsedCategories = new HashSet<>();
+
     private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -113,6 +114,16 @@ public class GroceryOverlayService extends Service {
             }
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
             if (panelView == null) togglePanel();
+        }
+    };
+
+    /** Screen-off must never leave the expanded Grocery form visible on wake. */
+    private final BroadcastReceiver screenStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                closePanel();
+            }
         }
     };
 
@@ -136,6 +147,10 @@ public class GroceryOverlayService extends Service {
         androidx.core.content.ContextCompat.registerReceiver(this,
                 voiceResultReceiver,
                 new IntentFilter(GroceryVoiceCaptureActivity.ACTION_RESULT),
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
+        androidx.core.content.ContextCompat.registerReceiver(this,
+                screenStateReceiver,
+                new IntentFilter(Intent.ACTION_SCREEN_OFF),
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
         if (Settings.canDrawOverlays(this)) {
             showStrip();
@@ -245,6 +260,10 @@ public class GroceryOverlayService extends Service {
             public boolean dispatchTouchEvent(MotionEvent event) {
                 if (event != null) {
                     FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+                    if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+                        closePanel();
+                        return true;
+                    }
                 }
                 return super.dispatchTouchEvent(event);
             }
@@ -256,6 +275,8 @@ public class GroceryOverlayService extends Service {
         root.setElevation(dp(16));
         root.setClipToPadding(false);
         root.setFocusableInTouchMode(true);
+        root.setClickable(true);
+        root.setOnClickListener(v -> closePanel());
         panelRoot.addView(root, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
@@ -689,6 +710,8 @@ public class GroceryOverlayService extends Service {
         overlayItemScroll.setVerticalScrollBarEnabled(true);
         overlayItemScroll.setScrollbarFadingEnabled(false);
         overlayItemScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        overlayItemScroll.setClickable(true);
+        overlayItemScroll.setOnClickListener(v -> closePanel());
         overlayItemScroll.addView(itemContainer, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT));
@@ -1482,6 +1505,9 @@ public class GroceryOverlayService extends Service {
         int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
         if (passive) {
             flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        } else {
+            flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                    | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
         }
         return new WindowManager.LayoutParams(width, height,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -1757,6 +1783,7 @@ public class GroceryOverlayService extends Service {
         getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, false).apply();
         unregisterReceiver(voiceResultReceiver);
+        unregisterReceiver(screenStateReceiver);
         super.onDestroy();
     }
 }
