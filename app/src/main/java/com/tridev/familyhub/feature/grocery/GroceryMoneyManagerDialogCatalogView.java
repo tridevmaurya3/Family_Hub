@@ -11,6 +11,7 @@ import androidx.appcompat.widget.AppCompatTextView;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.concurrent.ExecutorService;
@@ -23,12 +24,17 @@ import java.util.concurrent.Executors;
  * MoneyManagerFormAutoBinder cannot see these dropdowns. This lightweight status
  * view binds the two fields when the dialog is attached, without changing the
  * floating overlay, Finance, Loan or SmartSMS integration paths.
+ *
+ * When editing a Grocery item, the exact MoneyManager account/category selected
+ * for that item is retained. This prevents a later global default from silently
+ * replacing the transaction channel of an already-posted Grocery expense.
  */
 public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextView {
 
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private boolean catalogLoading;
     private long lastRefreshAt;
+    @Nullable private GroceryItem boundItem;
 
     public GroceryMoneyManagerDialogCatalogView(@NonNull Context context) {
         super(context);
@@ -45,6 +51,12 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
             @Nullable AttributeSet attrs,
             int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+    }
+
+    /** Associates this dialog with the exact Grocery row being added/edited. */
+    public void bindItem(@NonNull GroceryItem item) {
+        boundItem = item;
+        if (isAttachedToWindow()) refreshCatalog();
     }
 
     @Override
@@ -131,14 +143,20 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
         MoneyManagerMasterCatalogBridge.Choice currentCategory =
                 MoneyManagerMasterCatalogBridge.findByLabel(
                         catalog.expenseCategories, currentCategoryLabel);
+
+        String savedAccountRef = boundItem == null
+                ? MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(getContext())
+                : GroceryMoneyManagerBridge.selectedAccountRef(getContext(), boundItem);
+        String savedCategoryRef = boundItem == null
+                ? MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(getContext())
+                : GroceryMoneyManagerBridge.selectedCategoryRef(getContext(), boundItem);
+
         MoneyManagerMasterCatalogBridge.Choice savedAccount =
                 MoneyManagerMasterCatalogBridge.findByRef(
-                        catalog.accounts,
-                        MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(getContext()));
+                        catalog.accounts, savedAccountRef);
         MoneyManagerMasterCatalogBridge.Choice savedCategory =
                 MoneyManagerMasterCatalogBridge.findByRef(
-                        catalog.expenseCategories,
-                        MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(getContext()));
+                        catalog.expenseCategories, savedCategoryRef);
         MoneyManagerMasterCatalogBridge.Choice accountToShow =
                 currentAccount != null ? currentAccount : savedAccount;
         MoneyManagerMasterCatalogBridge.Choice categoryToShow =
@@ -149,8 +167,13 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
         account.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 0 || position >= catalog.accounts.size()) return;
             MoneyManagerMasterCatalogBridge.Choice choice = catalog.accounts.get(position);
-            MoneyManagerMasterCatalogBridge.rememberGroceryDefaultAccount(
-                    getContext(), choice.ref);
+            if (boundItem != null) {
+                GroceryMoneyManagerBridge.rememberNextPurchaseAccount(
+                        getContext(), boundItem, choice.ref);
+            } else {
+                MoneyManagerMasterCatalogBridge.rememberGroceryDefaultAccount(
+                        getContext(), choice.ref);
+            }
             MoneyManagerMasterCatalogBridge.rememberAccountChoice(
                     getContext(), choice.label, choice.ref);
         });
@@ -159,8 +182,13 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
             if (position < 0 || position >= catalog.expenseCategories.size()) return;
             MoneyManagerMasterCatalogBridge.Choice choice =
                     catalog.expenseCategories.get(position);
-            MoneyManagerMasterCatalogBridge.rememberGroceryDefaultCategory(
-                    getContext(), choice.ref);
+            if (boundItem != null) {
+                GroceryMoneyManagerBridge.rememberNextPurchaseCategory(
+                        getContext(), boundItem, choice.ref);
+            } else {
+                MoneyManagerMasterCatalogBridge.rememberGroceryDefaultCategory(
+                        getContext(), choice.ref);
+            }
             MoneyManagerMasterCatalogBridge.rememberCategoryChoice(
                     getContext(), choice.label, choice.ref);
         });
