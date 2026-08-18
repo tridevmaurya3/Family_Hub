@@ -33,10 +33,19 @@
     <string name="family_map_info_movement">Movement • %1$s</string>
     <string name="family_map_info_nearest">Nearest • %1$s • %2$s</string>
     <string name="family_map_info_distance_from">Distance from %1$s • %2$s</string>
-    <string name="family_map_info_compare_hint">Tap another member pin to compare distance</string>
+    <string name="family_map_info_compare_hint">Choose another family member to compare distance</string>
     <string name="family_map_info_battery_charging">%1$d%% • Charging</string>
     <string name="family_map_info_battery_not_charging">%1$d%% • Not charging</string>
     <string name="family_map_info_live_hint">Tap this card for directions, Maps and Street View</string>
+
+    <string name="family_map_compare_title">Compare with family member</string>
+    <string name="family_map_compare_dropdown_hint">Select family member</string>
+    <string name="family_map_compare_no_member">No other live member available</string>
+    <string name="family_map_compare_distance">Distance from %1$s: %2$s</string>
+    <string name="family_map_compare_select_summary">Select a member to show both locations and their distance on the map.</string>
+    <string name="family_map_compare_nearest_summary">%1$s is the closest family member.</string>
+    <string name="family_map_compare_member_summary">%1$s is %2$s away from the selected member.</string>
+    <string name="family_map_compare_actions">Directions, Maps &amp; Street View</string>
 
     <string name="family_map_member_actions_title">Open %1$s</string>
     <string name="family_map_member_actions_message">Choose a safe way to view or reach this member’s latest shared location.</string>
