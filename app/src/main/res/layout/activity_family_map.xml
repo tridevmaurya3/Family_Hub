@@ -112,6 +112,16 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
+    <com.tridev.familyhub.feature.familylive.FamilyMapComparePanelView
+        android:id="@+id/familyMapComparePanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginStart="@dimen/space_12"
+        android:layout_marginEnd="@dimen/space_12"
+        android:elevation="@dimen/family_map_panel_elevation"
+        android:visibility="gone" />
+
     <View
         android:id="@+id/familyMapControlRail"
         android:layout_width="1dp"
