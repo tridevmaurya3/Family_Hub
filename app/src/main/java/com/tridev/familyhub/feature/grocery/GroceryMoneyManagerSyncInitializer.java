@@ -39,6 +39,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * The event/source identity of the first successful purchase remains canonical.
  * Later corrections to amount, store, MoneyManager account/card or Expense
  * category update that exact MoneyManager row rather than replacing/removing it.
+ * Existing historical purchases stay baselined, while a purchase completed after
+ * this process starts is never swallowed by the first asynchronous baseline scan.
  */
 public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -62,11 +64,13 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
     @Nullable private InvalidationTracker.Observer observer;
     @NonNull private volatile WeakReference<Activity> foregroundActivity =
             new WeakReference<>(null);
+    private long processStartedAt;
 
     @Override
     public boolean onCreate() {
         Context context = getContext();
         if (context == null) return false;
+        processStartedAt = System.currentTimeMillis();
         appContext = context.getApplicationContext();
 
         if (appContext instanceof Application) {
@@ -137,6 +141,10 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             SharedPreferences.Editor baseline = preferences.edit();
             for (GroceryItem item : items) {
                 if (item == null || !item.isPurchased || item.purchasedAt <= 0L) continue;
+                // ContentProviders are created before the app Activity/Service.
+                // Therefore a purchase timestamp newer than processStartedAt is a
+                // real action from this run, not historical data to suppress.
+                if (item.purchasedAt >= processStartedAt) continue;
                 String key = itemPreferenceKey(item);
                 baseline.putString(PREFIX_EVENT + key,
                         GroceryMoneyManagerBridge.eventIdFor(item));
@@ -148,7 +156,9 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 baseline.putBoolean(PREFIX_SENT + key, false);
             }
             baseline.putBoolean(KEY_INITIALIZED, true).apply();
-            return;
+            // Do not return. A Grocery purchase can be completed while the first
+            // async scan is waiting for its executor; those current-run rows must
+            // be processed immediately below instead of being silently baselined.
         }
 
         FirebaseUser currentUser = null;
@@ -203,11 +213,18 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                         || !currentPayload.equals(appliedPayload);
                 if (!changed) continue;
 
-                // A baselined historical purchase was deliberately never sent.
-                // Editing it must not silently import old history into MoneyManager.
                 if (!previousSent) {
-                    rememberApplied(preferences, key, currentPayload,
-                            item.purchaseCount, false);
+                    // A higher purchaseCount is a new explicit purchase cycle, not
+                    // an edit of the historical baselined purchase. Restore the
+                    // original behaviour: it must be offered to MoneyManager.
+                    if (item.purchaseCount > previousCount) {
+                        postNewPurchase(context, preferences, key, item,
+                                currentEvent, currentSource, currentPayload);
+                    } else {
+                        // Historical baselined data remains local-only.
+                        rememberApplied(preferences, key, currentPayload,
+                                item.purchaseCount, false);
+                    }
                     continue;
                 }
 
