@@ -77,6 +77,7 @@ public class GroceryOverlayService extends Service {
 
     private static final String CHANNEL_ID = "grocery_overlay_channel";
     private static final int NOTIFICATION_ID = 4107;
+    private static final int SMART_VISIBLE_CHIPS = 5;
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams stripParams;
@@ -526,7 +527,8 @@ public class GroceryOverlayService extends Service {
         quickAdd.addView(add, addParams);
         root.addView(quickAdd);
 
-        TextView smartLabel = text("Smart suggestions • Most used first", 9, true);
+        TextView smartLabel = text(
+                "Smart suggestions • Category-wise • Most used first", 9, true);
         smartLabel.setTextColor(Color.rgb(84, 93, 105));
         smartLabel.setVisibility(View.GONE);
         LinearLayout.LayoutParams smartLabelParams = new LinearLayout.LayoutParams(
@@ -534,25 +536,63 @@ public class GroceryOverlayService extends Service {
         smartLabelParams.topMargin = dp(3);
         root.addView(smartLabel, smartLabelParams);
 
+        LinearLayout suggestionBar = new LinearLayout(this);
+        suggestionBar.setGravity(Gravity.CENTER_VERTICAL);
+        suggestionBar.setOrientation(LinearLayout.HORIZONTAL);
+
         HorizontalScrollView suggestionScroll = new HorizontalScrollView(this);
         suggestionScroll.setHorizontalScrollBarEnabled(false);
         suggestionScroll.setFillViewport(false);
-        suggestionScroll.setVisibility(View.GONE);
+        suggestionScroll.setVisibility(View.INVISIBLE);
         LinearLayout suggestionRow = new LinearLayout(this);
         suggestionRow.setOrientation(LinearLayout.HORIZONTAL);
         suggestionRow.setGravity(Gravity.CENTER_VERTICAL);
         suggestionScroll.addView(suggestionRow, new HorizontalScrollView.LayoutParams(
                 HorizontalScrollView.LayoutParams.WRAP_CONTENT,
                 HorizontalScrollView.LayoutParams.MATCH_PARENT));
-        root.addView(suggestionScroll, new LinearLayout.LayoutParams(
+        suggestionBar.addView(suggestionScroll, new LinearLayout.LayoutParams(
+                0, dp(36), 1f));
+
+        Button moreSuggestions = compactAction("•••",
+                Color.rgb(15, 108, 189), Color.argb(225, 232, 243, 252));
+        moreSuggestions.setContentDescription("More smart suggestions");
+        moreSuggestions.setTextSize(14f);
+        moreSuggestions.setVisibility(View.GONE);
+        moreSuggestions.setElevation(dp(1));
+        LinearLayout.LayoutParams moreSuggestionParams = new LinearLayout.LayoutParams(
+                dp(40), dp(32));
+        moreSuggestionParams.setMarginStart(dp(5));
+        suggestionBar.addView(moreSuggestions, moreSuggestionParams);
+
+        Button clearSuggestions = compactAction("Clear",
+                Color.rgb(170, 62, 62), Color.argb(238, 255, 248, 249));
+        clearSuggestions.setContentDescription("Clear grocery form");
+        clearSuggestions.setTextSize(10f);
+        clearSuggestions.setSingleLine(true);
+        clearSuggestions.setElevation(dp(1));
+        clearSuggestions.setBackground(rounded(Color.argb(238, 255, 248, 249),
+                Color.argb(205, 213, 133, 139), 16));
+        LinearLayout.LayoutParams clearSuggestionParams = new LinearLayout.LayoutParams(
+                dp(62), dp(32));
+        clearSuggestionParams.setMarginStart(dp(5));
+        suggestionBar.addView(clearSuggestions, clearSuggestionParams);
+
+        root.addView(suggestionBar, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
 
-        repository.loadSuggestions(suggestions -> {
+        clearSuggestions.setOnClickListener(v -> clearSmartFilledForm(
+                input, quantity, quantityUnit, category, price, quickPick));
+
+        repository.loadItems("", allItems -> {
+            List<GroceryItem> suggestions = rankSmartSuggestions(allItems);
             smartSuggestions.clear();
             smartSuggestions.addAll(suggestions);
+            suggestionRow.removeAllViews();
+
             if (suggestions.isEmpty()) {
                 smartLabel.setVisibility(View.GONE);
-                suggestionScroll.setVisibility(View.GONE);
+                suggestionScroll.setVisibility(View.INVISIBLE);
+                moreSuggestions.setVisibility(View.GONE);
                 quickPick.setAdapter(compactSpinnerAdapter(
                         new String[]{"Suggested"}));
                 return;
@@ -560,12 +600,16 @@ public class GroceryOverlayService extends Service {
 
             smartLabel.setVisibility(View.VISIBLE);
             suggestionScroll.setVisibility(View.VISIBLE);
-            suggestionRow.removeAllViews();
+
             String[] quickPickLabels = new String[suggestions.size() + 1];
             quickPickLabels[0] = "Suggested";
             for (int index = 0; index < suggestions.size(); index++) {
+                quickPickLabels[index + 1] = suggestions.get(index).name;
+            }
+
+            int visibleCount = Math.min(SMART_VISIBLE_CHIPS, suggestions.size());
+            for (int index = 0; index < visibleCount; index++) {
                 GroceryItem suggestion = suggestions.get(index);
-                quickPickLabels[index + 1] = suggestion.name;
                 Button chip = compactAction(suggestion.name,
                         Color.rgb(15, 108, 89), Color.argb(220, 239, 250, 243));
                 chip.setTextSize(10f);
@@ -581,17 +625,15 @@ public class GroceryOverlayService extends Service {
                 suggestionRow.addView(chip, chipParams);
             }
 
-            Button clear = compactAction("Clear",
-                    Color.rgb(170, 62, 62), Color.argb(225, 255, 239, 241));
-            clear.setTextSize(10f);
-            clear.setSingleLine(true);
-            clear.setElevation(dp(1));
-            clear.setOnClickListener(v -> clearSmartFilledForm(
-                    input, quantity, quantityUnit, category, price, quickPick));
-            LinearLayout.LayoutParams clearParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, dp(32));
-            clearParams.setMarginEnd(dp(4));
-            suggestionRow.addView(clear, clearParams);
+            if (suggestions.size() > visibleCount) {
+                moreSuggestions.setVisibility(View.VISIBLE);
+                moreSuggestions.setOnClickListener(v -> showSmartSuggestionOverflow(
+                        moreSuggestions, suggestions, input, quantity,
+                        quantityUnit, quantityUnits, category, categoryLabels, price));
+            } else {
+                moreSuggestions.setVisibility(View.GONE);
+                moreSuggestions.setOnClickListener(null);
+            }
 
             quickPick.setAdapter(compactSpinnerAdapter(quickPickLabels));
             quickPick.setSelection(0);
@@ -1368,6 +1410,105 @@ public class GroceryOverlayService extends Service {
         name.requestFocus();
         ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
                 .showSoftInput(name, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    /**
+     * Builds a full smart-pick history without the old eight-item UI limit.
+     * Categories with the highest combined purchase count come first; within
+     * each category the most frequently purchased item comes first.
+     */
+    private List<GroceryItem> rankSmartSuggestions(List<GroceryItem> allItems) {
+        Map<String, GroceryItem> bestByName = new LinkedHashMap<>();
+        for (GroceryItem item : allItems) {
+            if (item == null || item.name == null || item.name.trim().isEmpty()
+                    || item.purchaseCount <= 0) {
+                continue;
+            }
+            String key = item.name.trim().toLowerCase(java.util.Locale.ENGLISH);
+            GroceryItem previous = bestByName.get(key);
+            if (previous == null
+                    || item.purchaseCount > previous.purchaseCount
+                    || (item.purchaseCount == previous.purchaseCount
+                    && item.purchasedAt > previous.purchasedAt)) {
+                bestByName.put(key, item);
+            }
+        }
+
+        List<GroceryItem> ranked = new ArrayList<>(bestByName.values());
+        Map<String, Integer> categoryTotals = new java.util.HashMap<>();
+        for (GroceryItem item : ranked) {
+            String categoryName = smartSuggestionCategory(item);
+            categoryTotals.put(categoryName,
+                    categoryTotals.getOrDefault(categoryName, 0)
+                            + Math.max(0, item.purchaseCount));
+        }
+
+        ranked.sort((left, right) -> {
+            String leftCategory = smartSuggestionCategory(left);
+            String rightCategory = smartSuggestionCategory(right);
+            int compareCategoryTotal = Integer.compare(
+                    categoryTotals.getOrDefault(rightCategory, 0),
+                    categoryTotals.getOrDefault(leftCategory, 0));
+            if (compareCategoryTotal != 0) return compareCategoryTotal;
+
+            int compareCategoryName = leftCategory.compareToIgnoreCase(rightCategory);
+            if (compareCategoryName != 0) return compareCategoryName;
+
+            int compareCount = Integer.compare(right.purchaseCount, left.purchaseCount);
+            if (compareCount != 0) return compareCount;
+
+            int compareRecent = Long.compare(right.purchasedAt, left.purchasedAt);
+            if (compareRecent != 0) return compareRecent;
+
+            return left.name.compareToIgnoreCase(right.name);
+        });
+        return ranked;
+    }
+
+    private String smartSuggestionCategory(GroceryItem item) {
+        if (item == null || item.category == null || item.category.trim().isEmpty()) {
+            return getString(R.string.grocery_uncategorized);
+        }
+        return item.category.trim();
+    }
+
+    /** Shows every ranked purchased item, grouped category-wise, from the ••• button. */
+    private void showSmartSuggestionOverflow(
+            View anchor,
+            List<GroceryItem> suggestions,
+            EditText name,
+            EditText quantity,
+            Spinner unit,
+            String[] units,
+            Spinner category,
+            String[] categories,
+            EditText price) {
+        FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+        PopupMenu popup = new PopupMenu(this, anchor);
+        String lastCategory = "";
+        int headerIndex = 0;
+        for (int index = 0; index < suggestions.size(); index++) {
+            GroceryItem suggestion = suggestions.get(index);
+            String categoryName = smartSuggestionCategory(suggestion);
+            if (!categoryName.equalsIgnoreCase(lastCategory)) {
+                android.view.MenuItem header = popup.getMenu().add(
+                        0, 40_000 + headerIndex, index * 2,
+                        "— " + categoryName + " —");
+                header.setEnabled(false);
+                headerIndex++;
+                lastCategory = categoryName;
+            }
+            popup.getMenu().add(0, 50_000 + index, index * 2 + 1,
+                    suggestion.name + "  •  " + suggestion.purchaseCount + "×");
+        }
+        popup.setOnMenuItemClickListener(menuItem -> {
+            int index = menuItem.getItemId() - 50_000;
+            if (index < 0 || index >= suggestions.size()) return false;
+            applySmartSuggestion(suggestions.get(index), name, quantity, unit,
+                    units, category, categories, price);
+            return true;
+        });
+        popup.show();
     }
 
     private void applyInlineHistory(
