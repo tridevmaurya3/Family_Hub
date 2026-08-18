@@ -28,7 +28,7 @@ final class FamilyMemberMarkerFactory {
         int size = 72;
         Bitmap output = Bitmap.createBitmap(size, 84, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(output);
-        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         float cx = size / 2F, cy = 34F, radius = 28F;
 
         paint.setColor(Color.WHITE);
@@ -39,18 +39,23 @@ final class FamilyMemberMarkerFactory {
         canvas.drawCircle(cx, cy, radius + 1F, paint);
         paint.setStyle(Paint.Style.FILL);
 
+        float photoRadius = radius - 2F;
         Path clip = new Path();
-        clip.addCircle(cx, cy, radius - 2F, Path.Direction.CW);
+        clip.addCircle(cx, cy, photoRadius, Path.Direction.CW);
         canvas.save();
         canvas.clipPath(clip);
-        if (photo != null) {
-            Rect source = new Rect(0, 0, photo.getWidth(), photo.getHeight());
-            RectF target = new RectF(cx - radius, cy - radius,
-                    cx + radius, cy + radius);
+        if (photo != null && photo.getWidth() > 0 && photo.getHeight() > 0) {
+            Rect source = centerCropSquare(photo);
+            RectF target = new RectF(
+                    cx - photoRadius,
+                    cy - photoRadius,
+                    cx + photoRadius,
+                    cy + photoRadius
+            );
             canvas.drawBitmap(photo, source, target, paint);
         } else {
             paint.setColor(lighten(statusColor));
-            canvas.drawCircle(cx, cy, radius, paint);
+            canvas.drawCircle(cx, cy, photoRadius, paint);
             paint.setColor(statusColor);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setFakeBoldText(true);
@@ -69,6 +74,20 @@ final class FamilyMemberMarkerFactory {
         paint.setColor(statusColor);
         canvas.drawPath(tail, paint);
         return BitmapDescriptorFactory.fromBitmap(output);
+    }
+
+    /**
+     * Crops around the centre without changing the original aspect ratio.
+     * This prevents portrait profile photos from being squashed into the pin.
+     */
+    @NonNull
+    private static Rect centerCropSquare(@NonNull Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int side = Math.min(width, height);
+        int left = Math.max(0, (width - side) / 2);
+        int top = Math.max(0, (height - side) / 2);
+        return new Rect(left, top, left + side, top + side);
     }
 
     private static int lighten(@ColorInt int color) {
