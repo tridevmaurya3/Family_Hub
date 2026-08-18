@@ -382,7 +382,9 @@ public class GroceryOverlayService extends Service {
         opacityPanel.addView(opacityLabel, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
         SeekBar opacity = new SeekBar(this);
-        int savedProgress = Math.round((stripView.getAlpha() - 0.35f) / 0.65f * 100f);
+        float savedAlpha = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getFloat("alpha", 0.88f);
+        int savedProgress = Math.round((savedAlpha - 0.35f) / 0.65f * 100f);
         opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
         opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
@@ -390,7 +392,8 @@ public class GroceryOverlayService extends Service {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float alpha = 0.35f + (progress / 100f) * 0.65f;
-                stripView.setAlpha(alpha);
+                if (stripView != null) stripView.setAlpha(alpha);
+                if (panelView != null) panelView.setAlpha(alpha);
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                         .putFloat("alpha", alpha).apply();
             }
@@ -764,55 +767,18 @@ public class GroceryOverlayService extends Service {
         final int minPanelWidth = Math.min(maxPanelWidth, dp(300));
         final int minPanelHeight = Math.min(maxPanelHeight, dp(420));
 
-        TextView resizeCorner = text("↘", 18, true);
-        resizeCorner.setGravity(Gravity.CENTER);
-        resizeCorner.setTextColor(Color.rgb(15, 108, 189));
-        resizeCorner.setContentDescription(getString(R.string.grocery_overlay_resize));
-        resizeCorner.setBackground(rounded(Color.argb(220, 232, 243, 252),
-                Color.argb(190, 190, 216, 236), 14));
-        resizeCorner.setElevation(dp(4));
-        resizeCorner.setOnTouchListener(new View.OnTouchListener() {
-            private int startWidth;
-            private int startHeight;
-            private float downX;
-            private float downY;
-
-            @Override
-            public boolean onTouch(View view, MotionEvent event) {
-                FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-                if (panelParams == null || panelView == null) return false;
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    startWidth = panelParams.width;
-                    startHeight = panelParams.height;
-                    downX = event.getRawX();
-                    downY = event.getRawY();
-                    return true;
-                }
-                if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    panelParams.width = clamp(startWidth
-                            + Math.round(event.getRawX() - downX),
-                            minPanelWidth, maxPanelWidth);
-                    panelParams.height = clamp(startHeight
-                            + Math.round(event.getRawY() - downY),
-                            minPanelHeight, maxPanelHeight);
-                    windowManager.updateViewLayout(panelView, panelParams);
-                    return true;
-                }
-                if (event.getAction() == MotionEvent.ACTION_UP
-                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                            .putInt("panel_width", panelParams.width)
-                            .putInt("panel_height", panelParams.height)
-                            .apply();
-                    return true;
-                }
-                return true;
-            }
-        });
-        FrameLayout.LayoutParams cornerParams = new FrameLayout.LayoutParams(
-                dp(34), dp(34), Gravity.END | Gravity.BOTTOM);
-        cornerParams.setMargins(0, 0, dp(4), dp(4));
-        panelRoot.addView(resizeCorner, cornerParams);
+        addResizeHandle(panelRoot, "↖", Gravity.START | Gravity.TOP,
+                -1, -1, minPanelWidth, maxPanelWidth,
+                minPanelHeight, maxPanelHeight);
+        addResizeHandle(panelRoot, "↗", Gravity.END | Gravity.TOP,
+                1, -1, minPanelWidth, maxPanelWidth,
+                minPanelHeight, maxPanelHeight);
+        addResizeHandle(panelRoot, "↙", Gravity.START | Gravity.BOTTOM,
+                -1, 1, minPanelWidth, maxPanelWidth,
+                minPanelHeight, maxPanelHeight);
+        addResizeHandle(panelRoot, "↘", Gravity.END | Gravity.BOTTOM,
+                1, 1, minPanelWidth, maxPanelWidth,
+                minPanelHeight, maxPanelHeight);
 
         overlayListCompactHeight = dp(150);
         overlayListExpandedHeight = dp(250);
@@ -895,6 +861,7 @@ public class GroceryOverlayService extends Service {
         });
 
         panelView = panelRoot;
+        panelView.setAlpha(savedAlpha);
         int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getInt("panel_width", maxPanelWidth);
         int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE)
@@ -1703,6 +1670,76 @@ public class GroceryOverlayService extends Service {
                 0, dp(38), 1f);
         params.setMarginStart(dp(4));
         return params;
+    }
+
+    /** Adds a drag-to-resize grip without changing Grocery form/business behavior. */
+    private void addResizeHandle(
+            FrameLayout panelRoot,
+            String symbol,
+            int gravity,
+            int horizontalDirection,
+            int verticalDirection,
+            int minPanelWidth,
+            int maxPanelWidth,
+            int minPanelHeight,
+            int maxPanelHeight) {
+        TextView handle = text(symbol, 15, true);
+        handle.setGravity(Gravity.CENTER);
+        handle.setTextColor(Color.rgb(15, 108, 189));
+        handle.setContentDescription(getString(R.string.grocery_overlay_resize));
+        handle.setBackground(rounded(Color.argb(205, 232, 243, 252),
+                Color.argb(175, 190, 216, 236), 12));
+        handle.setElevation(dp(5));
+        handle.setAlpha(0.82f);
+        handle.setOnTouchListener(new View.OnTouchListener() {
+            private int startWidth;
+            private int startHeight;
+            private float downX;
+            private float downY;
+
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+                if (panelParams == null || panelView == null) return true;
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    startWidth = panelParams.width;
+                    startHeight = panelParams.height;
+                    downX = event.getRawX();
+                    downY = event.getRawY();
+                    return true;
+                }
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    int dx = Math.round(event.getRawX() - downX);
+                    int dy = Math.round(event.getRawY() - downY);
+                    panelParams.width = clamp(startWidth
+                                    + horizontalDirection * dx,
+                            minPanelWidth, maxPanelWidth);
+                    panelParams.height = clamp(startHeight
+                                    + verticalDirection * dy,
+                            minPanelHeight, maxPanelHeight);
+                    windowManager.updateViewLayout(panelView, panelParams);
+                    return true;
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP
+                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                            .putInt("panel_width", panelParams.width)
+                            .putInt("panel_height", panelParams.height)
+                            .apply();
+                    return true;
+                }
+                return true;
+            }
+        });
+
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                dp(28), dp(28), gravity);
+        int edge = dp(4);
+        params.leftMargin = edge;
+        params.rightMargin = edge;
+        params.bottomMargin = edge;
+        params.topMargin = (gravity & Gravity.TOP) == Gravity.TOP ? dp(42) : edge;
+        panelRoot.addView(handle, params);
     }
 
     private void closePanel() {
