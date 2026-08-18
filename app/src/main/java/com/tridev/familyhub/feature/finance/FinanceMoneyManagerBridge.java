@@ -25,7 +25,10 @@ public final class FinanceMoneyManagerBridge {
 
     private static final Uri COMPANION_ENDPOINT = Uri.parse(
             "content://" + MoneyManagerMasterCatalogBridge.AUTHORITY);
+    private static final Uri EDIT_ENDPOINT = Uri.parse(
+            "content://com.example.moneymanagerpro.tridev.familyhubedit");
     private static final String METHOD_ACCEPT_V1 = "accept_family_event_v1";
+    private static final String METHOD_UPDATE_V1 = "update_family_event_v1";
     private static final String METHOD_CANCEL_FINANCE_V1 = "cancel_family_finance_event_v1";
 
     private FinanceMoneyManagerBridge() { }
@@ -69,42 +72,54 @@ public final class FinanceMoneyManagerBridge {
             @NonNull Context context,
             @NonNull FinanceEntry entry,
             boolean forceReview) {
-        if (!isPostable(entry)) {
-            return new Result(false, false, "SKIPPED", "Family Finance entry is not postable");
+        Bundle extras = buildPayload(context, entry, forceReview);
+        if (extras == null) {
+            return validationFailure(context, entry);
         }
+        return call(COMPANION_ENDPOINT, context, METHOD_ACCEPT_V1, extras);
+    }
+
+    /**
+     * Corrects the exact MoneyManager row created from this Family Hub entry.
+     * The canonical event/source identity is deliberately retained so editing a
+     * category, account, amount or date never becomes a delete/new transaction.
+     */
+    @NonNull
+    public static Result updateLinked(
+            @NonNull Context context,
+            @NonNull FinanceEntry entry,
+            @NonNull String canonicalEventId,
+            @NonNull String canonicalSourceRecordId) {
+        Bundle extras = buildPayload(context, entry, false);
+        if (extras == null) {
+            return validationFailure(context, entry);
+        }
+        extras.putString("canonical_event_id", structured(canonicalEventId, 120));
+        extras.putString("canonical_source_record_id",
+                structured(canonicalSourceRecordId, 160));
+        return call(EDIT_ENDPOINT, context, METHOD_UPDATE_V1, extras);
+    }
+
+    @Nullable
+    private static Bundle buildPayload(
+            @NonNull Context context,
+            @NonNull FinanceEntry entry,
+            boolean forceReview) {
+        if (!isPostable(entry)) return null;
         long amountMinor = toMinor(entry.amount);
-        if (amountMinor <= 0L) {
-            return new Result(false, false, "SKIPPED", "Family Finance amount is missing");
-        }
+        if (amountMinor <= 0L) return null;
 
         boolean income = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
         String sourceRecordId = sourceRecordIdFor(entry);
         String eventId = eventIdFor(entry);
-        long occurredAt = occurredAt(entry);
-
-        // Resolve from MoneyManager's live master catalog when a remembered ref
-        // is not available. Expense and Income categories are resolved against
-        // their own type so an old cross-type preference can never be reused.
         String accountRef = MoneyManagerMasterCatalogBridge.accountRefForLabel(
                 context, entry.accountName);
         String categoryRef = MoneyManagerMasterCatalogBridge.categoryRefForFinanceLabel(
                 context, entry.category, income);
+        if (accountRef.isEmpty() || categoryRef.isEmpty()) return null;
 
-        if (accountRef.isEmpty()) {
-            return new Result(false, false, "NEEDS_REVIEW",
-                    "Selected Family Finance account/card is not in MoneyManager master catalog");
-        }
-        if (categoryRef.isEmpty()) {
-            return new Result(false, false, "NEEDS_REVIEW",
-                    income
-                            ? "Selected Income category is not in MoneyManager master catalog"
-                            : "Selected Expense category is not in MoneyManager master catalog");
-        }
-
-        String accountHint = accountRef;
-        String categoryHint = categoryRef;
+        long occurredAt = occurredAt(entry);
         String paymentMethod = metadata(entry.paymentMethod, 80);
-
         Bundle extras = new Bundle();
         extras.putString("event_id", eventId);
         extras.putString("source_record_id", sourceRecordId);
@@ -115,16 +130,40 @@ public final class FinanceMoneyManagerBridge {
         extras.putLong("amount_minor", amountMinor);
         extras.putString("currency", "INR");
         extras.putLong("occurred_at", occurredAt);
-        extras.putString("account_hint", accountHint);
+        extras.putString("account_hint", accountRef);
         extras.putString("merchant_hint", paymentMethod);
-        extras.putString("category_hint", categoryHint);
+        extras.putString("category_hint", categoryRef);
         extras.putString("fingerprint", sha256(
                 sourceRecordId + "|" + amountMinor + "|"
                         + (income ? "CREDIT" : "DEBIT") + "|"
-                        + accountHint.toLowerCase(Locale.ROOT) + "|"
-                        + categoryHint.toLowerCase(Locale.ROOT)));
+                        + accountRef.toLowerCase(Locale.ROOT) + "|"
+                        + categoryRef.toLowerCase(Locale.ROOT)));
+        return extras;
+    }
 
-        return call(COMPANION_ENDPOINT, context, METHOD_ACCEPT_V1, extras);
+    @NonNull
+    private static Result validationFailure(
+            @NonNull Context context,
+            @NonNull FinanceEntry entry) {
+        if (!isPostable(entry) || toMinor(entry.amount) <= 0L) {
+            return new Result(false, false, "SKIPPED",
+                    "Family Finance entry is not postable");
+        }
+        boolean income = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
+        String accountRef = MoneyManagerMasterCatalogBridge.accountRefForLabel(
+                context, entry.accountName);
+        if (accountRef.isEmpty()) {
+            return new Result(false, false, "NEEDS_REVIEW",
+                    "Selected Family Finance account/card is not in MoneyManager master catalog");
+        }
+        String categoryRef = MoneyManagerMasterCatalogBridge.categoryRefForFinanceLabel(
+                context, entry.category, income);
+        return new Result(false, false, "NEEDS_REVIEW",
+                categoryRef.isEmpty()
+                        ? (income
+                        ? "Selected Income category is not in MoneyManager master catalog"
+                        : "Selected Expense category is not in MoneyManager master catalog")
+                        : "Family Finance entry could not be prepared");
     }
 
     @NonNull
