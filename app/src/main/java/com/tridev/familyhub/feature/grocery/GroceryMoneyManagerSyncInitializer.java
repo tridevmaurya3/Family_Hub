@@ -34,28 +34,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * STEP 8 / STEP 13H reliability bootstrap for Family Hub Grocery -> MoneyManagerPro.
+ * Reliable Grocery -> MoneyManager synchronization.
  *
- * Existing purchases are baselined and are never imported retrospectively.
- * New local purchase cycles are observed from Room and offered to MoneyManager.
- *
- * Reliability rules:
- * - Room invalidations that arrive while a scan is already running are never lost;
- *   a pending rescan is executed immediately after the current scan.
- * - A new local purchase first attempts a direct, type-safe MoneyManager post.
- *   The bridge revalidates the selected account/card and Expense category against
- *   MoneyManager's live master catalog, so the floating overlay does not depend
- *   on a stale cached catalog snapshot.
- * - NEEDS_REVIEW, QUEUED and mapping-required responses are not treated as a
- *   finalized send and therefore never clear the item's pending selections.
- * - If exact selections are missing, the foreground picker remains the safe
- *   fallback; the bridge never guesses or auto-creates finance masters.
- * - Undo and full item deletion both cancel only the exact previously-finalized
- *   Grocery event. Failed cancellation state is retained for a later retry.
- * - Monthly reset keeps purchaseCount unchanged and therefore never cancels the
- *   previous month's legitimate expense.
- * - Remote purchases made by another family member are not pushed into this
- *   device owner's personal MoneyManager ledger.
+ * The event/source identity of the first successful purchase remains canonical.
+ * Later corrections to amount, store, MoneyManager account/card or Expense
+ * category update that exact MoneyManager row rather than replacing/removing it.
  */
 public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -63,6 +46,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
     private static final String KEY_INITIALIZED = "initialized";
     private static final String PREFIX_EVENT = "event_";
     private static final String PREFIX_SOURCE = "source_";
+    private static final String PREFIX_APPLIED = "applied_";
     private static final String PREFIX_COUNT = "count_";
     private static final String PREFIX_SENT = "sent_";
 
@@ -91,31 +75,21 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                         @Override public void onActivityCreated(
                                 @NonNull Activity activity,
                                 @Nullable Bundle savedInstanceState) { }
-                        @Override public void onActivityStarted(
-                                @NonNull Activity activity) { }
-                        @Override public void onActivityResumed(
-                                @NonNull Activity activity) {
+                        @Override public void onActivityStarted(@NonNull Activity activity) { }
+                        @Override public void onActivityResumed(@NonNull Activity activity) {
                             foregroundActivity = new WeakReference<>(activity);
                             scheduleScan(false);
                         }
-                        @Override public void onActivityPaused(
-                                @NonNull Activity activity) {
+                        @Override public void onActivityPaused(@NonNull Activity activity) {
                             Activity current = foregroundActivity.get();
-                            if (current == activity) {
-                                foregroundActivity = new WeakReference<>(null);
-                            }
+                            if (current == activity) foregroundActivity = new WeakReference<>(null);
                         }
-                        @Override public void onActivityStopped(
-                                @NonNull Activity activity) { }
+                        @Override public void onActivityStopped(@NonNull Activity activity) { }
                         @Override public void onActivitySaveInstanceState(
-                                @NonNull Activity activity,
-                                @NonNull Bundle outState) { }
-                        @Override public void onActivityDestroyed(
-                                @NonNull Activity activity) {
+                                @NonNull Activity activity, @NonNull Bundle outState) { }
+                        @Override public void onActivityDestroyed(@NonNull Activity activity) {
                             Activity current = foregroundActivity.get();
-                            if (current == activity) {
-                                foregroundActivity = new WeakReference<>(null);
-                            }
+                            if (current == activity) foregroundActivity = new WeakReference<>(null);
                         }
                     });
         }
@@ -135,12 +109,10 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
     private void scheduleScan(boolean startup) {
         Context context = appContext;
         if (context == null) return;
-
         if (!scanQueued.compareAndSet(false, true)) {
             rescanRequested.set(true);
             return;
         }
-
         EXECUTOR.execute(() -> {
             boolean firstPass = true;
             try {
@@ -151,16 +123,13 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 } while (rescanRequested.get());
             } finally {
                 scanQueued.set(false);
-                if (rescanRequested.get()) {
-                    scheduleScan(false);
-                }
+                if (rescanRequested.get()) scheduleScan(false);
             }
         });
     }
 
     private void scan(@NonNull Context context, boolean startup) {
-        SharedPreferences preferences = context.getSharedPreferences(
-                PREFS, Context.MODE_PRIVATE);
+        SharedPreferences preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         List<GroceryItem> items = FamilyHubDatabase.getInstance(context)
                 .groceryItemDao().getAll();
 
@@ -173,6 +142,8 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                         GroceryMoneyManagerBridge.eventIdFor(item));
                 baseline.putString(PREFIX_SOURCE + key,
                         GroceryMoneyManagerBridge.sourceRecordIdFor(item));
+                baseline.putString(PREFIX_APPLIED + key,
+                        GroceryMoneyManagerBridge.moneyPayloadSignature(context, item));
                 baseline.putInt(PREFIX_COUNT + key, Math.max(0, item.purchaseCount));
                 baseline.putBoolean(PREFIX_SENT + key, false);
             }
@@ -183,9 +154,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         FirebaseUser currentUser = null;
         try {
             currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        } catch (RuntimeException ignored) {
-            // Local-only Family Hub stays eligible for same-device integration.
-        }
+        } catch (RuntimeException ignored) { }
 
         Set<String> existingKeys = new HashSet<>();
 
@@ -194,79 +163,66 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             String key = itemPreferenceKey(item);
             existingKeys.add(key);
 
-            String previousEvent = safe(preferences.getString(PREFIX_EVENT + key, ""));
-            String previousSource = safe(preferences.getString(PREFIX_SOURCE + key, ""));
+            String canonicalEvent = safe(preferences.getString(PREFIX_EVENT + key, ""));
+            String canonicalSource = safe(preferences.getString(PREFIX_SOURCE + key, ""));
+            String appliedPayload = safe(preferences.getString(PREFIX_APPLIED + key, ""));
             int previousCount = preferences.getInt(PREFIX_COUNT + key, 0);
             boolean previousSent = preferences.getBoolean(PREFIX_SENT + key, false);
 
             if (item.isPurchased && item.purchasedAt > 0L) {
                 String currentEvent = GroceryMoneyManagerBridge.eventIdFor(item);
-                if (currentEvent.equals(previousEvent)) {
-                    // Includes the intentional first-install baseline. Never import
-                    // an already-existing purchase retrospectively.
-                    continue;
+                String currentSource = GroceryMoneyManagerBridge.sourceRecordIdFor(item);
+                String currentPayload = GroceryMoneyManagerBridge.moneyPayloadSignature(context, item);
+
+                // Upgrade old sync state without importing old purchases. If the
+                // canonical event still matches, current values become the local
+                // baseline. A changed event/payload is handled below as an edit.
+                if (appliedPayload.isEmpty() && currentEvent.equals(canonicalEvent)) {
+                    appliedPayload = currentPayload;
+                    preferences.edit().putString(PREFIX_APPLIED + key, appliedPayload).apply();
                 }
 
                 if (!belongsToThisDeviceUser(item, currentUser)) {
-                    remember(preferences, key, currentEvent,
-                            GroceryMoneyManagerBridge.sourceRecordIdFor(item),
+                    if (canonicalEvent.isEmpty()) {
+                        rememberNew(preferences, key, currentEvent, currentSource,
+                                currentPayload, item.purchaseCount, false);
+                    } else {
+                        rememberApplied(preferences, key, currentPayload,
+                                item.purchaseCount, previousSent);
+                    }
+                    continue;
+                }
+
+                if (canonicalEvent.isEmpty() || canonicalSource.isEmpty()) {
+                    postNewPurchase(context, preferences, key, item,
+                            currentEvent, currentSource, currentPayload);
+                    continue;
+                }
+
+                boolean changed = !currentEvent.equals(canonicalEvent)
+                        || !currentPayload.equals(appliedPayload);
+                if (!changed) continue;
+
+                // A baselined historical purchase was deliberately never sent.
+                // Editing it must not silently import old history into MoneyManager.
+                if (!previousSent) {
+                    rememberApplied(preferences, key, currentPayload,
                             item.purchaseCount, false);
                     continue;
                 }
 
-                GroceryMoneyManagerBridge.Result direct =
-                        GroceryMoneyManagerBridge.sendPurchase(context, item);
-                if (direct.accepted) {
-                    remember(preferences, key, currentEvent,
-                            GroceryMoneyManagerBridge.sourceRecordIdFor(item),
-                            item.purchaseCount, true);
-                    continue;
-                }
-
-                if (!"MAPPING_REQUIRED".equals(direct.status)) {
-                    // MoneyManager unavailable/review/queued states remain untouched.
-                    // A later Room invalidation/process resume retries the exact same
-                    // deterministic event without creating a duplicate.
-                    continue;
-                }
-
-                Activity activity = foregroundActivity.get();
-                if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
-                    // The floating overlay already exposes account/category fields.
-                    // If they were left unresolved, wait rather than guessing.
-                    continue;
-                }
-                if (!promptingKeys.add(key)) continue;
-
-                GroceryMoneyManagerAccountPicker.chooseForCompletedPurchase(
-                        activity,
-                        item,
-                        () -> EXECUTOR.execute(() -> {
-                            try {
-                                GroceryMoneyManagerBridge.Result result =
-                                        GroceryMoneyManagerBridge.sendPurchase(context, item);
-                                if (result.accepted) {
-                                    remember(preferences, key, currentEvent,
-                                            GroceryMoneyManagerBridge.sourceRecordIdFor(item),
-                                            item.purchaseCount, true);
-                                }
-                            } finally {
-                                promptingKeys.remove(key);
-                            }
-                        }));
+                updateExistingPurchase(context, preferences, key, item,
+                        canonicalEvent, canonicalSource, currentPayload);
                 continue;
             }
 
-            if (!previousEvent.isEmpty()) {
+            if (!canonicalEvent.isEmpty()) {
                 boolean explicitUndo = item.purchaseCount < previousCount;
-                if (explicitUndo && previousSent && !previousSource.isEmpty()) {
+                if (explicitUndo && previousSent && !canonicalSource.isEmpty()) {
                     GroceryMoneyManagerBridge.Result cancelled =
                             GroceryMoneyManagerBridge.cancelPurchase(
-                                    context, previousEvent, previousSource);
-                    if (!cancelled.accepted) {
-                        // Retain the exact original identity and retry later.
-                        continue;
-                    }
+                                    context, canonicalEvent, canonicalSource);
+                    if (!cancelled.accepted) continue;
                 }
                 clearRemembered(preferences, key);
             }
@@ -275,11 +231,82 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         cancelAndPruneDeletedItems(context, preferences, existingKeys);
     }
 
-    /**
-     * A purchased Grocery item can be removed completely (Delete/Clear Purchased)
-     * rather than first being unchecked. In that case the Room row no longer
-     * exists, so cancellation must be driven from the retained event/source state.
-     */
+    private void postNewPurchase(
+            @NonNull Context context,
+            @NonNull SharedPreferences preferences,
+            @NonNull String key,
+            @NonNull GroceryItem item,
+            @NonNull String currentEvent,
+            @NonNull String currentSource,
+            @NonNull String currentPayload) {
+        GroceryMoneyManagerBridge.Result direct =
+                GroceryMoneyManagerBridge.sendPurchase(context, item);
+        if (direct.accepted) {
+            rememberNew(preferences, key, currentEvent, currentSource,
+                    currentPayload, item.purchaseCount, true);
+            return;
+        }
+        if (!"MAPPING_REQUIRED".equals(direct.status)) return;
+
+        Activity activity = foregroundActivity.get();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (!promptingKeys.add(key)) return;
+        GroceryMoneyManagerAccountPicker.chooseForCompletedPurchase(
+                activity, item, () -> EXECUTOR.execute(() -> {
+                    try {
+                        GroceryMoneyManagerBridge.Result result =
+                                GroceryMoneyManagerBridge.sendPurchase(context, item);
+                        if (result.accepted) {
+                            rememberNew(preferences, key,
+                                    GroceryMoneyManagerBridge.eventIdFor(item),
+                                    GroceryMoneyManagerBridge.sourceRecordIdFor(item),
+                                    GroceryMoneyManagerBridge.moneyPayloadSignature(context, item),
+                                    item.purchaseCount, true);
+                        }
+                    } finally {
+                        promptingKeys.remove(key);
+                    }
+                }));
+    }
+
+    private void updateExistingPurchase(
+            @NonNull Context context,
+            @NonNull SharedPreferences preferences,
+            @NonNull String key,
+            @NonNull GroceryItem item,
+            @NonNull String canonicalEvent,
+            @NonNull String canonicalSource,
+            @NonNull String currentPayload) {
+        GroceryMoneyManagerBridge.Result direct =
+                GroceryMoneyManagerBridge.updateLinkedPurchase(
+                        context, item, canonicalEvent, canonicalSource);
+        if (direct.accepted) {
+            rememberApplied(preferences, key, currentPayload,
+                    item.purchaseCount, true);
+            return;
+        }
+        if (!"MAPPING_REQUIRED".equals(direct.status)) return;
+
+        Activity activity = foregroundActivity.get();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (!promptingKeys.add(key)) return;
+        GroceryMoneyManagerAccountPicker.chooseForCompletedPurchase(
+                activity, item, () -> EXECUTOR.execute(() -> {
+                    try {
+                        GroceryMoneyManagerBridge.Result result =
+                                GroceryMoneyManagerBridge.updateLinkedPurchase(
+                                        context, item, canonicalEvent, canonicalSource);
+                        if (result.accepted) {
+                            rememberApplied(preferences, key,
+                                    GroceryMoneyManagerBridge.moneyPayloadSignature(context, item),
+                                    item.purchaseCount, true);
+                        }
+                    } finally {
+                        promptingKeys.remove(key);
+                    }
+                }));
+    }
+
     private void cancelAndPruneDeletedItems(
             @NonNull Context context,
             @NonNull SharedPreferences preferences,
@@ -293,16 +320,11 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             String eventId = safe(preferences.getString(PREFIX_EVENT + key, ""));
             String sourceRecordId = safe(preferences.getString(PREFIX_SOURCE + key, ""));
             boolean sent = preferences.getBoolean(PREFIX_SENT + key, false);
-
             if (sent && !eventId.isEmpty() && !sourceRecordId.isEmpty()) {
                 GroceryMoneyManagerBridge.Result cancelled =
                         GroceryMoneyManagerBridge.cancelPurchase(
                                 context, eventId, sourceRecordId);
-                if (!cancelled.accepted) {
-                    // MoneyManager may be temporarily unavailable. Keep state so
-                    // a later scan can finish the exact same safe cancellation.
-                    continue;
-                }
+                if (!cancelled.accepted) continue;
             }
             clearRemembered(preferences, key);
         }
@@ -318,16 +340,31 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         return editorUid.isEmpty() || currentUser.getUid().equals(editorUid);
     }
 
-    private void remember(
+    private void rememberNew(
             @NonNull SharedPreferences preferences,
             @NonNull String key,
             @NonNull String eventId,
             @NonNull String sourceRecordId,
+            @NonNull String appliedPayload,
             int purchaseCount,
             boolean sent) {
         preferences.edit()
                 .putString(PREFIX_EVENT + key, eventId)
                 .putString(PREFIX_SOURCE + key, sourceRecordId)
+                .putString(PREFIX_APPLIED + key, appliedPayload)
+                .putInt(PREFIX_COUNT + key, Math.max(0, purchaseCount))
+                .putBoolean(PREFIX_SENT + key, sent)
+                .apply();
+    }
+
+    private void rememberApplied(
+            @NonNull SharedPreferences preferences,
+            @NonNull String key,
+            @NonNull String appliedPayload,
+            int purchaseCount,
+            boolean sent) {
+        preferences.edit()
+                .putString(PREFIX_APPLIED + key, appliedPayload)
                 .putInt(PREFIX_COUNT + key, Math.max(0, purchaseCount))
                 .putBoolean(PREFIX_SENT + key, sent)
                 .apply();
@@ -339,6 +376,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         preferences.edit()
                 .remove(PREFIX_EVENT + key)
                 .remove(PREFIX_SOURCE + key)
+                .remove(PREFIX_APPLIED + key)
                 .remove(PREFIX_COUNT + key)
                 .remove(PREFIX_SENT + key)
                 .apply();
@@ -372,7 +410,6 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         return value == null ? "" : value.trim();
     }
 
-    // Initializer only; no public CRUD surface.
     @Nullable @Override public Cursor query(@NonNull Uri uri,
             @Nullable String[] projection, @Nullable String selection,
             @Nullable String[] selectionArgs, @Nullable String sortOrder) { return null; }
