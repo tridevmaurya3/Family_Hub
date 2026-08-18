@@ -15,7 +15,7 @@ import androidx.annotation.Nullable;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 
-/** Creates compact photo/initial markers without changing the existing map flow. */
+/** Creates clear photo/initial markers without changing the existing map flow. */
 final class FamilyMemberMarkerFactory {
     private FamilyMemberMarkerFactory() { }
 
@@ -25,11 +25,14 @@ final class FamilyMemberMarkerFactory {
             @Nullable Bitmap photo,
             @ColorInt int statusColor
     ) {
-        int size = 72;
-        Bitmap output = Bitmap.createBitmap(size, 84, Bitmap.Config.ARGB_8888);
+        int width = 90;
+        int height = 106;
+        Bitmap output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(output);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        float cx = size / 2F, cy = 34F, radius = 28F;
+        float cx = width / 2F;
+        float cy = 38F;
+        float radius = 33F;
 
         paint.setColor(Color.WHITE);
         canvas.drawCircle(cx, cy, radius + 4F, paint);
@@ -59,7 +62,7 @@ final class FamilyMemberMarkerFactory {
             paint.setColor(statusColor);
             paint.setTextAlign(Paint.Align.CENTER);
             paint.setFakeBoldText(true);
-            paint.setTextSize(20F);
+            paint.setTextSize(22F);
             Paint.FontMetrics metrics = paint.getFontMetrics();
             float baseline = cy - (metrics.ascent + metrics.descent) / 2F;
             canvas.drawText(initials(name), cx, baseline, paint);
@@ -67,9 +70,9 @@ final class FamilyMemberMarkerFactory {
         canvas.restore();
 
         Path tail = new Path();
-        tail.moveTo(cx - 9F, 62F);
-        tail.lineTo(cx + 9F, 62F);
-        tail.lineTo(cx, 80F);
+        tail.moveTo(cx - 11F, 70F);
+        tail.lineTo(cx + 11F, 70F);
+        tail.lineTo(cx, 102F);
         tail.close();
         paint.setColor(statusColor);
         canvas.drawPath(tail, paint);
