@@ -147,7 +147,7 @@
                             android:ellipsize="end"
                             android:inputType="numberDecimal"
                             android:maxLines="1"
-                            android:textSize="17sp" />
+                            android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -170,10 +170,7 @@
                             android:includeFontPadding="false"
                             android:inputType="none"
                             android:maxLines="1"
-                            app:autoSizeMaxTextSize="16sp"
-                            app:autoSizeMinTextSize="11sp"
-                            app:autoSizeStepGranularity="1sp"
-                            app:autoSizeTextType="uniform" />
+                            android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -183,7 +180,7 @@
             style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="@dimen/space_6"
             app:cardBackgroundColor="@color/fh_primary_container"
             app:strokeColor="@color/fh_primary">
 
@@ -191,7 +188,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/space_10">
+                android:padding="@dimen/space_8">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_account_layout"
@@ -208,10 +205,10 @@
                         android:includeFontPadding="false"
                         android:inputType="none"
                         android:maxLines="1"
-                        app:autoSizeMaxTextSize="16sp"
-                        app:autoSizeMinTextSize="11sp"
-                        app:autoSizeStepGranularity="1sp"
-                        app:autoSizeTextType="uniform" />
+                        android:minHeight="44dp"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="0dp"
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -219,7 +216,7 @@
                     style="@style/Widget.FamilyHub.Form.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_6"
+                    android:layout_marginTop="@dimen/space_4"
                     android:hint="@string/finance_category">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -230,10 +227,10 @@
                         android:includeFontPadding="false"
                         android:inputType="none"
                         android:maxLines="1"
-                        app:autoSizeMaxTextSize="16sp"
-                        app:autoSizeMinTextSize="11sp"
-                        app:autoSizeStepGranularity="1sp"
-                        app:autoSizeTextType="uniform" />
+                        android:minHeight="44dp"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="0dp"
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -241,7 +238,7 @@
                     style="@style/Widget.FamilyHub.Form.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_6"
+                    android:layout_marginTop="@dimen/space_4"
                     android:hint="@string/finance_payment_method">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -252,7 +249,10 @@
                         android:includeFontPadding="false"
                         android:inputType="none"
                         android:maxLines="1"
-                        android:textSize="15sp" />
+                        android:minHeight="44dp"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="0dp"
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -261,7 +261,7 @@
             style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="@dimen/space_6"
             app:cardBackgroundColor="@color/fh_success_container"
             app:strokeColor="@color/fh_success">
 
@@ -269,7 +269,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/space_10">
+                android:padding="@dimen/space_8">
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/finance_recurring_switch"
@@ -278,24 +278,23 @@
                     android:gravity="center_vertical"
                     android:maxLines="1"
                     android:text="@string/finance_recurring"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/finance_shared_switch"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/touch_target_min"
-                    android:layout_marginTop="2dp"
                     android:gravity="center_vertical"
                     android:maxLines="1"
                     android:text="@string/finance_share_summary"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_paid_by_layout"
                     style="@style/Widget.FamilyHub.Form.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_6"
+                    android:layout_marginTop="@dimen/space_4"
                     android:hint="@string/finance_paid_by">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -306,13 +305,16 @@
                         android:includeFontPadding="false"
                         android:inputType="none"
                         android:maxLines="1"
-                        android:textSize="15sp" />
+                        android:minHeight="44dp"
+                        android:paddingTop="0dp"
+                        android:paddingBottom="0dp"
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_6"
+                    android:layout_marginTop="@dimen/space_4"
                     android:baselineAligned="false"
                     android:orientation="horizontal">
 
@@ -322,7 +324,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="@dimen/space_4"
-                        android:layout_weight="0.82"
+                        android:layout_weight="0.75"
                         android:hint="@string/finance_split_type">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -333,10 +335,10 @@
                             android:includeFontPadding="false"
                             android:inputType="none"
                             android:maxLines="1"
-                            app:autoSizeMaxTextSize="15sp"
-                            app:autoSizeMinTextSize="11sp"
-                            app:autoSizeStepGranularity="1sp"
-                            app:autoSizeTextType="uniform" />
+                            android:minHeight="44dp"
+                            android:paddingTop="0dp"
+                            android:paddingBottom="0dp"
+                            android:textSize="13sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -345,7 +347,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_4"
-                        android:layout_weight="1.18"
+                        android:layout_weight="1.25"
                         android:hint="@string/finance_settlement_status">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -356,10 +358,10 @@
                             android:includeFontPadding="false"
                             android:inputType="none"
                             android:maxLines="1"
-                            app:autoSizeMaxTextSize="15sp"
-                            app:autoSizeMinTextSize="10sp"
-                            app:autoSizeStepGranularity="1sp"
-                            app:autoSizeTextType="uniform" />
+                            android:minHeight="44dp"
+                            android:paddingTop="0dp"
+                            android:paddingBottom="0dp"
+                            android:textSize="12sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -368,7 +370,7 @@
                     style="@style/Widget.FamilyHub.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_6"
+                    android:layout_marginTop="@dimen/space_4"
                     android:hint="@string/finance_participants">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -378,7 +380,7 @@
                         android:ellipsize="end"
                         android:inputType="textCapWords"
                         android:maxLines="1"
-                        android:textSize="15sp" />
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -386,7 +388,7 @@
                     style="@style/Widget.FamilyHub.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_6"
+                    android:layout_marginTop="@dimen/space_4"
                     android:hint="@string/finance_custom_amounts">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -396,7 +398,7 @@
                         android:ellipsize="end"
                         android:inputType="text"
                         android:maxLines="1"
-                        android:textSize="15sp" />
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -405,7 +407,7 @@
             style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="@dimen/space_6"
             app:cardBackgroundColor="@color/fh_form_surface_tint"
             app:strokeColor="@color/fh_form_outline">
 
@@ -413,7 +415,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/space_10">
+                android:padding="@dimen/space_8">
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_note_layout"
@@ -430,7 +432,7 @@
                         android:inputType="textMultiLine|textCapSentences"
                         android:maxLines="4"
                         android:minLines="2"
-                        android:textSize="15sp" />
+                        android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -439,7 +441,7 @@
             style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="@dimen/space_6"
             app:cardBackgroundColor="@color/fh_surface"
             app:strokeColor="@color/fh_outline_variant">
 
