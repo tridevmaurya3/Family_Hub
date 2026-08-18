@@ -225,7 +225,12 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         FinanceMoneyManagerBridge.Result result =
                 FinanceMoneyManagerBridge.updateLinked(
                         context, entry, canonicalEvent, canonicalSource);
-        if (result.accepted) {
+
+        // An edit is complete only when MoneyManager confirms that the linked
+        // ledger row itself was UPDATED. PRESERVED intentionally means no ledger
+        // rewrite occurred, so advancing PREFIX_APPLIED there would permanently
+        // hide the correction from later retries.
+        if ("UPDATED".equalsIgnoreCase(result.status)) {
             preferences.edit()
                     .putString(PREFIX_APPLIED + key, currentEvent)
                     .putBoolean(PREFIX_PENDING + key, false)
@@ -233,11 +238,13 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                     .apply();
             return;
         }
+
         preferences.edit()
                 .putBoolean(PREFIX_PENDING + key,
                         "UNAVAILABLE".equals(result.status)
                                 || "FAILED".equals(result.status)
-                                || "QUEUED".equals(result.status))
+                                || "QUEUED".equals(result.status)
+                                || "PRESERVED".equals(result.status))
                 .apply();
     }
 
