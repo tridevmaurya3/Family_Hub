@@ -38,12 +38,15 @@ public final class FinanceMoneyManagerBridge {
         public final boolean preservedLedger;
         public final String status;
         public final String reason;
+        public final String transactionId;
 
-        private Result(boolean accepted, boolean preservedLedger, String status, String reason) {
+        private Result(boolean accepted, boolean preservedLedger, String status,
+                       String reason, String transactionId) {
             this.accepted = accepted;
             this.preservedLedger = preservedLedger;
             this.status = safe(status);
             this.reason = safe(reason);
+            this.transactionId = safe(transactionId);
         }
     }
 
@@ -147,14 +150,14 @@ public final class FinanceMoneyManagerBridge {
             @NonNull FinanceEntry entry) {
         if (!isPostable(entry) || toMinor(entry.amount) <= 0L) {
             return new Result(false, false, "SKIPPED",
-                    "Family Finance entry is not postable");
+                    "Family Finance entry is not postable", "");
         }
         boolean income = FinanceEntry.TYPE_INCOME.equals(entry.entryType);
         String accountRef = MoneyManagerMasterCatalogBridge.accountRefForLabel(
                 context, entry.accountName);
         if (accountRef.isEmpty()) {
             return new Result(false, false, "NEEDS_REVIEW",
-                    "Selected Family Finance account/card is not in MoneyManager master catalog");
+                    "Selected Family Finance account/card is not in MoneyManager master catalog", "");
         }
         String categoryRef = MoneyManagerMasterCatalogBridge.categoryRefForFinanceLabel(
                 context, entry.category, income);
@@ -163,7 +166,7 @@ public final class FinanceMoneyManagerBridge {
                         ? (income
                         ? "Selected Income category is not in MoneyManager master catalog"
                         : "Selected Expense category is not in MoneyManager master catalog")
-                        : "Family Finance entry could not be prepared");
+                        : "Family Finance entry could not be prepared", "");
     }
 
     @NonNull
@@ -195,19 +198,35 @@ public final class FinanceMoneyManagerBridge {
                     .call(endpoint, method, null, extras);
             if (response == null) {
                 return new Result(false, false, "UNAVAILABLE",
-                        "MoneyManager did not return a response");
+                        "MoneyManager did not return a response", "");
             }
             String status = safe(response.getString("status"));
             String reason = safe(response.getString("reason"));
-            boolean accepted = !("REJECTED".equals(status)
-                    || "FAILED".equals(status)
-                    || "UNAVAILABLE".equals(status)
-                    || "NEEDS_REVIEW".equals(status));
-            return new Result(accepted, "PRESERVED".equals(status), status, reason);
+            String transactionId = safe(response.getString("transaction_id"));
+            boolean accepted = isFinalizedStatus(status, transactionId);
+            return new Result(accepted, "PRESERVED".equalsIgnoreCase(status),
+                    status, reason, transactionId);
         } catch (RuntimeException unavailable) {
             return new Result(false, false, "UNAVAILABLE",
-                    "MoneyManager bridge is unavailable");
+                    "MoneyManager bridge is unavailable", "");
         }
+    }
+
+    private static boolean isFinalizedStatus(
+            @Nullable String status,
+            @Nullable String transactionId) {
+        String value = safe(status).toUpperCase(Locale.ROOT);
+        if ("DUPLICATE".equals(value)) {
+            // A queue duplicate without a linked transaction is not a completed
+            // sync. Keep retrying instead of making the Finance row disappear
+            // from the user's expectation while no MoneyManager ledger row exists.
+            return !safe(transactionId).isEmpty();
+        }
+        return "POSTED".equals(value)
+                || "RECONCILED".equals(value)
+                || "UPDATED".equals(value)
+                || "CANCELLED".equals(value)
+                || "PRESERVED".equals(value);
     }
 
     private static long occurredAt(@NonNull FinanceEntry entry) {
