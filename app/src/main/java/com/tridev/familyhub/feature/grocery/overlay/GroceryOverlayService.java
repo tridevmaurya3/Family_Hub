@@ -1600,10 +1600,12 @@ public class GroceryOverlayService extends Service {
         text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         text.setIncludeFontPadding(false);
         text.setSingleLine(false);
-        text.setMaxLines(2);
+        text.setHorizontallyScrolling(false);
+        text.setMaxLines(Integer.MAX_VALUE);
         text.setEllipsize(null);
-        text.setPadding(dp(14), dp(7), dp(14), dp(7));
-        text.setMinHeight(dp(50));
+        text.setPadding(dp(14), dp(5), dp(14), dp(5));
+        text.setMinHeight(0);
+        text.setMinimumHeight(0);
         text.setBackground(premiumDropdownRowBackground());
         return text;
     }
