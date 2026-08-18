@@ -1472,7 +1472,7 @@ public class GroceryOverlayService extends Service {
         return item.category.trim();
     }
 
-    /** Shows every ranked purchased item, grouped category-wise, from the ••• button. */
+    /** Shows every ranked purchased item in a visibly grouped smart picker. */
     private void showSmartSuggestionOverflow(
             View anchor,
             List<GroceryItem> suggestions,
@@ -1484,31 +1484,125 @@ public class GroceryOverlayService extends Service {
             String[] categories,
             EditText price) {
         FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-        PopupMenu popup = new PopupMenu(this, anchor);
+
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int popupWidth = Math.min(screenWidth - dp(28), dp(330));
+        int popupHeight = Math.min(screenHeight - dp(210), dp(520));
+
+        LinearLayout popupRoot = new LinearLayout(this);
+        popupRoot.setOrientation(LinearLayout.VERTICAL);
+        popupRoot.setPadding(dp(7), dp(7), dp(7), dp(7));
+        popupRoot.setBackground(premiumDropdownBackground());
+        popupRoot.setElevation(dp(10));
+
+        TextView popupTitle = text("Smart suggestions", 12, true);
+        popupTitle.setTextColor(Color.rgb(15, 90, 72));
+        popupTitle.setPadding(dp(10), dp(4), dp(10), dp(2));
+        popupRoot.addView(popupTitle, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView popupHint = text("Category-wise • most purchased first", 9, false);
+        popupHint.setTextColor(Color.rgb(94, 104, 114));
+        popupHint.setPadding(dp(10), 0, dp(10), dp(5));
+        popupRoot.addView(popupHint, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setVerticalScrollBarEnabled(true);
+        LinearLayout groupedList = new LinearLayout(this);
+        groupedList.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(groupedList, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.WRAP_CONTENT));
+        popupRoot.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        final android.widget.PopupWindow popup = new android.widget.PopupWindow(this);
+        popup.setContentView(popupRoot);
+        popup.setWidth(popupWidth);
+        popup.setHeight(popupHeight);
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        popup.setElevation(dp(12));
+        popup.setOverlapAnchor(false);
+
         String lastCategory = "";
-        int headerIndex = 0;
-        for (int index = 0; index < suggestions.size(); index++) {
-            GroceryItem suggestion = suggestions.get(index);
+        for (GroceryItem suggestion : suggestions) {
             String categoryName = smartSuggestionCategory(suggestion);
             if (!categoryName.equalsIgnoreCase(lastCategory)) {
-                android.view.MenuItem header = popup.getMenu().add(
-                        0, 40_000 + headerIndex, index * 2,
-                        "— " + categoryName + " —");
-                header.setEnabled(false);
-                headerIndex++;
+                int categoryPurchaseTotal = 0;
+                int categoryItemCount = 0;
+                for (GroceryItem candidate : suggestions) {
+                    if (categoryName.equalsIgnoreCase(
+                            smartSuggestionCategory(candidate))) {
+                        categoryPurchaseTotal += Math.max(0, candidate.purchaseCount);
+                        categoryItemCount++;
+                    }
+                }
+
+                TextView header = text(categoryName + "  •  "
+                        + categoryItemCount + "  •  "
+                        + categoryPurchaseTotal + "×", 10, true);
+                header.setTextColor(Color.rgb(12, 99, 75));
+                header.setPadding(dp(10), dp(5), dp(10), dp(5));
+                header.setBackground(roundedFill(
+                        Color.argb(235, 225, 246, 238), 9));
+                LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                headerParams.topMargin = groupedList.getChildCount() == 0
+                        ? 0 : dp(5);
+                headerParams.bottomMargin = dp(3);
+                groupedList.addView(header, headerParams);
                 lastCategory = categoryName;
             }
-            popup.getMenu().add(0, 50_000 + index, index * 2 + 1,
-                    suggestion.name + "  •  " + suggestion.purchaseCount + "×");
+
+            LinearLayout itemRow = new LinearLayout(this);
+            itemRow.setOrientation(LinearLayout.HORIZONTAL);
+            itemRow.setGravity(Gravity.CENTER_VERTICAL);
+            itemRow.setPadding(dp(10), dp(3), dp(8), dp(3));
+            itemRow.setBackground(rounded(
+                    Color.argb(247, 255, 255, 255),
+                    Color.argb(125, 212, 222, 226), 9));
+
+            TextView itemText = text(suggestion.name, 10, false);
+            itemText.setTextColor(Color.rgb(38, 45, 50));
+            itemText.setSingleLine(false);
+            itemText.setMaxLines(3);
+            itemText.setPadding(0, dp(1), dp(6), dp(1));
+            itemRow.addView(itemText, new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView countBadge = text(suggestion.purchaseCount + "×", 9, true);
+            countBadge.setTextColor(Color.rgb(15, 108, 89));
+            countBadge.setGravity(Gravity.CENTER);
+            countBadge.setPadding(dp(7), dp(2), dp(7), dp(2));
+            countBadge.setBackground(roundedFill(
+                    Color.argb(230, 235, 248, 241), 12));
+            itemRow.addView(countBadge, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
+
+            itemRow.setOnClickListener(v -> {
+                applySmartSuggestion(suggestion, name, quantity, unit,
+                        units, category, categories, price);
+                popup.dismiss();
+            });
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            rowParams.bottomMargin = dp(3);
+            groupedList.addView(itemRow, rowParams);
         }
-        popup.setOnMenuItemClickListener(menuItem -> {
-            int index = menuItem.getItemId() - 50_000;
-            if (index < 0 || index >= suggestions.size()) return false;
-            applySmartSuggestion(suggestions.get(index), name, quantity, unit,
-                    units, category, categories, price);
-            return true;
-        });
-        popup.show();
+
+        int xOffset = -(popupWidth - Math.max(anchor.getWidth(), dp(40)));
+        popup.showAsDropDown(anchor, xOffset, dp(5));
     }
 
     private void applyInlineHistory(
@@ -1692,6 +1786,11 @@ public class GroceryOverlayService extends Service {
             public View getView(int position, View convertView, ViewGroup parent) {
                 return premiumDropDownText(getItem(position));
             }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                return premiumDropDownText(getItem(position));
+            }
         };
         input.setAdapter(adapter);
         input.setThreshold(0);
@@ -1736,7 +1835,7 @@ public class GroceryOverlayService extends Service {
     private TextView premiumDropDownText(@Nullable String value) {
         TextView text = new TextView(this);
         text.setText(value == null ? "" : value);
-        text.setTextSize(11.5f);
+        text.setTextSize(10.5f);
         text.setTextColor(Color.rgb(31, 42, 49));
         text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         text.setIncludeFontPadding(false);
@@ -1744,10 +1843,14 @@ public class GroceryOverlayService extends Service {
         text.setHorizontallyScrolling(false);
         text.setMaxLines(Integer.MAX_VALUE);
         text.setEllipsize(null);
-        text.setPadding(dp(14), dp(5), dp(14), dp(5));
+        text.setLineSpacing(0f, 1f);
+        text.setPadding(dp(12), dp(1), dp(12), dp(1));
         text.setMinHeight(0);
         text.setMinimumHeight(0);
         text.setBackground(premiumDropdownRowBackground());
+        text.setLayoutParams(new android.widget.AbsListView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         return text;
     }
 
