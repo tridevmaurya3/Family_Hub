@@ -1616,7 +1616,7 @@ public class GroceryOverlayService extends Service {
         spinner.setDropDownWidth(Math.min(
                 getResources().getDisplayMetrics().widthPixels - dp(32), dp(330)));
         spinner.setPopupBackgroundDrawable(premiumDropdownBackground());
-        spinner.setPopupVerticalOffset(dp(4));
+        spinner.setDropDownVerticalOffset(dp(4));
         return spinner;
     }
 
