@@ -1589,7 +1589,6 @@ public class GroceryOverlayService extends Service {
             groupedList.addView(itemRow, rowParams);
         }
 
-        int popupX = anchor.getLocationOnScreen(new int[2]) ? 0 : 0;
         int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(40)));
         popup.showAsDropDown(anchor, xOffset, dp(5));
     }
