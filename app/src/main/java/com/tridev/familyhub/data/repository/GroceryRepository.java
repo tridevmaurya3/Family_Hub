@@ -738,6 +738,7 @@ public class GroceryRepository {
                 existing.amount = amount;
                 existing.note = financeNote(item);
                 existing.transactionDate = purchaseDate(item);
+                existing.updatedByName = financeActorName(item);
                 existing.updatedAt = System.currentTimeMillis();
                 financeEntryDao.update(existing);
                 publishLinkedFinance(existing);
@@ -753,6 +754,7 @@ public class GroceryRepository {
                 existing.amount = amount;
                 existing.note = financeNote(item);
                 existing.transactionDate = purchaseDate(item);
+                existing.updatedByName = financeActorName(item);
                 existing.updatedAt = System.currentTimeMillis();
                 financeEntryDao.update(existing);
                 publishLinkedFinance(existing);
@@ -772,11 +774,25 @@ public class GroceryRepository {
             entry.isShared = true;
             entry.cloudId = linkedCloudId;
             entry.familyId = financeFamilyId(item);
+            // Keep the signed-in writer UID for Firebase rules, but display the
+            // member who actually completed/updated the Grocery item.
             entry.updatedByUid = user == null ? "" : user.getUid();
-            entry.updatedByName = displayName(user);
+            entry.updatedByName = financeActorName(item);
         }
         item.financeEntryId = financeEntryDao.insert(entry);
         publishLinkedFinance(entry);
+    }
+
+    @NonNull
+    private static String financeActorName(@NonNull GroceryItem item) {
+        String purchaser = item.purchasedByName == null
+                ? "" : item.purchasedByName.trim();
+        if (!purchaser.isEmpty()) {
+            return purchaser;
+        }
+        String editor = item.updatedByName == null
+                ? "" : item.updatedByName.trim();
+        return editor.isEmpty() ? "Family member" : editor;
     }
 
     @NonNull
