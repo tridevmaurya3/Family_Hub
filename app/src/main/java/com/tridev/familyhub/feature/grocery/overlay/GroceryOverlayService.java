@@ -13,26 +13,29 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
-import android.text.InputType;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.SeekBar;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -40,9 +43,9 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.GroceryPurchase;
-import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
@@ -50,10 +53,10 @@ import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Draggable, adjustable quick-grocery surface shown over other phone screens. */
@@ -98,7 +101,8 @@ public class GroceryOverlayService extends Service {
     private boolean collapseAllCategories;
     private final Set<String> collapsedCategories = new HashSet<>();
     private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) {
+        @Override
+        public void onReceive(Context context, Intent intent) {
             if (intent == null) return;
             String result = intent.getStringExtra(GroceryVoiceCaptureActivity.EXTRA_RESULT);
             if (result != null && !result.trim().isEmpty()) {
@@ -332,7 +336,8 @@ public class GroceryOverlayService extends Service {
         opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float alpha = 0.35f + (progress / 100f) * 0.65f;
                 stripView.setAlpha(alpha);
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit()
@@ -345,66 +350,61 @@ public class GroceryOverlayService extends Service {
                 opacityPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
         root.addView(opacityPanel);
 
-        LinearLayout detailsOne = new LinearLayout(this);
-        detailsOne.setOrientation(LinearLayout.HORIZONTAL);
+        final String[] quantityUnits = getResources().getStringArray(
+                R.array.grocery_quantity_units);
+        final String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
+
         EditText quantity = compactInput(getString(R.string.grocery_quantity_amount_hint));
         quantity.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        detailsOne.addView(labelledField(
-                getString(R.string.grocery_quantity_amount), quantity), weightedField());
-        Spinner quantityUnit = compactSpinner(
-                getResources().getStringArray(R.array.grocery_quantity_units));
-        LinearLayout.LayoutParams unitParams = weightedField();
-        unitParams.setMarginStart(dp(8));
-        detailsOne.addView(labelledField(
-                getString(R.string.grocery_quantity_unit), quantityUnit), unitParams);
+        Spinner quantityUnit = compactSpinner(quantityUnits);
+        EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
+        price.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        Spinner category = compactSpinner(categoryLabels);
+        Spinner moneyAccount = moneyAccountSpinner();
+        Spinner moneyCategory = moneyCategorySpinner();
+        Spinner priority = compactSpinner(
+                getResources().getStringArray(R.array.grocery_priority_labels));
+
+        List<String> memberLabels = new ArrayList<>();
+        memberLabels.add(getString(R.string.grocery_whole_family));
+        for (FamilyMember familyMember : familyMembers) {
+            memberLabels.add(familyMember.name);
+        }
+        Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
+
+        final List<GroceryItem> smartSuggestions = new ArrayList<>();
+        Spinner quickPick = compactSpinner(new String[]{"Suggested"});
+
+        LinearLayout detailsOne = new LinearLayout(this);
+        detailsOne.setOrientation(LinearLayout.HORIZONTAL);
+        addCompactColumn(detailsOne, labelledField(
+                getString(R.string.grocery_quantity_amount), quantity), false);
+        addCompactColumn(detailsOne, labelledField(
+                getString(R.string.grocery_quantity_unit), quantityUnit), true);
+        addCompactColumn(detailsOne, labelledField(
+                getString(R.string.grocery_overlay_price), price), true);
         overlayFormDetails.addView(detailsOne);
 
         LinearLayout detailsTwo = new LinearLayout(this);
         detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
-        Spinner category = compactSpinner(
-                GroceryOptionCatalog.categoryLabels(this));
-        detailsTwo.addView(labelledField(
-                getString(R.string.grocery_category), category), weightedField());
-        EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
-        price.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        LinearLayout.LayoutParams priceParams = weightedField();
-        priceParams.setMarginStart(dp(8));
-        detailsTwo.addView(labelledField(
-                getString(R.string.grocery_overlay_price), price), priceParams);
+        addCompactColumn(detailsTwo, labelledField(
+                getString(R.string.grocery_category), category), false);
+        addCompactColumn(detailsTwo, labelledField(
+                getString(R.string.money_manager_paid_from), moneyAccount), true);
+        addCompactColumn(detailsTwo, labelledField(
+                getString(R.string.money_manager_expense_category), moneyCategory), true);
         overlayFormDetails.addView(detailsTwo);
-
-        LinearLayout moneyRow = new LinearLayout(this);
-        moneyRow.setOrientation(LinearLayout.HORIZONTAL);
-        Spinner moneyAccount = moneyAccountSpinner();
-        moneyRow.addView(labelledField(
-                getString(R.string.money_manager_paid_from), moneyAccount), weightedField());
-        Spinner moneyCategory = moneyCategorySpinner();
-        LinearLayout.LayoutParams moneyCategoryParams = weightedField();
-        moneyCategoryParams.setMarginStart(dp(8));
-        moneyRow.addView(labelledField(
-                getString(R.string.money_manager_expense_category), moneyCategory),
-                moneyCategoryParams);
-        overlayFormDetails.addView(moneyRow);
         attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
         LinearLayout detailsThree = new LinearLayout(this);
         detailsThree.setOrientation(LinearLayout.HORIZONTAL);
-        Spinner priority = compactSpinner(
-                getResources().getStringArray(R.array.grocery_priority_labels));
-        detailsThree.addView(labelledField(
-                getString(R.string.grocery_priority), priority), weightedField());
-        List<String> memberLabels = new ArrayList<>();
-        memberLabels.add(getString(R.string.grocery_whole_family));
-        for (FamilyMember member : familyMembers) {
-            memberLabels.add(member.name);
-        }
-        Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
-        LinearLayout.LayoutParams memberParams = weightedField();
-        memberParams.setMarginStart(dp(8));
-        detailsThree.addView(labelledField(
-                getString(R.string.grocery_assign_to), member), memberParams);
+        addCompactColumn(detailsThree, labelledField(
+                getString(R.string.grocery_priority), priority), false);
+        addCompactColumn(detailsThree, labelledField(
+                getString(R.string.grocery_assign_to), member), true);
+        addCompactColumn(detailsThree, labelledField("Quick pick", quickPick), true);
         overlayFormDetails.addView(detailsThree);
 
         TextView quickLabel = text(getString(
@@ -449,6 +449,7 @@ public class GroceryOverlayService extends Service {
                     .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
         });
         quickAdd.addView(input, new LinearLayout.LayoutParams(0, dp(42), 1f));
+
         ImageButton voice = new ImageButton(this);
         voice.setImageResource(R.drawable.ic_mic);
         voice.setContentDescription(getString(R.string.grocery_overlay_voice));
@@ -460,6 +461,7 @@ public class GroceryOverlayService extends Service {
                 dp(40), dp(40));
         voiceParams.setMarginStart(dp(6));
         quickAdd.addView(voice, voiceParams);
+
         Button add = new Button(this);
         add.setText("＋ Add");
         add.setTextSize(12f);
@@ -471,6 +473,81 @@ public class GroceryOverlayService extends Service {
         addParams.setMarginStart(dp(8));
         quickAdd.addView(add, addParams);
         root.addView(quickAdd);
+
+        TextView smartLabel = text("Smart suggestions • Most used first", 9, true);
+        smartLabel.setTextColor(Color.rgb(84, 93, 105));
+        smartLabel.setVisibility(View.GONE);
+        LinearLayout.LayoutParams smartLabelParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(20));
+        smartLabelParams.topMargin = dp(3);
+        root.addView(smartLabel, smartLabelParams);
+
+        HorizontalScrollView suggestionScroll = new HorizontalScrollView(this);
+        suggestionScroll.setHorizontalScrollBarEnabled(false);
+        suggestionScroll.setFillViewport(false);
+        suggestionScroll.setVisibility(View.GONE);
+        LinearLayout suggestionRow = new LinearLayout(this);
+        suggestionRow.setOrientation(LinearLayout.HORIZONTAL);
+        suggestionRow.setGravity(Gravity.CENTER_VERTICAL);
+        suggestionScroll.addView(suggestionRow, new HorizontalScrollView.LayoutParams(
+                HorizontalScrollView.LayoutParams.WRAP_CONTENT,
+                HorizontalScrollView.LayoutParams.MATCH_PARENT));
+        root.addView(suggestionScroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
+
+        repository.loadSuggestions(suggestions -> {
+            smartSuggestions.clear();
+            smartSuggestions.addAll(suggestions);
+            if (suggestions.isEmpty()) {
+                smartLabel.setVisibility(View.GONE);
+                suggestionScroll.setVisibility(View.GONE);
+                quickPick.setAdapter(compactSpinnerAdapter(
+                        new String[]{"Suggested"}));
+                return;
+            }
+
+            smartLabel.setVisibility(View.VISIBLE);
+            suggestionScroll.setVisibility(View.VISIBLE);
+            suggestionRow.removeAllViews();
+            String[] quickPickLabels = new String[suggestions.size() + 1];
+            quickPickLabels[0] = "Suggested";
+            for (int index = 0; index < suggestions.size(); index++) {
+                GroceryItem suggestion = suggestions.get(index);
+                quickPickLabels[index + 1] = suggestion.name;
+                Button chip = compactAction(suggestion.name,
+                        Color.rgb(15, 108, 89), Color.rgb(239, 250, 243));
+                chip.setTextSize(10f);
+                chip.setSingleLine(true);
+                chip.setEllipsize(TextUtils.TruncateAt.END);
+                chip.setOnClickListener(v -> applySmartSuggestion(
+                        suggestion, input, quantity, quantityUnit, quantityUnits,
+                        category, categoryLabels, price));
+                LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, dp(32));
+                chipParams.setMarginEnd(dp(6));
+                suggestionRow.addView(chip, chipParams);
+            }
+            quickPick.setAdapter(compactSpinnerAdapter(quickPickLabels));
+            quickPick.setSelection(0);
+        });
+
+        quickPick.setOnItemSelectedListener(
+                new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(android.widget.AdapterView<?> parent,
+                                               View view, int position, long id) {
+                        if (position <= 0 || position > smartSuggestions.size()) return;
+                        applySmartSuggestion(smartSuggestions.get(position - 1),
+                                input, quantity, quantityUnit, quantityUnits,
+                                category, categoryLabels, price);
+                    }
+
+                    @Override
+                    public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                        // Keep existing form values.
+                    }
+                });
+
         root.addView(overlayFormDetails);
 
         LinearLayout listTools = new LinearLayout(this);
@@ -489,7 +566,8 @@ public class GroceryOverlayService extends Service {
                 : getString(R.string.grocery_search_hint) + " • " + overlayCategoryFilter);
         search.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
-            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
+            @Override
+            public void onTextChanged(CharSequence s, int st, int b, int c) {
                 overlaySearchQuery = s == null ? "" : s.toString().trim();
                 refreshPanel();
             }
@@ -521,7 +599,6 @@ public class GroceryOverlayService extends Service {
         toolsParams.topMargin = dp(6);
         root.addView(listTools, toolsParams);
 
-        String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
         categoryFilter.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(this, categoryFilter);
             popup.getMenu().setGroupCheckable(1, true, true);
@@ -642,8 +719,6 @@ public class GroceryOverlayService extends Service {
             }
         });
 
-
-
         voice.setOnClickListener(v -> {
             pendingVoiceText = input.getText().toString();
             closePanel();
@@ -700,6 +775,7 @@ public class GroceryOverlayService extends Service {
                 input.setText("");
                 quantity.setText("");
                 price.setText("");
+                quickPick.setSelection(0);
                 refreshPanel();
             });
         });
@@ -765,9 +841,9 @@ public class GroceryOverlayService extends Service {
                     || !matchesOverlayFilters(item)) {
                 continue;
             }
-            String category = item.category.isEmpty()
+            String categoryName = item.category.isEmpty()
                     ? getString(R.string.grocery_uncategorized) : item.category;
-            grouped.computeIfAbsent(category, key -> new ArrayList<>()).add(item);
+            grouped.computeIfAbsent(categoryName, key -> new ArrayList<>()).add(item);
         }
         int shownHere = 0;
         for (Map.Entry<String, List<GroceryItem>> group : grouped.entrySet()) {
@@ -775,18 +851,18 @@ public class GroceryOverlayService extends Service {
                     + group.getKey().toLowerCase(java.util.Locale.ENGLISH);
             boolean collapsed = collapseAllCategories
                     || collapsedCategories.contains(collapseKey);
-            TextView category = text((collapsed ? "▸  " : "▾  ") + group.getKey() + "  ("
-                    + group.getValue().size() + ")", 11, true);
-            category.setTextColor(Color.rgb(15, 108, 89));
-            category.setGravity(Gravity.CENTER_VERTICAL);
-            category.setPadding(dp(9), 0, dp(9), 0);
-            category.setBackground(roundedFill(Color.rgb(226, 244, 238), 8));
+            TextView categoryHeader = text((collapsed ? "▸  " : "▾  ")
+                    + group.getKey() + "  (" + group.getValue().size() + ")", 11, true);
+            categoryHeader.setTextColor(Color.rgb(15, 108, 89));
+            categoryHeader.setGravity(Gravity.CENTER_VERTICAL);
+            categoryHeader.setPadding(dp(9), 0, dp(9), 0);
+            categoryHeader.setBackground(roundedFill(Color.rgb(226, 244, 238), 8));
             LinearLayout.LayoutParams categoryParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(30));
             categoryParams.topMargin = shownHere == 0 ? 0 : dp(4);
             categoryParams.bottomMargin = dp(3);
-            itemContainer.addView(category, categoryParams);
-            category.setOnClickListener(v -> {
+            itemContainer.addView(categoryHeader, categoryParams);
+            categoryHeader.setOnClickListener(v -> {
                 collapseAllCategories = false;
                 if (!collapsedCategories.add(collapseKey)) {
                     collapsedCategories.remove(collapseKey);
@@ -889,8 +965,43 @@ public class GroceryOverlayService extends Service {
         double savedPrice = item.actualCost > 0D
                 ? item.actualCost : item.estimatedCost;
         if (savedPrice > 0D) price.setText(String.valueOf(savedPrice));
-        itemContainer.addView(labelledField(
-                getString(R.string.grocery_actual_cost), price), fullEditorField());
+
+        EditText quantity = compactInput(
+                getString(R.string.grocery_quantity_amount_hint));
+        quantity.setInputType(InputType.TYPE_CLASS_NUMBER
+                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        String[] parts = item.quantity.trim().split("\\s+", 2);
+        if (parts.length > 0) quantity.setText(parts[0]);
+        String[] units = getResources().getStringArray(R.array.grocery_quantity_units);
+        Spinner unit = compactSpinner(units);
+        if (parts.length > 1) selectSpinner(unit, units, parts[1]);
+
+        String[] categories = GroceryOptionCatalog.categoryLabels(this);
+        Spinner category = compactSpinner(categories);
+        selectSpinner(category, categories, item.category);
+        Spinner moneyAccount = moneyAccountSpinner();
+        Spinner moneyCategory = moneyCategorySpinner();
+
+        LinearLayout purchasePrimaryRow = new LinearLayout(this);
+        purchasePrimaryRow.setOrientation(LinearLayout.HORIZONTAL);
+        addCompactColumn(purchasePrimaryRow, labelledField(
+                getString(R.string.grocery_actual_cost), price), false);
+        addCompactColumn(purchasePrimaryRow, labelledField(
+                getString(R.string.grocery_quantity_amount), quantity), true);
+        addCompactColumn(purchasePrimaryRow, labelledField(
+                getString(R.string.grocery_quantity_unit), unit), true);
+        itemContainer.addView(purchasePrimaryRow);
+
+        LinearLayout purchaseMoneyRow = new LinearLayout(this);
+        purchaseMoneyRow.setOrientation(LinearLayout.HORIZONTAL);
+        addCompactColumn(purchaseMoneyRow, labelledField(
+                getString(R.string.grocery_category), category), false);
+        addCompactColumn(purchaseMoneyRow, labelledField(
+                getString(R.string.money_manager_paid_from), moneyAccount), true);
+        addCompactColumn(purchaseMoneyRow, labelledField(
+                getString(R.string.money_manager_expense_category), moneyCategory), true);
+        itemContainer.addView(purchaseMoneyRow);
+        attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
         AutoCompleteTextView store = compactAutoComplete(
                 getString(R.string.grocery_store_hint),
@@ -901,45 +1012,6 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(labelledField(
                 getString(R.string.grocery_store_name), store), fullEditorField());
 
-        LinearLayout quantityRow = new LinearLayout(this);
-        quantityRow.setOrientation(LinearLayout.HORIZONTAL);
-        EditText quantity = compactInput(
-                getString(R.string.grocery_quantity_amount_hint));
-        quantity.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        String[] parts = item.quantity.trim().split("\\s+", 2);
-        if (parts.length > 0) quantity.setText(parts[0]);
-        quantityRow.addView(labelledField(
-                getString(R.string.grocery_quantity_amount), quantity), weightedField());
-        String[] units = getResources().getStringArray(R.array.grocery_quantity_units);
-        Spinner unit = compactSpinner(units);
-        if (parts.length > 1) selectSpinner(unit, units, parts[1]);
-        LinearLayout.LayoutParams unitParams = weightedField();
-        unitParams.setMarginStart(dp(8));
-        quantityRow.addView(labelledField(
-                getString(R.string.grocery_quantity_unit), unit), unitParams);
-        itemContainer.addView(quantityRow);
-
-        String[] categories = GroceryOptionCatalog.categoryLabels(this);
-        Spinner category = compactSpinner(categories);
-        selectSpinner(category, categories, item.category);
-        itemContainer.addView(labelledField(
-                getString(R.string.grocery_category), category), fullEditorField());
-
-        LinearLayout moneyRow = new LinearLayout(this);
-        moneyRow.setOrientation(LinearLayout.HORIZONTAL);
-        Spinner moneyAccount = moneyAccountSpinner();
-        moneyRow.addView(labelledField(
-                getString(R.string.money_manager_paid_from), moneyAccount), weightedField());
-        Spinner moneyCategory = moneyCategorySpinner();
-        LinearLayout.LayoutParams moneyCategoryParams = weightedField();
-        moneyCategoryParams.setMarginStart(dp(8));
-        moneyRow.addView(labelledField(
-                getString(R.string.money_manager_expense_category), moneyCategory),
-                moneyCategoryParams);
-        itemContainer.addView(moneyRow);
-        attachLiveMoneyCatalog(moneyAccount, moneyCategory);
-
         TextView historyInsight = text("", 10, false);
         historyInsight.setTextColor(Color.rgb(15, 108, 89));
         historyInsight.setPadding(dp(8), 0, dp(8), 0);
@@ -949,10 +1021,10 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         repository.loadStoreComparison(item.name, item.quantity,
                 (history, cheapest) -> {
-            if (history == null || itemContainer == null) return;
-            applyInlineHistory(history, cheapest, price, store, quantity,
-                    unit, units, category, categories, historyInsight);
-        });
+                    if (history == null || itemContainer == null) return;
+                    applyInlineHistory(history, cheapest, price, store, quantity,
+                            unit, units, category, categories, historyInsight);
+                });
 
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -978,8 +1050,9 @@ public class GroceryOverlayService extends Service {
         save.setOnClickListener(v -> {
             String priceText = price.getText().toString().trim();
             if (!priceText.isEmpty()) {
-                try { item.actualCost = Double.parseDouble(priceText); }
-                catch (NumberFormatException error) {
+                try {
+                    item.actualCost = Double.parseDouble(priceText);
+                } catch (NumberFormatException error) {
                     price.setError(getString(R.string.grocery_invalid_cost));
                     return;
                 }
@@ -1100,8 +1173,7 @@ public class GroceryOverlayService extends Service {
         for (int i = 0; i < choices.size(); i++) {
             labels[i + 1] = choices.get(i).label;
         }
-        spinner.setAdapter(new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, labels));
+        spinner.setAdapter(compactSpinnerAdapter(labels));
         spinner.setSelection(0);
         for (int i = 0; i < choices.size(); i++) {
             if (choices.get(i).ref.equalsIgnoreCase(selectedRef)) {
@@ -1149,7 +1221,8 @@ public class GroceryOverlayService extends Service {
                 Color.WHITE, Color.rgb(15, 108, 89));
         LinearLayout.LayoutParams undoParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
-        undoParams.leftMargin = dp(24); undoParams.rightMargin = dp(24);
+        undoParams.leftMargin = dp(24);
+        undoParams.rightMargin = dp(24);
         itemContainer.addView(undo, undoParams);
         final boolean[] handled = {false};
         undo.setOnClickListener(v -> {
@@ -1170,6 +1243,35 @@ public class GroceryOverlayService extends Service {
         }
     }
 
+    private void applySmartSuggestion(
+            GroceryItem suggestion,
+            EditText name,
+            EditText quantity,
+            Spinner unit,
+            String[] units,
+            Spinner category,
+            String[] categories,
+            EditText price) {
+        name.setText(suggestion.name);
+        name.setSelection(name.length());
+
+        String cleanQuantity = suggestion.quantity == null
+                ? "" : suggestion.quantity.trim();
+        if (!cleanQuantity.isEmpty()) {
+            String[] parts = cleanQuantity.split("\\s+", 2);
+            if (parts.length > 0) quantity.setText(parts[0]);
+            if (parts.length > 1) selectSpinner(unit, units, parts[1]);
+        }
+        if (suggestion.category != null && !suggestion.category.trim().isEmpty()) {
+            selectSpinner(category, categories, suggestion.category.trim());
+        }
+        double suggestedPrice = suggestion.actualCost > 0D
+                ? suggestion.actualCost : suggestion.estimatedCost;
+        if (suggestedPrice > 0D) {
+            price.setText(String.valueOf(suggestedPrice));
+        }
+    }
+
     private void applyInlineHistory(
             GroceryPurchase history,
             GroceryPurchase cheapest,
@@ -1180,8 +1282,7 @@ public class GroceryOverlayService extends Service {
             String[] units,
             Spinner category,
             String[] categories,
-            TextView insight
-    ) {
+            TextView insight) {
         String[] previousQuantity = history.quantity.trim().split("\\s+", 2);
         if (previousQuantity.length > 0) quantity.setText(previousQuantity[0]);
         if (previousQuantity.length > 1) {
@@ -1196,14 +1297,15 @@ public class GroceryOverlayService extends Service {
         insight.setText(inlineComparisonText(history, cheapest,
                 history.actualCost));
         price.addTextChangedListener(new android.text.TextWatcher() {
-            @Override public void beforeTextChanged(
-                    CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(
-                    CharSequence s, int start, int before, int count) {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
                 double current = 0D;
-                try { current = Double.parseDouble(s == null
-                        ? "" : s.toString().trim()); }
-                catch (NumberFormatException ignored) { }
+                try {
+                    current = Double.parseDouble(s == null
+                            ? "" : s.toString().trim());
+                } catch (NumberFormatException ignored) { }
                 insight.setText(inlineComparisonText(history, cheapest, current));
             }
             @Override public void afterTextChanged(android.text.Editable s) { }
@@ -1245,8 +1347,8 @@ public class GroceryOverlayService extends Service {
 
     private LinearLayout.LayoutParams fullEditorField() {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(66));
-        params.topMargin = dp(5);
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(62));
+        params.topMargin = dp(4);
         return params;
     }
 
@@ -1334,8 +1436,7 @@ public class GroceryOverlayService extends Service {
         return input;
     }
 
-    private AutoCompleteTextView compactAutoComplete(
-            String hint, String[] values) {
+    private AutoCompleteTextView compactAutoComplete(String hint, String[] values) {
         AutoCompleteTextView input = new AutoCompleteTextView(this);
         input.setSingleLine(true);
         input.setTextSize(11.5f);
@@ -1350,11 +1451,41 @@ public class GroceryOverlayService extends Service {
         return input;
     }
 
+    private ArrayAdapter<String> compactSpinnerAdapter(String[] values) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, values) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                styleSpinnerText(view, false);
+                return view;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                View view = super.getDropDownView(position, convertView, parent);
+                styleSpinnerText(view, true);
+                return view;
+            }
+        };
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        return adapter;
+    }
+
+    private void styleSpinnerText(View view, boolean dropdown) {
+        if (!(view instanceof TextView)) return;
+        TextView text = (TextView) view;
+        text.setTextSize(dropdown ? 11.5f : 11f);
+        text.setSingleLine(true);
+        text.setEllipsize(TextUtils.TruncateAt.END);
+        text.setGravity(Gravity.CENTER_VERTICAL);
+        text.setPadding(dp(8), 0, dp(dropdown ? 8 : 18), 0);
+        if (dropdown) text.setMinHeight(dp(40));
+    }
+
     private Spinner compactSpinner(String[] values) {
         Spinner spinner = new Spinner(this);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, values);
-        spinner.setAdapter(adapter);
+        spinner.setAdapter(compactSpinnerAdapter(values));
         spinner.setBackground(rounded(Color.rgb(248, 249, 250),
                 Color.rgb(214, 220, 227), 12));
         return spinner;
@@ -1367,11 +1498,19 @@ public class GroceryOverlayService extends Service {
         return params;
     }
 
+    private void addCompactColumn(LinearLayout row, View field, boolean withStartMargin) {
+        LinearLayout.LayoutParams params = weightedField();
+        if (withStartMargin) params.setMarginStart(dp(6));
+        row.addView(field, params);
+    }
+
     private LinearLayout labelledField(String label, View field) {
         LinearLayout block = new LinearLayout(this);
         block.setOrientation(LinearLayout.VERTICAL);
         TextView fieldLabel = text(label, 9, true);
         fieldLabel.setTextColor(Color.rgb(84, 93, 105));
+        fieldLabel.setSingleLine(true);
+        fieldLabel.setEllipsize(TextUtils.TruncateAt.END);
         block.addView(fieldLabel, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
         block.addView(field, new LinearLayout.LayoutParams(
@@ -1413,7 +1552,8 @@ public class GroceryOverlayService extends Service {
     }
 
     /** Captures Back before the IME so one press closes the floating panel. */
-    private final class BackAwareEditText extends androidx.appcompat.widget.AppCompatEditText {
+    private final class BackAwareEditText
+            extends androidx.appcompat.widget.AppCompatEditText {
         BackAwareEditText() {
             super(GroceryOverlayService.this);
         }
@@ -1453,7 +1593,10 @@ public class GroceryOverlayService extends Service {
     }
 
     @Nullable
-    @Override public IBinder onBind(Intent intent) { return null; }
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
     @Override
     public void onDestroy() {
