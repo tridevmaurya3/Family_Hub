@@ -81,6 +81,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private static final String STATE_QUERY = "family_map_query";
     private static final String STATE_SELECTED_MEMBER =
             "family_map_selected_member";
+    private static final String STATE_COMPARISON_MEMBER =
+            "family_map_comparison_member";
     private static final String STATE_TRAFFIC = "family_map_traffic";
 
     private final Map<Marker, FamilyLiveCloudMember> markerMembers =
@@ -124,6 +126,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private TextView stateText;
     private MaterialButton typeButton;
     private MaterialButton trafficButton;
+    private FamilyMapComparePanelView comparePanel;
 
     private boolean mapReady;
     private boolean dataReady;
@@ -148,8 +151,32 @@ public final class FamilyMapActivity extends AppCompatActivity {
 
         View root = findViewById(R.id.familyMapRoot);
         topPanel = findViewById(R.id.familyMapTopPanel);
+        comparePanel = findViewById(R.id.familyMapComparePanel);
         controlRail = findViewById(R.id.familyMapControlRail);
         bottomPanel = findViewById(R.id.familyMapBottomPanel);
+
+        comparePanel.setListener(new FamilyMapComparePanelView.Listener() {
+            @Override
+            public void onCompareMemberSelected(
+                    @NonNull FamilyLiveCloudMember member
+            ) {
+                if (selectedMemberUid == null
+                        || selectedMemberUid.equals(member.uid)) {
+                    return;
+                }
+                Marker marker = memberMarkers.get(member.uid);
+                if (marker != null) {
+                    compareWithSelectedMember(marker, member);
+                }
+            }
+
+            @Override
+            public void onOpenMemberActions(
+                    @NonNull FamilyLiveCloudMember member
+            ) {
+                showMemberActions(member);
+            }
+        });
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
             androidx.core.graphics.Insets bars = insets.getInsets(
@@ -161,12 +188,16 @@ public final class FamilyMapActivity extends AppCompatActivity {
                     + getResources().getDimensionPixelSize(R.dimen.space_8);
             topPanel.setLayoutParams(topParams);
             view.setPadding(0, 0, 0, bars.bottom);
+            topPanel.post(this::positionComparePanel);
             return insets;
         });
 
         root.addOnLayoutChangeListener((view, left, top, right, bottom,
                                         oldLeft, oldTop, oldRight,
-                                        oldBottom) -> applyMapPadding());
+                                        oldBottom) -> {
+            positionComparePanel();
+            applyMapPadding();
+        });
 
         loading = findViewById(R.id.familyMapLoading);
         stateCard = findViewById(R.id.familyMapStateCard);
@@ -342,6 +373,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         outState.putBoolean(STATE_TRAFFIC, trafficEnabled);
         outState.putString(STATE_QUERY, query);
         outState.putString(STATE_SELECTED_MEMBER, selectedMemberUid);
+        outState.putString(STATE_COMPARISON_MEMBER, comparisonTargetUid);
         if (map != null) {
             outState.putParcelable(
                     STATE_CAMERA,
@@ -401,6 +433,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
             return;
         }
 
+        String comparisonToRestore = comparisonTargetUid;
         map.clear();
         markerMembers.clear();
         memberMarkers.clear();
@@ -412,6 +445,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
 
         if (selectedMemberUid == null) {
             setSelectionChromeVisible(true);
+            hideComparisonPanel();
         }
 
         renderSafePlaces();
@@ -475,6 +509,16 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
 
         restoreSelectedMemberFocus();
+        if (comparisonToRestore != null
+                && selectedMemberUid != null
+                && !selectedMemberUid.equals(comparisonToRestore)) {
+            Marker target = memberMarkers.get(comparisonToRestore);
+            FamilyLiveCloudMember targetMember = target == null
+                    ? null : markerMembers.get(target);
+            if (target != null && targetMember != null) {
+                compareWithSelectedMember(target, targetMember);
+            }
+        }
         loading.setVisibility(View.GONE);
 
         if (!dataReady) {
@@ -599,7 +643,8 @@ public final class FamilyMapActivity extends AppCompatActivity {
                     .strokeWidth(3F));
         }
 
-        marker.showInfoWindow();
+        marker.hideInfoWindow();
+        showComparisonPanel(member);
     }
 
     private void compareWithSelectedMember(
@@ -624,7 +669,12 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 .geodesic(true));
 
         setSelectionChromeVisible(false);
-        targetMarker.showInfoWindow();
+        targetMarker.hideInfoWindow();
+
+        FamilyLiveCloudMember selected = findMember(selectedMemberUid);
+        if (selected != null) {
+            showComparisonPanel(selected);
+        }
 
         LatLngBounds bounds = new LatLngBounds.Builder()
                 .include(selectedMarker.getPosition())
@@ -661,6 +711,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         comparisonTargetUid = null;
         selectedMarker = null;
         selectedMemberUid = null;
+        hideComparisonPanel();
         setSelectionChromeVisible(true);
     }
 
@@ -688,6 +739,43 @@ public final class FamilyMapActivity extends AppCompatActivity {
         findViewById(R.id.familyMapHost).post(this::applyMapPadding);
     }
 
+    private void showComparisonPanel(
+            @NonNull FamilyLiveCloudMember primaryMember
+    ) {
+        comparePanel.bind(
+                primaryMember,
+                members,
+                memberPhotos,
+                comparisonTargetUid
+        );
+        if (comparePanel.getVisibility() != View.VISIBLE) {
+            comparePanel.setVisibility(View.VISIBLE);
+        }
+        positionComparePanel();
+        comparePanel.post(this::applyMapPadding);
+    }
+
+    private void hideComparisonPanel() {
+        if (comparePanel != null && comparePanel.getVisibility() != View.GONE) {
+            comparePanel.setVisibility(View.GONE);
+            findViewById(R.id.familyMapHost).post(this::applyMapPadding);
+        }
+    }
+
+    private void positionComparePanel() {
+        if (comparePanel == null || topPanel == null) {
+            return;
+        }
+        ViewGroup.MarginLayoutParams params =
+                (ViewGroup.MarginLayoutParams) comparePanel.getLayoutParams();
+        int desiredTop = topPanel.getBottom()
+                + getResources().getDimensionPixelSize(R.dimen.space_8);
+        if (params.topMargin != desiredTop) {
+            params.topMargin = desiredTop;
+            comparePanel.setLayoutParams(params);
+        }
+    }
+
     private void restoreSelectedMemberFocus() {
         if (selectedMemberUid == null || map == null) {
             return;
@@ -699,6 +787,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 : markerMembers.get(marker);
 
         if (marker == null || member == null) {
+            hideComparisonPanel();
             setSelectionChromeVisible(true);
             if (pendingIntentFocus && dataReady) {
                 pendingIntentFocus = false;
@@ -1134,6 +1223,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         trafficEnabled = state.getBoolean(STATE_TRAFFIC, false);
         query = valueOrEmpty(state.getString(STATE_QUERY));
         selectedMemberUid = state.getString(STATE_SELECTED_MEMBER);
+        comparisonTargetUid = state.getString(STATE_COMPARISON_MEMBER);
         restoredCamera = state.getParcelable(STATE_CAMERA);
         fitOnNextRender = restoredCamera == null;
     }
@@ -1355,9 +1445,19 @@ public final class FamilyMapActivity extends AppCompatActivity {
             ) + (edge * 2);
         }
 
+        int topPadding = topPanel.getBottom() + edge;
+        if (comparePanel != null
+                && comparePanel.getVisibility() == View.VISIBLE
+                && comparePanel.getBottom() > 0) {
+            topPadding = Math.max(
+                    topPadding,
+                    comparePanel.getBottom() + edge
+            );
+        }
+
         map.setPadding(
                 edge,
-                topPanel.getBottom() + edge,
+                topPadding,
                 edge,
                 bottomPadding
         );
