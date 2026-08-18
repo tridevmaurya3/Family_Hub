@@ -178,27 +178,19 @@ public class GroceryOverlayService extends Service {
         }
         if (intent != null && ACTION_HIDE.equals(intent.getAction())) {
             closePanel();
-            if (stripView != null) {
-                stripView.setVisibility(View.GONE);
-            }
+            if (stripView != null) stripView.setVisibility(View.GONE);
             return START_STICKY;
         }
         if (intent != null && ACTION_SHOW.equals(intent.getAction())) {
-            if (stripView == null && Settings.canDrawOverlays(this)) {
-                showStrip();
-            }
-            if (stripView != null) {
-                stripView.setVisibility(View.VISIBLE);
-            }
+            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
+            if (stripView != null) stripView.setVisibility(View.VISIBLE);
             return START_STICKY;
         }
         return START_STICKY;
     }
 
     private void showStrip() {
-        if (stripView != null) {
-            return;
-        }
+        if (stripView != null) return;
         TextView strip = new TextView(this);
         strip.setText("+");
         strip.setTextColor(Color.rgb(11, 79, 59));
@@ -215,10 +207,8 @@ public class GroceryOverlayService extends Service {
 
         stripParams = overlayParams(dp(44), dp(44), true);
         stripParams.gravity = Gravity.TOP | Gravity.START;
-        stripParams.x = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getInt("x", dp(12));
-        stripParams.y = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getInt("y", dp(160));
+        stripParams.x = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("x", dp(12));
+        stripParams.y = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("y", dp(160));
         strip.setOnTouchListener(new View.OnTouchListener() {
             private int startX;
             private int startY;
@@ -228,9 +218,7 @@ public class GroceryOverlayService extends Service {
 
             @Override
             public boolean onTouch(View view, MotionEvent event) {
-                if (event != null) {
-                    FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-                }
+                if (event != null) FamilyHubAppLockManager.noteTrustedOverlayInteraction();
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     startX = stripParams.x;
                     startY = stripParams.y;
@@ -250,11 +238,8 @@ public class GroceryOverlayService extends Service {
                 }
                 if (event.getAction() == MotionEvent.ACTION_UP) {
                     getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                            .putInt("x", stripParams.x)
-                            .putInt("y", stripParams.y).apply();
-                    if (!moved) {
-                        togglePanel();
-                    }
+                            .putInt("x", stripParams.x).putInt("y", stripParams.y).apply();
+                    if (!moved) togglePanel();
                     return true;
                 }
                 return false;
@@ -276,20 +261,14 @@ public class GroceryOverlayService extends Service {
                 cornerPaint.setStyle(Paint.Style.STROKE);
                 setWillNotDraw(false);
             }
-
-            @Override
-            protected void dispatchDraw(Canvas canvas) {
+            @Override protected void dispatchDraw(Canvas canvas) {
                 super.dispatchDraw(canvas);
                 drawResizeCornerGuides(canvas, getWidth(), getHeight(), cornerPaint);
             }
-
-            @Override
-            public boolean dispatchTouchEvent(MotionEvent event) {
+            @Override public boolean dispatchTouchEvent(MotionEvent event) {
                 if (event != null) {
                     FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-                    if (handlePanelCornerResizeGesture(this, event)) {
-                        return true;
-                    }
+                    if (handlePanelCornerResizeGesture(this, event)) return true;
                     if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
                         closePanel();
                         return true;
@@ -300,7 +279,7 @@ public class GroceryOverlayService extends Service {
         };
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(14), dp(12), dp(18), dp(18));
+        root.setPadding(dp(14), dp(10), dp(18), dp(14));
         root.setBackground(panelGradient());
         root.setElevation(dp(16));
         root.setClipToPadding(false);
@@ -308,8 +287,7 @@ public class GroceryOverlayService extends Service {
         root.setClickable(true);
         root.setOnClickListener(v -> closePanel());
         panelRoot.addView(root, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT));
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         View glassHighlight = new View(this);
         glassHighlight.setClickable(false);
@@ -323,8 +301,7 @@ public class GroceryOverlayService extends Service {
         panelRoot.addView(glassHighlight, highlightParams);
 
         root.setOnKeyListener((view, keyCode, event) -> {
-            if (keyCode == KeyEvent.KEYCODE_BACK
-                    && event.getAction() == KeyEvent.ACTION_UP) {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
                 closePanel();
                 return true;
             }
@@ -333,8 +310,19 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout titleStack = new LinearLayout(this);
+        titleStack.setOrientation(LinearLayout.VERTICAL);
+        titleStack.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = text(getString(R.string.grocery_overlay_title), 16, true);
-        header.addView(title, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        titleStack.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(24)));
+        TextView shoppingSubtitle = text("(" + getString(R.string.grocery_list_type) + ")", 11, true);
+        shoppingSubtitle.setTextColor(Color.rgb(84, 93, 105));
+        shoppingSubtitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        titleStack.addView(shoppingSubtitle, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
+        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(44), 1f));
+
         overlayFormToggle = new Button(this);
         overlayFormToggle.setText(R.string.grocery_overlay_hide_form);
         overlayFormToggle.setTextSize(10f);
@@ -346,15 +334,15 @@ public class GroceryOverlayService extends Service {
         overlayFormToggle.setBackground(rounded(Color.argb(220, 232, 243, 252),
                 Color.argb(190, 190, 216, 236), 16));
         overlayFormToggle.setElevation(dp(2));
-        header.addView(overlayFormToggle,
-                new LinearLayout.LayoutParams(dp(78), dp(34)));
+        header.addView(overlayFormToggle, new LinearLayout.LayoutParams(dp(78), dp(34)));
         Button close = new Button(this);
         close.setText("×");
         close.setTextSize(20f);
         close.setBackgroundColor(Color.TRANSPARENT);
         close.setOnClickListener(v -> closePanel());
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(44)));
-        root.addView(header);
+        root.addView(header, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(46)));
 
         overlayFormDetails = new LinearLayout(this);
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
@@ -373,57 +361,46 @@ public class GroceryOverlayService extends Service {
         monthly.setText(R.string.grocery_list_monthly);
         monthly.setTextSize(12f);
         monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(
-                0, dp(36), 1f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(
-                0, dp(36), 1f));
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 1f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 1f));
         listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             selectedListType[0] = checkedId == monthly.getId()
-                    ? GroceryItem.LIST_MONTHLY
-                    : GroceryItem.LIST_DAILY;
+                    ? GroceryItem.LIST_MONTHLY : GroceryItem.LIST_DAILY;
             visibleListType = selectedListType[0];
             refreshPanel();
         });
-        LinearLayout typeBlock = labelledField(
-                getString(R.string.grocery_list_type), listTypeGroup);
         LinearLayout listTypeControls = new LinearLayout(this);
-        listTypeControls.setGravity(Gravity.BOTTOM | Gravity.CENTER_VERTICAL);
-        listTypeControls.addView(typeBlock, new LinearLayout.LayoutParams(
-                0, dp(60), 1f));
+        listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
+        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(0, dp(36), 1f));
 
         Button opacityToggle = compactAction("◐",
                 Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
         opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
-        LinearLayout.LayoutParams opacityToggleParams = new LinearLayout.LayoutParams(
-                dp(46), dp(38));
+        LinearLayout.LayoutParams opacityToggleParams = new LinearLayout.LayoutParams(dp(46), dp(36));
         opacityToggleParams.setMarginStart(dp(8));
-        opacityToggleParams.bottomMargin = dp(2);
         listTypeControls.addView(opacityToggle, opacityToggleParams);
-        root.addView(listTypeControls);
+        root.addView(listTypeControls, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
 
         LinearLayout opacityPanel = new LinearLayout(this);
         opacityPanel.setOrientation(LinearLayout.VERTICAL);
         opacityPanel.setPadding(dp(8), dp(2), dp(8), dp(2));
         opacityPanel.setBackground(roundedFill(Color.argb(218, 242, 248, 253), 10));
         opacityPanel.setVisibility(View.GONE);
-        TextView opacityLabel = text(getString(
-                R.string.grocery_overlay_opacity), 10, false);
+        TextView opacityLabel = text(getString(R.string.grocery_overlay_opacity), 10, false);
         opacityPanel.addView(opacityLabel, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
         SeekBar opacity = new SeekBar(this);
-        float savedAlpha = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getFloat("alpha", 0.88f);
+        float savedAlpha = getSharedPreferences(PREFS, MODE_PRIVATE).getFloat("alpha", 0.88f);
         int savedProgress = Math.round((savedAlpha - 0.35f) / 0.65f * 100f);
         opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
         opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float alpha = 0.35f + (progress / 100f) * 0.65f;
                 if (stripView != null) stripView.setAlpha(alpha);
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                        .putFloat("alpha", alpha).apply();
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putFloat("alpha", alpha).apply();
             }
         });
         opacityPanel.addView(opacity, new LinearLayout.LayoutParams(
@@ -432,76 +409,57 @@ public class GroceryOverlayService extends Service {
                 opacityPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
         root.addView(opacityPanel);
 
-        final String[] quantityUnits = getResources().getStringArray(
-                R.array.grocery_quantity_units);
+        final String[] quantityUnits = getResources().getStringArray(R.array.grocery_quantity_units);
         final String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
-
         EditText quantity = compactInput(getString(R.string.grocery_quantity_amount_hint));
-        quantity.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        quantity.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         Spinner quantityUnit = compactSpinner(quantityUnits);
         EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
-        price.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        price.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         Spinner category = compactSpinner(categoryLabels);
         Spinner moneyAccount = moneyAccountSpinner();
         Spinner moneyCategory = moneyCategorySpinner();
-        Spinner priority = compactSpinner(
-                getResources().getStringArray(R.array.grocery_priority_labels));
+        Spinner priority = compactSpinner(getResources().getStringArray(R.array.grocery_priority_labels));
 
         List<String> memberLabels = new ArrayList<>();
         memberLabels.add(getString(R.string.grocery_whole_family));
-        for (FamilyMember familyMember : familyMembers) {
-            memberLabels.add(familyMember.name);
-        }
+        for (FamilyMember familyMember : familyMembers) memberLabels.add(familyMember.name);
         Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
-
         final List<GroceryItem> smartSuggestions = new ArrayList<>();
         Spinner quickPick = compactSpinner(new String[]{"Suggested"});
 
         LinearLayout detailsOne = new LinearLayout(this);
         detailsOne.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(detailsOne, labelledField(
-                getString(R.string.grocery_quantity_amount), quantity), false);
-        addCompactColumn(detailsOne, labelledField(
-                getString(R.string.grocery_quantity_unit), quantityUnit), true);
-        addCompactColumn(detailsOne, labelledField(
-                getString(R.string.grocery_overlay_price), price), true);
+        addCompactColumn(detailsOne, labelledField(getString(R.string.grocery_quantity_amount), quantity), false);
+        addCompactColumn(detailsOne, labelledField(getString(R.string.grocery_quantity_unit), quantityUnit), true);
+        addCompactColumn(detailsOne, labelledField(getString(R.string.grocery_overlay_price), price), true);
         overlayFormDetails.addView(detailsOne);
 
         LinearLayout detailsTwo = new LinearLayout(this);
         detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(detailsTwo, labelledField(
-                getString(R.string.grocery_category), category), false);
-        addCompactColumn(detailsTwo, labelledField(
-                getString(R.string.money_manager_paid_from), moneyAccount), true);
-        addCompactColumn(detailsTwo, labelledField(
-                getString(R.string.money_manager_expense_category), moneyCategory), true);
+        addCompactColumn(detailsTwo, labelledField(getString(R.string.grocery_category), category), false);
+        addCompactColumn(detailsTwo, labelledField(getString(R.string.money_manager_paid_from), moneyAccount), true);
+        addCompactColumn(detailsTwo, labelledField(getString(R.string.money_manager_expense_category), moneyCategory), true);
         overlayFormDetails.addView(detailsTwo);
         attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
         LinearLayout detailsThree = new LinearLayout(this);
         detailsThree.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(detailsThree, labelledField(
-                getString(R.string.grocery_priority), priority), false);
-        addCompactColumn(detailsThree, labelledField(
-                getString(R.string.grocery_assign_to), member), true);
+        addCompactColumn(detailsThree, labelledField(getString(R.string.grocery_priority), priority), false);
+        addCompactColumn(detailsThree, labelledField(getString(R.string.grocery_assign_to), member), true);
         addCompactColumn(detailsThree, labelledField("Quick pick", quickPick), true);
         overlayFormDetails.addView(detailsThree);
 
-        TextView quickLabel = text(getString(
-                R.string.grocery_overlay_quick_item), 11, true);
+        TextView quickLabel = text(getString(R.string.grocery_overlay_quick_item), 11, true);
         LinearLayout.LayoutParams quickLabelParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(22));
-        quickLabelParams.topMargin = dp(4);
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(18));
         root.addView(quickLabel, quickLabelParams);
 
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
         EditText input = new BackAwareEditText();
         input.setSingleLine(true);
-        input.setInputType(InputType.TYPE_CLASS_TEXT
-                | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         input.setFocusable(true);
         input.setFocusableInTouchMode(true);
         input.setCursorVisible(true);
@@ -518,8 +476,7 @@ public class GroceryOverlayService extends Service {
             pendingVoiceText = "";
         }
         input.setOnKeyListener((view, keyCode, event) -> {
-            if (keyCode == KeyEvent.KEYCODE_BACK
-                    && event.getAction() == KeyEvent.ACTION_UP) {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
                 closePanel();
                 return true;
             }
@@ -540,8 +497,7 @@ public class GroceryOverlayService extends Service {
         voice.setBackground(rounded(Color.argb(220, 232, 243, 252),
                 Color.argb(190, 190, 216, 236), 22));
         voice.setElevation(dp(2));
-        LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(
-                dp(40), dp(40));
+        LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(dp(40), dp(40));
         voiceParams.setMarginStart(dp(6));
         quickAdd.addView(voice, voiceParams);
 
@@ -549,17 +505,14 @@ public class GroceryOverlayService extends Service {
         add.setText("＋ Add");
         add.setTextSize(12f);
         add.setTextColor(Color.WHITE);
-        add.setBackground(rounded(Color.rgb(15, 108, 189),
-                Color.rgb(15, 108, 189), 22));
+        add.setBackground(rounded(Color.rgb(15, 108, 189), Color.rgb(15, 108, 189), 22));
         add.setElevation(dp(3));
-        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(
-                dp(82), dp(42));
+        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(82), dp(42));
         addParams.setMarginStart(dp(8));
         quickAdd.addView(add, addParams);
         root.addView(quickAdd);
 
-        TextView smartLabel = text(
-                "Smart suggestions • Category-wise • Most used first", 9, true);
+        TextView smartLabel = text("Smart suggestions • Category-wise • Most used first", 9, true);
         smartLabel.setTextColor(Color.rgb(84, 93, 105));
         smartLabel.setVisibility(View.GONE);
         LinearLayout.LayoutParams smartLabelParams = new LinearLayout.LayoutParams(
@@ -570,7 +523,6 @@ public class GroceryOverlayService extends Service {
         LinearLayout suggestionBar = new LinearLayout(this);
         suggestionBar.setGravity(Gravity.CENTER_VERTICAL);
         suggestionBar.setOrientation(LinearLayout.HORIZONTAL);
-
         HorizontalScrollView suggestionScroll = new HorizontalScrollView(this);
         suggestionScroll.setHorizontalScrollBarEnabled(false);
         suggestionScroll.setFillViewport(false);
@@ -581,36 +533,29 @@ public class GroceryOverlayService extends Service {
         suggestionScroll.addView(suggestionRow, new HorizontalScrollView.LayoutParams(
                 HorizontalScrollView.LayoutParams.WRAP_CONTENT,
                 HorizontalScrollView.LayoutParams.MATCH_PARENT));
-        suggestionBar.addView(suggestionScroll, new LinearLayout.LayoutParams(
-                0, dp(36), 1f));
-
-        Button moreSuggestions = compactAction("•••",
-                Color.rgb(15, 108, 189), Color.argb(225, 232, 243, 252));
+        suggestionBar.addView(suggestionScroll, new LinearLayout.LayoutParams(0, dp(36), 1f));
+        Button moreSuggestions = compactAction("•••", Color.rgb(15, 108, 189),
+                Color.argb(225, 232, 243, 252));
         moreSuggestions.setContentDescription("More smart suggestions");
         moreSuggestions.setTextSize(14f);
         moreSuggestions.setVisibility(View.GONE);
         moreSuggestions.setElevation(dp(1));
-        LinearLayout.LayoutParams moreSuggestionParams = new LinearLayout.LayoutParams(
-                dp(40), dp(32));
+        LinearLayout.LayoutParams moreSuggestionParams = new LinearLayout.LayoutParams(dp(40), dp(32));
         moreSuggestionParams.setMarginStart(dp(5));
         suggestionBar.addView(moreSuggestions, moreSuggestionParams);
-
-        Button clearSuggestions = compactAction("Clear",
-                Color.rgb(170, 62, 62), Color.argb(238, 255, 248, 249));
+        Button clearSuggestions = compactAction("Clear", Color.rgb(170, 62, 62),
+                Color.argb(238, 255, 248, 249));
         clearSuggestions.setContentDescription("Clear grocery form");
         clearSuggestions.setTextSize(10f);
         clearSuggestions.setSingleLine(true);
         clearSuggestions.setElevation(dp(1));
         clearSuggestions.setBackground(rounded(Color.argb(238, 255, 248, 249),
                 Color.argb(205, 213, 133, 139), 16));
-        LinearLayout.LayoutParams clearSuggestionParams = new LinearLayout.LayoutParams(
-                dp(62), dp(32));
+        LinearLayout.LayoutParams clearSuggestionParams = new LinearLayout.LayoutParams(dp(62), dp(32));
         clearSuggestionParams.setMarginStart(dp(5));
         suggestionBar.addView(clearSuggestions, clearSuggestionParams);
-
         root.addView(suggestionBar, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
-
         clearSuggestions.setOnClickListener(v -> clearSmartFilledForm(
                 input, quantity, quantityUnit, category, price, quickPick));
 
@@ -619,7 +564,6 @@ public class GroceryOverlayService extends Service {
             smartSuggestions.clear();
             smartSuggestions.addAll(suggestions);
             suggestionRow.removeAllViews();
-
             if (suggestions.isEmpty()) {
                 smartLabel.setVisibility(View.GONE);
                 suggestionScroll.setVisibility(View.INVISIBLE);
@@ -629,34 +573,29 @@ public class GroceryOverlayService extends Service {
                 quickPick.setDropDownWidth(adaptivePopupWidth(emptyQuickPick, 12.5f));
                 return;
             }
-
             smartLabel.setVisibility(View.VISIBLE);
             suggestionScroll.setVisibility(View.VISIBLE);
-
             String[] quickPickLabels = new String[suggestions.size() + 1];
             quickPickLabels[0] = "Suggested";
             for (int index = 0; index < suggestions.size(); index++) {
                 quickPickLabels[index + 1] = suggestions.get(index).name;
             }
-
             int visibleCount = Math.min(SMART_VISIBLE_CHIPS, suggestions.size());
             for (int index = 0; index < visibleCount; index++) {
                 GroceryItem suggestion = suggestions.get(index);
-                Button chip = compactAction(suggestion.name,
-                        Color.rgb(15, 108, 89), Color.argb(220, 239, 250, 243));
+                Button chip = compactAction(suggestion.name, Color.rgb(15, 108, 89),
+                        Color.argb(220, 239, 250, 243));
                 chip.setTextSize(10f);
                 chip.setSingleLine(true);
                 chip.setEllipsize(TextUtils.TruncateAt.END);
                 chip.setElevation(dp(1));
-                chip.setOnClickListener(v -> applySmartSuggestion(
-                        suggestion, input, quantity, quantityUnit, quantityUnits,
-                        category, categoryLabels, price));
+                chip.setOnClickListener(v -> applySmartSuggestion(suggestion, input,
+                        quantity, quantityUnit, quantityUnits, category, categoryLabels, price));
                 LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, dp(32));
                 chipParams.setMarginEnd(dp(6));
                 suggestionRow.addView(chip, chipParams);
             }
-
             if (suggestions.size() > visibleCount) {
                 moreSuggestions.setVisibility(View.VISIBLE);
                 moreSuggestions.setOnClickListener(v -> showSmartSuggestionOverflow(
@@ -666,34 +605,25 @@ public class GroceryOverlayService extends Service {
                 moreSuggestions.setVisibility(View.GONE);
                 moreSuggestions.setOnClickListener(null);
             }
-
             quickPick.setAdapter(compactSpinnerAdapter(quickPickLabels));
             quickPick.setDropDownWidth(adaptivePopupWidth(quickPickLabels, 12.5f));
             quickPick.setSelection(0);
         });
 
-        quickPick.setOnItemSelectedListener(
-                new android.widget.AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(android.widget.AdapterView<?> parent,
-                                               View view, int position, long id) {
-                        if (position <= 0 || position > smartSuggestions.size()) return;
-                        applySmartSuggestion(smartSuggestions.get(position - 1),
-                                input, quantity, quantityUnit, quantityUnits,
-                                category, categoryLabels, price);
-                    }
-
-                    @Override
-                    public void onNothingSelected(android.widget.AdapterView<?> parent) {
-                        // Keep existing form values.
-                    }
-                });
+        quickPick.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                                                 View view, int position, long id) {
+                if (position <= 0 || position > smartSuggestions.size()) return;
+                applySmartSuggestion(smartSuggestions.get(position - 1), input, quantity,
+                        quantityUnit, quantityUnits, category, categoryLabels, price);
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        });
 
         root.addView(overlayFormDetails);
 
         LinearLayout listTools = new LinearLayout(this);
         listTools.setGravity(Gravity.CENTER_VERTICAL);
-
         LinearLayout searchBox = new LinearLayout(this);
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
         searchBox.setBackground(glassFieldBackground());
@@ -708,38 +638,31 @@ public class GroceryOverlayService extends Service {
                 : getString(R.string.grocery_search_hint) + " • " + overlayCategoryFilter);
         search.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
-            @Override
-            public void onTextChanged(CharSequence s, int st, int b, int c) {
+            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
                 overlaySearchQuery = s == null ? "" : s.toString().trim();
                 refreshPanel();
             }
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
         searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1f));
-
         ImageButton categoryFilter = new ImageButton(this);
         categoryFilter.setImageResource(R.drawable.ic_filter);
-        categoryFilter.setContentDescription(
-                getString(R.string.grocery_filter_by_category));
+        categoryFilter.setContentDescription(getString(R.string.grocery_filter_by_category));
         categoryFilter.setColorFilter(overlayCategoryFilter.isEmpty()
                 ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
         categoryFilter.setPadding(dp(10), dp(10), dp(10), dp(10));
         categoryFilter.setBackgroundColor(Color.TRANSPARENT);
-        searchBox.addView(categoryFilter,
-                new LinearLayout.LayoutParams(dp(42), dp(42)));
-        listTools.addView(searchBox, new LinearLayout.LayoutParams(
-                0, dp(42), 1f));
-
+        searchBox.addView(categoryFilter, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        listTools.addView(searchBox, new LinearLayout.LayoutParams(0, dp(42), 1f));
         Button collapse = compactAction(getString(R.string.grocery_collapse_all),
                 Color.rgb(15, 108, 89), Color.argb(220, 226, 244, 238));
         collapse.setElevation(dp(1));
-        LinearLayout.LayoutParams collapseParams = new LinearLayout.LayoutParams(
-                dp(94), dp(38));
+        LinearLayout.LayoutParams collapseParams = new LinearLayout.LayoutParams(dp(94), dp(38));
         collapseParams.setMarginStart(dp(6));
         listTools.addView(collapse, collapseParams);
         LinearLayout.LayoutParams toolsParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-        toolsParams.topMargin = dp(6);
+        toolsParams.topMargin = dp(2);
         root.addView(listTools, toolsParams);
 
         categoryFilter.setOnClickListener(v -> {
@@ -751,18 +674,15 @@ public class GroceryOverlayService extends Service {
             for (int index = 1; index < categoryLabels.length; index++) {
                 android.view.MenuItem categoryItem = popup.getMenu().add(
                         1, 20_000 + index, index, categoryLabels[index]);
-                categoryItem.setChecked(categoryLabels[index]
-                        .equalsIgnoreCase(overlayCategoryFilter));
+                categoryItem.setChecked(categoryLabels[index].equalsIgnoreCase(overlayCategoryFilter));
             }
             popup.setOnMenuItemClickListener(item -> {
                 int categoryIndex = item.getItemId() - 20_000;
-                overlayCategoryFilter = categoryIndex <= 0
-                        ? "" : categoryLabels[categoryIndex];
+                overlayCategoryFilter = categoryIndex <= 0 ? "" : categoryLabels[categoryIndex];
                 item.setChecked(true);
                 search.setHint(overlayCategoryFilter.isEmpty()
                         ? getString(R.string.grocery_search_hint)
-                        : getString(R.string.grocery_search_hint)
-                                + " • " + overlayCategoryFilter);
+                        : getString(R.string.grocery_search_hint) + " • " + overlayCategoryFilter);
                 categoryFilter.setColorFilter(overlayCategoryFilter.isEmpty()
                         ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
                 refreshPanel();
@@ -788,31 +708,24 @@ public class GroceryOverlayService extends Service {
         overlayItemScroll.setClickable(true);
         overlayItemScroll.setOnClickListener(v -> closePanel());
         overlayItemScroll.addView(itemContainer, new ScrollView.LayoutParams(
-                ScrollView.LayoutParams.MATCH_PARENT,
-                ScrollView.LayoutParams.WRAP_CONTENT));
+                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         final int maxPanelWidth = screenWidth - dp(24);
         final int maxPanelHeight = screenHeight - dp(98);
         final int minPanelWidth = Math.min(maxPanelWidth, dp(280));
         final int minPanelHeight = Math.min(maxPanelHeight, dp(360));
-
         overlayListCompactHeight = dp(150);
         overlayListExpandedHeight = dp(250);
         LinearLayout.LayoutParams listParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0, 1f);
-        listParams.topMargin = dp(10);
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        listParams.topMargin = dp(2);
         root.addView(overlayItemScroll, listParams);
 
         overlayFormCollapsed = false;
-        overlayFormToggle.setOnClickListener(v ->
-                setOverlayFormCollapsed(!overlayFormCollapsed));
-        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY,
-                oldScrollX, oldScrollY) -> {
-            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) {
-                setOverlayFormCollapsed(true);
-            }
+        overlayFormToggle.setOnClickListener(v -> setOverlayFormCollapsed(!overlayFormCollapsed));
+        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) setOverlayFormCollapsed(true);
         });
 
         voice.setOnClickListener(v -> {
@@ -833,8 +746,7 @@ public class GroceryOverlayService extends Service {
                 return;
             }
             if (category.getSelectedItemPosition() <= 0) {
-                android.widget.Toast.makeText(this,
-                        R.string.grocery_category_required,
+                android.widget.Toast.makeText(this, R.string.grocery_category_required,
                         android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -843,24 +755,19 @@ public class GroceryOverlayService extends Service {
             item.name = name;
             item.listType = selectedListType[0];
             String amount = quantity.getText().toString().trim();
-            item.quantity = amount.isEmpty() ? "" : amount + " "
-                    + String.valueOf(quantityUnit.getSelectedItem());
+            item.quantity = amount.isEmpty() ? "" : amount + " " + quantityUnit.getSelectedItem();
             item.category = String.valueOf(category.getSelectedItem());
             String priceText = price.getText().toString().trim();
             if (!priceText.isEmpty()) {
-                try {
-                    item.estimatedCost = Double.parseDouble(priceText);
-                } catch (NumberFormatException error) {
+                try { item.estimatedCost = Double.parseDouble(priceText); }
+                catch (NumberFormatException error) {
                     price.setError(getString(R.string.grocery_invalid_cost));
                     return;
                 }
             }
             int priorityIndex = priority.getSelectedItemPosition();
-            item.priority = priorityIndex == 2
-                    ? GroceryItem.PRIORITY_URGENT
-                    : priorityIndex == 1
-                    ? GroceryItem.PRIORITY_HIGH
-                    : GroceryItem.PRIORITY_NORMAL;
+            item.priority = priorityIndex == 2 ? GroceryItem.PRIORITY_URGENT
+                    : priorityIndex == 1 ? GroceryItem.PRIORITY_HIGH : GroceryItem.PRIORITY_NORMAL;
             int memberIndex = member.getSelectedItemPosition();
             if (memberIndex > 0 && memberIndex <= familyMembers.size()) {
                 FamilyMember selected = familyMembers.get(memberIndex - 1);
@@ -878,10 +785,8 @@ public class GroceryOverlayService extends Service {
         });
 
         panelView = panelRoot;
-        int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getInt("panel_width", maxPanelWidth);
-        int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getInt("panel_height", maxPanelHeight);
+        int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("panel_width", maxPanelWidth);
+        int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("panel_height", maxPanelHeight);
         int resolvedPanelWidth = clamp(savedPanelWidth, minPanelWidth, maxPanelWidth);
         int resolvedPanelHeight = clamp(savedPanelHeight, minPanelHeight, maxPanelHeight);
         panelParams = overlayParams(resolvedPanelWidth, resolvedPanelHeight, false);
@@ -889,29 +794,23 @@ public class GroceryOverlayService extends Service {
         panelParams.x = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getInt("panel_x", Math.max(0, (screenWidth - resolvedPanelWidth) / 2));
         panelParams.x = clamp(panelParams.x, 0, Math.max(0, screenWidth - resolvedPanelWidth));
-        panelParams.y = getSharedPreferences(PREFS, MODE_PRIVATE)
-                .getInt("panel_y", dp(74));
+        panelParams.y = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("panel_y", dp(74));
         panelParams.y = clamp(panelParams.y, 0, Math.max(0, screenHeight - resolvedPanelHeight));
         windowManager.addView(panelView, panelParams);
         root.requestFocus();
         refreshPanel();
         input.requestFocus();
-        input.postDelayed(() -> ((InputMethodManager) getSystemService(
-                INPUT_METHOD_SERVICE)).showSoftInput(input,
-                InputMethodManager.SHOW_IMPLICIT), 150L);
+        input.postDelayed(() -> ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT), 150L);
     }
 
     private void refreshPanel() {
-        if (repository == null || itemContainer == null) {
-            return;
-        }
-        repository.loadItems("", items -> renderItems(items));
+        if (repository == null || itemContainer == null) return;
+        repository.loadItems("", this::renderItems);
     }
 
     private void renderItems(List<GroceryItem> items) {
-        if (itemContainer == null) {
-            return;
-        }
+        if (itemContainer == null) return;
         itemContainer.removeAllViews();
         boolean monthly = GroceryItem.LIST_MONTHLY.equals(visibleListType);
         renderSection(items, visibleListType,
@@ -919,40 +818,32 @@ public class GroceryOverlayService extends Service {
                         : R.string.grocery_overlay_daily_section), 0);
     }
 
-    private int renderSection(List<GroceryItem> items, String listType,
-                              String heading, int alreadyShown) {
+    private int renderSection(List<GroceryItem> items, String listType, String heading, int alreadyShown) {
         int count = 0;
         for (GroceryItem item : items) {
-            if (!item.isPurchased && listType.equals(item.listType)
-                    && matchesOverlayFilters(item)) count++;
+            if (!item.isPurchased && listType.equals(item.listType) && matchesOverlayFilters(item)) count++;
         }
         TextView sectionTitle = text(heading + "  (" + count + ")", 12, true);
         sectionTitle.setTextColor(GroceryItem.LIST_MONTHLY.equals(listType)
                 ? Color.rgb(107, 76, 154) : Color.rgb(15, 108, 89));
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(34));
-        titleParams.topMargin = alreadyShown == 0 ? 0 : dp(6);
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(28));
+        titleParams.topMargin = alreadyShown == 0 ? 0 : dp(3);
         itemContainer.addView(sectionTitle, titleParams);
 
         List<GroceryItem> ordered = new ArrayList<>(items);
-        ordered.sort((left, right) -> Integer.compare(
-                priorityRank(left), priorityRank(right)));
+        ordered.sort((left, right) -> Integer.compare(priorityRank(left), priorityRank(right)));
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : ordered) {
-            if (item.isPurchased || !listType.equals(item.listType)
-                    || !matchesOverlayFilters(item)) {
-                continue;
-            }
+            if (item.isPurchased || !listType.equals(item.listType) || !matchesOverlayFilters(item)) continue;
             String categoryName = item.category.isEmpty()
                     ? getString(R.string.grocery_uncategorized) : item.category;
             grouped.computeIfAbsent(categoryName, key -> new ArrayList<>()).add(item);
         }
         int shownHere = 0;
         for (Map.Entry<String, List<GroceryItem>> group : grouped.entrySet()) {
-            String collapseKey = listType + "|"
-                    + group.getKey().toLowerCase(java.util.Locale.ENGLISH);
-            boolean collapsed = collapseAllCategories
-                    || collapsedCategories.contains(collapseKey);
+            String collapseKey = listType + "|" + group.getKey().toLowerCase(java.util.Locale.ENGLISH);
+            boolean collapsed = collapseAllCategories || collapsedCategories.contains(collapseKey);
             TextView categoryHeader = text((collapsed ? "▸  " : "▾  ")
                     + group.getKey() + "  (" + group.getValue().size() + ")", 11, true);
             categoryHeader.setTextColor(Color.rgb(15, 108, 89));
@@ -966,9 +857,7 @@ public class GroceryOverlayService extends Service {
             itemContainer.addView(categoryHeader, categoryParams);
             categoryHeader.setOnClickListener(v -> {
                 collapseAllCategories = false;
-                if (!collapsedCategories.add(collapseKey)) {
-                    collapsedCategories.remove(collapseKey);
-                }
+                if (!collapsedCategories.add(collapseKey)) collapsedCategories.remove(collapseKey);
                 refreshPanel();
             });
             if (collapsed) continue;
@@ -976,9 +865,7 @@ public class GroceryOverlayService extends Service {
                 CheckBox row = new CheckBox(this);
                 String detail = (shownHere + 1) + ".  " + item.name;
                 if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
-                if (!item.assignedMemberName.isEmpty()) {
-                    detail += "  •  " + item.assignedMemberName;
-                }
+                if (!item.assignedMemberName.isEmpty()) detail += "  •  " + item.assignedMemberName;
                 if (GroceryItem.PRIORITY_URGENT.equals(item.priority)) {
                     detail += "  •  " + getString(R.string.grocery_priority_urgent);
                 } else if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) {
@@ -1011,10 +898,8 @@ public class GroceryOverlayService extends Service {
             }
         }
         if (count == 0) {
-            TextView empty = text(getString(
-                    GroceryItem.LIST_MONTHLY.equals(listType)
-                            ? R.string.grocery_overlay_monthly_empty
-                            : R.string.grocery_overlay_daily_empty), 11, false);
+            TextView empty = text(getString(GroceryItem.LIST_MONTHLY.equals(listType)
+                    ? R.string.grocery_overlay_monthly_empty : R.string.grocery_overlay_daily_empty), 11, false);
             empty.setTextColor(Color.rgb(110, 118, 128));
             empty.setPadding(dp(8), 0, 0, 0);
             itemContainer.addView(empty, new LinearLayout.LayoutParams(
@@ -1040,17 +925,14 @@ public class GroceryOverlayService extends Service {
 
     private boolean matchesOverlayFilters(GroceryItem item) {
         boolean categoryMatches = overlayCategoryFilter.isEmpty()
-                || overlayCategoryFilter.equalsIgnoreCase(
-                        item.category == null ? "" : item.category.trim());
+                || overlayCategoryFilter.equalsIgnoreCase(item.category == null ? "" : item.category.trim());
         return categoryMatches && matchesOverlaySearch(item);
     }
 
-    /** Keeps purchase completion entirely inside the floating surface. */
     private void showInlinePurchaseEditor(GroceryItem item) {
         if (itemContainer == null) return;
         itemContainer.removeAllViews();
         setOverlayFormCollapsed(true);
-
         TextView title = text(getString(R.string.grocery_complete_title), 14, true);
         title.setTextColor(Color.rgb(15, 108, 89));
         itemContainer.addView(title, new LinearLayout.LayoutParams(
@@ -1063,22 +945,16 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
 
         EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
-        price.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        double savedPrice = item.actualCost > 0D
-                ? item.actualCost : item.estimatedCost;
+        price.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        double savedPrice = item.actualCost > 0D ? item.actualCost : item.estimatedCost;
         if (savedPrice > 0D) price.setText(String.valueOf(savedPrice));
-
-        EditText quantity = compactInput(
-                getString(R.string.grocery_quantity_amount_hint));
-        quantity.setInputType(InputType.TYPE_CLASS_NUMBER
-                | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        EditText quantity = compactInput(getString(R.string.grocery_quantity_amount_hint));
+        quantity.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         String[] parts = item.quantity.trim().split("\\s+", 2);
         if (parts.length > 0) quantity.setText(parts[0]);
         String[] units = getResources().getStringArray(R.array.grocery_quantity_units);
         Spinner unit = compactSpinner(units);
         if (parts.length > 1) selectSpinner(unit, units, parts[1]);
-
         String[] categories = GroceryOptionCatalog.categoryLabels(this);
         Spinner category = compactSpinner(categories);
         selectSpinner(category, categories, item.category);
@@ -1087,33 +963,23 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout purchasePrimaryRow = new LinearLayout(this);
         purchasePrimaryRow.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(purchasePrimaryRow, labelledField(
-                getString(R.string.grocery_actual_cost), price), false);
-        addCompactColumn(purchasePrimaryRow, labelledField(
-                getString(R.string.grocery_quantity_amount), quantity), true);
-        addCompactColumn(purchasePrimaryRow, labelledField(
-                getString(R.string.grocery_quantity_unit), unit), true);
+        addCompactColumn(purchasePrimaryRow, labelledField(getString(R.string.grocery_actual_cost), price), false);
+        addCompactColumn(purchasePrimaryRow, labelledField(getString(R.string.grocery_quantity_amount), quantity), true);
+        addCompactColumn(purchasePrimaryRow, labelledField(getString(R.string.grocery_quantity_unit), unit), true);
         itemContainer.addView(purchasePrimaryRow);
-
         LinearLayout purchaseMoneyRow = new LinearLayout(this);
         purchaseMoneyRow.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(purchaseMoneyRow, labelledField(
-                getString(R.string.grocery_category), category), false);
-        addCompactColumn(purchaseMoneyRow, labelledField(
-                getString(R.string.money_manager_paid_from), moneyAccount), true);
-        addCompactColumn(purchaseMoneyRow, labelledField(
-                getString(R.string.money_manager_expense_category), moneyCategory), true);
+        addCompactColumn(purchaseMoneyRow, labelledField(getString(R.string.grocery_category), category), false);
+        addCompactColumn(purchaseMoneyRow, labelledField(getString(R.string.money_manager_paid_from), moneyAccount), true);
+        addCompactColumn(purchaseMoneyRow, labelledField(getString(R.string.money_manager_expense_category), moneyCategory), true);
         itemContainer.addView(purchaseMoneyRow);
         attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
-        AutoCompleteTextView store = compactAutoComplete(
-                getString(R.string.grocery_store_hint),
+        AutoCompleteTextView store = compactAutoComplete(getString(R.string.grocery_store_hint),
                 GroceryOptionCatalog.storePresets(this));
-        store.setInputType(InputType.TYPE_CLASS_TEXT
-                | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        store.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         store.setText(item.storeName);
-        itemContainer.addView(labelledField(
-                getString(R.string.grocery_store_name), store), fullEditorField());
+        itemContainer.addView(labelledField(getString(R.string.grocery_store_name), store), fullEditorField());
 
         TextView historyInsight = text("", 10, false);
         historyInsight.setTextColor(Color.rgb(15, 108, 89));
@@ -1122,21 +988,19 @@ public class GroceryOverlayService extends Service {
         historyInsight.setVisibility(View.GONE);
         itemContainer.addView(historyInsight, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
-        repository.loadStoreComparison(item.name, item.quantity,
-                (history, cheapest) -> {
-                    if (history == null || itemContainer == null) return;
-                    applyInlineHistory(history, cheapest, price, store, quantity,
-                            unit, units, category, categories, historyInsight);
-                });
+        repository.loadStoreComparison(item.name, item.quantity, (history, cheapest) -> {
+            if (history == null || itemContainer == null) return;
+            applyInlineHistory(history, cheapest, price, store, quantity,
+                    unit, units, category, categories, historyInsight);
+        });
 
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        Button cancel = compactAction(getString(R.string.cancel),
-                Color.rgb(91, 101, 114), Color.argb(220, 242, 244, 247));
-        Button skip = compactAction(getString(R.string.grocery_skip_and_complete),
-                Color.rgb(168, 93, 0), Color.argb(225, 255, 244, 222));
-        Button save = compactAction(getString(R.string.save),
-                Color.WHITE, Color.rgb(15, 108, 89));
+        Button cancel = compactAction(getString(R.string.cancel), Color.rgb(91, 101, 114),
+                Color.argb(220, 242, 244, 247));
+        Button skip = compactAction(getString(R.string.grocery_skip_and_complete), Color.rgb(168, 93, 0),
+                Color.argb(225, 255, 244, 222));
+        Button save = compactAction(getString(R.string.save), Color.WHITE, Color.rgb(15, 108, 89));
         actions.addView(cancel, actionParams());
         actions.addView(skip, actionParams());
         actions.addView(save, actionParams());
@@ -1144,7 +1008,6 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(46));
         actionsParams.topMargin = dp(8);
         itemContainer.addView(actions, actionsParams);
-
         cancel.setOnClickListener(v -> refreshPanel());
         skip.setOnClickListener(v -> {
             rememberPurchaseMoneySelections(item, moneyAccount, moneyCategory);
@@ -1153,19 +1016,16 @@ public class GroceryOverlayService extends Service {
         save.setOnClickListener(v -> {
             String priceText = price.getText().toString().trim();
             if (!priceText.isEmpty()) {
-                try {
-                    item.actualCost = Double.parseDouble(priceText);
-                } catch (NumberFormatException error) {
+                try { item.actualCost = Double.parseDouble(priceText); }
+                catch (NumberFormatException error) {
                     price.setError(getString(R.string.grocery_invalid_cost));
                     return;
                 }
             }
             String amount = quantity.getText().toString().trim();
-            item.quantity = amount.isEmpty() ? "" : amount + " "
-                    + String.valueOf(unit.getSelectedItem());
+            item.quantity = amount.isEmpty() ? "" : amount + " " + unit.getSelectedItem();
             if (category.getSelectedItemPosition() <= 0) {
-                android.widget.Toast.makeText(this,
-                        R.string.grocery_category_required,
+                android.widget.Toast.makeText(this, R.string.grocery_category_required,
                         android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -1222,36 +1082,25 @@ public class GroceryOverlayService extends Service {
         refreshMoneyCatalog(account, category, null);
     }
 
-    private void refreshMoneyCatalog(Spinner account, Spinner category,
-                                     @Nullable Runnable afterRefresh) {
+    private void refreshMoneyCatalog(Spinner account, Spinner category, @Nullable Runnable afterRefresh) {
         if (afterRefresh != null) pendingMoneyCatalogAction = afterRefresh;
         if (moneyCatalogRefreshing) return;
         moneyCatalogRefreshing = true;
-
         MoneyManagerMasterCatalogBridge.Catalog before = moneyCatalog;
         String accountRef = selectedMoneyRef(account, before.accounts);
         String categoryRef = selectedMoneyRef(category, before.expenseCategories);
-        if (accountRef.isEmpty()) {
-            accountRef = MoneyManagerMasterCatalogBridge
-                    .groceryDefaultAccountRef(this);
-        }
-        if (categoryRef.isEmpty()) {
-            categoryRef = MoneyManagerMasterCatalogBridge
-                    .groceryDefaultCategoryRef(this);
-        }
+        if (accountRef.isEmpty()) accountRef = MoneyManagerMasterCatalogBridge.groceryDefaultAccountRef(this);
+        if (categoryRef.isEmpty()) categoryRef = MoneyManagerMasterCatalogBridge.groceryDefaultCategoryRef(this);
         final String wantedAccountRef = accountRef;
         final String wantedCategoryRef = categoryRef;
-
         new Thread(() -> {
-            MoneyManagerMasterCatalogBridge.Catalog fresh =
-                    MoneyManagerMasterCatalogBridge.load(this);
+            MoneyManagerMasterCatalogBridge.Catalog fresh = MoneyManagerMasterCatalogBridge.load(this);
             new android.os.Handler(getMainLooper()).post(() -> {
                 moneyCatalogRefreshing = false;
                 if (panelView != null && fresh.available) {
                     moneyCatalog = fresh;
                     bindMoneySpinner(account, fresh.accounts, wantedAccountRef);
-                    bindMoneySpinner(category, fresh.expenseCategories,
-                            wantedCategoryRef);
+                    bindMoneySpinner(category, fresh.expenseCategories, wantedCategoryRef);
                 }
                 Runnable pending = pendingMoneyCatalogAction;
                 pendingMoneyCatalogAction = null;
@@ -1260,23 +1109,18 @@ public class GroceryOverlayService extends Service {
         }, "GroceryMoneyCatalogRefresh").start();
     }
 
-    private String selectedMoneyRef(
-            Spinner spinner,
-            List<MoneyManagerMasterCatalogBridge.Choice> choices) {
+    private String selectedMoneyRef(Spinner spinner,
+                                    List<MoneyManagerMasterCatalogBridge.Choice> choices) {
         int index = spinner.getSelectedItemPosition() - 1;
-        return index >= 0 && index < choices.size()
-                ? choices.get(index).ref : "";
+        return index >= 0 && index < choices.size() ? choices.get(index).ref : "";
     }
 
-    private void bindMoneySpinner(
-            Spinner spinner,
-            List<MoneyManagerMasterCatalogBridge.Choice> choices,
-            String selectedRef) {
+    private void bindMoneySpinner(Spinner spinner,
+                                  List<MoneyManagerMasterCatalogBridge.Choice> choices,
+                                  String selectedRef) {
         String[] labels = new String[choices.size() + 1];
         labels[0] = getString(R.string.money_manager_choose_later);
-        for (int i = 0; i < choices.size(); i++) {
-            labels[i + 1] = choices.get(i).label;
-        }
+        for (int i = 0; i < choices.size(); i++) labels[i + 1] = choices.get(i).label;
         spinner.setAdapter(compactSpinnerAdapter(labels));
         spinner.setDropDownWidth(adaptivePopupWidth(labels, 12.5f));
         spinner.setSelection(0);
@@ -1293,37 +1137,31 @@ public class GroceryOverlayService extends Service {
         int categoryIndex = category.getSelectedItemPosition() - 1;
         String accountRef = accountIndex >= 0 && accountIndex < moneyCatalog.accounts.size()
                 ? moneyCatalog.accounts.get(accountIndex).ref : "";
-        String categoryRef = categoryIndex >= 0
-                && categoryIndex < moneyCatalog.expenseCategories.size()
+        String categoryRef = categoryIndex >= 0 && categoryIndex < moneyCatalog.expenseCategories.size()
                 ? moneyCatalog.expenseCategories.get(categoryIndex).ref : "";
         MoneyManagerMasterCatalogBridge.rememberGroceryDefaultAccount(this, accountRef);
         MoneyManagerMasterCatalogBridge.rememberGroceryDefaultCategory(this, categoryRef);
     }
 
-    private void rememberPurchaseMoneySelections(
-            GroceryItem item, Spinner account, Spinner category) {
+    private void rememberPurchaseMoneySelections(GroceryItem item, Spinner account, Spinner category) {
         int accountIndex = account.getSelectedItemPosition() - 1;
         int categoryIndex = category.getSelectedItemPosition() - 1;
         String accountRef = accountIndex >= 0 && accountIndex < moneyCatalog.accounts.size()
                 ? moneyCatalog.accounts.get(accountIndex).ref : "";
-        String categoryRef = categoryIndex >= 0
-                && categoryIndex < moneyCatalog.expenseCategories.size()
+        String categoryRef = categoryIndex >= 0 && categoryIndex < moneyCatalog.expenseCategories.size()
                 ? moneyCatalog.expenseCategories.get(categoryIndex).ref : "";
-        GroceryMoneyManagerBridge.rememberNextPurchaseSelections(
-                this, item, accountRef, categoryRef);
+        GroceryMoneyManagerBridge.rememberNextPurchaseSelections(this, item, accountRef, categoryRef);
     }
 
     private void showFloatingUndo(GroceryItem item) {
         if (itemContainer == null) return;
         itemContainer.removeAllViews();
-        TextView message = text(getString(
-                R.string.grocery_purchase_completed, item.name), 12, true);
+        TextView message = text(getString(R.string.grocery_purchase_completed, item.name), 12, true);
         message.setGravity(Gravity.CENTER);
         message.setTextColor(Color.rgb(15, 108, 89));
         itemContainer.addView(message, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
-        Button undo = compactAction(getString(R.string.grocery_undo),
-                Color.WHITE, Color.rgb(15, 108, 89));
+        Button undo = compactAction(getString(R.string.grocery_undo), Color.WHITE, Color.rgb(15, 108, 89));
         LinearLayout.LayoutParams undoParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
         undoParams.leftMargin = dp(24);
@@ -1348,23 +1186,15 @@ public class GroceryOverlayService extends Service {
         }
     }
 
-    private void applySmartSuggestion(
-            GroceryItem suggestion,
-            EditText name,
-            EditText quantity,
-            Spinner unit,
-            String[] units,
-            Spinner category,
-            String[] categories,
-            EditText price) {
+    private void applySmartSuggestion(GroceryItem suggestion, EditText name,
+                                      EditText quantity, Spinner unit, String[] units,
+                                      Spinner category, String[] categories, EditText price) {
         FamilyHubAppLockManager.noteTrustedOverlayInteraction();
         name.setError(null);
         price.setError(null);
         name.setText(suggestion.name);
         name.setSelection(name.length());
-
-        String cleanQuantity = suggestion.quantity == null
-                ? "" : suggestion.quantity.trim();
+        String cleanQuantity = suggestion.quantity == null ? "" : suggestion.quantity.trim();
         if (!cleanQuantity.isEmpty()) {
             String[] parts = cleanQuantity.split("\\s+", 2);
             if (parts.length > 0) quantity.setText(parts[0]);
@@ -1375,18 +1205,11 @@ public class GroceryOverlayService extends Service {
         }
         double suggestedPrice = suggestion.actualCost > 0D
                 ? suggestion.actualCost : suggestion.estimatedCost;
-        if (suggestedPrice > 0D) {
-            price.setText(String.valueOf(suggestedPrice));
-        }
+        if (suggestedPrice > 0D) price.setText(String.valueOf(suggestedPrice));
     }
 
-    private void clearSmartFilledForm(
-            EditText name,
-            EditText quantity,
-            Spinner unit,
-            Spinner category,
-            EditText price,
-            Spinner quickPick) {
+    private void clearSmartFilledForm(EditText name, EditText quantity, Spinner unit,
+                                      Spinner category, EditText price, Spinner quickPick) {
         FamilyHubAppLockManager.noteTrustedOverlayInteraction();
         name.setError(null);
         price.setError(null);
@@ -1401,54 +1224,36 @@ public class GroceryOverlayService extends Service {
                 .showSoftInput(name, InputMethodManager.SHOW_IMPLICIT);
     }
 
-    /**
-     * Builds a full smart-pick history without the old eight-item UI limit.
-     * Categories with the highest combined purchase count come first; within
-     * each category the most frequently purchased item comes first.
-     */
     private List<GroceryItem> rankSmartSuggestions(List<GroceryItem> allItems) {
         Map<String, GroceryItem> bestByName = new LinkedHashMap<>();
         for (GroceryItem item : allItems) {
-            if (item == null || item.name == null || item.name.trim().isEmpty()
-                    || item.purchaseCount <= 0) {
-                continue;
-            }
+            if (item == null || item.name == null || item.name.trim().isEmpty() || item.purchaseCount <= 0) continue;
             String key = item.name.trim().toLowerCase(java.util.Locale.ENGLISH);
             GroceryItem previous = bestByName.get(key);
-            if (previous == null
-                    || item.purchaseCount > previous.purchaseCount
-                    || (item.purchaseCount == previous.purchaseCount
-                    && item.purchasedAt > previous.purchasedAt)) {
+            if (previous == null || item.purchaseCount > previous.purchaseCount
+                    || (item.purchaseCount == previous.purchaseCount && item.purchasedAt > previous.purchasedAt)) {
                 bestByName.put(key, item);
             }
         }
-
         List<GroceryItem> ranked = new ArrayList<>(bestByName.values());
         Map<String, Integer> categoryTotals = new java.util.HashMap<>();
         for (GroceryItem item : ranked) {
             String categoryName = smartSuggestionCategory(item);
-            categoryTotals.put(categoryName,
-                    categoryTotals.getOrDefault(categoryName, 0)
-                            + Math.max(0, item.purchaseCount));
+            categoryTotals.put(categoryName, categoryTotals.getOrDefault(categoryName, 0)
+                    + Math.max(0, item.purchaseCount));
         }
-
         ranked.sort((left, right) -> {
             String leftCategory = smartSuggestionCategory(left);
             String rightCategory = smartSuggestionCategory(right);
-            int compareCategoryTotal = Integer.compare(
-                    categoryTotals.getOrDefault(rightCategory, 0),
+            int compareCategoryTotal = Integer.compare(categoryTotals.getOrDefault(rightCategory, 0),
                     categoryTotals.getOrDefault(leftCategory, 0));
             if (compareCategoryTotal != 0) return compareCategoryTotal;
-
             int compareCategoryName = leftCategory.compareToIgnoreCase(rightCategory);
             if (compareCategoryName != 0) return compareCategoryName;
-
             int compareCount = Integer.compare(right.purchaseCount, left.purchaseCount);
             if (compareCount != 0) return compareCount;
-
             int compareRecent = Long.compare(right.purchasedAt, left.purchasedAt);
             if (compareRecent != 0) return compareRecent;
-
             return left.name.compareToIgnoreCase(right.name);
         });
         return ranked;
@@ -1461,19 +1266,11 @@ public class GroceryOverlayService extends Service {
         return item.category.trim();
     }
 
-    /** Shows every ranked purchased item in a compact, content-sized smart picker. */
-    private void showSmartSuggestionOverflow(
-            View anchor,
-            List<GroceryItem> suggestions,
-            EditText name,
-            EditText quantity,
-            Spinner unit,
-            String[] units,
-            Spinner category,
-            String[] categories,
-            EditText price) {
+    private void showSmartSuggestionOverflow(View anchor, List<GroceryItem> suggestions,
+                                             EditText name, EditText quantity, Spinner unit,
+                                             String[] units, Spinner category, String[] categories,
+                                             EditText price) {
         FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
         int popupWidth = adaptiveSmartPopupWidth(suggestions);
@@ -1486,54 +1283,42 @@ public class GroceryOverlayService extends Service {
                 lastCountedCategory = categoryName;
             }
         }
-        int desiredPopupHeight = dp(76)
-                + suggestions.size() * dp(38)
-                + categoryCount * dp(32);
+        int desiredPopupHeight = dp(76) + suggestions.size() * dp(38) + categoryCount * dp(32);
         int maxPopupHeight = Math.min(dp(360), Math.round(screenHeight * 0.46f));
         int popupHeight = clamp(desiredPopupHeight, dp(180), maxPopupHeight);
-
         LinearLayout popupRoot = new LinearLayout(this);
         popupRoot.setOrientation(LinearLayout.VERTICAL);
         popupRoot.setPadding(dp(7), dp(7), dp(7), dp(7));
         popupRoot.setBackground(premiumDropdownBackground());
         popupRoot.setElevation(dp(10));
-
         TextView popupTitle = text("Smart suggestions", 14, true);
         popupTitle.setTextColor(Color.rgb(15, 90, 72));
         popupTitle.setPadding(dp(10), dp(4), dp(10), dp(2));
         popupRoot.addView(popupTitle, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         TextView popupHint = text("Category-wise • most purchased first", 11, false);
         popupHint.setTextColor(Color.rgb(94, 104, 114));
         popupHint.setPadding(dp(10), 0, dp(10), dp(5));
         popupRoot.addView(popupHint, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(false);
         scroll.setVerticalScrollBarEnabled(true);
         LinearLayout groupedList = new LinearLayout(this);
         groupedList.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(groupedList, new ScrollView.LayoutParams(
-                ScrollView.LayoutParams.MATCH_PARENT,
-                ScrollView.LayoutParams.WRAP_CONTENT));
+                ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
         popupRoot.addView(scroll, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-
         final android.widget.PopupWindow popup = new android.widget.PopupWindow(this);
         popup.setContentView(popupRoot);
         popup.setWidth(Math.min(popupWidth, screenWidth - dp(24)));
         popup.setHeight(popupHeight);
         popup.setFocusable(true);
         popup.setOutsideTouchable(true);
-        popup.setBackgroundDrawable(
-                new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
         popup.setOverlapAnchor(false);
-
         String lastCategory = "";
         for (GroceryItem suggestion : suggestions) {
             String categoryName = smartSuggestionCategory(suggestion);
@@ -1541,61 +1326,47 @@ public class GroceryOverlayService extends Service {
                 int categoryPurchaseTotal = 0;
                 int categoryItemCount = 0;
                 for (GroceryItem candidate : suggestions) {
-                    if (categoryName.equalsIgnoreCase(
-                            smartSuggestionCategory(candidate))) {
+                    if (categoryName.equalsIgnoreCase(smartSuggestionCategory(candidate))) {
                         categoryPurchaseTotal += Math.max(0, candidate.purchaseCount);
                         categoryItemCount++;
                     }
                 }
-
-                TextView header = text(categoryName + "  •  "
-                        + categoryItemCount + "  •  "
+                TextView header = text(categoryName + "  •  " + categoryItemCount + "  •  "
                         + categoryPurchaseTotal + "×", 12, true);
                 header.setTextColor(Color.rgb(12, 99, 75));
                 header.setSingleLine(true);
                 header.setEllipsize(TextUtils.TruncateAt.END);
                 header.setPadding(dp(10), dp(5), dp(10), dp(5));
-                header.setBackground(roundedFill(
-                        Color.argb(235, 225, 246, 238), 9));
+                header.setBackground(roundedFill(Color.argb(235, 225, 246, 238), 9));
                 LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                headerParams.topMargin = groupedList.getChildCount() == 0
-                        ? 0 : dp(5);
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                headerParams.topMargin = groupedList.getChildCount() == 0 ? 0 : dp(5);
                 headerParams.bottomMargin = dp(3);
                 groupedList.addView(header, headerParams);
                 lastCategory = categoryName;
             }
-
             LinearLayout itemRow = new LinearLayout(this);
             itemRow.setOrientation(LinearLayout.HORIZONTAL);
             itemRow.setGravity(Gravity.CENTER_VERTICAL);
             itemRow.setPadding(dp(10), dp(3), dp(8), dp(3));
-            itemRow.setBackground(rounded(
-                    Color.argb(247, 255, 255, 255),
+            itemRow.setBackground(rounded(Color.argb(247, 255, 255, 255),
                     Color.argb(125, 212, 222, 226), 9));
-
             TextView itemText = text(suggestion.name, 13, false);
             itemText.setTextColor(Color.rgb(38, 45, 50));
             itemText.setSingleLine(true);
             itemText.setEllipsize(TextUtils.TruncateAt.END);
             itemText.setPadding(0, dp(1), dp(8), dp(1));
-            itemRow.addView(itemText, new LinearLayout.LayoutParams(
-                    0, dp(34), 1f));
-
+            itemRow.addView(itemText, new LinearLayout.LayoutParams(0, dp(34), 1f));
             TextView countBadge = text(suggestion.purchaseCount + "×", 11, true);
             countBadge.setTextColor(Color.rgb(15, 108, 89));
             countBadge.setGravity(Gravity.CENTER);
             countBadge.setPadding(dp(7), dp(2), dp(7), dp(2));
-            countBadge.setBackground(roundedFill(
-                    Color.argb(230, 235, 248, 241), 12));
+            countBadge.setBackground(roundedFill(Color.argb(230, 235, 248, 241), 12));
             itemRow.addView(countBadge, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT));
-
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
             itemRow.setOnClickListener(v -> {
-                applySmartSuggestion(suggestion, name, quantity, unit,
-                        units, category, categories, price);
+                applySmartSuggestion(suggestion, name, quantity, unit, units,
+                        category, categories, price);
                 popup.dismiss();
             });
             LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
@@ -1603,80 +1374,53 @@ public class GroceryOverlayService extends Service {
             rowParams.bottomMargin = dp(3);
             groupedList.addView(itemRow, rowParams);
         }
-
         int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(40)));
         popup.showAsDropDown(anchor, xOffset, dp(5));
     }
 
-    private void applyInlineHistory(
-            GroceryPurchase history,
-            GroceryPurchase cheapest,
-            EditText price,
-            EditText store,
-            EditText quantity,
-            Spinner unit,
-            String[] units,
-            Spinner category,
-            String[] categories,
-            TextView insight) {
+    private void applyInlineHistory(GroceryPurchase history, GroceryPurchase cheapest,
+                                    EditText price, EditText store, EditText quantity,
+                                    Spinner unit, String[] units, Spinner category,
+                                    String[] categories, TextView insight) {
         String[] previousQuantity = history.quantity.trim().split("\\s+", 2);
         if (previousQuantity.length > 0) quantity.setText(previousQuantity[0]);
-        if (previousQuantity.length > 1) {
-            selectSpinner(unit, units, previousQuantity[1]);
-        }
+        if (previousQuantity.length > 1) selectSpinner(unit, units, previousQuantity[1]);
         selectSpinner(category, categories, history.category);
-        if (history.actualCost > 0D) {
-            price.setText(String.valueOf(history.actualCost));
-        }
+        if (history.actualCost > 0D) price.setText(String.valueOf(history.actualCost));
         if (!history.storeName.isEmpty()) store.setText(history.storeName);
         insight.setVisibility(View.VISIBLE);
-        insight.setText(inlineComparisonText(history, cheapest,
-                history.actualCost));
+        insight.setText(inlineComparisonText(history, cheapest, history.actualCost));
         price.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 double current = 0D;
-                try {
-                    current = Double.parseDouble(s == null
-                            ? "" : s.toString().trim());
-                } catch (NumberFormatException ignored) { }
+                try { current = Double.parseDouble(s == null ? "" : s.toString().trim()); }
+                catch (NumberFormatException ignored) { }
                 insight.setText(inlineComparisonText(history, cheapest, current));
             }
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
     }
 
-    private String inlineComparisonText(GroceryPurchase history,
-                                        GroceryPurchase cheapest,
+    private String inlineComparisonText(GroceryPurchase history, GroceryPurchase cheapest,
                                         double current) {
-        StringBuilder value = new StringBuilder(getString(
-                R.string.grocery_previous_purchase,
-                history.quantity.isEmpty()
-                        ? getString(R.string.grocery_quantity_not_added)
-                        : history.quantity,
-                history.category.isEmpty()
-                        ? getString(R.string.grocery_uncategorized)
-                        : history.category,
-                String.format(java.util.Locale.ENGLISH, "₹%.2f",
-                        history.actualCost)));
-        if (!history.storeName.isEmpty()) value.append('\n').append(getString(
-                R.string.grocery_previous_store, history.storeName));
+        StringBuilder value = new StringBuilder(getString(R.string.grocery_previous_purchase,
+                history.quantity.isEmpty() ? getString(R.string.grocery_quantity_not_added) : history.quantity,
+                history.category.isEmpty() ? getString(R.string.grocery_uncategorized) : history.category,
+                String.format(java.util.Locale.ENGLISH, "₹%.2f", history.actualCost)));
+        if (!history.storeName.isEmpty()) value.append('\n').append(
+                getString(R.string.grocery_previous_store, history.storeName));
         if (cheapest != null && !cheapest.storeName.isEmpty()) {
             value.append('\n').append(getString(R.string.grocery_cheapest_store,
                     cheapest.storeName, cheapest.actualCost));
-            if (current > cheapest.actualCost) value.append('\n').append(getString(
-                    R.string.grocery_possible_saving,
-                    current - cheapest.actualCost));
+            if (current > cheapest.actualCost) value.append('\n').append(
+                    getString(R.string.grocery_possible_saving, current - cheapest.actualCost));
         }
         if (current > 0D && history.actualCost > 0D) {
-            double percent = (current - history.actualCost)
-                    / history.actualCost * 100D;
+            double percent = (current - history.actualCost) / history.actualCost * 100D;
             value.append('\n').append(Math.abs(percent) < 0.05D
                     ? getString(R.string.grocery_price_same)
-                    : getString(R.string.grocery_price_change,
-                            history.actualCost, current, percent));
+                    : getString(R.string.grocery_price_change, history.actualCost, current, percent));
         }
         return value.toString();
     }
@@ -1702,16 +1446,13 @@ public class GroceryOverlayService extends Service {
     }
 
     private LinearLayout.LayoutParams actionParams() {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                0, dp(38), 1f);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(38), 1f);
         params.setMarginStart(dp(4));
         return params;
     }
 
-    /** The actual panel border corners act as resize grips; no extra buttons are used. */
     private boolean handlePanelCornerResizeGesture(View panel, MotionEvent event) {
         if (event == null || panelParams == null || panelView == null) return false;
-
         int action = event.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) {
             int cornerTouch = dp(24);
@@ -1722,7 +1463,6 @@ public class GroceryOverlayService extends Service {
             boolean top = localY <= cornerTouch;
             boolean bottom = localY >= panel.getHeight() - cornerTouch;
             if (!(left || right) || !(top || bottom)) return false;
-
             cornerResizeHorizontalDirection = left ? -1 : 1;
             cornerResizeVerticalDirection = top ? -1 : 1;
             cornerResizeStartWidth = panelParams.width;
@@ -1734,9 +1474,7 @@ public class GroceryOverlayService extends Service {
             cornerResizeActive = true;
             return true;
         }
-
         if (!cornerResizeActive) return false;
-
         if (action == MotionEvent.ACTION_MOVE) {
             int dx = Math.round(event.getRawX() - cornerResizeDownRawX);
             int dy = Math.round(event.getRawY() - cornerResizeDownRawY);
@@ -1746,21 +1484,16 @@ public class GroceryOverlayService extends Service {
             int maxHeight = screenHeight - dp(98);
             int minWidth = Math.min(maxWidth, dp(280));
             int minHeight = Math.min(maxHeight, dp(360));
-
             int newWidth = cornerResizeHorizontalDirection < 0
                     ? clamp(cornerResizeStartWidth - dx, minWidth, maxWidth)
                     : clamp(cornerResizeStartWidth + dx, minWidth, maxWidth);
             int newHeight = cornerResizeVerticalDirection < 0
                     ? clamp(cornerResizeStartHeight - dy, minHeight, maxHeight)
                     : clamp(cornerResizeStartHeight + dy, minHeight, maxHeight);
-
             int newX = cornerResizeHorizontalDirection < 0
-                    ? cornerResizeStartX + (cornerResizeStartWidth - newWidth)
-                    : cornerResizeStartX;
+                    ? cornerResizeStartX + (cornerResizeStartWidth - newWidth) : cornerResizeStartX;
             int newY = cornerResizeVerticalDirection < 0
-                    ? cornerResizeStartY + (cornerResizeStartHeight - newHeight)
-                    : cornerResizeStartY;
-
+                    ? cornerResizeStartY + (cornerResizeStartHeight - newHeight) : cornerResizeStartY;
             panelParams.width = newWidth;
             panelParams.height = newHeight;
             panelParams.x = clamp(newX, 0, Math.max(0, screenWidth - newWidth));
@@ -1768,39 +1501,30 @@ public class GroceryOverlayService extends Service {
             windowManager.updateViewLayout(panelView, panelParams);
             return true;
         }
-
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
             getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                     .putInt("panel_width", panelParams.width)
                     .putInt("panel_height", panelParams.height)
                     .putInt("panel_x", panelParams.x)
-                    .putInt("panel_y", panelParams.y)
-                    .apply();
+                    .putInt("panel_y", panelParams.y).apply();
             cornerResizeActive = false;
             return true;
         }
         return true;
     }
 
-    /** Draws subtle resize guides directly on the form border corners. */
     private void drawResizeCornerGuides(Canvas canvas, int width, int height, Paint paint) {
         if (canvas == null || width <= 0 || height <= 0 || paint == null) return;
         float edge = dp(3);
         float length = dp(11);
-
         canvas.drawLine(edge, edge, edge + length, edge, paint);
         canvas.drawLine(edge, edge, edge, edge + length, paint);
-
         canvas.drawLine(width - edge, edge, width - edge - length, edge, paint);
         canvas.drawLine(width - edge, edge, width - edge, edge + length, paint);
-
         canvas.drawLine(edge, height - edge, edge + length, height - edge, paint);
         canvas.drawLine(edge, height - edge, edge, height - edge - length, paint);
-
-        canvas.drawLine(width - edge, height - edge,
-                width - edge - length, height - edge, paint);
-        canvas.drawLine(width - edge, height - edge,
-                width - edge, height - edge - length, paint);
+        canvas.drawLine(width - edge, height - edge, width - edge - length, height - edge, paint);
+        canvas.drawLine(width - edge, height - edge, width - edge, height - edge - length, paint);
     }
 
     private void closePanel() {
@@ -1819,17 +1543,12 @@ public class GroceryOverlayService extends Service {
     }
 
     private void setOverlayFormCollapsed(boolean collapsed) {
-        if (overlayFormDetails == null || overlayItemScroll == null
-                || overlayFormToggle == null) {
-            return;
-        }
+        if (overlayFormDetails == null || overlayItemScroll == null || overlayFormToggle == null) return;
         overlayFormCollapsed = collapsed;
         overlayFormDetails.setVisibility(collapsed ? View.GONE : View.VISIBLE);
         overlayFormToggle.setText(collapsed
-                ? R.string.grocery_overlay_show_form
-                : R.string.grocery_overlay_hide_form);
-        LinearLayout.LayoutParams params =
-                (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
+                ? R.string.grocery_overlay_show_form : R.string.grocery_overlay_hide_form);
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
         params.height = 0;
         params.weight = 1f;
         overlayItemScroll.setLayoutParams(params);
@@ -1837,15 +1556,11 @@ public class GroceryOverlayService extends Service {
 
     private WindowManager.LayoutParams overlayParams(int width, int height, boolean passive) {
         int flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
-        if (passive) {
-            flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
-        } else {
-            flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                    | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
-        }
+        if (passive) flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        else flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
         return new WindowManager.LayoutParams(width, height,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                flags, PixelFormat.TRANSLUCENT);
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flags, PixelFormat.TRANSLUCENT);
     }
 
     private TextView text(String value, int size, boolean bold) {
@@ -1853,9 +1568,7 @@ public class GroceryOverlayService extends Service {
         view.setText(value);
         view.setTextSize(size);
         view.setTextColor(Color.rgb(36, 36, 36));
-        if (bold) {
-            view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
-        }
+        if (bold) view.setTypeface(view.getTypeface(), android.graphics.Typeface.BOLD);
         view.setGravity(Gravity.CENTER_VERTICAL);
         return view;
     }
@@ -1881,13 +1594,10 @@ public class GroceryOverlayService extends Service {
         input.setElevation(dp(1));
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_dropdown_item_1line, values) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
+            @Override public View getView(int position, View convertView, ViewGroup parent) {
                 return premiumDropDownText(getItem(position));
             }
-
-            @Override
-            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+            @Override public View getDropDownView(int position, View convertView, ViewGroup parent) {
                 return premiumDropDownText(getItem(position));
             }
         };
@@ -1901,13 +1611,10 @@ public class GroceryOverlayService extends Service {
 
     private ArrayAdapter<String> compactSpinnerAdapter(String[] values) {
         return new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, values) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
+            @Override public View getView(int position, View convertView, ViewGroup parent) {
                 return spinnerSelectedText(getItem(position));
             }
-
-            @Override
-            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+            @Override public View getDropDownView(int position, View convertView, ViewGroup parent) {
                 return premiumDropDownText(getItem(position));
             }
         };
@@ -1960,17 +1667,14 @@ public class GroceryOverlayService extends Service {
         return spinner;
     }
 
-    /** Sizes normal dropdowns from their longest visible text instead of page width. */
     private int adaptivePopupWidth(String[] values, float textSizeSp) {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setTextSize(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP, textSizeSp,
-                getResources().getDisplayMetrics()));
+        paint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
+                textSizeSp, getResources().getDisplayMetrics()));
         float longest = 0f;
         if (values != null) {
             for (String value : values) {
-                if (value == null) continue;
-                longest = Math.max(longest, paint.measureText(value.trim()));
+                if (value != null) longest = Math.max(longest, paint.measureText(value.trim()));
             }
         }
         int desired = Math.round(longest) + dp(42);
@@ -1978,23 +1682,19 @@ public class GroceryOverlayService extends Service {
         return clamp(desired, dp(120), Math.max(dp(120), max));
     }
 
-    /** Content-sized width for the ••• smart suggestion list including count badges. */
     private int adaptiveSmartPopupWidth(List<GroceryItem> suggestions) {
         Paint normal = new Paint(Paint.ANTI_ALIAS_FLAG);
-        normal.setTextSize(TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_SP, 13f,
-                getResources().getDisplayMetrics()));
+        normal.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
+                13f, getResources().getDisplayMetrics()));
         Paint bold = new Paint(normal);
         bold.setFakeBoldText(true);
         float longest = normal.measureText("Category-wise • most purchased first");
         for (GroceryItem suggestion : suggestions) {
             if (suggestion == null) continue;
             longest = Math.max(longest,
-                    normal.measureText(suggestion.name == null ? "" : suggestion.name)
-                            + dp(58));
+                    normal.measureText(suggestion.name == null ? "" : suggestion.name) + dp(58));
             String category = smartSuggestionCategory(suggestion);
-            longest = Math.max(longest,
-                    bold.measureText(category + " • 99 • 999×"));
+            longest = Math.max(longest, bold.measureText(category + " • 99 • 999×"));
         }
         int desired = Math.round(longest) + dp(34);
         int screenMax = getResources().getDisplayMetrics().widthPixels - dp(28);
@@ -2003,8 +1703,7 @@ public class GroceryOverlayService extends Service {
     }
 
     private LinearLayout.LayoutParams weightedField() {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                0, dp(60), 1f);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(60), 1f);
         params.topMargin = dp(4);
         return params;
     }
@@ -2047,20 +1746,16 @@ public class GroceryOverlayService extends Service {
     }
 
     private GradientDrawable glassFieldBackground() {
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.argb(235, 255, 255, 255),
-                        Color.argb(218, 244, 249, 252)});
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.argb(235, 255, 255, 255), Color.argb(218, 244, 249, 252)});
         drawable.setCornerRadius(dp(12));
         drawable.setStroke(dp(1), Color.argb(190, 204, 214, 222));
         return drawable;
     }
 
     private GradientDrawable premiumDropdownBackground() {
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.argb(250, 255, 255, 255),
-                        Color.argb(246, 243, 249, 252)});
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.argb(250, 255, 255, 255), Color.argb(246, 243, 249, 252)});
         drawable.setCornerRadius(dp(14));
         drawable.setStroke(dp(1), Color.argb(210, 199, 211, 221));
         drawable.setPadding(dp(5), dp(5), dp(5), dp(5));
@@ -2068,29 +1763,23 @@ public class GroceryOverlayService extends Service {
     }
 
     private GradientDrawable premiumDropdownRowBackground() {
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.argb(246, 255, 255, 255),
-                        Color.argb(238, 239, 248, 246)});
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.argb(246, 255, 255, 255), Color.argb(238, 239, 248, 246)});
         drawable.setCornerRadius(dp(10));
         drawable.setStroke(dp(1), Color.argb(130, 213, 224, 228));
         return drawable;
     }
 
     private GradientDrawable glassTopHighlight() {
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.argb(185, 255, 255, 255),
-                        Color.argb(55, 255, 255, 255), Color.TRANSPARENT});
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.argb(185, 255, 255, 255), Color.argb(55, 255, 255, 255), Color.TRANSPARENT});
         drawable.setCornerRadius(dp(12));
         return drawable;
     }
 
     private GradientDrawable panelGradient() {
-        GradientDrawable drawable = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.argb(236, 239, 250, 243),
-                        Color.argb(228, 255, 244, 245),
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.argb(236, 239, 250, 243), Color.argb(228, 255, 244, 245),
                         Color.argb(232, 238, 246, 253)});
         drawable.setCornerRadius(dp(20));
         drawable.setStroke(dp(1), Color.argb(200, 199, 213, 220));
@@ -2105,17 +1794,10 @@ public class GroceryOverlayService extends Service {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    /** Captures Back before the IME so one press closes the floating panel. */
-    private final class BackAwareEditText
-            extends androidx.appcompat.widget.AppCompatEditText {
-        BackAwareEditText() {
-            super(GroceryOverlayService.this);
-        }
-
-        @Override
-        public boolean onKeyPreIme(int keyCode, KeyEvent event) {
-            if (keyCode == KeyEvent.KEYCODE_BACK
-                    && event.getAction() == KeyEvent.ACTION_UP) {
+    private final class BackAwareEditText extends androidx.appcompat.widget.AppCompatEditText {
+        BackAwareEditText() { super(GroceryOverlayService.this); }
+        @Override public boolean onKeyPreIme(int keyCode, KeyEvent event) {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
                 closePanel();
                 return true;
             }
@@ -2125,18 +1807,15 @@ public class GroceryOverlayService extends Service {
 
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
-                getString(R.string.grocery_overlay_channel),
-                NotificationManager.IMPORTANCE_LOW);
+                getString(R.string.grocery_overlay_channel), NotificationManager.IMPORTANCE_LOW);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
     }
 
     private Notification createNotification() {
         Intent stop = new Intent(this, GroceryOverlayService.class);
         stop.setAction(ACTION_STOP);
-        android.app.PendingIntent stopIntent = android.app.PendingIntent.getService(
-                this, 0, stop,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT
-                        | android.app.PendingIntent.FLAG_IMMUTABLE);
+        android.app.PendingIntent stopIntent = android.app.PendingIntent.getService(this, 0, stop,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_grocery)
                 .setContentTitle(getString(R.string.grocery_overlay_title))
@@ -2148,22 +1827,17 @@ public class GroceryOverlayService extends Service {
 
     @Nullable
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
+    public IBinder onBind(Intent intent) { return null; }
 
     @Override
     public void onDestroy() {
-        if (repository != null) {
-            repository.stopRealtimeSync();
-        }
+        if (repository != null) repository.stopRealtimeSync();
         closePanel();
         if (stripView != null) {
             windowManager.removeView(stripView);
             stripView = null;
         }
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                .putBoolean(KEY_ENABLED, false).apply();
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, false).apply();
         unregisterReceiver(voiceResultReceiver);
         unregisterReceiver(screenStateReceiver);
         super.onDestroy();
