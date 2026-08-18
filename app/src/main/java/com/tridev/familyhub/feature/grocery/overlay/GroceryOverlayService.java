@@ -1857,10 +1857,10 @@ public class GroceryOverlayService extends Service {
 
     private GradientDrawable panelGradient() {
         GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.argb(236, 239, 250, 243), Color.argb(228, 255, 244, 245),
-                        Color.argb(232, 238, 246, 253)});
+                new int[]{Color.argb(252, 239, 250, 243), Color.argb(250, 255, 244, 245),
+                        Color.argb(252, 238, 246, 253)});
         drawable.setCornerRadius(dp(20));
-        drawable.setStroke(dp(1), Color.argb(200, 199, 213, 220));
+        drawable.setStroke(dp(1), Color.argb(225, 199, 213, 220));
         return drawable;
     }
 
