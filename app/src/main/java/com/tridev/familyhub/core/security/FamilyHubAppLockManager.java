@@ -36,6 +36,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     private long lastInteractionElapsedRealtime;
     private boolean sessionUnlocked;
     private boolean lockNavigationInProgress;
+    private boolean activeActivityResumed;
     @NonNull private String unlockedUid = "";
 
     private final Runnable timeoutRunnable = () -> {
@@ -75,6 +76,31 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         manager.cancelTimeout();
     }
 
+    /**
+     * Records interaction coming from Family Hub's trusted application-overlay UI.
+     * The overlay is a Service window, so its touches do not pass through an
+     * Activity Window.Callback. Treating those touches as real user interaction
+     * prevents an inactivity lock from appearing while the user is actively
+     * adding Grocery items. This never unlocks a locked session and never changes
+     * the configured timeout.
+     */
+    public static void noteTrustedOverlayInteraction() {
+        FamilyHubAppLockManager manager = instance;
+        if (manager == null || !manager.sessionUnlocked
+                || !currentUid().equals(manager.unlockedUid)) {
+            return;
+        }
+        manager.markInteractionNow();
+        Activity activity = manager.activeActivity.get();
+        if (!manager.activeActivityResumed || activity == null
+                || manager.isEntryOrLockActivity(activity)
+                || !AppSecurityStore.isProtectionEnabled(activity)
+                || manager.lockNavigationInProgress) {
+            return;
+        }
+        manager.scheduleTimeout(manager.timeoutMillis(activity));
+    }
+
     public static void forceLock(@NonNull Activity activity) {
         FamilyHubAppLockManager manager = instance;
         if (manager == null) {
@@ -89,6 +115,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
         activeActivity = new WeakReference<>(activity);
+        activeActivityResumed = true;
 
         if (isEntryOrLockActivity(activity)) {
             if (activity instanceof AppLockActivity) {
@@ -137,7 +164,10 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     @Override
     public void onActivityPaused(@NonNull Activity activity) {
         Activity current = activeActivity.get();
-        if (current == activity) cancelTimeout();
+        if (current == activity) {
+            activeActivityResumed = false;
+            cancelTimeout();
+        }
     }
 
     @Override
@@ -145,6 +175,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         Activity current = activeActivity.get();
         if (current == activity) {
             activeActivity.clear();
+            activeActivityResumed = false;
             cancelTimeout();
         }
     }
