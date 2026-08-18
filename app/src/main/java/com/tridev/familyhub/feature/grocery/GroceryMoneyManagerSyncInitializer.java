@@ -41,6 +41,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * category update that exact MoneyManager row rather than replacing/removing it.
  * Existing historical purchases stay baselined, while a purchase completed after
  * this process starts is never swallowed by the first asynchronous baseline scan.
+ *
+ * In addition to the payload signature, the last successfully-applied Grocery
+ * updatedAt version is retained. This prevents an edit from being skipped when an
+ * older sync-state migration accidentally baselined the new payload before the
+ * linked MoneyManager row was actually updated.
  */
 public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -49,6 +54,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
     private static final String PREFIX_EVENT = "event_";
     private static final String PREFIX_SOURCE = "source_";
     private static final String PREFIX_APPLIED = "applied_";
+    private static final String PREFIX_VERSION = "version_";
     private static final String PREFIX_COUNT = "count_";
     private static final String PREFIX_SENT = "sent_";
 
@@ -152,6 +158,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                         GroceryMoneyManagerBridge.sourceRecordIdFor(item));
                 baseline.putString(PREFIX_APPLIED + key,
                         GroceryMoneyManagerBridge.moneyPayloadSignature(context, item));
+                baseline.putLong(PREFIX_VERSION + key, Math.max(0L, item.updatedAt));
                 baseline.putInt(PREFIX_COUNT + key, Math.max(0, item.purchaseCount));
                 baseline.putBoolean(PREFIX_SENT + key, false);
             }
@@ -176,6 +183,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             String canonicalEvent = safe(preferences.getString(PREFIX_EVENT + key, ""));
             String canonicalSource = safe(preferences.getString(PREFIX_SOURCE + key, ""));
             String appliedPayload = safe(preferences.getString(PREFIX_APPLIED + key, ""));
+            long appliedVersion = preferences.getLong(PREFIX_VERSION + key, 0L);
             int previousCount = preferences.getInt(PREFIX_COUNT + key, 0);
             boolean previousSent = preferences.getBoolean(PREFIX_SENT + key, false);
 
@@ -184,21 +192,28 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 String currentSource = GroceryMoneyManagerBridge.sourceRecordIdFor(item);
                 String currentPayload = GroceryMoneyManagerBridge.moneyPayloadSignature(context, item);
 
-                // Upgrade old sync state without importing old purchases. If the
-                // canonical event still matches, current values become the local
-                // baseline. A changed event/payload is handled below as an edit.
-                if (appliedPayload.isEmpty() && currentEvent.equals(canonicalEvent)) {
+                // Only historical/local-only rows may be safely baselined here.
+                // A row that was already sent to MoneyManager must never absorb a
+                // newer edit into local state before the linked ledger row updates.
+                if (appliedPayload.isEmpty()
+                        && currentEvent.equals(canonicalEvent)
+                        && !previousSent) {
                     appliedPayload = currentPayload;
-                    preferences.edit().putString(PREFIX_APPLIED + key, appliedPayload).apply();
+                    appliedVersion = Math.max(0L, item.updatedAt);
+                    preferences.edit()
+                            .putString(PREFIX_APPLIED + key, appliedPayload)
+                            .putLong(PREFIX_VERSION + key, appliedVersion)
+                            .apply();
                 }
 
                 if (!belongsToThisDeviceUser(item, currentUser)) {
                     if (canonicalEvent.isEmpty()) {
                         rememberNew(preferences, key, currentEvent, currentSource,
-                                currentPayload, item.purchaseCount, false);
+                                currentPayload, item.updatedAt,
+                                item.purchaseCount, false);
                     } else {
                         rememberApplied(preferences, key, currentPayload,
-                                item.purchaseCount, previousSent);
+                                item.updatedAt, item.purchaseCount, previousSent);
                     }
                     continue;
                 }
@@ -210,7 +225,8 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 }
 
                 boolean changed = !currentEvent.equals(canonicalEvent)
-                        || !currentPayload.equals(appliedPayload);
+                        || !currentPayload.equals(appliedPayload)
+                        || (previousSent && item.updatedAt > appliedVersion);
                 if (!changed) continue;
 
                 if (!previousSent) {
@@ -223,7 +239,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                     } else {
                         // Historical baselined data remains local-only.
                         rememberApplied(preferences, key, currentPayload,
-                                item.purchaseCount, false);
+                                item.updatedAt, item.purchaseCount, false);
                     }
                     continue;
                 }
@@ -260,7 +276,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 GroceryMoneyManagerBridge.sendPurchase(context, item);
         if (direct.accepted) {
             rememberNew(preferences, key, currentEvent, currentSource,
-                    currentPayload, item.purchaseCount, true);
+                    currentPayload, item.updatedAt, item.purchaseCount, true);
             return;
         }
         if (!"MAPPING_REQUIRED".equals(direct.status)) return;
@@ -278,7 +294,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                                     GroceryMoneyManagerBridge.eventIdFor(item),
                                     GroceryMoneyManagerBridge.sourceRecordIdFor(item),
                                     GroceryMoneyManagerBridge.moneyPayloadSignature(context, item),
-                                    item.purchaseCount, true);
+                                    item.updatedAt, item.purchaseCount, true);
                         }
                     } finally {
                         promptingKeys.remove(key);
@@ -297,11 +313,13 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         GroceryMoneyManagerBridge.Result direct =
                 GroceryMoneyManagerBridge.updateLinkedPurchase(
                         context, item, canonicalEvent, canonicalSource);
-        if (direct.accepted) {
+        if ("UPDATED".equalsIgnoreCase(direct.status)) {
             rememberApplied(preferences, key, currentPayload,
-                    item.purchaseCount, true);
+                    item.updatedAt, item.purchaseCount, true);
             return;
         }
+        // PRESERVED means MoneyManager deliberately did not rewrite the linked
+        // row. It is not an edit success and must never advance local applied state.
         if (!"MAPPING_REQUIRED".equals(direct.status)) return;
 
         Activity activity = foregroundActivity.get();
@@ -313,10 +331,10 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                         GroceryMoneyManagerBridge.Result result =
                                 GroceryMoneyManagerBridge.updateLinkedPurchase(
                                         context, item, canonicalEvent, canonicalSource);
-                        if (result.accepted) {
+                        if ("UPDATED".equalsIgnoreCase(result.status)) {
                             rememberApplied(preferences, key,
                                     GroceryMoneyManagerBridge.moneyPayloadSignature(context, item),
-                                    item.purchaseCount, true);
+                                    item.updatedAt, item.purchaseCount, true);
                         }
                     } finally {
                         promptingKeys.remove(key);
@@ -363,12 +381,14 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             @NonNull String eventId,
             @NonNull String sourceRecordId,
             @NonNull String appliedPayload,
+            long appliedVersion,
             int purchaseCount,
             boolean sent) {
         preferences.edit()
                 .putString(PREFIX_EVENT + key, eventId)
                 .putString(PREFIX_SOURCE + key, sourceRecordId)
                 .putString(PREFIX_APPLIED + key, appliedPayload)
+                .putLong(PREFIX_VERSION + key, Math.max(0L, appliedVersion))
                 .putInt(PREFIX_COUNT + key, Math.max(0, purchaseCount))
                 .putBoolean(PREFIX_SENT + key, sent)
                 .apply();
@@ -378,10 +398,12 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             @NonNull SharedPreferences preferences,
             @NonNull String key,
             @NonNull String appliedPayload,
+            long appliedVersion,
             int purchaseCount,
             boolean sent) {
         preferences.edit()
                 .putString(PREFIX_APPLIED + key, appliedPayload)
+                .putLong(PREFIX_VERSION + key, Math.max(0L, appliedVersion))
                 .putInt(PREFIX_COUNT + key, Math.max(0, purchaseCount))
                 .putBoolean(PREFIX_SENT + key, sent)
                 .apply();
@@ -394,6 +416,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                 .remove(PREFIX_EVENT + key)
                 .remove(PREFIX_SOURCE + key)
                 .remove(PREFIX_APPLIED + key)
+                .remove(PREFIX_VERSION + key)
                 .remove(PREFIX_COUNT + key)
                 .remove(PREFIX_SENT + key)
                 .apply();
