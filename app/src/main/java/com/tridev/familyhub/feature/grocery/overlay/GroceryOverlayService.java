@@ -665,31 +665,8 @@ public class GroceryOverlayService extends Service {
         toolsParams.topMargin = dp(2);
         root.addView(listTools, toolsParams);
 
-        categoryFilter.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(this, categoryFilter);
-            popup.getMenu().setGroupCheckable(1, true, true);
-            android.view.MenuItem allCategories = popup.getMenu().add(
-                    1, 20_000, 0, R.string.grocery_filter_all_categories);
-            allCategories.setChecked(overlayCategoryFilter.isEmpty());
-            for (int index = 1; index < categoryLabels.length; index++) {
-                android.view.MenuItem categoryItem = popup.getMenu().add(
-                        1, 20_000 + index, index, categoryLabels[index]);
-                categoryItem.setChecked(categoryLabels[index].equalsIgnoreCase(overlayCategoryFilter));
-            }
-            popup.setOnMenuItemClickListener(item -> {
-                int categoryIndex = item.getItemId() - 20_000;
-                overlayCategoryFilter = categoryIndex <= 0 ? "" : categoryLabels[categoryIndex];
-                item.setChecked(true);
-                search.setHint(overlayCategoryFilter.isEmpty()
-                        ? getString(R.string.grocery_search_hint)
-                        : getString(R.string.grocery_search_hint) + " • " + overlayCategoryFilter);
-                categoryFilter.setColorFilter(overlayCategoryFilter.isEmpty()
-                        ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
-                refreshPanel();
-                return true;
-            });
-            popup.show();
-        });
+        categoryFilter.setOnClickListener(v ->
+                showCategoryFilterPopup(categoryFilter, search, categoryLabels));
         collapse.setOnClickListener(v -> {
             collapseAllCategories = !collapseAllCategories;
             collapsedCategories.clear();
@@ -802,6 +779,107 @@ public class GroceryOverlayService extends Service {
         input.requestFocus();
         input.postDelayed(() -> ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
                 .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT), 150L);
+    }
+
+    private void showCategoryFilterPopup(ImageButton anchor, EditText search,
+                                         String[] categoryLabels) {
+        FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+        List<String> labels = new ArrayList<>();
+        labels.add(getString(R.string.grocery_filter_all_categories));
+        for (int index = 1; index < categoryLabels.length; index++) {
+            labels.add(categoryLabels[index]);
+        }
+        String[] widthLabels = labels.toArray(new String[0]);
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int popupWidth = Math.min(adaptivePopupWidth(widthLabels, 12.5f), screenWidth - dp(28));
+        int desiredHeight = dp(12) + labels.size() * dp(38);
+        int maxHeight = Math.min(dp(300), Math.round(screenHeight * 0.40f));
+        int popupHeight = Math.min(desiredHeight, maxHeight);
+
+        LinearLayout popupRoot = new LinearLayout(this);
+        popupRoot.setOrientation(LinearLayout.VERTICAL);
+        popupRoot.setPadding(dp(5), dp(5), dp(5), dp(5));
+        popupRoot.setBackground(premiumDropdownBackground());
+        popupRoot.setElevation(dp(10));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setVerticalScrollBarEnabled(true);
+        LinearLayout rows = new LinearLayout(this);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(rows, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.WRAP_CONTENT));
+        popupRoot.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+
+        final android.widget.PopupWindow popup = new android.widget.PopupWindow(this);
+        popup.setContentView(popupRoot);
+        popup.setWidth(popupWidth);
+        popup.setHeight(Math.max(dp(48), popupHeight));
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        popup.setElevation(dp(12));
+        popup.setOverlapAnchor(false);
+
+        for (int index = 0; index < labels.size(); index++) {
+            final int categoryIndex = index;
+            final String label = labels.get(index);
+            final boolean selected = categoryIndex == 0
+                    ? overlayCategoryFilter.isEmpty()
+                    : label.equalsIgnoreCase(overlayCategoryFilter);
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(10), dp(6), dp(8), dp(6));
+            row.setBackground(rounded(
+                    selected ? Color.argb(242, 229, 247, 239)
+                            : Color.argb(248, 255, 255, 255),
+                    selected ? Color.argb(210, 126, 190, 165)
+                            : Color.argb(125, 212, 222, 226), 10));
+
+            TextView labelView = text(label, 12, selected);
+            labelView.setTextColor(selected
+                    ? Color.rgb(15, 108, 89) : Color.rgb(31, 42, 49));
+            labelView.setSingleLine(true);
+            labelView.setEllipsize(null);
+            labelView.setIncludeFontPadding(false);
+            row.addView(labelView, new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            if (selected) {
+                TextView check = text("✓", 13, true);
+                check.setTextColor(Color.rgb(15, 108, 89));
+                check.setGravity(Gravity.CENTER);
+                row.addView(check, new LinearLayout.LayoutParams(
+                        dp(28), LinearLayout.LayoutParams.WRAP_CONTENT));
+            }
+
+            row.setOnClickListener(v -> {
+                overlayCategoryFilter = categoryIndex == 0 ? "" : label;
+                search.setHint(overlayCategoryFilter.isEmpty()
+                        ? getString(R.string.grocery_search_hint)
+                        : getString(R.string.grocery_search_hint)
+                                + " • " + overlayCategoryFilter);
+                anchor.setColorFilter(overlayCategoryFilter.isEmpty()
+                        ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
+                refreshPanel();
+                popup.dismiss();
+            });
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            rowParams.bottomMargin = dp(3);
+            rows.addView(row, rowParams);
+        }
+
+        int xOffset = -(popupWidth - Math.max(anchor.getWidth(), dp(42)));
+        popup.showAsDropDown(anchor, xOffset, dp(4));
     }
 
     private void refreshPanel() {
