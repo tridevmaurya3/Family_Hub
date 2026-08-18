@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
@@ -105,6 +106,16 @@ public class GroceryOverlayService extends Service {
     private String overlayCategoryFilter = "";
     private boolean collapseAllCategories;
     private final Set<String> collapsedCategories = new HashSet<>();
+
+    private boolean cornerResizeActive;
+    private int cornerResizeHorizontalDirection;
+    private int cornerResizeVerticalDirection;
+    private int cornerResizeStartWidth;
+    private int cornerResizeStartHeight;
+    private int cornerResizeStartX;
+    private int cornerResizeStartY;
+    private float cornerResizeDownRawX;
+    private float cornerResizeDownRawY;
 
     private final BroadcastReceiver voiceResultReceiver = new BroadcastReceiver() {
         @Override
@@ -258,10 +269,27 @@ public class GroceryOverlayService extends Service {
             return;
         }
         FrameLayout panelRoot = new FrameLayout(this) {
+            private final Paint cornerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            {
+                cornerPaint.setColor(Color.argb(190, 74, 143, 183));
+                cornerPaint.setStrokeWidth(dp(1));
+                cornerPaint.setStyle(Paint.Style.STROKE);
+                setWillNotDraw(false);
+            }
+
+            @Override
+            protected void dispatchDraw(Canvas canvas) {
+                super.dispatchDraw(canvas);
+                drawResizeCornerGuides(canvas, getWidth(), getHeight(), cornerPaint);
+            }
+
             @Override
             public boolean dispatchTouchEvent(MotionEvent event) {
                 if (event != null) {
                     FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+                    if (handlePanelCornerResizeGesture(this, event)) {
+                        return true;
+                    }
                     if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
                         closePanel();
                         return true;
@@ -768,19 +796,6 @@ public class GroceryOverlayService extends Service {
         final int maxPanelHeight = screenHeight - dp(98);
         final int minPanelWidth = Math.min(maxPanelWidth, dp(280));
         final int minPanelHeight = Math.min(maxPanelHeight, dp(360));
-
-        addResizeHandle(panelRoot, "↖", Gravity.START | Gravity.TOP,
-                -1, -1, minPanelWidth, maxPanelWidth,
-                minPanelHeight, maxPanelHeight);
-        addResizeHandle(panelRoot, "↗", Gravity.END | Gravity.TOP,
-                1, -1, minPanelWidth, maxPanelWidth,
-                minPanelHeight, maxPanelHeight);
-        addResizeHandle(panelRoot, "↙", Gravity.START | Gravity.BOTTOM,
-                -1, 1, minPanelWidth, maxPanelWidth,
-                minPanelHeight, maxPanelHeight);
-        addResizeHandle(panelRoot, "↘", Gravity.END | Gravity.BOTTOM,
-                1, 1, minPanelWidth, maxPanelWidth,
-                minPanelHeight, maxPanelHeight);
 
         overlayListCompactHeight = dp(150);
         overlayListExpandedHeight = dp(250);
@@ -1693,103 +1708,99 @@ public class GroceryOverlayService extends Service {
         return params;
     }
 
-    /** Adds a large, reliable drag-to-resize grip at a panel corner. */
-    private void addResizeHandle(
-            FrameLayout panelRoot,
-            String symbol,
-            int gravity,
-            int horizontalDirection,
-            int verticalDirection,
-            int minPanelWidth,
-            int maxPanelWidth,
-            int minPanelHeight,
-            int maxPanelHeight) {
-        TextView handle = text(symbol, 18, true);
-        handle.setGravity(Gravity.CENTER);
-        handle.setTextColor(Color.rgb(15, 108, 189));
-        handle.setContentDescription(getString(R.string.grocery_overlay_resize));
-        handle.setBackground(rounded(Color.argb(248, 239, 248, 253),
-                Color.argb(235, 121, 178, 218), 16));
-        handle.setElevation(dp(12));
-        handle.setAlpha(1f);
-        handle.setClickable(true);
-        handle.setOnTouchListener(new View.OnTouchListener() {
-            private int startWidth;
-            private int startHeight;
-            private int startPanelX;
-            private int startPanelY;
-            private float downX;
-            private float downY;
+    /** The actual panel border corners act as resize grips; no extra buttons are used. */
+    private boolean handlePanelCornerResizeGesture(View panel, MotionEvent event) {
+        if (event == null || panelParams == null || panelView == null) return false;
 
-            @Override
-            public boolean onTouch(View view, MotionEvent event) {
-                FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-                if (panelParams == null || panelView == null) return true;
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    if (view.getParent() != null) {
-                        view.getParent().requestDisallowInterceptTouchEvent(true);
-                    }
-                    startWidth = panelParams.width;
-                    startHeight = panelParams.height;
-                    startPanelX = panelParams.x;
-                    startPanelY = panelParams.y;
-                    downX = event.getRawX();
-                    downY = event.getRawY();
-                    return true;
-                }
-                if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    int dx = Math.round(event.getRawX() - downX);
-                    int dy = Math.round(event.getRawY() - downY);
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            int cornerTouch = dp(24);
+            float localX = event.getX();
+            float localY = event.getY();
+            boolean left = localX <= cornerTouch;
+            boolean right = localX >= panel.getWidth() - cornerTouch;
+            boolean top = localY <= cornerTouch;
+            boolean bottom = localY >= panel.getHeight() - cornerTouch;
+            if (!(left || right) || !(top || bottom)) return false;
 
-                    int newWidth = horizontalDirection < 0
-                            ? clamp(startWidth - dx, minPanelWidth, maxPanelWidth)
-                            : clamp(startWidth + dx, minPanelWidth, maxPanelWidth);
-                    int newHeight = verticalDirection < 0
-                            ? clamp(startHeight - dy, minPanelHeight, maxPanelHeight)
-                            : clamp(startHeight + dy, minPanelHeight, maxPanelHeight);
+            cornerResizeHorizontalDirection = left ? -1 : 1;
+            cornerResizeVerticalDirection = top ? -1 : 1;
+            cornerResizeStartWidth = panelParams.width;
+            cornerResizeStartHeight = panelParams.height;
+            cornerResizeStartX = panelParams.x;
+            cornerResizeStartY = panelParams.y;
+            cornerResizeDownRawX = event.getRawX();
+            cornerResizeDownRawY = event.getRawY();
+            cornerResizeActive = true;
+            return true;
+        }
 
-                    int screenWidth = getResources().getDisplayMetrics().widthPixels;
-                    int screenHeight = getResources().getDisplayMetrics().heightPixels;
-                    int newX = horizontalDirection < 0
-                            ? startPanelX + (startWidth - newWidth)
-                            : startPanelX;
-                    int newY = verticalDirection < 0
-                            ? startPanelY + (startHeight - newHeight)
-                            : startPanelY;
+        if (!cornerResizeActive) return false;
 
-                    panelParams.width = newWidth;
-                    panelParams.height = newHeight;
-                    panelParams.x = clamp(newX, 0, Math.max(0, screenWidth - newWidth));
-                    panelParams.y = clamp(newY, 0, Math.max(0, screenHeight - newHeight));
-                    windowManager.updateViewLayout(panelView, panelParams);
-                    return true;
-                }
-                if (event.getAction() == MotionEvent.ACTION_UP
-                        || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                            .putInt("panel_width", panelParams.width)
-                            .putInt("panel_height", panelParams.height)
-                            .putInt("panel_x", panelParams.x)
-                            .putInt("panel_y", panelParams.y)
-                            .apply();
-                    if (view.getParent() != null) {
-                        view.getParent().requestDisallowInterceptTouchEvent(false);
-                    }
-                    return true;
-                }
-                return true;
-            }
-        });
+        if (action == MotionEvent.ACTION_MOVE) {
+            int dx = Math.round(event.getRawX() - cornerResizeDownRawX);
+            int dy = Math.round(event.getRawY() - cornerResizeDownRawY);
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getResources().getDisplayMetrics().heightPixels;
+            int maxWidth = screenWidth - dp(24);
+            int maxHeight = screenHeight - dp(98);
+            int minWidth = Math.min(maxWidth, dp(280));
+            int minHeight = Math.min(maxHeight, dp(360));
 
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                dp(42), dp(42), gravity);
-        int edge = dp(2);
-        params.leftMargin = edge;
-        params.rightMargin = edge;
-        params.bottomMargin = edge;
-        params.topMargin = edge;
-        panelRoot.addView(handle, params);
-        handle.bringToFront();
+            int newWidth = cornerResizeHorizontalDirection < 0
+                    ? clamp(cornerResizeStartWidth - dx, minWidth, maxWidth)
+                    : clamp(cornerResizeStartWidth + dx, minWidth, maxWidth);
+            int newHeight = cornerResizeVerticalDirection < 0
+                    ? clamp(cornerResizeStartHeight - dy, minHeight, maxHeight)
+                    : clamp(cornerResizeStartHeight + dy, minHeight, maxHeight);
+
+            int newX = cornerResizeHorizontalDirection < 0
+                    ? cornerResizeStartX + (cornerResizeStartWidth - newWidth)
+                    : cornerResizeStartX;
+            int newY = cornerResizeVerticalDirection < 0
+                    ? cornerResizeStartY + (cornerResizeStartHeight - newHeight)
+                    : cornerResizeStartY;
+
+            panelParams.width = newWidth;
+            panelParams.height = newHeight;
+            panelParams.x = clamp(newX, 0, Math.max(0, screenWidth - newWidth));
+            panelParams.y = clamp(newY, 0, Math.max(0, screenHeight - newHeight));
+            windowManager.updateViewLayout(panelView, panelParams);
+            return true;
+        }
+
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putInt("panel_width", panelParams.width)
+                    .putInt("panel_height", panelParams.height)
+                    .putInt("panel_x", panelParams.x)
+                    .putInt("panel_y", panelParams.y)
+                    .apply();
+            cornerResizeActive = false;
+            return true;
+        }
+        return true;
+    }
+
+    /** Draws subtle resize guides directly on the form border corners. */
+    private void drawResizeCornerGuides(Canvas canvas, int width, int height, Paint paint) {
+        if (canvas == null || width <= 0 || height <= 0 || paint == null) return;
+        float edge = dp(3);
+        float length = dp(11);
+
+        canvas.drawLine(edge, edge, edge + length, edge, paint);
+        canvas.drawLine(edge, edge, edge, edge + length, paint);
+
+        canvas.drawLine(width - edge, edge, width - edge - length, edge, paint);
+        canvas.drawLine(width - edge, edge, width - edge, edge + length, paint);
+
+        canvas.drawLine(edge, height - edge, edge + length, height - edge, paint);
+        canvas.drawLine(edge, height - edge, edge, height - edge - length, paint);
+
+        canvas.drawLine(width - edge, height - edge,
+                width - edge - length, height - edge, paint);
+        canvas.drawLine(width - edge, height - edge,
+                width - edge, height - edge - length, paint);
     }
 
     private void closePanel() {
@@ -1803,6 +1814,7 @@ public class GroceryOverlayService extends Service {
             panelParams = null;
             pendingMoneyCatalogAction = null;
             overlayFormCollapsed = false;
+            cornerResizeActive = false;
         }
     }
 
