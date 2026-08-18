@@ -26,14 +26,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * STEP 9/10 bootstrap for Family Hub Finance -> MoneyManagerPro.
+ * Family Hub Finance -> MoneyManager synchronization.
  *
- * Grocery-owned rows and finalized LoanManager projections are excluded so
- * MoneyManager never receives an echo of a transaction it already finalized.
- * Family-owned Income/Expense deletions are forwarded to MoneyManager using the
- * original deterministic event identity. MoneyManager decides whether its row
- * is integration-owned and therefore removable, or whether external/manual
- * evidence requires the canonical ledger row to be preserved.
+ * The first successfully-posted event/source identity is retained as the
+ * canonical link. Later Family Hub edits update that exact MoneyManager row in
+ * place instead of creating a replacement event. This keeps Expense/Income rows
+ * visible when amount, category, account, date or type is corrected.
  */
 public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
 
@@ -41,6 +39,7 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
     private static final String KEY_INITIALIZED = "initialized";
     private static final String PREFIX_EVENT = "event_";
     private static final String PREFIX_SOURCE = "source_";
+    private static final String PREFIX_APPLIED = "applied_";
     private static final String PREFIX_PENDING = "pending_";
     private static final String PREFIX_FORCE_REVIEW = "force_review_";
 
@@ -73,12 +72,10 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
     private void scheduleScan() {
         Context context = appContext;
         if (context == null) return;
-
         if (!scanQueued.compareAndSet(false, true)) {
             rescanRequested.set(true);
             return;
         }
-
         EXECUTOR.execute(() -> {
             try {
                 do {
@@ -87,9 +84,7 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                 } while (rescanRequested.get());
             } finally {
                 scanQueued.set(false);
-                if (rescanRequested.get()) {
-                    scheduleScan();
-                }
+                if (rescanRequested.get()) scheduleScan();
             }
         });
     }
@@ -106,10 +101,11 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             for (FinanceEntry entry : entries) {
                 if (!eligibleStructure(entry, groceryDao)) continue;
                 String key = FinanceMoneyManagerBridge.stableEntryKey(entry);
-                baseline.putString(PREFIX_EVENT + key,
-                        FinanceMoneyManagerBridge.eventIdFor(entry));
+                String event = FinanceMoneyManagerBridge.eventIdFor(entry);
+                baseline.putString(PREFIX_EVENT + key, event);
                 baseline.putString(PREFIX_SOURCE + key,
                         FinanceMoneyManagerBridge.sourceRecordIdFor(entry));
+                baseline.putString(PREFIX_APPLIED + key, event);
                 baseline.putBoolean(PREFIX_PENDING + key, false);
                 baseline.putBoolean(PREFIX_FORCE_REVIEW + key, false);
             }
@@ -131,52 +127,82 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             }
 
             String currentEvent = FinanceMoneyManagerBridge.eventIdFor(entry);
-            String previousEvent = safe(preferences.getString(
-                    PREFIX_EVENT + key, ""));
+            String canonicalEvent = safe(preferences.getString(PREFIX_EVENT + key, ""));
+            String canonicalSource = safe(preferences.getString(PREFIX_SOURCE + key, ""));
+            String appliedEvent = safe(preferences.getString(
+                    PREFIX_APPLIED + key, canonicalEvent));
             boolean pending = preferences.getBoolean(PREFIX_PENDING + key, false);
-            boolean pendingForceReview = preferences.getBoolean(
-                    PREFIX_FORCE_REVIEW + key, false);
 
-            if (!previousEvent.isEmpty() && currentEvent.equals(previousEvent)) {
-                if (pending) {
-                    sendAndRemember(context, preferences, key, entry,
-                            pendingForceReview);
-                }
+            if (currentEvent.equals(appliedEvent) && !pending) continue;
+
+            if (canonicalEvent.isEmpty() || canonicalSource.isEmpty()) {
+                sendNewAndRemember(context, preferences, key, entry);
                 continue;
             }
 
-            boolean forceReview = !previousEvent.isEmpty();
-            sendAndRemember(context, preferences, key, entry, forceReview);
+            if (currentEvent.equals(canonicalEvent) && appliedEvent.equals(canonicalEvent)) {
+                // Retry of the original create after a temporary MoneyManager outage.
+                sendNewAndRemember(context, preferences, key, entry);
+                continue;
+            }
+
+            updateAndRemember(context, preferences, key, entry,
+                    canonicalEvent, canonicalSource, currentEvent);
         }
 
         cancelAndPruneDeletedSourceState(context, preferences, existingKeys);
     }
 
-    private void sendAndRemember(
+    private void sendNewAndRemember(
+            @NonNull Context context,
+            @NonNull SharedPreferences preferences,
+            @NonNull String key,
+            @NonNull FinanceEntry entry) {
+        FinanceMoneyManagerBridge.Result result =
+                FinanceMoneyManagerBridge.send(context, entry, false);
+        if (result.accepted) {
+            String event = FinanceMoneyManagerBridge.eventIdFor(entry);
+            preferences.edit()
+                    .putString(PREFIX_EVENT + key, event)
+                    .putString(PREFIX_SOURCE + key,
+                            FinanceMoneyManagerBridge.sourceRecordIdFor(entry))
+                    .putString(PREFIX_APPLIED + key, event)
+                    .putBoolean(PREFIX_PENDING + key, false)
+                    .putBoolean(PREFIX_FORCE_REVIEW + key, false)
+                    .apply();
+            return;
+        }
+        preferences.edit()
+                .putBoolean(PREFIX_PENDING + key,
+                        "UNAVAILABLE".equals(result.status)
+                                || "FAILED".equals(result.status))
+                .apply();
+    }
+
+    private void updateAndRemember(
             @NonNull Context context,
             @NonNull SharedPreferences preferences,
             @NonNull String key,
             @NonNull FinanceEntry entry,
-            boolean forceReview) {
+            @NonNull String canonicalEvent,
+            @NonNull String canonicalSource,
+            @NonNull String currentEvent) {
         FinanceMoneyManagerBridge.Result result =
-                FinanceMoneyManagerBridge.send(context, entry, forceReview);
-
-        String currentEvent = FinanceMoneyManagerBridge.eventIdFor(entry);
-        String currentSource = FinanceMoneyManagerBridge.sourceRecordIdFor(entry);
-        SharedPreferences.Editor editor = preferences.edit()
-                .putString(PREFIX_EVENT + key, currentEvent)
-                .putString(PREFIX_SOURCE + key, currentSource)
-                .putBoolean(PREFIX_FORCE_REVIEW + key, forceReview);
-
+                FinanceMoneyManagerBridge.updateLinked(
+                        context, entry, canonicalEvent, canonicalSource);
         if (result.accepted) {
-            editor.putBoolean(PREFIX_PENDING + key, false);
-        } else if ("UNAVAILABLE".equals(result.status)
-                || "FAILED".equals(result.status)) {
-            editor.putBoolean(PREFIX_PENDING + key, true);
-        } else {
-            editor.putBoolean(PREFIX_PENDING + key, false);
+            preferences.edit()
+                    .putString(PREFIX_APPLIED + key, currentEvent)
+                    .putBoolean(PREFIX_PENDING + key, false)
+                    .putBoolean(PREFIX_FORCE_REVIEW + key, false)
+                    .apply();
+            return;
         }
-        editor.apply();
+        preferences.edit()
+                .putBoolean(PREFIX_PENDING + key,
+                        "UNAVAILABLE".equals(result.status)
+                                || "FAILED".equals(result.status))
+                .apply();
     }
 
     private boolean eligibleStructure(
@@ -184,18 +210,15 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             @NonNull GroceryItemDao groceryDao) {
         if (!FinanceMoneyManagerBridge.isPostable(entry)) return false;
         if (entry == null) return false;
-
         if (entry.cloudId != null
                 && entry.cloudId.toLowerCase(java.util.Locale.ROOT)
                 .startsWith("grocery_")) return false;
         if (entry.note != null && entry.note.startsWith("[Grocery] ")) return false;
-
         if (entry.note != null
                 && entry.note.startsWith("[LoanManagerProjection] ")) return false;
         if (entry.cloudId != null
                 && entry.cloudId.toLowerCase(java.util.Locale.ROOT)
                 .startsWith("loan_projection_")) return false;
-
         return groceryDao.getByFinanceEntryId(entry.id) == null;
     }
 
@@ -229,7 +252,6 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
 
             String eventId = safe(preferences.getString(PREFIX_EVENT + key, ""));
             String sourceRecordId = safe(preferences.getString(PREFIX_SOURCE + key, ""));
-
             boolean canPrune;
             if (eventId.isEmpty() || sourceRecordId.isEmpty()) {
                 canPrune = true;
@@ -238,16 +260,12 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                         FinanceMoneyManagerBridge.cancel(context, eventId, sourceRecordId);
                 canPrune = result.accepted;
             }
-
-            if (!canPrune) {
-                // Keep the original event identity. A later Room invalidation or
-                // process restart will retry cancellation when MoneyManager is ready.
-                continue;
-            }
+            if (!canPrune) continue;
 
             preferences.edit()
                     .remove(PREFIX_EVENT + key)
                     .remove(PREFIX_SOURCE + key)
+                    .remove(PREFIX_APPLIED + key)
                     .remove(PREFIX_PENDING + key)
                     .remove(PREFIX_FORCE_REVIEW + key)
                     .apply();
