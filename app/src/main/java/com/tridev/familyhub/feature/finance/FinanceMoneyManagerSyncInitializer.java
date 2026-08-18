@@ -1,11 +1,14 @@
 package com.tridev.familyhub.feature.finance;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -50,12 +53,36 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
     private final AtomicBoolean rescanRequested = new AtomicBoolean(false);
     @Nullable private Context appContext;
     @Nullable private InvalidationTracker.Observer observer;
+    private long processStartedAt;
 
     @Override
     public boolean onCreate() {
         Context context = getContext();
         if (context == null) return false;
+        processStartedAt = System.currentTimeMillis();
         appContext = context.getApplicationContext();
+
+        if (appContext instanceof Application) {
+            ((Application) appContext).registerActivityLifecycleCallbacks(
+                    new Application.ActivityLifecycleCallbacks() {
+                        @Override public void onActivityCreated(
+                                @NonNull Activity activity,
+                                @Nullable Bundle savedInstanceState) { }
+                        @Override public void onActivityStarted(@NonNull Activity activity) { }
+                        @Override public void onActivityResumed(@NonNull Activity activity) {
+                            // A temporary MoneyManager outage or an older installed
+                            // MoneyManager build must not make one edit permanently
+                            // disappear. Resume safely retries the same canonical id.
+                            scheduleScan();
+                        }
+                        @Override public void onActivityPaused(@NonNull Activity activity) { }
+                        @Override public void onActivityStopped(@NonNull Activity activity) { }
+                        @Override public void onActivitySaveInstanceState(
+                                @NonNull Activity activity,
+                                @NonNull Bundle outState) { }
+                        @Override public void onActivityDestroyed(@NonNull Activity activity) { }
+                    });
+        }
 
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(appContext);
         observer = new InvalidationTracker.Observer("finance_entries") {
@@ -100,6 +127,12 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
             SharedPreferences.Editor baseline = preferences.edit();
             for (FinanceEntry entry : entries) {
                 if (!eligibleStructure(entry, groceryDao)) continue;
+                // ContentProviders start before the Activity. An entry created
+                // after this timestamp belongs to the current run and must be
+                // posted, even if the first async baseline scan was delayed.
+                boolean createdThisRun = entry.createdAt > 0L
+                        && entry.createdAt >= processStartedAt;
+                if (createdThisRun) continue;
                 String key = FinanceMoneyManagerBridge.stableEntryKey(entry);
                 String event = FinanceMoneyManagerBridge.eventIdFor(entry);
                 baseline.putString(PREFIX_EVENT + key, event);
@@ -110,7 +143,8 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
                 baseline.putBoolean(PREFIX_FORCE_REVIEW + key, false);
             }
             baseline.putBoolean(KEY_INITIALIZED, true).apply();
-            return;
+            // Do not return: any entry created while this first scan waited in
+            // the executor is intentionally processed as a new MoneyManager row.
         }
 
         FirebaseUser currentUser = currentUser();
@@ -175,7 +209,8 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         preferences.edit()
                 .putBoolean(PREFIX_PENDING + key,
                         "UNAVAILABLE".equals(result.status)
-                                || "FAILED".equals(result.status))
+                                || "FAILED".equals(result.status)
+                                || "QUEUED".equals(result.status))
                 .apply();
     }
 
@@ -201,7 +236,8 @@ public final class FinanceMoneyManagerSyncInitializer extends ContentProvider {
         preferences.edit()
                 .putBoolean(PREFIX_PENDING + key,
                         "UNAVAILABLE".equals(result.status)
-                                || "FAILED".equals(result.status))
+                                || "FAILED".equals(result.status)
+                                || "QUEUED".equals(result.status))
                 .apply();
     }
 
