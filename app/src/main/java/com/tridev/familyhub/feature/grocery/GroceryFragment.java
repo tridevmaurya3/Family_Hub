@@ -489,6 +489,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         GroceryItem item = existing == null
                 ? new GroceryItem()
                 : existing;
+        form.groceryMoneyCatalogStatus.bindItem(item);
         String[] priorityLabels = getResources().getStringArray(
                 R.array.grocery_priority_labels
         );
