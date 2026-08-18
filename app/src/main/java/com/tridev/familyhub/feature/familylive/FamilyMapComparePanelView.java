@@ -3,7 +3,6 @@ package com.tridev.familyhub.feature.familylive;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
 import android.util.AttributeSet;
@@ -209,7 +208,7 @@ public final class FamilyMapComparePanelView extends MaterialCardView {
         compareInput.setPadding(dp(12), 0, dp(8), 0);
         compareInput.setMinHeight(dp(46));
         compareInput.setOnClickListener(ignored -> compareInput.showDropDown());
-        compareLayout.addView(compareInput, new TextInputLayout.LayoutParams(
+        compareLayout.addView(compareInput, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -367,7 +366,8 @@ public final class FamilyMapComparePanelView extends MaterialCardView {
                 getContext(), R.layout.item_form_dropdown, labels));
         if (comparisonChoices.isEmpty()) {
             compareInput.setEnabled(false);
-            compareInput.setText(R.string.family_map_compare_no_member, false);
+            compareInput.setText(getResources().getString(
+                    R.string.family_map_compare_no_member), false);
         } else {
             compareInput.setEnabled(true);
             compareInput.setText(selectedTarget == null
