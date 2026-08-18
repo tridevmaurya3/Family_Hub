@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
@@ -393,7 +394,6 @@ public class GroceryOverlayService extends Service {
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 float alpha = 0.35f + (progress / 100f) * 0.65f;
                 if (stripView != null) stripView.setAlpha(alpha);
-                if (panelView != null) panelView.setAlpha(alpha);
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                         .putFloat("alpha", alpha).apply();
             }
@@ -596,8 +596,9 @@ public class GroceryOverlayService extends Service {
                 smartLabel.setVisibility(View.GONE);
                 suggestionScroll.setVisibility(View.INVISIBLE);
                 moreSuggestions.setVisibility(View.GONE);
-                quickPick.setAdapter(compactSpinnerAdapter(
-                        new String[]{"Suggested"}));
+                String[] emptyQuickPick = new String[]{"Suggested"};
+                quickPick.setAdapter(compactSpinnerAdapter(emptyQuickPick));
+                quickPick.setDropDownWidth(adaptivePopupWidth(emptyQuickPick, 12.5f));
                 return;
             }
 
@@ -639,6 +640,7 @@ public class GroceryOverlayService extends Service {
             }
 
             quickPick.setAdapter(compactSpinnerAdapter(quickPickLabels));
+            quickPick.setDropDownWidth(adaptivePopupWidth(quickPickLabels, 12.5f));
             quickPick.setSelection(0);
         });
 
@@ -764,8 +766,8 @@ public class GroceryOverlayService extends Service {
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         final int maxPanelWidth = screenWidth - dp(24);
         final int maxPanelHeight = screenHeight - dp(98);
-        final int minPanelWidth = Math.min(maxPanelWidth, dp(300));
-        final int minPanelHeight = Math.min(maxPanelHeight, dp(420));
+        final int minPanelWidth = Math.min(maxPanelWidth, dp(280));
+        final int minPanelHeight = Math.min(maxPanelHeight, dp(360));
 
         addResizeHandle(panelRoot, "↖", Gravity.START | Gravity.TOP,
                 -1, -1, minPanelWidth, maxPanelWidth,
@@ -861,16 +863,20 @@ public class GroceryOverlayService extends Service {
         });
 
         panelView = panelRoot;
-        panelView.setAlpha(savedAlpha);
         int savedPanelWidth = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getInt("panel_width", maxPanelWidth);
         int savedPanelHeight = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getInt("panel_height", maxPanelHeight);
-        panelParams = overlayParams(
-                clamp(savedPanelWidth, minPanelWidth, maxPanelWidth),
-                clamp(savedPanelHeight, minPanelHeight, maxPanelHeight), false);
-        panelParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        panelParams.y = dp(74);
+        int resolvedPanelWidth = clamp(savedPanelWidth, minPanelWidth, maxPanelWidth);
+        int resolvedPanelHeight = clamp(savedPanelHeight, minPanelHeight, maxPanelHeight);
+        panelParams = overlayParams(resolvedPanelWidth, resolvedPanelHeight, false);
+        panelParams.gravity = Gravity.TOP | Gravity.START;
+        panelParams.x = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getInt("panel_x", Math.max(0, (screenWidth - resolvedPanelWidth) / 2));
+        panelParams.x = clamp(panelParams.x, 0, Math.max(0, screenWidth - resolvedPanelWidth));
+        panelParams.y = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getInt("panel_y", dp(74));
+        panelParams.y = clamp(panelParams.y, 0, Math.max(0, screenHeight - resolvedPanelHeight));
         windowManager.addView(panelView, panelParams);
         root.requestFocus();
         refreshPanel();
@@ -1257,6 +1263,7 @@ public class GroceryOverlayService extends Service {
             labels[i + 1] = choices.get(i).label;
         }
         spinner.setAdapter(compactSpinnerAdapter(labels));
+        spinner.setDropDownWidth(adaptivePopupWidth(labels, 12.5f));
         spinner.setSelection(0);
         for (int i = 0; i < choices.size(); i++) {
             if (choices.get(i).ref.equalsIgnoreCase(selectedRef)) {
@@ -1439,7 +1446,7 @@ public class GroceryOverlayService extends Service {
         return item.category.trim();
     }
 
-    /** Shows every ranked purchased item in a visibly grouped smart picker. */
+    /** Shows every ranked purchased item in a compact, content-sized smart picker. */
     private void showSmartSuggestionOverflow(
             View anchor,
             List<GroceryItem> suggestions,
@@ -1454,8 +1461,21 @@ public class GroceryOverlayService extends Service {
 
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        int popupWidth = Math.min(screenWidth - dp(28), dp(330));
-        int popupHeight = Math.min(screenHeight - dp(210), dp(520));
+        int popupWidth = adaptiveSmartPopupWidth(suggestions);
+        int categoryCount = 0;
+        String lastCountedCategory = "";
+        for (GroceryItem suggestion : suggestions) {
+            String categoryName = smartSuggestionCategory(suggestion);
+            if (!categoryName.equalsIgnoreCase(lastCountedCategory)) {
+                categoryCount++;
+                lastCountedCategory = categoryName;
+            }
+        }
+        int desiredPopupHeight = dp(76)
+                + suggestions.size() * dp(38)
+                + categoryCount * dp(32);
+        int maxPopupHeight = Math.min(dp(360), Math.round(screenHeight * 0.46f));
+        int popupHeight = clamp(desiredPopupHeight, dp(180), maxPopupHeight);
 
         LinearLayout popupRoot = new LinearLayout(this);
         popupRoot.setOrientation(LinearLayout.VERTICAL);
@@ -1463,14 +1483,14 @@ public class GroceryOverlayService extends Service {
         popupRoot.setBackground(premiumDropdownBackground());
         popupRoot.setElevation(dp(10));
 
-        TextView popupTitle = text("Smart suggestions", 12, true);
+        TextView popupTitle = text("Smart suggestions", 14, true);
         popupTitle.setTextColor(Color.rgb(15, 90, 72));
         popupTitle.setPadding(dp(10), dp(4), dp(10), dp(2));
         popupRoot.addView(popupTitle, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        TextView popupHint = text("Category-wise • most purchased first", 9, false);
+        TextView popupHint = text("Category-wise • most purchased first", 11, false);
         popupHint.setTextColor(Color.rgb(94, 104, 114));
         popupHint.setPadding(dp(10), 0, dp(10), dp(5));
         popupRoot.addView(popupHint, new LinearLayout.LayoutParams(
@@ -1490,7 +1510,7 @@ public class GroceryOverlayService extends Service {
 
         final android.widget.PopupWindow popup = new android.widget.PopupWindow(this);
         popup.setContentView(popupRoot);
-        popup.setWidth(popupWidth);
+        popup.setWidth(Math.min(popupWidth, screenWidth - dp(24)));
         popup.setHeight(popupHeight);
         popup.setFocusable(true);
         popup.setOutsideTouchable(true);
@@ -1515,8 +1535,10 @@ public class GroceryOverlayService extends Service {
 
                 TextView header = text(categoryName + "  •  "
                         + categoryItemCount + "  •  "
-                        + categoryPurchaseTotal + "×", 10, true);
+                        + categoryPurchaseTotal + "×", 12, true);
                 header.setTextColor(Color.rgb(12, 99, 75));
+                header.setSingleLine(true);
+                header.setEllipsize(TextUtils.TruncateAt.END);
                 header.setPadding(dp(10), dp(5), dp(10), dp(5));
                 header.setBackground(roundedFill(
                         Color.argb(235, 225, 246, 238), 9));
@@ -1538,15 +1560,15 @@ public class GroceryOverlayService extends Service {
                     Color.argb(247, 255, 255, 255),
                     Color.argb(125, 212, 222, 226), 9));
 
-            TextView itemText = text(suggestion.name, 10, false);
+            TextView itemText = text(suggestion.name, 13, false);
             itemText.setTextColor(Color.rgb(38, 45, 50));
-            itemText.setSingleLine(false);
-            itemText.setMaxLines(3);
-            itemText.setPadding(0, dp(1), dp(6), dp(1));
+            itemText.setSingleLine(true);
+            itemText.setEllipsize(TextUtils.TruncateAt.END);
+            itemText.setPadding(0, dp(1), dp(8), dp(1));
             itemRow.addView(itemText, new LinearLayout.LayoutParams(
-                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                    0, dp(34), 1f));
 
-            TextView countBadge = text(suggestion.purchaseCount + "×", 9, true);
+            TextView countBadge = text(suggestion.purchaseCount + "×", 11, true);
             countBadge.setTextColor(Color.rgb(15, 108, 89));
             countBadge.setGravity(Gravity.CENTER);
             countBadge.setPadding(dp(7), dp(2), dp(7), dp(2));
@@ -1562,13 +1584,13 @@ public class GroceryOverlayService extends Service {
                 popup.dismiss();
             });
             LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(38));
             rowParams.bottomMargin = dp(3);
             groupedList.addView(itemRow, rowParams);
         }
 
-        int xOffset = -(popupWidth - Math.max(anchor.getWidth(), dp(40)));
+        int popupX = anchor.getLocationOnScreen(new int[2]) ? 0 : 0;
+        int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(40)));
         popup.showAsDropDown(anchor, xOffset, dp(5));
     }
 
@@ -1672,7 +1694,7 @@ public class GroceryOverlayService extends Service {
         return params;
     }
 
-    /** Adds a drag-to-resize grip without changing Grocery form/business behavior. */
+    /** Adds a large, reliable drag-to-resize grip at a panel corner. */
     private void addResizeHandle(
             FrameLayout panelRoot,
             String symbol,
@@ -1683,17 +1705,20 @@ public class GroceryOverlayService extends Service {
             int maxPanelWidth,
             int minPanelHeight,
             int maxPanelHeight) {
-        TextView handle = text(symbol, 15, true);
+        TextView handle = text(symbol, 18, true);
         handle.setGravity(Gravity.CENTER);
         handle.setTextColor(Color.rgb(15, 108, 189));
         handle.setContentDescription(getString(R.string.grocery_overlay_resize));
-        handle.setBackground(rounded(Color.argb(205, 232, 243, 252),
-                Color.argb(175, 190, 216, 236), 12));
-        handle.setElevation(dp(5));
-        handle.setAlpha(0.82f);
+        handle.setBackground(rounded(Color.argb(248, 239, 248, 253),
+                Color.argb(235, 121, 178, 218), 16));
+        handle.setElevation(dp(12));
+        handle.setAlpha(1f);
+        handle.setClickable(true);
         handle.setOnTouchListener(new View.OnTouchListener() {
             private int startWidth;
             private int startHeight;
+            private int startPanelX;
+            private int startPanelY;
             private float downX;
             private float downY;
 
@@ -1702,8 +1727,13 @@ public class GroceryOverlayService extends Service {
                 FamilyHubAppLockManager.noteTrustedOverlayInteraction();
                 if (panelParams == null || panelView == null) return true;
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    if (view.getParent() != null) {
+                        view.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
                     startWidth = panelParams.width;
                     startHeight = panelParams.height;
+                    startPanelX = panelParams.x;
+                    startPanelY = panelParams.y;
                     downX = event.getRawX();
                     downY = event.getRawY();
                     return true;
@@ -1711,12 +1741,27 @@ public class GroceryOverlayService extends Service {
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
                     int dx = Math.round(event.getRawX() - downX);
                     int dy = Math.round(event.getRawY() - downY);
-                    panelParams.width = clamp(startWidth
-                                    + horizontalDirection * dx,
-                            minPanelWidth, maxPanelWidth);
-                    panelParams.height = clamp(startHeight
-                                    + verticalDirection * dy,
-                            minPanelHeight, maxPanelHeight);
+
+                    int newWidth = horizontalDirection < 0
+                            ? clamp(startWidth - dx, minPanelWidth, maxPanelWidth)
+                            : clamp(startWidth + dx, minPanelWidth, maxPanelWidth);
+                    int newHeight = verticalDirection < 0
+                            ? clamp(startHeight - dy, minPanelHeight, maxPanelHeight)
+                            : clamp(startHeight + dy, minPanelHeight, maxPanelHeight);
+
+                    int screenWidth = getResources().getDisplayMetrics().widthPixels;
+                    int screenHeight = getResources().getDisplayMetrics().heightPixels;
+                    int newX = horizontalDirection < 0
+                            ? startPanelX + (startWidth - newWidth)
+                            : startPanelX;
+                    int newY = verticalDirection < 0
+                            ? startPanelY + (startHeight - newHeight)
+                            : startPanelY;
+
+                    panelParams.width = newWidth;
+                    panelParams.height = newHeight;
+                    panelParams.x = clamp(newX, 0, Math.max(0, screenWidth - newWidth));
+                    panelParams.y = clamp(newY, 0, Math.max(0, screenHeight - newHeight));
                     windowManager.updateViewLayout(panelView, panelParams);
                     return true;
                 }
@@ -1725,7 +1770,12 @@ public class GroceryOverlayService extends Service {
                     getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                             .putInt("panel_width", panelParams.width)
                             .putInt("panel_height", panelParams.height)
+                            .putInt("panel_x", panelParams.x)
+                            .putInt("panel_y", panelParams.y)
                             .apply();
+                    if (view.getParent() != null) {
+                        view.getParent().requestDisallowInterceptTouchEvent(false);
+                    }
                     return true;
                 }
                 return true;
@@ -1733,13 +1783,14 @@ public class GroceryOverlayService extends Service {
         });
 
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                dp(28), dp(28), gravity);
-        int edge = dp(4);
+                dp(42), dp(42), gravity);
+        int edge = dp(2);
         params.leftMargin = edge;
         params.rightMargin = edge;
         params.bottomMargin = edge;
-        params.topMargin = (gravity & Gravity.TOP) == Gravity.TOP ? dp(42) : edge;
+        params.topMargin = edge;
         panelRoot.addView(handle, params);
+        handle.bringToFront();
     }
 
     private void closePanel() {
@@ -1831,8 +1882,7 @@ public class GroceryOverlayService extends Service {
         };
         input.setAdapter(adapter);
         input.setThreshold(0);
-        input.setDropDownWidth(Math.min(
-                getResources().getDisplayMetrics().widthPixels - dp(32), dp(330)));
+        input.setDropDownWidth(adaptivePopupWidth(values, 12.5f));
         input.setDropDownBackgroundDrawable(premiumDropdownBackground());
         input.setOnClickListener(v -> input.showDropDown());
         return input;
@@ -1842,8 +1892,7 @@ public class GroceryOverlayService extends Service {
         return new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, values) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
-                TextView text = spinnerSelectedText(getItem(position));
-                return text;
+                return spinnerSelectedText(getItem(position));
             }
 
             @Override
@@ -1865,29 +1914,27 @@ public class GroceryOverlayService extends Service {
         text.setEllipsize(null);
         text.setPadding(dp(7), dp(2), dp(18), dp(2));
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                text, 7, 10, 1, TypedValue.COMPLEX_UNIT_SP);
+                text, 9, 11, 1, TypedValue.COMPLEX_UNIT_SP);
         return text;
     }
 
     private TextView premiumDropDownText(@Nullable String value) {
         TextView text = new TextView(this);
         text.setText(value == null ? "" : value);
-        text.setTextSize(10.5f);
+        text.setTextSize(12.5f);
         text.setTextColor(Color.rgb(31, 42, 49));
         text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         text.setIncludeFontPadding(false);
-        text.setSingleLine(false);
+        text.setSingleLine(true);
         text.setHorizontallyScrolling(false);
-        text.setMaxLines(Integer.MAX_VALUE);
-        text.setEllipsize(null);
-        text.setLineSpacing(0f, 1f);
-        text.setPadding(dp(12), dp(1), dp(12), dp(1));
-        text.setMinHeight(0);
-        text.setMinimumHeight(0);
+        text.setMaxLines(1);
+        text.setEllipsize(TextUtils.TruncateAt.END);
+        text.setPadding(dp(12), dp(2), dp(12), dp(2));
+        text.setMinHeight(dp(36));
+        text.setMinimumHeight(dp(36));
         text.setBackground(premiumDropdownRowBackground());
         text.setLayoutParams(new android.widget.AbsListView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
         return text;
     }
 
@@ -1896,11 +1943,52 @@ public class GroceryOverlayService extends Service {
         spinner.setAdapter(compactSpinnerAdapter(values));
         spinner.setBackground(glassFieldBackground());
         spinner.setElevation(dp(1));
-        spinner.setDropDownWidth(Math.min(
-                getResources().getDisplayMetrics().widthPixels - dp(32), dp(330)));
+        spinner.setDropDownWidth(adaptivePopupWidth(values, 12.5f));
         spinner.setPopupBackgroundDrawable(premiumDropdownBackground());
         spinner.setDropDownVerticalOffset(dp(4));
         return spinner;
+    }
+
+    /** Sizes normal dropdowns from their longest visible text instead of page width. */
+    private int adaptivePopupWidth(String[] values, float textSizeSp) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextSize(TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP, textSizeSp,
+                getResources().getDisplayMetrics()));
+        float longest = 0f;
+        if (values != null) {
+            for (String value : values) {
+                if (value == null) continue;
+                longest = Math.max(longest, paint.measureText(value.trim()));
+            }
+        }
+        int desired = Math.round(longest) + dp(42);
+        int max = getResources().getDisplayMetrics().widthPixels - dp(40);
+        return clamp(desired, dp(120), Math.max(dp(120), max));
+    }
+
+    /** Content-sized width for the ••• smart suggestion list including count badges. */
+    private int adaptiveSmartPopupWidth(List<GroceryItem> suggestions) {
+        Paint normal = new Paint(Paint.ANTI_ALIAS_FLAG);
+        normal.setTextSize(TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP, 13f,
+                getResources().getDisplayMetrics()));
+        Paint bold = new Paint(normal);
+        bold.setFakeBoldText(true);
+        float longest = normal.measureText("Category-wise • most purchased first");
+        for (GroceryItem suggestion : suggestions) {
+            if (suggestion == null) continue;
+            longest = Math.max(longest,
+                    normal.measureText(suggestion.name == null ? "" : suggestion.name)
+                            + dp(58));
+            String category = smartSuggestionCategory(suggestion);
+            longest = Math.max(longest,
+                    bold.measureText(category + " • 99 • 999×"));
+        }
+        int desired = Math.round(longest) + dp(34);
+        int screenMax = getResources().getDisplayMetrics().widthPixels - dp(28);
+        int practicalMax = Math.min(screenMax, dp(360));
+        return clamp(desired, dp(220), Math.max(dp(220), practicalMax));
     }
 
     private LinearLayout.LayoutParams weightedField() {
