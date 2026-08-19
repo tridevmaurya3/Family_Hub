@@ -122,7 +122,7 @@ public final class FinanceMoneyManagerBridge {
         if (accountRef.isEmpty() || categoryRef.isEmpty()) return null;
 
         long occurredAt = occurredAt(entry);
-        String paymentMethod = metadata(entry.paymentMethod, 80);
+        String detail = financeDetail(entry);
         Bundle extras = new Bundle();
         extras.putString("event_id", eventId);
         extras.putString("source_record_id", sourceRecordId);
@@ -134,14 +134,43 @@ public final class FinanceMoneyManagerBridge {
         extras.putString("currency", "INR");
         extras.putLong("occurred_at", occurredAt);
         extras.putString("account_hint", accountRef);
-        extras.putString("merchant_hint", paymentMethod);
+        // Carry the user's Family Finance description through the existing
+        // privacy-safe detail field. This does not change event identity,
+        // mapping, account/category ownership or update/delete behaviour.
+        extras.putString("merchant_hint", detail);
         extras.putString("category_hint", categoryRef);
         extras.putString("fingerprint", sha256(
                 sourceRecordId + "|" + amountMinor + "|"
                         + (income ? "CREDIT" : "DEBIT") + "|"
                         + accountRef.toLowerCase(Locale.ROOT) + "|"
-                        + categoryRef.toLowerCase(Locale.ROOT)));
+                        + categoryRef.toLowerCase(Locale.ROOT) + "|"
+                        + detail.toLowerCase(Locale.ROOT)));
         return extras;
+    }
+
+    @NonNull
+    private static String financeDetail(@NonNull FinanceEntry entry) {
+        StringBuilder detail = new StringBuilder();
+        appendDetail(detail, metadata(entry.note, 60));
+        appendDetail(detail, metadata(entry.category, 40));
+        if (!safe(entry.paymentMethod).isEmpty()) {
+            appendDetail(detail, "Payment " + metadata(entry.paymentMethod, 30));
+        }
+        if (!safe(entry.paidByName).isEmpty()) {
+            appendDetail(detail, "Paid by " + metadata(entry.paidByName, 40));
+        }
+        if (!"NONE".equalsIgnoreCase(safe(entry.splitType))
+                && !safe(entry.splitType).isEmpty()) {
+            appendDetail(detail, "Split " + metadata(entry.splitType, 24));
+        }
+        return metadata(detail.toString(), 120);
+    }
+
+    private static void appendDetail(@NonNull StringBuilder output, @Nullable String value) {
+        String clean = safe(value);
+        if (clean.isEmpty()) return;
+        if (output.length() > 0) output.append(" • ");
+        output.append(clean);
     }
 
     @NonNull
