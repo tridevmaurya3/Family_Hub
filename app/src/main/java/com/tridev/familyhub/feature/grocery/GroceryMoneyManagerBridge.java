@@ -193,10 +193,10 @@ public final class GroceryMoneyManagerBridge {
         long amountMinor = toMinor(amount);
         String account = selectedAccountRef(context, item);
         String category = selectedCategoryRef(context, item);
-        String merchant = metadata(item.storeName, 120).toLowerCase(Locale.ROOT);
+        String detail = purchaseDetail(item).toLowerCase(Locale.ROOT);
         return sha256(eventIdFor(item) + "|" + amountMinor + "|"
                 + account.toLowerCase(Locale.ROOT) + "|"
-                + category.toLowerCase(Locale.ROOT) + "|" + merchant);
+                + category.toLowerCase(Locale.ROOT) + "|" + detail);
     }
 
     @Nullable
@@ -223,7 +223,7 @@ public final class GroceryMoneyManagerBridge {
 
         String eventId = eventIdFor(item);
         String sourceRecordId = sourceRecordIdFor(item);
-        String merchant = metadata(item.storeName, 120);
+        String detail = purchaseDetail(item);
         Bundle extras = new Bundle();
         extras.putString("event_id", eventId);
         extras.putString("source_record_id", sourceRecordId);
@@ -234,12 +234,47 @@ public final class GroceryMoneyManagerBridge {
         extras.putString("currency", "INR");
         extras.putLong("occurred_at", item.purchasedAt);
         extras.putString("account_hint", accountChoice.ref);
-        extras.putString("merchant_hint", merchant);
+        // MoneyManager's V1 contract already has a privacy-safe merchant/detail
+        // field. For Family Grocery we use it as the human-readable purchase
+        // summary so the ledger can show the actual item and quantity while the
+        // technical event id continues to handle dedupe/edit/delete ownership.
+        extras.putString("merchant_hint", detail);
         extras.putString("category_hint", categoryChoice.ref);
         extras.putString("fingerprint", sha256(
                 sourceRecordId + "|" + amountMinor + "|" + accountChoice.ref + "|"
-                        + categoryChoice.ref + "|" + merchant.toLowerCase(Locale.ROOT)));
+                        + categoryChoice.ref + "|" + detail.toLowerCase(Locale.ROOT)));
         return extras;
+    }
+
+    @NonNull
+    private static String purchaseDetail(@NonNull GroceryItem item) {
+        StringBuilder detail = new StringBuilder();
+        appendDetail(detail, metadata(item.name, 48));
+        if (!safe(item.quantity).isEmpty()) {
+            appendDetail(detail, "Qty " + metadata(item.quantity, 32));
+        }
+        if (!safe(item.category).isEmpty()) {
+            appendDetail(detail, metadata(item.category, 40));
+        }
+        if (!safe(item.storeName).isEmpty()) {
+            appendDetail(detail, "Store " + metadata(item.storeName, 40));
+        }
+        String buyer = !safe(item.purchasedByName).isEmpty()
+                ? item.purchasedByName : item.assignedMemberName;
+        if (!safe(buyer).isEmpty()) {
+            appendDetail(detail, "By " + metadata(buyer, 40));
+        }
+        if (!safe(item.notes).isEmpty()) {
+            appendDetail(detail, metadata(item.notes, 40));
+        }
+        return metadata(detail.toString(), 120);
+    }
+
+    private static void appendDetail(@NonNull StringBuilder output, @Nullable String value) {
+        String clean = safe(value);
+        if (clean.isEmpty()) return;
+        if (output.length() > 0) output.append(" • ");
+        output.append(clean);
     }
 
     @NonNull
