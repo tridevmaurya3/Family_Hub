@@ -48,6 +48,69 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <HorizontalScrollView
+        android:id="@+id/reminder_filter_scroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_8"
+        android:clipToPadding="false"
+        android:fillViewport="false"
+        android:scrollbars="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/reminder_search_layout">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reminder_period_filter"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:minWidth="0dp"
+                android:text="All dates ▾" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reminder_priority_filter"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginStart="@dimen/space_6"
+                android:minWidth="0dp"
+                android:text="Priority ▾" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reminder_category_filter"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginStart="@dimen/space_6"
+                android:minWidth="0dp"
+                android:text="Category ▾" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reminder_status_filter"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginStart="@dimen/space_6"
+                android:minWidth="0dp"
+                android:text="Status ▾" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reminder_member_filter"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:layout_marginStart="@dimen/space_6"
+                android:minWidth="0dp"
+                android:text="Member ▾" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
     <com.tridev.familyhub.feature.reminders.ReminderDashboardSummaryView
         android:id="@+id/reminder_dashboard_summary"
         android:layout_width="0dp"
@@ -67,7 +130,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/reminder_search_layout" />
+        app:layout_constraintTop_toBottomOf="@id/reminder_filter_scroll" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/reminders_empty_state"
@@ -79,7 +142,7 @@
         app:cardBackgroundColor="@color/fh_module_reminders_container"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/reminder_search_layout"
+        app:layout_constraintTop_toBottomOf="@id/reminder_filter_scroll"
         app:strokeColor="@color/fh_module_reminders">
 
         <LinearLayout

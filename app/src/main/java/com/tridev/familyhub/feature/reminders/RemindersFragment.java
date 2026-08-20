@@ -42,6 +42,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 
 /** Create, manage, and schedule private local reminders. */
 public class RemindersFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
@@ -53,6 +54,12 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
     private ReminderRepository repository;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+    private final List<Reminder> loadedReminders = new ArrayList<>();
+    private String periodFilter = "ALL";
+    private String priorityFilter = "ALL";
+    private String categoryFilter = "ALL";
+    private String statusFilter = "ALL";
+    private String memberFilter = "ALL";
 
     @Nullable
     @Override
@@ -126,6 +133,19 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             }
         });
         binding.emptyAddReminderButton.setOnClickListener(v -> showReminderEditor(null));
+        binding.reminderPeriodFilter.setOnClickListener(v -> showFilterChoices(
+                "Calendar view", new String[]{"ALL", "TODAY", "THIS WEEK", "THIS MONTH"},
+                periodFilter, value -> { periodFilter = value; applyFilters(); }));
+        binding.reminderPriorityFilter.setOnClickListener(v -> showFilterChoices(
+                "Priority", new String[]{"ALL", "LOW", "MEDIUM", "HIGH", "URGENT"},
+                priorityFilter, value -> { priorityFilter = value; applyFilters(); }));
+        binding.reminderCategoryFilter.setOnClickListener(v -> showFilterChoices(
+                "Category", new String[]{"ALL", "GENERAL", "FAMILY", "FINANCE", "HEALTH", "GROCERY", "VEHICLE", "DOCUMENT", "PROPERTY"},
+                categoryFilter, value -> { categoryFilter = value; applyFilters(); }));
+        binding.reminderStatusFilter.setOnClickListener(v -> showFilterChoices(
+                "Status", new String[]{"ALL", "PENDING", "ACCEPTED", "IN_PROGRESS", "COMPLETED"},
+                statusFilter, value -> { statusFilter = value; applyFilters(); }));
+        binding.reminderMemberFilter.setOnClickListener(v -> showMemberFilter());
         binding.reminderSearchInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -163,12 +183,109 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             if (binding == null) {
                 return;
             }
-            reminderAdapter.submitList(reminders);
+            loadedReminders.clear();
+            loadedReminders.addAll(reminders);
             binding.reminderDashboardSummary.setReminders(reminders);
-            boolean isEmpty = reminders.isEmpty();
-            binding.reminderRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-            binding.remindersEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+            applyFilters();
         });
+    }
+
+    private interface FilterSelection {
+        void onSelected(@NonNull String value);
+    }
+
+    private void showFilterChoices(@NonNull String title, @NonNull String[] values,
+                                   @NonNull String current,
+                                   @NonNull FilterSelection listener) {
+        int selected = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].equals(current)) selected = i;
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(title)
+                .setSingleChoiceItems(values, selected, (dialog, which) -> {
+                    listener.onSelected(values[which]);
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void showMemberFilter() {
+        TreeSet<String> names = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (Reminder reminder : loadedReminders) {
+            if (!reminder.assignedMemberName.trim().isEmpty()) {
+                names.add(reminder.assignedMemberName.trim());
+            }
+        }
+        List<String> values = new ArrayList<>();
+        values.add("ALL");
+        values.add("UNASSIGNED");
+        values.addAll(names);
+        showFilterChoices("Family member", values.toArray(new String[0]), memberFilter,
+                value -> { memberFilter = value; applyFilters(); });
+    }
+
+    private void applyFilters() {
+        if (binding == null) return;
+        List<Reminder> filtered = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        Calendar start = Calendar.getInstance();
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+        long startToday = start.getTimeInMillis();
+        Calendar end = (Calendar) start.clone();
+        if ("TODAY".equals(periodFilter)) end.add(Calendar.DATE, 1);
+        else if ("THIS WEEK".equals(periodFilter)) end.add(Calendar.DATE, 7);
+        else if ("THIS MONTH".equals(periodFilter)) end.add(Calendar.MONTH, 1);
+        long endAt = end.getTimeInMillis();
+
+        for (Reminder reminder : loadedReminders) {
+            if (!"ALL".equals(priorityFilter)
+                    && !priorityFilter.equalsIgnoreCase(reminder.priority)) continue;
+            if (!"ALL".equals(categoryFilter)
+                    && !categoryFilter.equalsIgnoreCase(reminder.category)) continue;
+            if (!"ALL".equals(statusFilter)
+                    && !statusFilter.equalsIgnoreCase(reminder.collaborationStatus)) continue;
+            if ("UNASSIGNED".equals(memberFilter)
+                    && !reminder.assignedMemberName.trim().isEmpty()) continue;
+            if (!"ALL".equals(memberFilter) && !"UNASSIGNED".equals(memberFilter)
+                    && !memberFilter.equalsIgnoreCase(reminder.assignedMemberName)) continue;
+            if (!"ALL".equals(periodFilter)) {
+                long date = effectiveFilterTime(reminder, now);
+                if (date < startToday || date >= endAt) continue;
+            }
+            filtered.add(reminder);
+        }
+
+        reminderAdapter.submitList(filtered);
+        boolean empty = filtered.isEmpty();
+        binding.reminderRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.remindersEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+        binding.reminderPeriodFilter.setText(filterLabel(periodFilter, "All dates"));
+        binding.reminderPriorityFilter.setText(filterLabel(priorityFilter, "Priority"));
+        binding.reminderCategoryFilter.setText(filterLabel(categoryFilter, "Category"));
+        binding.reminderStatusFilter.setText(filterLabel(statusFilter, "Status"));
+        binding.reminderMemberFilter.setText(filterLabel(memberFilter, "Member"));
+    }
+
+    private long effectiveFilterTime(@NonNull Reminder reminder, long now) {
+        if (Reminder.REPEAT_ONCE.equals(reminder.repeatType)) return reminder.reminderAt;
+        Calendar next = Calendar.getInstance();
+        next.setTimeInMillis(reminder.reminderAt);
+        int field = Calendar.DATE;
+        if (Reminder.REPEAT_WEEKLY.equals(reminder.repeatType)) field = Calendar.WEEK_OF_YEAR;
+        else if (Reminder.REPEAT_MONTHLY.equals(reminder.repeatType)) field = Calendar.MONTH;
+        else if (Reminder.REPEAT_YEARLY.equals(reminder.repeatType)) field = Calendar.YEAR;
+        while (next.getTimeInMillis() < now) next.add(field, 1);
+        return next.getTimeInMillis();
+    }
+
+    @NonNull
+    private String filterLabel(@NonNull String value, @NonNull String fallback) {
+        return ("ALL".equals(value) ? fallback : value.replace('_', ' ')) + "  ▾";
     }
 
     private void showReminderEditor(@Nullable Reminder existingReminder) {
