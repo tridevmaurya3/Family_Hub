@@ -32,6 +32,7 @@ public class GroceryAdapter
 
     private static final int TYPE_HEADER = 0;
     private static final int TYPE_ITEM = 1;
+    private static final long DAY_MILLIS = 24L * 60L * 60L * 1000L;
 
     private static final class Row {
         final String header;
@@ -274,11 +275,7 @@ public class GroceryAdapter
             binding.groceryPriority.setTextColor(ContextCompat.getColor(
                     binding.getRoot().getContext(), priorityColor));
 
-            String listLabel = binding.getRoot().getContext().getString(
-                    GroceryItem.LIST_MONTHLY.equals(item.listType)
-                            ? R.string.grocery_list_monthly
-                            : R.string.grocery_list_daily
-            );
+            String listLabel = cycleLabel(item.listType);
             String assignment;
             if (item.isPurchased && !item.purchasedByName.isEmpty()) {
                 assignment = binding.getRoot().getContext().getString(
@@ -305,12 +302,7 @@ public class GroceryAdapter
                     .append(" • ")
                     .append(assignment);
             if (item.isPurchased && item.purchasedAt > 0L) {
-                assignmentLine.append(" • ").append(
-                        binding.getRoot().getContext().getString(
-                                R.string.grocery_purchased_on,
-                                purchaseDateFormat.format(new Date(item.purchasedAt))
-                        )
-                );
+                assignmentLine.append(" • ").append(lastPurchaseLabel(item.purchasedAt));
             }
             binding.groceryAssignment.setText(assignmentLine.toString());
 
@@ -352,6 +344,43 @@ public class GroceryAdapter
                 label = R.string.grocery_priority_normal;
             }
             return binding.getRoot().getContext().getString(label);
+        }
+
+        @NonNull
+        private String cycleLabel(@NonNull String listType) {
+            if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "3 Month";
+            if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "2 Month";
+            if (GroceryItem.LIST_MONTHLY.equals(listType)) {
+                return binding.getRoot().getContext().getString(R.string.grocery_list_monthly);
+            }
+            return binding.getRoot().getContext().getString(R.string.grocery_list_daily);
+        }
+
+        @NonNull
+        private String lastPurchaseLabel(long purchasedAt) {
+            long elapsed = Math.max(0L, System.currentTimeMillis() - purchasedAt);
+            long days = elapsed / DAY_MILLIS;
+            String age;
+            if (days == 0L) {
+                age = "Today";
+            } else if (days == 1L) {
+                age = "1 day ago";
+            } else if (days < 30L) {
+                age = days + " days ago";
+            } else {
+                long months = days / 30L;
+                long remainingDays = days % 30L;
+                String monthText = months == 1L ? "1 month" : months + " months";
+                if (remainingDays == 0L) {
+                    age = monthText + " ago";
+                } else {
+                    String dayText = remainingDays == 1L
+                            ? "1 day" : remainingDays + " days";
+                    age = monthText + " " + dayText + " ago";
+                }
+            }
+            return "Last purchase: " + age + " • "
+                    + purchaseDateFormat.format(new Date(purchasedAt));
         }
     }
 }
