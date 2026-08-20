@@ -1053,10 +1053,12 @@ public class GroceryOverlayService extends Service {
         itemContainer.addView(purchaseMoneyRow);
         attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
-        AutoCompleteTextView store = compactAutoComplete(getString(R.string.grocery_store_hint),
-                GroceryOptionCatalog.storePresets(this));
-        store.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        store.setText(item.storeName);
+        String[] storeValues = storeChoices(item.storeName);
+        Spinner store = compactSpinner(storeValues);
+        String currentStore = item.storeName == null ? "" : item.storeName.trim();
+        if (!currentStore.isEmpty()) {
+            selectSpinner(store, storeValues, currentStore);
+        }
         itemContainer.addView(labelledField(getString(R.string.grocery_store_name), store), fullEditorField());
 
         TextView historyInsight = text("", 10, false);
@@ -1108,10 +1110,37 @@ public class GroceryOverlayService extends Service {
                 return;
             }
             item.category = String.valueOf(category.getSelectedItem());
-            item.storeName = store.getText().toString().trim();
+            Object selectedStore = store.getSelectedItem();
+            item.storeName = selectedStore == null ? "" : selectedStore.toString().trim();
             rememberPurchaseMoneySelections(item, moneyAccount, moneyCategory);
             repository.setPurchased(item, true, () -> showFloatingUndo(item));
         });
+    }
+
+    private String[] storeChoices(@Nullable String currentStore) {
+        List<String> values = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (String preset : GroceryOptionCatalog.storePresets(this)) {
+            String clean = preset == null ? "" : preset.trim();
+            if (clean.isEmpty()) continue;
+            String key = clean.toLowerCase(java.util.Locale.ENGLISH);
+            if (seen.add(key)) values.add(clean);
+        }
+        String current = currentStore == null ? "" : currentStore.trim();
+        if (!current.isEmpty()) {
+            String key = current.toLowerCase(java.util.Locale.ENGLISH);
+            if (seen.add(key)) values.add(current);
+        }
+        return values.toArray(new String[0]);
+    }
+
+    private void bindStoreSpinner(Spinner spinner, @Nullable String selectedStore) {
+        String[] values = storeChoices(selectedStore);
+        spinner.setAdapter(compactSpinnerAdapter(values));
+        spinner.setDropDownWidth(adaptivePopupWidth(values, 12.5f));
+        String wanted = selectedStore == null ? "" : selectedStore.trim();
+        if (wanted.isEmpty() && values.length > 0) wanted = values[0];
+        if (!wanted.isEmpty()) selectSpinner(spinner, values, wanted);
     }
 
     private Spinner moneyAccountSpinner() {
@@ -1457,7 +1486,7 @@ public class GroceryOverlayService extends Service {
     }
 
     private void applyInlineHistory(GroceryPurchase history, GroceryPurchase cheapest,
-                                    EditText price, EditText store, EditText quantity,
+                                    EditText price, Spinner store, EditText quantity,
                                     Spinner unit, String[] units, Spinner category,
                                     String[] categories, TextView insight) {
         String[] previousQuantity = history.quantity.trim().split("\\s+", 2);
@@ -1465,7 +1494,7 @@ public class GroceryOverlayService extends Service {
         if (previousQuantity.length > 1) selectSpinner(unit, units, previousQuantity[1]);
         selectSpinner(category, categories, history.category);
         if (history.actualCost > 0D) price.setText(String.valueOf(history.actualCost));
-        if (!history.storeName.isEmpty()) store.setText(history.storeName);
+        if (!history.storeName.isEmpty()) bindStoreSpinner(store, history.storeName);
         insight.setVisibility(View.VISIBLE);
         insight.setText(inlineComparisonText(history, cheapest, history.actualCost));
         price.addTextChangedListener(new android.text.TextWatcher() {
