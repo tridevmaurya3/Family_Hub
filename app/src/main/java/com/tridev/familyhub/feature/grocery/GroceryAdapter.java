@@ -358,13 +358,26 @@ public class GroceryAdapter
 
         @NonNull
         private String lastPurchaseLabel(long purchasedAt) {
-            long elapsed = Math.max(0L, System.currentTimeMillis() - purchasedAt);
-            long days = elapsed / DAY_MILLIS;
+            java.util.Calendar today = java.util.Calendar.getInstance();
+            today.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            today.set(java.util.Calendar.MINUTE, 0);
+            today.set(java.util.Calendar.SECOND, 0);
+            today.set(java.util.Calendar.MILLISECOND, 0);
+
+            java.util.Calendar purchaseDay = java.util.Calendar.getInstance();
+            purchaseDay.setTimeInMillis(purchasedAt);
+            purchaseDay.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            purchaseDay.set(java.util.Calendar.MINUTE, 0);
+            purchaseDay.set(java.util.Calendar.SECOND, 0);
+            purchaseDay.set(java.util.Calendar.MILLISECOND, 0);
+
+            long days = Math.max(0L,
+                    (today.getTimeInMillis() - purchaseDay.getTimeInMillis()) / DAY_MILLIS);
             String age;
             if (days == 0L) {
                 age = "Today";
             } else if (days == 1L) {
-                age = "1 day ago";
+                age = "Yesterday";
             } else if (days < 30L) {
                 age = days + " days ago";
             } else {
