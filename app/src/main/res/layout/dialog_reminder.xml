@@ -24,7 +24,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:padding="@dimen/card_padding">
 
                 <ImageView
@@ -198,6 +198,30 @@
                     android:layout_height="@dimen/touch_target_min"
                     android:layout_weight="1"
                     android:text="@string/reminder_daily"
+                    android:textColor="@color/fh_on_surface" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/repeat_weekly_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:text="Weekly"
+                    android:textColor="@color/fh_on_surface" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/repeat_monthly_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:text="Monthly"
+                    android:textColor="@color/fh_on_surface" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/repeat_yearly_button"
+                    android:layout_width="0dp"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_weight="1"
+                    android:text="Yearly"
                     android:textColor="@color/fh_on_surface" />
 
             </RadioGroup>

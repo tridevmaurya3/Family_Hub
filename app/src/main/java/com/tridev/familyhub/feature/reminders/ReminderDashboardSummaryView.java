@@ -163,7 +163,8 @@ public final class ReminderDashboardSummaryView extends LinearLayout {
                     : "Your reminder schedule is clear");
         } else {
             nextTitle.setText(next.title.trim().isEmpty() ? "Untitled reminder" : next.title);
-            String repeat = Reminder.REPEAT_DAILY.equals(next.repeatType) ? " • Daily" : "";
+            String repeat = Reminder.REPEAT_ONCE.equals(next.repeatType)
+                    ? "" : " • " + friendlyRepeat(next.repeatType);
             String assignee = next.assignedMemberName.trim().isEmpty()
                     ? "" : " • " + next.assignedMemberName.trim();
             nextDetail.setText(dateTimeFormat.format(new Date(nextAt)) + repeat + assignee);
@@ -171,7 +172,7 @@ public final class ReminderDashboardSummaryView extends LinearLayout {
     }
 
     private long effectiveTrigger(@NonNull Reminder reminder, long now) {
-        if (!Reminder.REPEAT_DAILY.equals(reminder.repeatType)) return reminder.reminderAt;
+        if (Reminder.REPEAT_ONCE.equals(reminder.repeatType)) return reminder.reminderAt;
         Calendar source = Calendar.getInstance();
         source.setTimeInMillis(reminder.reminderAt);
         Calendar next = Calendar.getInstance();
@@ -180,8 +181,18 @@ public final class ReminderDashboardSummaryView extends LinearLayout {
         next.set(Calendar.MINUTE, source.get(Calendar.MINUTE));
         next.set(Calendar.SECOND, 0);
         next.set(Calendar.MILLISECOND, 0);
-        if (next.getTimeInMillis() < now) next.add(Calendar.DAY_OF_YEAR, 1);
+        int field = Calendar.DAY_OF_YEAR;
+        if (Reminder.REPEAT_WEEKLY.equals(reminder.repeatType)) field = Calendar.WEEK_OF_YEAR;
+        else if (Reminder.REPEAT_MONTHLY.equals(reminder.repeatType)) field = Calendar.MONTH;
+        else if (Reminder.REPEAT_YEARLY.equals(reminder.repeatType)) field = Calendar.YEAR;
+        while (next.getTimeInMillis() < now) next.add(field, 1);
         return next.getTimeInMillis();
+    }
+
+    @NonNull
+    private String friendlyRepeat(@NonNull String value) {
+        String clean = value.toLowerCase(Locale.getDefault());
+        return clean.substring(0, 1).toUpperCase(Locale.getDefault()) + clean.substring(1);
     }
 
     private long startOfToday() {

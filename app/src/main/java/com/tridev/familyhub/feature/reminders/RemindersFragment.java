@@ -192,9 +192,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             dialogBinding.reminderAssigneeInput.setText(
                     existingReminder.assignedMemberName.isEmpty()
                             ? "Unassigned" : existingReminder.assignedMemberName, false);
-            dialogBinding.reminderRepeatGroup.check(Reminder.REPEAT_DAILY.equals(existingReminder.repeatType)
-                    ? R.id.repeat_daily_button
-                    : R.id.repeat_once_button);
+            dialogBinding.reminderRepeatGroup.check(repeatButtonId(existingReminder.repeatType));
             dialogBinding.reminderEnabledSwitch.setChecked(existingReminder.isEnabled);
             dialogBinding.reminderSharedSwitch.setChecked(existingReminder.isShared);
             dialogBinding.reminderCollaborationStatusInput.setText(
@@ -223,9 +221,10 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
         dialogBinding.cancelReminderButton.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.saveReminderButton.setOnClickListener(v -> {
             String title = dialogBinding.reminderTitleInput.getText().toString().trim();
-            boolean isDaily = dialogBinding.reminderRepeatGroup.getCheckedRadioButtonId()
-                    == R.id.repeat_daily_button;
-            if (!validateEditor(dialogBinding.reminderTitleLayout, title, selectedTime, isDaily)) {
+            String repeatType = selectedRepeatType(
+                    dialogBinding.reminderRepeatGroup.getCheckedRadioButtonId());
+            boolean repeating = !Reminder.REPEAT_ONCE.equals(repeatType);
+            if (!validateEditor(dialogBinding.reminderTitleLayout, title, selectedTime, repeating)) {
                 return;
             }
 
@@ -233,7 +232,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             reminder.title = title;
             reminder.note = dialogBinding.reminderNoteInput.getText().toString().trim();
             reminder.reminderAt = selectedTime.getTimeInMillis();
-            reminder.repeatType = isDaily ? Reminder.REPEAT_DAILY : Reminder.REPEAT_ONCE;
+            reminder.repeatType = repeatType;
             reminder.priority = dialogBinding.reminderPriorityInput.getText().toString().trim();
             reminder.category = dialogBinding.reminderCategoryInput.getText().toString().trim();
             String assignee = dialogBinding.reminderAssigneeInput.getText().toString().trim();
@@ -273,18 +272,35 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
     }
 
     private boolean validateEditor(TextInputLayout titleLayout, String title, Calendar selectedTime,
-                                   boolean isDaily) {
+                                   boolean repeating) {
         if (TextUtils.isEmpty(title)) {
             titleLayout.setError(getString(R.string.reminder_title_required));
             return false;
         }
         titleLayout.setError(null);
-        if (!isDaily && selectedTime.getTimeInMillis() <= System.currentTimeMillis()) {
+        if (!repeating && selectedTime.getTimeInMillis() <= System.currentTimeMillis()) {
             Snackbar.make(binding.getRoot(), R.string.reminder_future_time_required,
                     Snackbar.LENGTH_SHORT).show();
             return false;
         }
         return true;
+    }
+
+    private int repeatButtonId(@NonNull String repeatType) {
+        if (Reminder.REPEAT_DAILY.equals(repeatType)) return R.id.repeat_daily_button;
+        if (Reminder.REPEAT_WEEKLY.equals(repeatType)) return R.id.repeat_weekly_button;
+        if (Reminder.REPEAT_MONTHLY.equals(repeatType)) return R.id.repeat_monthly_button;
+        if (Reminder.REPEAT_YEARLY.equals(repeatType)) return R.id.repeat_yearly_button;
+        return R.id.repeat_once_button;
+    }
+
+    @NonNull
+    private String selectedRepeatType(int buttonId) {
+        if (buttonId == R.id.repeat_daily_button) return Reminder.REPEAT_DAILY;
+        if (buttonId == R.id.repeat_weekly_button) return Reminder.REPEAT_WEEKLY;
+        if (buttonId == R.id.repeat_monthly_button) return Reminder.REPEAT_MONTHLY;
+        if (buttonId == R.id.repeat_yearly_button) return Reminder.REPEAT_YEARLY;
+        return Reminder.REPEAT_ONCE;
     }
 
     private void updateDateTimeInputs(DialogReminderBinding dialogBinding, Calendar selectedTime) {

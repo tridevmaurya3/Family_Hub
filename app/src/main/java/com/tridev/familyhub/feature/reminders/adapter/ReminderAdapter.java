@@ -95,11 +95,11 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
                     + " · " + friendly(reminder.category)
                     + (reminder.assignedMemberName.trim().isEmpty()
                     ? "" : " · " + reminder.assignedMemberName.trim());
-            if (Reminder.REPEAT_DAILY.equals(reminder.repeatType)) {
+            if (!Reminder.REPEAT_ONCE.equals(reminder.repeatType)) {
                 return binding.getRoot().getContext().getString(
                         R.string.reminder_daily_at,
                         timeFormat.format(date)
-                ) + smartMeta;
+                ) + " · " + friendly(reminder.repeatType) + smartMeta;
             }
             return dateFormat.format(date) + " · " + timeFormat.format(date) + smartMeta;
         }

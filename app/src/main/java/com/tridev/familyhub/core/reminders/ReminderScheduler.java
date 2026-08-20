@@ -46,14 +46,14 @@ public final class ReminderScheduler {
         pendingIntent.cancel();
     }
 
-    public static void rescheduleDailyIfEnabled(Context context, long reminderId, Runnable onComplete) {
+    public static void rescheduleRepeatingIfEnabled(Context context, long reminderId, Runnable onComplete) {
         Context appContext = context.getApplicationContext();
         DATABASE_EXECUTOR.execute(() -> {
             Reminder reminder = FamilyHubDatabase.getInstance(appContext)
                     .reminderDao()
                     .getById(reminderId);
             if (reminder != null && reminder.isEnabled
-                    && Reminder.REPEAT_DAILY.equals(reminder.repeatType)) {
+                    && !Reminder.REPEAT_ONCE.equals(reminder.repeatType)) {
                 schedule(appContext, reminder);
             }
             if (onComplete != null) {
@@ -101,10 +101,36 @@ public final class ReminderScheduler {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(reminder.reminderAt);
+        int field = Calendar.DATE;
+        if (Reminder.REPEAT_WEEKLY.equals(reminder.repeatType)) field = Calendar.WEEK_OF_YEAR;
+        else if (Reminder.REPEAT_MONTHLY.equals(reminder.repeatType)) field = Calendar.MONTH;
+        else if (Reminder.REPEAT_YEARLY.equals(reminder.repeatType)) field = Calendar.YEAR;
         while (calendar.getTimeInMillis() <= now) {
-            calendar.add(Calendar.DATE, 1);
+            calendar.add(field, 1);
         }
         return calendar.getTimeInMillis();
+    }
+
+    public static void scheduleSnooze(Context context, long reminderId, String title,
+                                      String note, String repeatType, int minutes) {
+        long triggerAt = System.currentTimeMillis() + Math.max(1, minutes) * 60_000L;
+        AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
+        if (alarmManager == null) return;
+        Intent intent = new Intent(context, ReminderReceiver.class)
+                .setAction(ReminderReceiver.ACTION_FIRE)
+                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId)
+                .putExtra(ReminderReceiver.EXTRA_TITLE, title)
+                .putExtra(ReminderReceiver.EXTRA_NOTE, note)
+                .putExtra(ReminderReceiver.EXTRA_REPEAT_TYPE, repeatType)
+                .putExtra(ReminderReceiver.EXTRA_SNOOZE_DELIVERY, true);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(context,
+                ((int) (reminderId & 0x7fffffff)) ^ 0x2f2f2f2f, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        try {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
+        } catch (SecurityException ignored) {
+            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
+        }
     }
 
     private static void scheduleAlarm(Context context, long reminderId, String title, String note,

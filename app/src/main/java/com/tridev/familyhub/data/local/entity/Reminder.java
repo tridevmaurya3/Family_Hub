@@ -14,6 +14,9 @@ public class Reminder {
 
     public static final String REPEAT_ONCE = "ONCE";
     public static final String REPEAT_DAILY = "DAILY";
+    public static final String REPEAT_WEEKLY = "WEEKLY";
+    public static final String REPEAT_MONTHLY = "MONTHLY";
+    public static final String REPEAT_YEARLY = "YEARLY";
 
     @PrimaryKey(autoGenerate = true)
     public long id;
