@@ -1493,4 +1493,16 @@ Sharing: %12$s</string>
         <item>Other</item>
     </string-array>
     <string name="feature_menu_help">Help &amp; Guide</string>
+    <string name="dashboard_briefing_title">Smart daily briefing</string>
+    <string name="dashboard_briefing_eyebrow">Smart daily briefing</string>
+    <string name="dashboard_briefing_loading">Preparing today’s family snapshot…</string>
+    <string name="dashboard_briefing_loading_detail">Your current Family Hub data will appear here.</string>
+    <string name="dashboard_briefing_snapshot_empty">Planner 0 • Reminders 0 • Attention 0</string>
+    <string name="dashboard_briefing_attention_headline">%1$d item(s) need attention today</string>
+    <string name="dashboard_briefing_reminder_headline">%1$d upcoming reminder(s)</string>
+    <string name="dashboard_briefing_pending_headline">%1$d family task(s) are pending</string>
+    <string name="dashboard_briefing_clear_headline">Everything looks organised today</string>
+    <string name="dashboard_briefing_next_reminder">Next: %1$s • %2$s at %3$s</string>
+    <string name="dashboard_briefing_no_reminder">No upcoming reminder. You can plan the day without a deadline.</string>
+    <string name="dashboard_briefing_snapshot">Pending %1$d • Reminders %2$d • Attention %3$d • Balance %4$s</string>
 </resources>

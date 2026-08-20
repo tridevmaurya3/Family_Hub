@@ -537,6 +537,7 @@ public class DashboardFragment extends Fragment {
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
                     renderPrioritySummary(data);
+                    renderDailyBriefing(data);
                     renderReminder(data);
                     renderBirthday(data);
                     renderBill(data);
@@ -550,6 +551,45 @@ public class DashboardFragment extends Fragment {
                     binding.dashboardErrorCard.setVisibility(View.VISIBLE);
                 }
         );
+    }
+
+    private void renderDailyBriefing(@NonNull DashboardData data) {
+        DashboardStats stats = data.getStats();
+        int attention = stats.getDocumentsExpiringSoon()
+                + stats.getVehiclesDueSoon();
+        int pending = stats.getPlannerOpen() + stats.getGroceryPending();
+        int upcoming = stats.getUpcomingReminders();
+
+        if (attention > 0) {
+            binding.dashboardBriefingHeadline.setText(getString(
+                    R.string.dashboard_briefing_attention_headline, attention));
+        } else if (upcoming > 0) {
+            binding.dashboardBriefingHeadline.setText(getString(
+                    R.string.dashboard_briefing_reminder_headline, upcoming));
+        } else if (pending > 0) {
+            binding.dashboardBriefingHeadline.setText(getString(
+                    R.string.dashboard_briefing_pending_headline, pending));
+        } else {
+            binding.dashboardBriefingHeadline.setText(
+                    R.string.dashboard_briefing_clear_headline);
+        }
+
+        if (data.hasUpcomingReminder() && data.getNextReminder() != null) {
+            Date nextDate = new Date(data.getNextReminderTriggerAt());
+            binding.dashboardBriefingDetail.setText(getString(
+                    R.string.dashboard_briefing_next_reminder,
+                    data.getNextReminder().title,
+                    reminderDateFormat.format(nextDate),
+                    reminderTimeFormat.format(nextDate)));
+        } else {
+            binding.dashboardBriefingDetail.setText(
+                    R.string.dashboard_briefing_no_reminder);
+        }
+
+        binding.dashboardBriefingSnapshot.setText(getString(
+                R.string.dashboard_briefing_snapshot,
+                pending, upcoming, attention,
+                currencyFormatter.format(data.getBalance())));
     }
 
     private void renderPrioritySummary(@NonNull DashboardData data) {

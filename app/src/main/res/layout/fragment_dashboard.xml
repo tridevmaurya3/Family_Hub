@@ -125,6 +125,64 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_12" />
 
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_daily_briefing_card"
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            android:contentDescription="@string/dashboard_briefing_title"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/space_12">
+
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/dashboard_briefing_eyebrow"
+                    android:textAllCaps="true"
+                    android:textColor="@color/fh_primary"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/dashboard_briefing_headline"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:text="@string/dashboard_briefing_loading"
+                    android:textColor="@color/fh_on_surface" />
+
+                <TextView
+                    android:id="@+id/dashboard_briefing_detail"
+                    style="@style/TextAppearance.FamilyHub.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:maxLines="3"
+                    android:text="@string/dashboard_briefing_loading_detail"
+                    android:textColor="@color/fh_on_surface_variant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/dashboard_briefing_snapshot"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:background="@drawable/bg_status_pill"
+                    android:padding="@dimen/space_8"
+                    android:text="@string/dashboard_briefing_snapshot_empty"
+                    android:textColor="@color/fh_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <ProgressBar
             android:id="@+id/dashboard_loading"
             style="?android:attr/progressBarStyleSmall"

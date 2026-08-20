@@ -116,7 +116,7 @@
                 android:layout_height="@dimen/touch_target_min"
                 android:layout_marginStart="@dimen/space_6"
                 android:minWidth="0dp"
-                android:text="Analytics & Report" />
+                android:text="Analytics &amp; Report" />
         </LinearLayout>
     </HorizontalScrollView>
 
