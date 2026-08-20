@@ -136,6 +136,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                 return;
             }
             reminderAdapter.submitList(reminders);
+            binding.reminderDashboardSummary.setReminders(reminders);
             boolean isEmpty = reminders.isEmpty();
             binding.reminderRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
             binding.remindersEmptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);

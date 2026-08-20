@@ -34,7 +34,7 @@
         app:startIconTint="@color/fh_module_reminders"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/reminders_overview">
+        app:layout_constraintTop_toBottomOf="@id/reminder_dashboard_summary">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/reminder_search_input"
@@ -47,6 +47,15 @@
             android:textColor="@color/fh_on_surface" />
 
     </com.google.android.material.textfield.TextInputLayout>
+
+    <com.tridev.familyhub.feature.reminders.ReminderDashboardSummaryView
+        android:id="@+id/reminder_dashboard_summary"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/compact_section_spacing"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/reminders_overview" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/reminder_recycler_view"
