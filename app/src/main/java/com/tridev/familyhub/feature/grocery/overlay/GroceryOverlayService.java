@@ -335,6 +335,14 @@ public class GroceryOverlayService extends Service {
                 Color.argb(190, 190, 216, 236), 16));
         overlayFormToggle.setElevation(dp(2));
         header.addView(overlayFormToggle, new LinearLayout.LayoutParams(dp(78), dp(34)));
+
+        Button opacityToggle = compactAction("◐",
+                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
+        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
+        LinearLayout.LayoutParams opacityHeaderParams = new LinearLayout.LayoutParams(dp(40), dp(34));
+        opacityHeaderParams.setMarginStart(dp(6));
+        header.addView(opacityToggle, opacityHeaderParams);
+
         Button close = new Button(this);
         close.setText("×");
         close.setTextSize(20f);
@@ -371,14 +379,8 @@ public class GroceryOverlayService extends Service {
         });
         LinearLayout listTypeControls = new LinearLayout(this);
         listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
-        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(0, dp(36), 1f));
-
-        Button opacityToggle = compactAction("◐",
-                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
-        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
-        LinearLayout.LayoutParams opacityToggleParams = new LinearLayout.LayoutParams(dp(46), dp(36));
-        opacityToggleParams.setMarginStart(dp(8));
-        listTypeControls.addView(opacityToggle, opacityToggleParams);
+        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
 
