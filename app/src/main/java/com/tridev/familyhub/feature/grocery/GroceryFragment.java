@@ -76,7 +76,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     @NonNull private String activeCycleFilter = GroceryItem.LIST_DAILY;
     private int activeStatusFilterId = R.id.filter_pending;
     @NonNull private String activeCategoryFilter = "";
-    @Nullable private com.google.android.material.chip.Chip groceryCategoryToggleChip;
+    @Nullable private MaterialButton groceryCategoryToggleChip;
     @Nullable private MaterialButton groceryCycleDropdown;
     @Nullable private MaterialButton groceryStatusDropdown;
     @Nullable private android.widget.EditText activeDialogVoiceInput;
@@ -295,32 +295,32 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         if (binding == null || groceryCycleDropdown != null || groceryStatusDropdown != null) {
             return;
         }
+        binding.groceryFilterScroll.setFillViewport(true);
+        ViewGroup.LayoutParams groupParams = binding.groceryFilterGroup.getLayoutParams();
+        groupParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        binding.groceryFilterGroup.setLayoutParams(groupParams);
+
         groceryCycleDropdown = createFilterDropdown(
                 getString(R.string.grocery_filter_daily),
                 R.color.fh_success_container,
                 R.color.fh_success,
                 R.color.fh_on_success_container,
-                154
+                96
         );
         groceryStatusDropdown = createFilterDropdown(
                 getString(R.string.grocery_filter_pending),
                 R.color.fh_warning_container,
                 R.color.fh_warning,
                 R.color.fh_on_warning_container,
-                138
+                94
         );
         groceryCycleDropdown.setOnClickListener(this::showCycleDropdown);
         groceryStatusDropdown.setOnClickListener(this::showStatusDropdown);
 
-        ViewGroup.MarginLayoutParams cycleParams = new ViewGroup.MarginLayoutParams(
-                dp(154), dp(40));
-        cycleParams.setMarginEnd(dp(8));
-        binding.groceryFilterGroup.addView(groceryCycleDropdown, 0, cycleParams);
-
-        ViewGroup.MarginLayoutParams statusParams = new ViewGroup.MarginLayoutParams(
-                dp(138), dp(40));
-        statusParams.setMarginEnd(dp(8));
-        binding.groceryFilterGroup.addView(groceryStatusDropdown, 1, statusParams);
+        binding.groceryFilterGroup.addView(groceryCycleDropdown, 0,
+                new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
+        binding.groceryFilterGroup.addView(groceryStatusDropdown, 1,
+                new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
     }
 
     @NonNull
@@ -334,13 +334,15 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         MaterialButton button = new MaterialButton(requireContext());
         button.setAllCaps(false);
         button.setText(label + "  ▾");
-        button.setTextSize(12f);
+        button.setTextSize(11f);
         button.setSingleLine(true);
         button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
-        button.setPadding(dp(14), 0, dp(12), 0);
-        button.setCornerRadius(dp(16));
+        button.setMinHeight(0);
+        button.setMinimumHeight(0);
+        button.setPadding(dp(10), 0, dp(8), 0);
+        button.setCornerRadius(dp(15));
         button.setStrokeWidth(dp(1));
         button.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(
                 requireContext(), strokeColor)));
@@ -349,69 +351,207 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         button.setTextColor(ContextCompat.getColor(requireContext(), textColor));
         button.setElevation(dp(1));
         button.setContentDescription(label);
-        button.setLayoutParams(new ViewGroup.MarginLayoutParams(dp(widthDp), dp(40)));
+        button.setLayoutParams(new ViewGroup.MarginLayoutParams(dp(widthDp), dp(38)));
         return button;
     }
 
+    private interface FilterChoiceListener {
+        void onChoice(int index);
+    }
+
     private void showCycleDropdown(@NonNull View anchor) {
-        PopupMenu popup = new PopupMenu(requireContext(), anchor);
-        popup.getMenu().setGroupCheckable(1, true, true);
-        popup.getMenu().add(1, MENU_CYCLE_DAILY, 0, R.string.grocery_filter_daily);
-        popup.getMenu().add(1, MENU_CYCLE_MONTHLY, 1, R.string.grocery_filter_monthly);
-        popup.getMenu().add(1, MENU_CYCLE_TWO_MONTH, 2, "2 Month");
-        popup.getMenu().add(1, MENU_CYCLE_THREE_MONTH, 3, "3 Month");
-        android.view.MenuItem current = popup.getMenu().findItem(
-                menuIdForCycle(activeCycleFilter));
-        if (current != null) current.setChecked(true);
-        popup.setOnMenuItemClickListener(item -> {
-            activeCycleFilter = cycleFromMenuId(item.getItemId());
-            item.setChecked(true);
-            syncPrimaryFilterChips();
-            loadItems(currentQuery());
-            return true;
-        });
-        popup.show();
+        String[] labels = new String[]{
+                getString(R.string.grocery_filter_daily),
+                getString(R.string.grocery_filter_monthly),
+                "2 Month",
+                "3 Month"
+        };
+        String[] values = new String[]{
+                GroceryItem.LIST_DAILY,
+                GroceryItem.LIST_MONTHLY,
+                GroceryItem.LIST_TWO_MONTH,
+                GroceryItem.LIST_THREE_MONTH
+        };
+        int selectedIndex = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i].equals(GroceryRecurrenceEngine.normalizeCycle(activeCycleFilter))) {
+                selectedIndex = i;
+                break;
+            }
+        }
+        showPremiumFilterPopup(anchor, labels, selectedIndex,
+                ContextCompat.getColor(requireContext(), R.color.fh_success), index -> {
+                    activeCycleFilter = values[index];
+                    syncPrimaryFilterChips();
+                    loadItems(currentQuery());
+                });
     }
 
     private void showStatusDropdown(@NonNull View anchor) {
-        PopupMenu popup = new PopupMenu(requireContext(), anchor);
-        popup.getMenu().setGroupCheckable(1, true, true);
-        popup.getMenu().add(1, R.id.filter_pending, 0, R.string.grocery_filter_pending);
-        popup.getMenu().add(1, R.id.filter_purchased, 1, R.string.grocery_filter_purchased);
-        android.view.MenuItem current = popup.getMenu().findItem(activeStatusFilterId);
-        if (current != null) current.setChecked(true);
-        popup.setOnMenuItemClickListener(item -> {
-            activeStatusFilterId = item.getItemId() == R.id.filter_purchased
-                    ? R.id.filter_purchased : R.id.filter_pending;
-            item.setChecked(true);
-            syncPrimaryFilterChips();
-            loadItems(currentQuery());
-            return true;
-        });
-        popup.show();
+        String[] labels = new String[]{
+                getString(R.string.grocery_filter_pending),
+                getString(R.string.grocery_filter_purchased)
+        };
+        int selectedIndex = activeStatusFilterId == R.id.filter_purchased ? 1 : 0;
+        showPremiumFilterPopup(anchor, labels, selectedIndex,
+                ContextCompat.getColor(requireContext(), R.color.fh_warning), index -> {
+                    activeStatusFilterId = index == 1
+                            ? R.id.filter_purchased : R.id.filter_pending;
+                    syncPrimaryFilterChips();
+                    loadItems(currentQuery());
+                });
+    }
+
+    private void showPremiumFilterPopup(
+            @NonNull View anchor,
+            @NonNull String[] labels,
+            int selectedIndex,
+            int accentColor,
+            @NonNull FilterChoiceListener listener
+    ) {
+        android.widget.LinearLayout root = new android.widget.LinearLayout(requireContext());
+        root.setOrientation(android.widget.LinearLayout.VERTICAL);
+        root.setPadding(dp(5), dp(5), dp(5), dp(5));
+        root.setBackground(premiumFilterPopupBackground());
+        root.setElevation(dp(10));
+
+        final android.widget.PopupWindow popup = new android.widget.PopupWindow(requireContext());
+        popup.setContentView(root);
+        int popupWidth = Math.max(anchor.getWidth(), dp(132));
+        int maxWidth = getResources().getDisplayMetrics().widthPixels - dp(28);
+        popup.setWidth(Math.min(popupWidth, maxWidth));
+        popup.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                android.graphics.Color.TRANSPARENT));
+        popup.setElevation(dp(12));
+        popup.setOverlapAnchor(false);
+
+        for (int index = 0; index < labels.length; index++) {
+            final int selectedChoice = index;
+            boolean selected = index == selectedIndex;
+            android.widget.TextView row = new android.widget.TextView(requireContext());
+            row.setText((selected ? "✓  " : "   ") + labels[index]);
+            row.setTextSize(12.5f);
+            row.setSingleLine(true);
+            row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(11), 0, dp(10), 0);
+            row.setTextColor(selected ? accentColor
+                    : ContextCompat.getColor(requireContext(), R.color.fh_text_primary));
+            if (selected) {
+                row.setTypeface(row.getTypeface(), android.graphics.Typeface.BOLD);
+            }
+            row.setBackground(premiumFilterRowBackground(selected, accentColor));
+            row.setOnClickListener(v -> {
+                listener.onChoice(selectedChoice);
+                popup.dismiss();
+            });
+            android.widget.LinearLayout.LayoutParams rowParams =
+                    new android.widget.LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, dp(40));
+            if (index < labels.length - 1) rowParams.bottomMargin = dp(4);
+            root.addView(row, rowParams);
+        }
+        popup.showAsDropDown(anchor, 0, dp(4));
+    }
+
+    @NonNull
+    private android.graphics.drawable.GradientDrawable premiumFilterPopupBackground() {
+        android.graphics.drawable.GradientDrawable drawable =
+                new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{
+                                android.graphics.Color.argb(253, 255, 255, 255),
+                                android.graphics.Color.argb(249, 243, 249, 252)
+                        });
+        drawable.setCornerRadius(dp(15));
+        drawable.setStroke(dp(1), android.graphics.Color.argb(210, 199, 211, 221));
+        drawable.setPadding(dp(5), dp(5), dp(5), dp(5));
+        return drawable;
+    }
+
+    @NonNull
+    private android.graphics.drawable.GradientDrawable premiumFilterRowBackground(
+            boolean selected,
+            int accentColor
+    ) {
+        int fill = selected
+                ? android.graphics.Color.argb(38,
+                        android.graphics.Color.red(accentColor),
+                        android.graphics.Color.green(accentColor),
+                        android.graphics.Color.blue(accentColor))
+                : android.graphics.Color.argb(248, 255, 255, 255);
+        int stroke = selected
+                ? android.graphics.Color.argb(135,
+                        android.graphics.Color.red(accentColor),
+                        android.graphics.Color.green(accentColor),
+                        android.graphics.Color.blue(accentColor))
+                : android.graphics.Color.argb(125, 212, 222, 226);
+        android.graphics.drawable.GradientDrawable drawable =
+                new android.graphics.drawable.GradientDrawable();
+        drawable.setColor(fill);
+        drawable.setCornerRadius(dp(10));
+        drawable.setStroke(dp(1), stroke);
+        return drawable;
     }
 
     private void ensureGroceryGroupingChip() {
         if (binding == null || groceryCategoryToggleChip != null) return;
-        com.google.android.material.chip.Chip chip =
-                new com.google.android.material.chip.Chip(requireContext());
-        chip.setCheckable(false);
-        chip.setClickable(true);
-        chip.setText(R.string.grocery_collapse_categories);
-        chip.setChipBackgroundColorResource(R.color.fh_info_container);
-        chip.setTextColor(ContextCompat.getColor(
-                requireContext(), R.color.fh_module_grocery));
-        chip.setOnClickListener(v ->
+        MaterialButton button = createFilterDropdown(
+                "Collapse",
+                R.color.fh_info_container,
+                R.color.fh_module_grocery,
+                R.color.fh_module_grocery,
+                118
+        );
+        button.setText("Collapse  ▴");
+        button.setContentDescription(getString(R.string.grocery_collapse_categories));
+        button.setOnClickListener(v ->
                 updateGroceryGroupingChip(adapter.toggleAllCategories()));
-        groceryCategoryToggleChip = chip;
-        binding.groceryFilterGroup.addView(chip);
+        groceryCategoryToggleChip = button;
+        binding.groceryFilterGroup.addView(button, 2,
+                new ViewGroup.MarginLayoutParams(dp(118), dp(38)));
+        fitPrimaryFilterControls();
+    }
+
+    private void fitPrimaryFilterControls() {
+        if (binding == null) return;
+        binding.groceryFilterScroll.post(() -> {
+            if (binding == null || groceryCycleDropdown == null
+                    || groceryStatusDropdown == null || groceryCategoryToggleChip == null) {
+                return;
+            }
+            int available = binding.groceryFilterScroll.getWidth();
+            if (available <= 0) return;
+            int usable = Math.max(0, available - dp(16));
+            int cycleWidth = Math.round(usable * 0.30f);
+            int statusWidth = Math.round(usable * 0.29f);
+            int categoryWidth = usable - cycleWidth - statusWidth;
+            if (cycleWidth < dp(82) || statusWidth < dp(82) || categoryWidth < dp(108)) {
+                cycleWidth = dp(82);
+                statusWidth = dp(82);
+                categoryWidth = Math.max(dp(108), usable - cycleWidth - statusWidth);
+            }
+            setFilterControlWidth(groceryCycleDropdown, cycleWidth);
+            setFilterControlWidth(groceryStatusDropdown, statusWidth);
+            setFilterControlWidth(groceryCategoryToggleChip, categoryWidth);
+        });
+    }
+
+    private void setFilterControlWidth(@NonNull View view, int width) {
+        ViewGroup.LayoutParams params = view.getLayoutParams();
+        params.width = width;
+        params.height = dp(38);
+        view.setLayoutParams(params);
     }
 
     private void updateGroceryGroupingChip(boolean allCollapsed) {
         if (groceryCategoryToggleChip == null) return;
-        groceryCategoryToggleChip.setText(allCollapsed
+        groceryCategoryToggleChip.setText(allCollapsed ? "Expand  ▾" : "Collapse  ▴");
+        groceryCategoryToggleChip.setContentDescription(getString(allCollapsed
                 ? R.string.grocery_expand_categories
-                : R.string.grocery_collapse_categories);
+                : R.string.grocery_collapse_categories));
     }
 
     private void syncPrimaryFilterChips() {
