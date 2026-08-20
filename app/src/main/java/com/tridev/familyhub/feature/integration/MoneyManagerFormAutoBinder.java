@@ -2,17 +2,26 @@ package com.tridev.familyhub.feature.integration;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
@@ -182,29 +191,164 @@ public final class MoneyManagerFormAutoBinder implements Application.ActivityLif
             @Nullable String familyInsight) {
         if (activity.isFinishing() || activity.isDestroyed()) return;
 
-        StringBuilder body = new StringBuilder()
-                .append("MoneyManager • ")
-                .append(master.periodLabel.isEmpty() ? "Current month" : master.periodLabel)
-                .append("\n\nExpense categories\n");
-        appendCategoryDetails(body, master.expenseCategories, formatter);
-        body.append("\nExpense total • ").append(formatter.format(master.expense));
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(true);
+        LinearLayout content = new LinearLayout(activity);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(activity, 18), dp(activity, 8),
+                dp(activity, 18), dp(activity, 12));
+        scroll.addView(content, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        body.append("\n\nIncome categories\n");
-        appendCategoryDetails(body, master.incomeCategories, formatter);
-        body.append("\nIncome total • ").append(formatter.format(master.income));
-        body.append("\nRemaining • ").append(formatter.format(master.remaining));
+        TextView period = dialogText(activity,
+                "MoneyManager  •  " + (master.periodLabel.isEmpty()
+                        ? "Current month" : master.periodLabel), 14f, true,
+                R.color.fh_info);
+        content.addView(period);
+
+        addCategoryCard(activity, content, "EXPENSE BREAKDOWN",
+                master.expenseCategories, master.expense, formatter,
+                R.color.fh_error_container, R.color.fh_error);
+        addCategoryCard(activity, content, "INCOME BREAKDOWN",
+                master.incomeCategories, master.income, formatter,
+                R.color.fh_success_container, R.color.fh_success);
+
+        int remainingColor = master.remaining >= 0D ? R.color.fh_success : R.color.fh_error;
+        int remainingBackground = master.remaining >= 0D
+                ? R.color.fh_success_container : R.color.fh_error_container;
+        addTotalCard(activity, content, "NET SAVING",
+                formatter.format(master.remaining), remainingBackground, remainingColor);
 
         String local = cleanInsight(familyInsight);
         if (!local.isEmpty()) {
-            body.append("\n\nFamily Hub insight\n").append(local);
+            addTextCard(activity, content, "FAMILY HUB INSIGHT", local,
+                    R.color.fh_info_container, R.color.fh_info);
         }
-        body.append("\n\nRead-only aggregate from MoneyManager; individual transactions are not shared.");
+
+        TextView privacy = dialogText(activity,
+                "Read-only summary from MoneyManager • Individual transactions are not shared",
+                10f, false, R.color.fh_text_secondary);
+        privacy.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams privacyParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        privacyParams.topMargin = dp(activity, 12);
+        content.addView(privacy, privacyParams);
 
         new MaterialAlertDialogBuilder(activity)
                 .setTitle("Finance Analytics")
-                .setMessage(body.toString())
+                .setView(scroll)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
+    }
+
+    private void addCategoryCard(@NonNull Activity activity,
+                                 @NonNull LinearLayout parent,
+                                 @NonNull String title,
+                                 @NonNull List<MoneyManagerFinanceSummaryBridge.CategoryTotal> rows,
+                                 double total,
+                                 @NonNull NumberFormat formatter,
+                                 int backgroundColor,
+                                 int accentColor) {
+        LinearLayout body = cardBody(activity, parent, backgroundColor, accentColor);
+        body.addView(dialogText(activity, title, 11f, true, accentColor));
+        if (rows.isEmpty()) {
+            body.addView(dialogText(activity, "No entries", 12f, false,
+                    R.color.fh_text_secondary));
+        } else {
+            for (MoneyManagerFinanceSummaryBridge.CategoryTotal item : rows) {
+                LinearLayout row = new LinearLayout(activity);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                TextView name = dialogText(activity, item.label, 12f, false,
+                        R.color.fh_on_surface);
+                TextView amount = dialogText(activity, formatter.format(item.amount),
+                        12f, true, accentColor);
+                LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                nameParams.setMarginEnd(dp(activity, 8));
+                row.addView(name, nameParams);
+                row.addView(amount);
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                rowParams.topMargin = dp(activity, 7);
+                body.addView(row, rowParams);
+            }
+        }
+        TextView totalView = dialogText(activity, "Total  " + formatter.format(total),
+                13f, true, accentColor);
+        totalView.setGravity(Gravity.END);
+        LinearLayout.LayoutParams totalParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        totalParams.topMargin = dp(activity, 10);
+        body.addView(totalView, totalParams);
+    }
+
+    private void addTotalCard(@NonNull Activity activity, @NonNull LinearLayout parent,
+                              @NonNull String title, @NonNull String value,
+                              int backgroundColor, int accentColor) {
+        LinearLayout body = cardBody(activity, parent, backgroundColor, accentColor);
+        body.setGravity(Gravity.CENTER_VERTICAL);
+        body.addView(dialogText(activity, title, 11f, true, accentColor));
+        TextView amount = dialogText(activity, value, 18f, true, accentColor);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(activity, 5);
+        body.addView(amount, params);
+    }
+
+    private void addTextCard(@NonNull Activity activity, @NonNull LinearLayout parent,
+                             @NonNull String title, @NonNull String value,
+                             int backgroundColor, int accentColor) {
+        LinearLayout body = cardBody(activity, parent, backgroundColor, accentColor);
+        body.addView(dialogText(activity, title, 11f, true, accentColor));
+        TextView detail = dialogText(activity, value, 12f, false, R.color.fh_on_surface);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(activity, 6);
+        body.addView(detail, params);
+    }
+
+    @NonNull
+    private LinearLayout cardBody(@NonNull Activity activity, @NonNull LinearLayout parent,
+                                  int backgroundColor, int accentColor) {
+        MaterialCardView card = new MaterialCardView(activity);
+        card.setRadius(dp(activity, 16));
+        card.setCardElevation(dp(activity, 1));
+        card.setStrokeWidth(dp(activity, 1));
+        card.setStrokeColor(ColorStateList.valueOf(
+                withAlpha(ContextCompat.getColor(activity, accentColor), 85)));
+        card.setCardBackgroundColor(ContextCompat.getColor(activity, backgroundColor));
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardParams.topMargin = dp(activity, 12);
+        parent.addView(card, cardParams);
+        LinearLayout body = new LinearLayout(activity);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(activity, 14), dp(activity, 12),
+                dp(activity, 14), dp(activity, 13));
+        card.addView(body, new MaterialCardView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return body;
+    }
+
+    @NonNull
+    private TextView dialogText(@NonNull Activity activity, @NonNull String value,
+                                float size, boolean bold, int colorResource) {
+        TextView view = new TextView(activity);
+        view.setText(value);
+        view.setTextSize(size);
+        view.setTextColor(ContextCompat.getColor(activity, colorResource));
+        view.setIncludeFontPadding(false);
+        if (bold) view.setTypeface(view.getTypeface(), Typeface.BOLD);
+        return view;
+    }
+
+    private int withAlpha(int color, int alpha) {
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color));
+    }
+
+    private int dp(@NonNull Activity activity, int value) {
+        return Math.round(value * activity.getResources().getDisplayMetrics().density);
     }
 
     private void appendCategoryDetails(

@@ -6,6 +6,10 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
@@ -392,7 +396,8 @@ public final class FamilyHubOnlyFinanceSummaryView extends LinearLayout {
         trendRowParams.topMargin = dp(8);
         trendBody.addView(trendRow, trendRowParams);
 
-        LinearLayout yoyColumn = premiumInfoColumn();
+        LinearLayout yoyColumn = premiumInfoColumn(
+                Color.argb(248, 244, 249, 255), Color.argb(150, 164, 196, 222));
         analyticsYoyTitle = premiumText("", 11f, true,
                 ContextCompat.getColor(getContext(), R.color.fh_text_secondary));
         analyticsYoyDetail = premiumText("", 12f, false,
@@ -408,7 +413,8 @@ public final class FamilyHubOnlyFinanceSummaryView extends LinearLayout {
         yoyParams.setMarginEnd(dp(4));
         trendRow.addView(yoyColumn, yoyParams);
 
-        LinearLayout monthColumn = premiumInfoColumn();
+        LinearLayout monthColumn = premiumInfoColumn(
+                Color.argb(248, 250, 252, 255), Color.argb(150, 190, 204, 216));
         analyticsMonthTitle = premiumText("", 11f, true,
                 ContextCompat.getColor(getContext(), R.color.fh_text_secondary));
         analyticsMonthDetail = premiumText("", 12f, false,
@@ -629,17 +635,19 @@ public final class FamilyHubOnlyFinanceSummaryView extends LinearLayout {
         analyticsSavingCompare.setText(compareText(snapshot.monthSaving, snapshot.previousMonthSaving));
 
         analyticsYoyTitle.setText("YoY • January–" + monthName(selectedAnalyticsMonth));
-        analyticsYoyDetail.setText(
-                "Income  " + signedPercent(snapshot.ytdIncome, snapshot.previousYtdIncome)
-                        + "\nExpense  " + signedPercent(snapshot.ytdExpense, snapshot.previousYtdExpense)
-                        + "\nSaving  " + signedPercent(snapshot.ytdSaving, snapshot.previousYtdSaving));
+        analyticsYoyDetail.setText(coloredTrendText(
+                trendValue(snapshot.ytdIncome, snapshot.previousYtdIncome),
+                trendValue(snapshot.ytdExpense, snapshot.previousYtdExpense),
+                trendValue(snapshot.ytdSaving, snapshot.previousYtdSaving),
+                snapshot.ytdSaving));
 
         analyticsMonthTitle.setText("Month • "
                 + monthName(selectedAnalyticsMonth) + " " + selectedAnalyticsYear);
-        analyticsMonthDetail.setText(
-                "Income  " + currencyFormatter.format(snapshot.monthIncome)
-                        + "\nExpense  " + currencyFormatter.format(snapshot.monthExpense)
-                        + "\nNet saving  " + currencyFormatter.format(snapshot.monthSaving));
+        analyticsMonthDetail.setText(coloredTrendText(
+                currencyFormatter.format(snapshot.monthIncome),
+                currencyFormatter.format(snapshot.monthExpense),
+                currencyFormatter.format(snapshot.monthSaving),
+                snapshot.monthSaving));
 
         analyticsTopCategory.setText(
                 snapshot.topCategory + "\n" + currencyFormatter.format(snapshot.topCategoryAmount));
@@ -774,9 +782,49 @@ public final class FamilyHubOnlyFinanceSummaryView extends LinearLayout {
 
     @NonNull
     private String signedPercent(double current, double previous) {
-        if (Math.abs(previous) < 0.01D) return "—";
+        if (Math.abs(previous) < 0.01D) return "No previous data";
         double change = ((current - previous) / Math.abs(previous)) * 100D;
         return String.format(Locale.getDefault(), "%+.1f%%", change);
+    }
+
+    @NonNull
+    private String trendValue(double current, double previous) {
+        if (Math.abs(previous) < 0.01D) return "No previous-year data";
+        return signedPercent(current, previous);
+    }
+
+    @NonNull
+    private CharSequence coloredTrendText(
+            @NonNull String income,
+            @NonNull String expense,
+            @NonNull String saving,
+            double savingValue
+    ) {
+        SpannableStringBuilder text = new SpannableStringBuilder();
+        appendTrendLine(text, "Income", income,
+                ContextCompat.getColor(getContext(), R.color.fh_success));
+        text.append('\n');
+        appendTrendLine(text, "Expense", expense,
+                ContextCompat.getColor(getContext(), R.color.fh_error));
+        text.append('\n');
+        appendTrendLine(text, "Net saving", saving,
+                ContextCompat.getColor(getContext(), savingValue >= 0D
+                        ? R.color.fh_success : R.color.fh_error));
+        return text;
+    }
+
+    private void appendTrendLine(
+            @NonNull SpannableStringBuilder target,
+            @NonNull String label,
+            @NonNull String value,
+            int color
+    ) {
+        int start = target.length();
+        target.append(label).append("  ").append(value);
+        target.setSpan(new ForegroundColorSpan(color), start, target.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        target.setSpan(new StyleSpan(Typeface.BOLD), start, target.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
     }
 
     private int entryYear(@NonNull FinanceEntry entry) {
@@ -896,13 +944,13 @@ public final class FamilyHubOnlyFinanceSummaryView extends LinearLayout {
     }
 
     @NonNull
-    private LinearLayout premiumInfoColumn() {
+    private LinearLayout premiumInfoColumn(int fillColor, int strokeColor) {
         LinearLayout column = new LinearLayout(getContext());
         column.setOrientation(VERTICAL);
-        column.setPadding(dp(9), dp(8), dp(9), dp(8));
-        column.setBackground(roundedBackground(
-                Color.argb(246, 252, 253, 255),
-                Color.argb(100, 196, 210, 220), 11));
+        column.setPadding(dp(10), dp(9), dp(10), dp(10));
+        column.setMinimumHeight(dp(102));
+        column.setBackground(roundedBackground(fillColor, strokeColor, 12));
+        column.setElevation(dp(1));
         return column;
     }
 
