@@ -62,6 +62,9 @@ public class DashboardFragment extends Fragment {
 
     private static final String DASHBOARD_PREFERENCES = "dashboard_preferences";
     private static final String KEY_BRIEFING_EXPANDED = "briefing_expanded";
+    private static final String KEY_PRIORITY_EXPANDED = "priority_expanded";
+    private static final String KEY_ACTION_CENTER_EXPANDED =
+            "action_center_expanded";
 
     private FragmentDashboardBinding binding;
     private DashboardRepository dashboardRepository;
@@ -114,6 +117,7 @@ public class DashboardFragment extends Fragment {
         setupNotificationAction();
         setupDashboardHighlights();
         setupDailyBriefingPreference();
+        setupDashboardSectionPreferences();
         renderHeader();
         loadDashboardData();
     }
@@ -141,6 +145,54 @@ public class DashboardFragment extends Fragment {
         binding.dashboardBriefingToggle.setContentDescription(getString(expanded
                 ? R.string.dashboard_briefing_collapse_description
                 : R.string.dashboard_briefing_expand_description));
+    }
+
+    private void setupDashboardSectionPreferences() {
+        SharedPreferences preferences = requireContext().getSharedPreferences(
+                DASHBOARD_PREFERENCES, android.content.Context.MODE_PRIVATE);
+        setupPersistentSection(
+                binding.dashboardPriorityToggle,
+                binding.dashboardPriorityContent,
+                preferences,
+                KEY_PRIORITY_EXPANDED);
+        setupPersistentSection(
+                binding.dashboardActionCenterToggle,
+                binding.dashboardActionCenterContent,
+                preferences,
+                KEY_ACTION_CENTER_EXPANDED);
+    }
+
+    private void setupPersistentSection(
+            @NonNull View toggle,
+            @NonNull View content,
+            @NonNull SharedPreferences preferences,
+            @NonNull String preferenceKey
+    ) {
+        boolean expanded = preferences.getBoolean(preferenceKey, true);
+        applySectionExpanded(toggle, content, expanded);
+        toggle.setOnClickListener(v -> {
+            boolean shouldExpand = content.getVisibility() != View.VISIBLE;
+            applySectionExpanded(toggle, content, shouldExpand);
+            preferences.edit().putBoolean(preferenceKey, shouldExpand).apply();
+        });
+    }
+
+    private void applySectionExpanded(
+            @NonNull View toggle,
+            @NonNull View content,
+            boolean expanded
+    ) {
+        content.setVisibility(expanded ? View.VISIBLE : View.GONE);
+        if (toggle instanceof com.google.android.material.button.MaterialButton) {
+            com.google.android.material.button.MaterialButton button =
+                    (com.google.android.material.button.MaterialButton) toggle;
+            button.setText(expanded
+                    ? R.string.dashboard_briefing_collapse
+                    : R.string.dashboard_briefing_expand);
+            button.setContentDescription(getString(expanded
+                    ? R.string.dashboard_section_collapse_description
+                    : R.string.dashboard_section_expand_description));
+        }
     }
 
     /** Binds the stable Fluent header: menu, notification, then profile. */

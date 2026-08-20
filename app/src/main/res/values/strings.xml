@@ -1520,4 +1520,6 @@ Sharing: %12$s</string>
     <string name="dashboard_briefing_expand">Show more</string>
     <string name="dashboard_briefing_collapse_description">Collapse smart daily briefing</string>
     <string name="dashboard_briefing_expand_description">Expand smart daily briefing</string>
+    <string name="dashboard_section_collapse_description">Collapse dashboard section</string>
+    <string name="dashboard_section_expand_description">Expand dashboard section</string>
 </resources>
