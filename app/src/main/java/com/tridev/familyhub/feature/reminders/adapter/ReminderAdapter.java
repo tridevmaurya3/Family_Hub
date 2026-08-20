@@ -91,13 +91,23 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
 
         private String formatDetail(Reminder reminder) {
             Date date = new Date(reminder.reminderAt);
+            String smartMeta = " · " + friendly(reminder.priority)
+                    + " · " + friendly(reminder.category)
+                    + (reminder.assignedMemberName.trim().isEmpty()
+                    ? "" : " · " + reminder.assignedMemberName.trim());
             if (Reminder.REPEAT_DAILY.equals(reminder.repeatType)) {
                 return binding.getRoot().getContext().getString(
                         R.string.reminder_daily_at,
                         timeFormat.format(date)
-                );
+                ) + smartMeta;
             }
-            return dateFormat.format(date) + " · " + timeFormat.format(date);
+            return dateFormat.format(date) + " · " + timeFormat.format(date) + smartMeta;
+        }
+
+        private String friendly(String value) {
+            if (value == null || value.trim().isEmpty()) return "General";
+            String clean = value.trim().toLowerCase(Locale.getDefault());
+            return clean.substring(0, 1).toUpperCase(Locale.getDefault()) + clean.substring(1);
         }
     }
 }

@@ -29,6 +29,10 @@ public class ReminderRepository {
         void onRemindersLoaded(List<Reminder> reminders);
     }
 
+    public interface MembersCallback {
+        void onMembersLoaded(List<FamilyMember> members);
+    }
+
     public interface ActionCallback {
         void onComplete(Reminder reminder);
     }
@@ -110,6 +114,13 @@ public class ReminderRepository {
         });
     }
 
+    public void loadFamilyMembers(@NonNull MembersCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            List<FamilyMember> members = familyMemberDao.getAll();
+            mainHandler.post(() -> callback.onMembersLoaded(members));
+        });
+    }
+
     public void save(Reminder reminder, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             reminder.updatedAt = System.currentTimeMillis();
@@ -145,6 +156,8 @@ public class ReminderRepository {
         values.put("note", reminder.note);
         values.put("reminderAt", reminder.reminderAt);
         values.put("repeatType", reminder.repeatType);
+        values.put("priority", reminder.priority);
+        values.put("category", reminder.category);
         values.put("enabled", reminder.isEnabled);
         values.put("assignedMemberId", reminder.assignedMemberId == 0 ? "" : String.valueOf(reminder.assignedMemberId));
         values.put("assignedMemberName", reminder.assignedMemberName);
@@ -174,6 +187,8 @@ public class ReminderRepository {
             reminder.title=text(s,"title"); reminder.note=text(s,"note");
             reminder.reminderAt=number(s,"reminderAt");
             reminder.repeatType=fallback(text(s,"repeatType"), Reminder.REPEAT_ONCE);
+            reminder.priority=fallback(text(s,"priority"), "MEDIUM");
+            reminder.category=fallback(text(s,"category"), "GENERAL");
             reminder.isEnabled=bool(s,"enabled");
             reminder.assignedMemberName=text(s,"assignedMemberName");
             reminder.assignedMemberId=resolveLocalMemberId(

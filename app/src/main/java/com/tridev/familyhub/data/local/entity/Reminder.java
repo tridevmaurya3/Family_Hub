@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.Index;
 import androidx.room.PrimaryKey;
+import androidx.room.ColumnInfo;
 
 /** A local reminder with an optional daily repeat schedule. */
 @Entity(tableName = "reminders", indices = {@Index(value = {"reminderAt"}),
@@ -27,6 +28,14 @@ public class Reminder {
 
     @NonNull
     public String repeatType = REPEAT_ONCE;
+
+    @NonNull
+    @ColumnInfo(defaultValue = "'MEDIUM'")
+    public String priority = "MEDIUM";
+
+    @NonNull
+    @ColumnInfo(defaultValue = "'GENERAL'")
+    public String category = "GENERAL";
 
     public boolean isEnabled = true;
 

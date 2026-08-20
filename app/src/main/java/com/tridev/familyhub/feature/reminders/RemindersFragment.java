@@ -25,6 +25,7 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.reminders.ReminderScheduler;
 import com.tridev.familyhub.data.local.entity.Reminder;
+import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.repository.ReminderRepository;
 import com.tridev.familyhub.databinding.DialogReminderBinding;
 import com.tridev.familyhub.databinding.FragmentRemindersBinding;
@@ -34,6 +35,8 @@ import com.tridev.familyhub.feature.reminders.adapter.ReminderAdapter;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Create, manage, and schedule private local reminders. */
 public class RemindersFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
@@ -150,6 +153,27 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
         dialogBinding.reminderCollaborationStatusInput.setAdapter(new android.widget.ArrayAdapter<>(
                 requireContext(), R.layout.item_form_dropdown, collaborationLabels
         ));
+        String[] priorities = {"LOW", "MEDIUM", "HIGH", "URGENT"};
+        String[] categories = {"GENERAL", "FAMILY", "FINANCE", "HEALTH", "GROCERY", "VEHICLE", "DOCUMENT", "PROPERTY"};
+        dialogBinding.reminderPriorityInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, priorities));
+        dialogBinding.reminderCategoryInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, categories));
+        final List<FamilyMember> memberChoices = new ArrayList<>();
+        List<String> memberLabels = new ArrayList<>();
+        memberLabels.add("Unassigned");
+        dialogBinding.reminderAssigneeInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, memberLabels));
+        repository.loadFamilyMembers(members -> {
+            if (binding == null || !isAdded()) return;
+            memberChoices.clear();
+            memberChoices.addAll(members);
+            memberLabels.clear();
+            memberLabels.add("Unassigned");
+            for (FamilyMember member : members) memberLabels.add(member.name);
+            dialogBinding.reminderAssigneeInput.setAdapter(new android.widget.ArrayAdapter<>(
+                    requireContext(), R.layout.item_form_dropdown, memberLabels));
+        });
         boolean isNewReminder = existingReminder == null;
         Calendar selectedTime = Calendar.getInstance();
         selectedTime.add(Calendar.HOUR_OF_DAY, 1);
@@ -163,6 +187,11 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             selectedTime.setTimeInMillis(existingReminder.reminderAt);
             dialogBinding.reminderTitleInput.setText(existingReminder.title);
             dialogBinding.reminderNoteInput.setText(existingReminder.note);
+            dialogBinding.reminderPriorityInput.setText(existingReminder.priority, false);
+            dialogBinding.reminderCategoryInput.setText(existingReminder.category, false);
+            dialogBinding.reminderAssigneeInput.setText(
+                    existingReminder.assignedMemberName.isEmpty()
+                            ? "Unassigned" : existingReminder.assignedMemberName, false);
             dialogBinding.reminderRepeatGroup.check(Reminder.REPEAT_DAILY.equals(existingReminder.repeatType)
                     ? R.id.repeat_daily_button
                     : R.id.repeat_once_button);
@@ -173,6 +202,9 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             );
         } else {
             dialogBinding.reminderCollaborationStatusInput.setText(collaborationLabels[0], false);
+            dialogBinding.reminderPriorityInput.setText("MEDIUM", false);
+            dialogBinding.reminderCategoryInput.setText("GENERAL", false);
+            dialogBinding.reminderAssigneeInput.setText("Unassigned", false);
         }
         updateDateTimeInputs(dialogBinding, selectedTime);
 
@@ -202,6 +234,17 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             reminder.note = dialogBinding.reminderNoteInput.getText().toString().trim();
             reminder.reminderAt = selectedTime.getTimeInMillis();
             reminder.repeatType = isDaily ? Reminder.REPEAT_DAILY : Reminder.REPEAT_ONCE;
+            reminder.priority = dialogBinding.reminderPriorityInput.getText().toString().trim();
+            reminder.category = dialogBinding.reminderCategoryInput.getText().toString().trim();
+            String assignee = dialogBinding.reminderAssigneeInput.getText().toString().trim();
+            reminder.assignedMemberName = "Unassigned".equals(assignee) ? "" : assignee;
+            reminder.assignedMemberId = 0L;
+            for (FamilyMember member : memberChoices) {
+                if (member.name.equalsIgnoreCase(reminder.assignedMemberName)) {
+                    reminder.assignedMemberId = member.id;
+                    break;
+                }
+            }
             reminder.isEnabled = dialogBinding.reminderEnabledSwitch.isChecked();
             reminder.isShared = dialogBinding.reminderSharedSwitch.isChecked();
             reminder.collaborationStatus = dialogBinding.reminderCollaborationStatusInput

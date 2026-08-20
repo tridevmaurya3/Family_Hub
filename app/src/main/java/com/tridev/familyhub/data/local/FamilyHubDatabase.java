@@ -69,7 +69,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 31,
+        version = 32,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -361,6 +361,13 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `properties` ADD COLUMN `isShared` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_cloudId` ON `properties` (`cloudId`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_familyId` ON `properties` (`familyId`)");
+        }
+    };
+    /** Adds optional smart-form metadata without rewriting existing reminders. */
+    private static final Migration MIGRATION_31_32 = new Migration(31, 32) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `priority` TEXT NOT NULL DEFAULT 'MEDIUM'");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `category` TEXT NOT NULL DEFAULT 'GENERAL'");
         }
     };
 
@@ -880,7 +887,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_27_28,
                                     MIGRATION_28_29,
                                     MIGRATION_29_30,
-                                    MIGRATION_30_31
+                                    MIGRATION_30_31,
+                                    MIGRATION_31_32
                             )
                             .build();
                 }
