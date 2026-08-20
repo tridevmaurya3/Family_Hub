@@ -27,6 +27,8 @@ public class GroceryItem {
 
     public static final String LIST_DAILY = "DAILY";
     public static final String LIST_MONTHLY = "MONTHLY";
+    public static final String LIST_TWO_MONTH = "TWO_MONTH";
+    public static final String LIST_THREE_MONTH = "THREE_MONTH";
 
     public static final String PRIORITY_NORMAL = "NORMAL";
     public static final String PRIORITY_HIGH = "HIGH";
@@ -73,6 +75,10 @@ public class GroceryItem {
 
     @ColumnInfo(defaultValue = "0") public boolean isMonthlyMaster;
 
+    /**
+     * Month key (yyyy-MM) of the latest automatically-created Daily occurrence.
+     * The existing column is reused so older databases need no schema migration.
+     */
     @NonNull
     @ColumnInfo(defaultValue = "''") public String lastResetMonth = "";
 
@@ -83,7 +89,7 @@ public class GroceryItem {
     @NonNull
     public String notes = "";
 
-    /** Daily essentials or the recurring monthly household list. */
+    /** Daily item or its recurring planning cycle. */
     @NonNull
     public String listType = LIST_DAILY;
 
