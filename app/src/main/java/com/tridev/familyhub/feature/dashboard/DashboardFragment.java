@@ -559,19 +559,52 @@ public class DashboardFragment extends Fragment {
                 + stats.getVehiclesDueSoon();
         int pending = stats.getPlannerOpen() + stats.getGroceryPending();
         int upcoming = stats.getUpcomingReminders();
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour < 12) {
+            binding.dashboardBriefingEyebrow.setText(
+                    R.string.dashboard_briefing_morning);
+        } else if (hour < 17) {
+            binding.dashboardBriefingEyebrow.setText(
+                    R.string.dashboard_briefing_afternoon);
+        } else {
+            binding.dashboardBriefingEyebrow.setText(
+                    R.string.dashboard_briefing_evening);
+        }
+
+        View.OnClickListener primaryAction;
 
         if (attention > 0) {
             binding.dashboardBriefingHeadline.setText(getString(
                     R.string.dashboard_briefing_attention_headline, attention));
+            binding.dashboardBriefingGuidance.setText(
+                    R.string.dashboard_briefing_guidance_attention);
+            binding.dashboardBriefingAction.setText(
+                    R.string.dashboard_briefing_action_attention);
+            primaryAction = v -> openUrgentPriority(stats);
         } else if (upcoming > 0) {
             binding.dashboardBriefingHeadline.setText(getString(
                     R.string.dashboard_briefing_reminder_headline, upcoming));
+            binding.dashboardBriefingGuidance.setText(
+                    R.string.dashboard_briefing_guidance_reminder);
+            binding.dashboardBriefingAction.setText(
+                    R.string.dashboard_briefing_action_reminder);
+            primaryAction = v -> openTab(R.id.nav_reminders);
         } else if (pending > 0) {
             binding.dashboardBriefingHeadline.setText(getString(
                     R.string.dashboard_briefing_pending_headline, pending));
+            binding.dashboardBriefingGuidance.setText(
+                    R.string.dashboard_briefing_guidance_pending);
+            binding.dashboardBriefingAction.setText(
+                    R.string.dashboard_briefing_action_pending);
+            primaryAction = v -> openPendingPriority(stats);
         } else {
             binding.dashboardBriefingHeadline.setText(
                     R.string.dashboard_briefing_clear_headline);
+            binding.dashboardBriefingGuidance.setText(
+                    R.string.dashboard_briefing_guidance_clear);
+            binding.dashboardBriefingAction.setText(
+                    R.string.dashboard_briefing_action_overview);
+            primaryAction = null;
         }
 
         if (data.hasUpcomingReminder() && data.getNextReminder() != null) {
@@ -590,6 +623,9 @@ public class DashboardFragment extends Fragment {
                 R.string.dashboard_briefing_snapshot,
                 pending, upcoming, attention,
                 currencyFormatter.format(data.getBalance())));
+        binding.dashboardBriefingAction.setOnClickListener(primaryAction);
+        binding.dashboardBriefingAction.setEnabled(primaryAction != null);
+        binding.dashboardDailyBriefingCard.setOnClickListener(primaryAction);
     }
 
     private void renderPrioritySummary(@NonNull DashboardData data) {

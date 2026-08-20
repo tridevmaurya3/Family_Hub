@@ -1505,4 +1505,15 @@ Sharing: %12$s</string>
     <string name="dashboard_briefing_next_reminder">Next: %1$s • %2$s at %3$s</string>
     <string name="dashboard_briefing_no_reminder">No upcoming reminder. You can plan the day without a deadline.</string>
     <string name="dashboard_briefing_snapshot">Pending %1$d • Reminders %2$d • Attention %3$d • Balance %4$s</string>
+    <string name="dashboard_briefing_morning">Morning briefing</string>
+    <string name="dashboard_briefing_afternoon">Day briefing</string>
+    <string name="dashboard_briefing_evening">Evening briefing</string>
+    <string name="dashboard_briefing_guidance_attention">Priority suggestion: review time-sensitive documents or vehicle items first.</string>
+    <string name="dashboard_briefing_guidance_reminder">Priority suggestion: check the next reminder and prepare before its due time.</string>
+    <string name="dashboard_briefing_guidance_pending">Priority suggestion: finish one planner or grocery item to reduce today’s load.</string>
+    <string name="dashboard_briefing_guidance_clear">No urgent action is pending. Review the family overview whenever needed.</string>
+    <string name="dashboard_briefing_action_attention">Review attention items</string>
+    <string name="dashboard_briefing_action_reminder">Open reminders</string>
+    <string name="dashboard_briefing_action_pending">Open pending tasks</string>
+    <string name="dashboard_briefing_action_overview">Overview ready</string>
 </resources>
