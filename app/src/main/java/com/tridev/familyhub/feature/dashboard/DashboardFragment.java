@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.dashboard;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -59,6 +60,9 @@ import java.util.Locale;
 /** Main Family Hub dashboard with organized unique feature shortcuts. */
 public class DashboardFragment extends Fragment {
 
+    private static final String DASHBOARD_PREFERENCES = "dashboard_preferences";
+    private static final String KEY_BRIEFING_EXPANDED = "briefing_expanded";
+
     private FragmentDashboardBinding binding;
     private DashboardRepository dashboardRepository;
 
@@ -109,8 +113,34 @@ public class DashboardFragment extends Fragment {
         setupActionCards();
         setupNotificationAction();
         setupDashboardHighlights();
+        setupDailyBriefingPreference();
         renderHeader();
         loadDashboardData();
+    }
+
+    private void setupDailyBriefingPreference() {
+        SharedPreferences preferences = requireContext().getSharedPreferences(
+                DASHBOARD_PREFERENCES, android.content.Context.MODE_PRIVATE);
+        boolean expanded = preferences.getBoolean(KEY_BRIEFING_EXPANDED, true);
+        applyDailyBriefingExpanded(expanded);
+        binding.dashboardBriefingToggle.setOnClickListener(v -> {
+            boolean shouldExpand = binding.dashboardBriefingContent
+                    .getVisibility() != View.VISIBLE;
+            applyDailyBriefingExpanded(shouldExpand);
+            preferences.edit().putBoolean(
+                    KEY_BRIEFING_EXPANDED, shouldExpand).apply();
+        });
+    }
+
+    private void applyDailyBriefingExpanded(boolean expanded) {
+        binding.dashboardBriefingContent.setVisibility(
+                expanded ? View.VISIBLE : View.GONE);
+        binding.dashboardBriefingToggle.setText(expanded
+                ? R.string.dashboard_briefing_collapse
+                : R.string.dashboard_briefing_expand);
+        binding.dashboardBriefingToggle.setContentDescription(getString(expanded
+                ? R.string.dashboard_briefing_collapse_description
+                : R.string.dashboard_briefing_expand_description));
     }
 
     /** Binds the stable Fluent header: menu, notification, then profile. */

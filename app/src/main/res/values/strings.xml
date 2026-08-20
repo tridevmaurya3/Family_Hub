@@ -1516,4 +1516,8 @@ Sharing: %12$s</string>
     <string name="dashboard_briefing_action_reminder">Open reminders</string>
     <string name="dashboard_briefing_action_pending">Open pending tasks</string>
     <string name="dashboard_briefing_action_overview">Overview ready</string>
+    <string name="dashboard_briefing_collapse">Show less</string>
+    <string name="dashboard_briefing_expand">Show more</string>
+    <string name="dashboard_briefing_collapse_description">Collapse smart daily briefing</string>
+    <string name="dashboard_briefing_expand_description">Expand smart daily briefing</string>
 </resources>
