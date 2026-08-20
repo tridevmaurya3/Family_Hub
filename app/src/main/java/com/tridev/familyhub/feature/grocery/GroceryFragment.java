@@ -4,9 +4,11 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.speech.RecognizerIntent;
 import android.net.Uri;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +28,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.transition.TransitionManager;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.gms.location.LocationServices;
@@ -60,15 +63,22 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             GroceryItem.PRIORITY_URGENT
     };
 
+    private static final int MENU_CYCLE_DAILY = 21_001;
+    private static final int MENU_CYCLE_MONTHLY = 21_002;
+    private static final int MENU_CYCLE_TWO_MONTH = 21_003;
+    private static final int MENU_CYCLE_THREE_MONTH = 21_004;
+
     private FragmentGroceryBinding binding;
     private GroceryRepository repository;
     private FamilyMemberRepository memberRepository;
     private GroceryAdapter adapter;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
-    private int activeListFilterId = R.id.filter_daily;
+    @NonNull private String activeCycleFilter = GroceryItem.LIST_DAILY;
     private int activeStatusFilterId = R.id.filter_pending;
     @NonNull private String activeCategoryFilter = "";
     @Nullable private com.google.android.material.chip.Chip groceryCategoryToggleChip;
+    @Nullable private MaterialButton groceryCycleDropdown;
+    @Nullable private MaterialButton groceryStatusDropdown;
     @Nullable private android.widget.EditText activeDialogVoiceInput;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -250,15 +260,18 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryFilterGroup.setSingleSelection(false);
         binding.groceryFilterGroup.clearCheck();
         binding.filterAll.setVisibility(View.GONE);
-        ensureGroceryGroupingChip();
+        binding.filterDaily.setVisibility(View.GONE);
+        binding.filterMonthly.setVisibility(View.GONE);
+        binding.filterPending.setVisibility(View.GONE);
+        binding.filterPurchased.setVisibility(View.GONE);
 
         binding.filterDaily.setOnClickListener(v -> {
-            activeListFilterId = R.id.filter_daily;
+            activeCycleFilter = GroceryItem.LIST_DAILY;
             syncPrimaryFilterChips();
             loadItems(currentQuery());
         });
         binding.filterMonthly.setOnClickListener(v -> {
-            activeListFilterId = R.id.filter_monthly;
+            activeCycleFilter = GroceryItem.LIST_MONTHLY;
             syncPrimaryFilterChips();
             loadItems(currentQuery());
         });
@@ -272,7 +285,110 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             syncPrimaryFilterChips();
             loadItems(currentQuery());
         });
+
+        ensurePrimaryFilterDropdowns();
+        ensureGroceryGroupingChip();
         syncPrimaryFilterChips();
+    }
+
+    private void ensurePrimaryFilterDropdowns() {
+        if (binding == null || groceryCycleDropdown != null || groceryStatusDropdown != null) {
+            return;
+        }
+        groceryCycleDropdown = createFilterDropdown(
+                getString(R.string.grocery_filter_daily),
+                R.color.fh_success_container,
+                R.color.fh_success,
+                R.color.fh_on_success_container,
+                154
+        );
+        groceryStatusDropdown = createFilterDropdown(
+                getString(R.string.grocery_filter_pending),
+                R.color.fh_warning_container,
+                R.color.fh_warning,
+                R.color.fh_on_warning_container,
+                138
+        );
+        groceryCycleDropdown.setOnClickListener(this::showCycleDropdown);
+        groceryStatusDropdown.setOnClickListener(this::showStatusDropdown);
+
+        ViewGroup.MarginLayoutParams cycleParams = new ViewGroup.MarginLayoutParams(
+                dp(154), dp(40));
+        cycleParams.setMarginEnd(dp(8));
+        binding.groceryFilterGroup.addView(groceryCycleDropdown, 0, cycleParams);
+
+        ViewGroup.MarginLayoutParams statusParams = new ViewGroup.MarginLayoutParams(
+                dp(138), dp(40));
+        statusParams.setMarginEnd(dp(8));
+        binding.groceryFilterGroup.addView(groceryStatusDropdown, 1, statusParams);
+    }
+
+    @NonNull
+    private MaterialButton createFilterDropdown(
+            @NonNull String label,
+            int backgroundColor,
+            int strokeColor,
+            int textColor,
+            int widthDp
+    ) {
+        MaterialButton button = new MaterialButton(requireContext());
+        button.setAllCaps(false);
+        button.setText(label + "  ▾");
+        button.setTextSize(12f);
+        button.setSingleLine(true);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(dp(14), 0, dp(12), 0);
+        button.setCornerRadius(dp(16));
+        button.setStrokeWidth(dp(1));
+        button.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(
+                requireContext(), strokeColor)));
+        button.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(
+                requireContext(), backgroundColor)));
+        button.setTextColor(ContextCompat.getColor(requireContext(), textColor));
+        button.setElevation(dp(1));
+        button.setContentDescription(label);
+        button.setLayoutParams(new ViewGroup.MarginLayoutParams(dp(widthDp), dp(40)));
+        return button;
+    }
+
+    private void showCycleDropdown(@NonNull View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.getMenu().setGroupCheckable(1, true, true);
+        popup.getMenu().add(1, MENU_CYCLE_DAILY, 0, R.string.grocery_filter_daily);
+        popup.getMenu().add(1, MENU_CYCLE_MONTHLY, 1, R.string.grocery_filter_monthly);
+        popup.getMenu().add(1, MENU_CYCLE_TWO_MONTH, 2, "2 Month");
+        popup.getMenu().add(1, MENU_CYCLE_THREE_MONTH, 3, "3 Month");
+        android.view.MenuItem current = popup.getMenu().findItem(
+                menuIdForCycle(activeCycleFilter));
+        if (current != null) current.setChecked(true);
+        popup.setOnMenuItemClickListener(item -> {
+            activeCycleFilter = cycleFromMenuId(item.getItemId());
+            item.setChecked(true);
+            syncPrimaryFilterChips();
+            loadItems(currentQuery());
+            return true;
+        });
+        popup.show();
+    }
+
+    private void showStatusDropdown(@NonNull View anchor) {
+        PopupMenu popup = new PopupMenu(requireContext(), anchor);
+        popup.getMenu().setGroupCheckable(1, true, true);
+        popup.getMenu().add(1, R.id.filter_pending, 0, R.string.grocery_filter_pending);
+        popup.getMenu().add(1, R.id.filter_purchased, 1, R.string.grocery_filter_purchased);
+        android.view.MenuItem current = popup.getMenu().findItem(activeStatusFilterId);
+        if (current != null) current.setChecked(true);
+        popup.setOnMenuItemClickListener(item -> {
+            activeStatusFilterId = item.getItemId() == R.id.filter_purchased
+                    ? R.id.filter_purchased : R.id.filter_pending;
+            item.setChecked(true);
+            syncPrimaryFilterChips();
+            loadItems(currentQuery());
+            return true;
+        });
+        popup.show();
     }
 
     private void ensureGroceryGroupingChip() {
@@ -300,40 +416,55 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     private void syncPrimaryFilterChips() {
         if (binding == null) return;
-        binding.filterDaily.setChecked(activeListFilterId == R.id.filter_daily);
-        binding.filterMonthly.setChecked(activeListFilterId == R.id.filter_monthly);
+        binding.filterDaily.setChecked(GroceryItem.LIST_DAILY.equals(activeCycleFilter));
+        binding.filterMonthly.setChecked(GroceryItem.LIST_MONTHLY.equals(activeCycleFilter));
         binding.filterPending.setChecked(activeStatusFilterId == R.id.filter_pending);
         binding.filterPurchased.setChecked(activeStatusFilterId == R.id.filter_purchased);
+        if (groceryCycleDropdown != null) {
+            String label = cycleLabel(activeCycleFilter);
+            groceryCycleDropdown.setText(label + "  ▾");
+            groceryCycleDropdown.setContentDescription(label);
+        }
+        if (groceryStatusDropdown != null) {
+            String label = getString(activeStatusFilterId == R.id.filter_purchased
+                    ? R.string.grocery_filter_purchased
+                    : R.string.grocery_filter_pending);
+            groceryStatusDropdown.setText(label + "  ▾");
+            groceryStatusDropdown.setContentDescription(label);
+        }
     }
 
     private void showFilterMenu(@NonNull View anchor) {
         PopupMenu popup = new PopupMenu(requireContext(), anchor);
         popup.getMenu().setGroupCheckable(1, true, true);
-        popup.getMenu().add(1, R.id.filter_daily, 0, R.string.grocery_filter_daily);
-        popup.getMenu().add(1, R.id.filter_monthly, 1, R.string.grocery_filter_monthly);
+        popup.getMenu().add(1, MENU_CYCLE_DAILY, 0, R.string.grocery_filter_daily);
+        popup.getMenu().add(1, MENU_CYCLE_MONTHLY, 1, R.string.grocery_filter_monthly);
+        popup.getMenu().add(1, MENU_CYCLE_TWO_MONTH, 2, "2 Month");
+        popup.getMenu().add(1, MENU_CYCLE_THREE_MONTH, 3, "3 Month");
         popup.getMenu().setGroupCheckable(3, true, true);
-        popup.getMenu().add(3, R.id.filter_pending, 2, R.string.grocery_filter_pending);
-        popup.getMenu().add(3, R.id.filter_purchased, 3, R.string.grocery_filter_purchased);
-        popup.getMenu().add(0, View.generateViewId(), 4,
+        popup.getMenu().add(3, R.id.filter_pending, 4, R.string.grocery_filter_pending);
+        popup.getMenu().add(3, R.id.filter_purchased, 5, R.string.grocery_filter_purchased);
+        popup.getMenu().add(0, View.generateViewId(), 6,
                 R.string.grocery_filter_category_heading).setEnabled(false);
         popup.getMenu().setGroupCheckable(2, true, true);
         android.view.MenuItem allCategories = popup.getMenu().add(
-                2, 10_000, 5, R.string.grocery_filter_all_categories);
+                2, 10_000, 7, R.string.grocery_filter_all_categories);
         allCategories.setChecked(activeCategoryFilter.isEmpty());
         String[] categories = GroceryOptionCatalog.categoryLabels(requireContext());
         for (int index = 1; index < categories.length; index++) {
             android.view.MenuItem categoryItem = popup.getMenu().add(
-                    2, 10_000 + index, 5 + index, categories[index]);
+                    2, 10_000 + index, 7 + index, categories[index]);
             categoryItem.setChecked(categories[index]
                     .equalsIgnoreCase(activeCategoryFilter));
         }
-        android.view.MenuItem selectedList = popup.getMenu().findItem(activeListFilterId);
+        android.view.MenuItem selectedList = popup.getMenu().findItem(
+                menuIdForCycle(activeCycleFilter));
         if (selectedList != null) selectedList.setChecked(true);
         android.view.MenuItem selectedStatus = popup.getMenu().findItem(activeStatusFilterId);
         if (selectedStatus != null) selectedStatus.setChecked(true);
         popup.setOnMenuItemClickListener(item -> {
             if (item.getGroupId() == 1) {
-                activeListFilterId = item.getItemId();
+                activeCycleFilter = cycleFromMenuId(item.getItemId());
             } else if (item.getGroupId() == 3) {
                 activeStatusFilterId = item.getItemId();
             } else if (item.getGroupId() == 2) {
@@ -347,6 +478,44 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             return true;
         });
         popup.show();
+    }
+
+    @NonNull
+    private String cycleFromMenuId(int menuId) {
+        if (menuId == MENU_CYCLE_THREE_MONTH) return GroceryItem.LIST_THREE_MONTH;
+        if (menuId == MENU_CYCLE_TWO_MONTH) return GroceryItem.LIST_TWO_MONTH;
+        if (menuId == MENU_CYCLE_MONTHLY) return GroceryItem.LIST_MONTHLY;
+        return GroceryItem.LIST_DAILY;
+    }
+
+    private int menuIdForCycle(@Nullable String cycle) {
+        String normalized = GroceryRecurrenceEngine.normalizeCycle(cycle);
+        if (GroceryItem.LIST_THREE_MONTH.equals(normalized)) return MENU_CYCLE_THREE_MONTH;
+        if (GroceryItem.LIST_TWO_MONTH.equals(normalized)) return MENU_CYCLE_TWO_MONTH;
+        if (GroceryItem.LIST_MONTHLY.equals(normalized)) return MENU_CYCLE_MONTHLY;
+        return MENU_CYCLE_DAILY;
+    }
+
+    @NonNull
+    private String cycleLabel(@Nullable String cycle) {
+        String normalized = GroceryRecurrenceEngine.normalizeCycle(cycle);
+        if (GroceryItem.LIST_THREE_MONTH.equals(normalized)) return "3 Month";
+        if (GroceryItem.LIST_TWO_MONTH.equals(normalized)) return "2 Month";
+        if (GroceryItem.LIST_MONTHLY.equals(normalized)) {
+            return getString(R.string.grocery_filter_monthly);
+        }
+        return getString(R.string.grocery_filter_daily);
+    }
+
+    @NonNull
+    private String listTypeFromLabel(@NonNull String label) {
+        if ("3 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_THREE_MONTH;
+        if ("2 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_TWO_MONTH;
+        if (getString(R.string.grocery_filter_monthly).equalsIgnoreCase(label)
+                || "Monthly".equalsIgnoreCase(label)) {
+            return GroceryItem.LIST_MONTHLY;
+        }
+        return GroceryItem.LIST_DAILY;
     }
 
     private void showExportMenu(@NonNull View anchor) {
@@ -494,9 +663,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 R.array.grocery_priority_labels
         );
         String[] categoryLabels = GroceryOptionCatalog.categoryLabels(requireContext());
-        String[] listTypeLabels = getResources().getStringArray(
-                R.array.grocery_list_type_labels
-        );
+        String[] listTypeLabels = new String[]{
+                getString(R.string.grocery_filter_daily),
+                getString(R.string.grocery_filter_monthly),
+                "2 Month",
+                "3 Month"
+        };
         String[] quantityUnits = getResources().getStringArray(
                 R.array.grocery_quantity_units
         );
@@ -573,11 +745,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             form.groceryStoreInput.setText(item.storeName);
             form.groceryAutoPriceSwitch.setChecked(item.autoPriceEnabled);
             form.groceryMonthlyMasterSwitch.setChecked(item.isMonthlyMaster);
-            form.groceryListTypeInput.setText(
-                    GroceryItem.LIST_MONTHLY.equals(item.listType)
-                            ? listTypeLabels[1] : listTypeLabels[0],
-                    false
-            );
+            form.groceryListTypeInput.setText(cycleLabel(item.listType), false);
             form.groceryAssigneeInput.setText(
                     item.assignedMemberName.isEmpty()
                             ? assigneeLabels.get(0)
@@ -646,10 +814,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             item.actualCost = parseAmount(textOf(form.groceryActualCostInput));
             item.storeName = textOf(form.groceryStoreInput);
             item.autoPriceEnabled = form.groceryAutoPriceSwitch.isChecked();
-            item.listType = listTypeLabels[1].equalsIgnoreCase(
-                    textOf(form.groceryListTypeInput)
-            ) ? GroceryItem.LIST_MONTHLY : GroceryItem.LIST_DAILY;
-            item.isMonthlyMaster = GroceryItem.LIST_MONTHLY.equals(item.listType)
+            item.listType = listTypeFromLabel(textOf(form.groceryListTypeInput));
+            item.isMonthlyMaster = GroceryRecurrenceEngine.isRecurringType(item.listType)
                     && form.groceryMonthlyMasterSwitch.isChecked();
             int assigneeIndex = assigneeLabels.indexOf(
                     textOf(form.groceryAssigneeInput)
@@ -952,10 +1118,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     @NonNull
     private List<GroceryItem> applyFilter(@NonNull List<GroceryItem> items) {
         List<GroceryItem> filtered = new ArrayList<>();
+        long now = System.currentTimeMillis();
         for (GroceryItem item : items) {
-            boolean listMatches = activeListFilterId == R.id.filter_monthly
-                    ? GroceryItem.LIST_MONTHLY.equals(item.listType)
-                    : GroceryItem.LIST_DAILY.equals(item.listType);
+            boolean listMatches = GroceryRecurrenceEngine.matchesCycle(
+                    item, activeCycleFilter, now);
             boolean statusMatches = activeStatusFilterId == R.id.filter_purchased
                     ? item.isPurchased
                     : !item.isPurchased;
@@ -1040,14 +1206,23 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     private void addFromVoice(@NonNull String spoken) {
         String normalized = spoken.trim();
+        String lower = normalized.toLowerCase(Locale.ROOT);
         GroceryItem item = new GroceryItem();
-        item.listType = normalized.toLowerCase(Locale.ROOT).contains("monthly")
-                || normalized.contains("मंथली")
-                || normalized.contains("मासिक")
-                ? GroceryItem.LIST_MONTHLY : GroceryItem.LIST_DAILY;
-        item.isMonthlyMaster = GroceryItem.LIST_MONTHLY.equals(item.listType);
+        if (lower.contains("3 month") || lower.contains("three month")
+                || normalized.contains("3 मंथ") || normalized.contains("3 महीने")) {
+            item.listType = GroceryItem.LIST_THREE_MONTH;
+        } else if (lower.contains("2 month") || lower.contains("two month")
+                || normalized.contains("2 मंथ") || normalized.contains("2 महीने")) {
+            item.listType = GroceryItem.LIST_TWO_MONTH;
+        } else if (lower.contains("monthly") || normalized.contains("मंथली")
+                || normalized.contains("मासिक")) {
+            item.listType = GroceryItem.LIST_MONTHLY;
+        } else {
+            item.listType = GroceryItem.LIST_DAILY;
+        }
+        item.isMonthlyMaster = GroceryRecurrenceEngine.isRecurringType(item.listType);
         normalized = normalized.replaceAll(
-                "(?i)monthly|daily|list|add|item|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
+                "(?i)three\\s*month|two\\s*month|3\\s*month|2\\s*month|monthly|daily|list|add|item|3\\s*मंथ|2\\s*मंथ|3\\s*महीने|2\\s*महीने|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
                 " ").replaceAll("\\s+", " ").trim();
         item.name = normalized.isEmpty() ? spoken.trim() : normalized;
         estimateAndSave(item, () -> {
@@ -1083,6 +1258,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         suggested.estimatedCost = source.actualCost > 0D
                                 ? source.actualCost : source.estimatedCost;
                         suggested.listType = source.listType;
+                        suggested.isMonthlyMaster = GroceryRecurrenceEngine
+                                .isRecurringType(source.listType);
                         repository.save(suggested,
                                 () -> loadItems(currentQuery()));
                     }).show();
@@ -1163,10 +1340,17 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 : input.getText().toString().trim();
     }
 
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
     @Override
     public void onDestroyView() {
         repository.stopRealtimeSync();
         binding.groceryRecyclerView.setAdapter(null);
+        groceryCategoryToggleChip = null;
+        groceryCycleDropdown = null;
+        groceryStatusDropdown = null;
         binding = null;
         super.onDestroyView();
     }
