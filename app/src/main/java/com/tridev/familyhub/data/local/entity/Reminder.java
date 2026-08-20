@@ -43,6 +43,12 @@ public class Reminder {
     @ColumnInfo(defaultValue = "0")
     public int preAlertMinutes;
 
+    @ColumnInfo(defaultValue = "0") public long seenAt;
+    @ColumnInfo(defaultValue = "0") public long acceptedAt;
+    @ColumnInfo(defaultValue = "0") public long startedAt;
+    @ColumnInfo(defaultValue = "0") public long completedAt;
+    @NonNull @ColumnInfo(defaultValue = "''") public String completedByName = "";
+
     public boolean isEnabled = true;
 
     public long createdAt;

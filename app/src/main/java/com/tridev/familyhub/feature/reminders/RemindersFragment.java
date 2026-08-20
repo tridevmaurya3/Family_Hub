@@ -79,6 +79,21 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             public void onEnabledChanged(Reminder reminder, boolean isEnabled) {
                 updateEnabledState(reminder, isEnabled);
             }
+
+            @Override
+            public void onStatusChanged(Reminder reminder) {
+                showStatusSelector(reminder);
+            }
+
+            @Override
+            public void onSeen(Reminder reminder) {
+                if (reminder.seenAt > 0L) return;
+                reminder.seenAt = System.currentTimeMillis();
+                repository.save(reminder, saved -> {
+                    if (binding != null) loadReminders(
+                            binding.reminderSearchInput.getText().toString());
+                });
+            }
         });
 
         binding.reminderRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -263,6 +278,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             reminder.isShared = dialogBinding.reminderSharedSwitch.isChecked();
             reminder.collaborationStatus = dialogBinding.reminderCollaborationStatusInput
                     .getText().toString().trim();
+            stampCollaborationStatus(reminder, reminder.collaborationStatus);
 
             repository.save(reminder, savedReminder -> {
                 if (binding == null) {
@@ -371,6 +387,52 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                 ).show();
             }
         });
+    }
+
+    private void showStatusSelector(@NonNull Reminder reminder) {
+        String[] statuses = getResources().getStringArray(R.array.collaboration_status_labels);
+        int selected = 0;
+        for (int i = 0; i < statuses.length; i++) {
+            if (statuses[i].equalsIgnoreCase(reminder.collaborationStatus)) selected = i;
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Update reminder status")
+                .setSingleChoiceItems(statuses, selected, (dialog, which) -> {
+                    applyCollaborationStatus(reminder, statuses[which]);
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void applyCollaborationStatus(@NonNull Reminder reminder,
+                                          @NonNull String status) {
+        reminder.collaborationStatus = status;
+        stampCollaborationStatus(reminder, status);
+        repository.save(reminder, saved -> {
+            if (binding == null) return;
+            loadReminders(binding.reminderSearchInput.getText().toString());
+            Snackbar.make(binding.getRoot(), "Reminder status updated",
+                    Snackbar.LENGTH_SHORT).show();
+        });
+    }
+
+    private void stampCollaborationStatus(@NonNull Reminder reminder,
+                                          @NonNull String status) {
+        long now = System.currentTimeMillis();
+        if (reminder.seenAt == 0L) reminder.seenAt = now;
+        if ("ACCEPTED".equals(status) && reminder.acceptedAt == 0L) {
+            reminder.acceptedAt = now;
+        } else if ("IN_PROGRESS".equals(status)) {
+            if (reminder.acceptedAt == 0L) reminder.acceptedAt = now;
+            if (reminder.startedAt == 0L) reminder.startedAt = now;
+        } else if ("COMPLETED".equals(status)) {
+            if (reminder.acceptedAt == 0L) reminder.acceptedAt = now;
+            if (reminder.startedAt == 0L) reminder.startedAt = now;
+            reminder.completedAt = now;
+            reminder.completedByName = reminder.assignedMemberName.trim().isEmpty()
+                    ? "Family member" : reminder.assignedMemberName.trim();
+        }
     }
 
     private void confirmDelete(Reminder reminder) {

@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.text.DateFormat;
 
 /** RecyclerView adapter for locally scheduled reminders. */
 public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.ReminderViewHolder> {
@@ -25,6 +26,10 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
         void onDelete(Reminder reminder);
 
         void onEnabledChanged(Reminder reminder, boolean isEnabled);
+
+        void onStatusChanged(Reminder reminder);
+
+        void onSeen(Reminder reminder);
     }
 
     private final List<Reminder> reminders = new ArrayList<>();
@@ -76,6 +81,10 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
             binding.reminderNote.setVisibility(reminder.note.trim().isEmpty()
                     ? android.view.View.GONE
                     : android.view.View.VISIBLE);
+            binding.reminderCollaborationTimeline.setText(collaborationTimeline(reminder));
+            binding.reminderStatusButton.setText(friendly(reminder.collaborationStatus) + "  ›");
+            binding.reminderStatusButton.setOnClickListener(v -> listener.onStatusChanged(reminder));
+            if (reminder.isShared && reminder.seenAt == 0L) listener.onSeen(reminder);
             binding.reminderEnabledSwitch.setOnCheckedChangeListener(null);
             binding.reminderEnabledSwitch.setChecked(reminder.isEnabled);
             binding.reminderEnabledSwitch.setOnCheckedChangeListener((buttonView, enabled) -> {
@@ -108,6 +117,26 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
             if (value == null || value.trim().isEmpty()) return "General";
             String clean = value.trim().toLowerCase(Locale.getDefault());
             return clean.substring(0, 1).toUpperCase(Locale.getDefault()) + clean.substring(1);
+        }
+
+        private String collaborationTimeline(Reminder reminder) {
+            StringBuilder text = new StringBuilder("Status • ")
+                    .append(friendly(reminder.collaborationStatus));
+            if (reminder.seenAt > 0L) text.append("  ·  Seen ").append(shortTime(reminder.seenAt));
+            if (reminder.acceptedAt > 0L) text.append("  ·  Accepted ").append(shortTime(reminder.acceptedAt));
+            if (reminder.startedAt > 0L) text.append("  ·  Started ").append(shortTime(reminder.startedAt));
+            if (reminder.completedAt > 0L) {
+                text.append("  ·  Completed ").append(shortTime(reminder.completedAt));
+                if (!reminder.completedByName.trim().isEmpty()) {
+                    text.append(" by ").append(reminder.completedByName.trim());
+                }
+            }
+            return text.toString();
+        }
+
+        private String shortTime(long value) {
+            return DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                    .format(new Date(value));
         }
     }
 }

@@ -1473,6 +1473,7 @@ Sharing: %12$s</string>
     <string name="timeline_note">Timeline note</string>
     <string-array name="collaboration_status_labels">
         <item>PENDING</item>
+        <item>ACCEPTED</item>
         <item>IN_PROGRESS</item>
         <item>COMPLETED</item>
     </string-array>
