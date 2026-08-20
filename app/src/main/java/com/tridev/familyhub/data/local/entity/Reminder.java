@@ -40,6 +40,9 @@ public class Reminder {
     @ColumnInfo(defaultValue = "'GENERAL'")
     public String category = "GENERAL";
 
+    @ColumnInfo(defaultValue = "0")
+    public int preAlertMinutes;
+
     public boolean isEnabled = true;
 
     public long createdAt;

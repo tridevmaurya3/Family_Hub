@@ -158,6 +158,7 @@ public class ReminderRepository {
         values.put("repeatType", reminder.repeatType);
         values.put("priority", reminder.priority);
         values.put("category", reminder.category);
+        values.put("preAlertMinutes", reminder.preAlertMinutes);
         values.put("enabled", reminder.isEnabled);
         values.put("assignedMemberId", reminder.assignedMemberId == 0 ? "" : String.valueOf(reminder.assignedMemberId));
         values.put("assignedMemberName", reminder.assignedMemberName);
@@ -189,6 +190,7 @@ public class ReminderRepository {
             reminder.repeatType=fallback(text(s,"repeatType"), Reminder.REPEAT_ONCE);
             reminder.priority=fallback(text(s,"priority"), "MEDIUM");
             reminder.category=fallback(text(s,"category"), "GENERAL");
+            reminder.preAlertMinutes=(int) number(s,"preAlertMinutes");
             reminder.isEnabled=bool(s,"enabled");
             reminder.assignedMemberName=text(s,"assignedMemberName");
             reminder.assignedMemberId=resolveLocalMemberId(

@@ -29,7 +29,10 @@ public class ReminderReceiver extends BroadcastReceiver {
     public static final String EXTRA_REPEAT_TYPE = "repeat_type";
     public static final String EXTRA_SNOOZE_MINUTES = "snooze_minutes";
     public static final String EXTRA_SNOOZE_DELIVERY = "snooze_delivery";
+    public static final String EXTRA_PRIORITY = "priority";
+    public static final String EXTRA_PRE_ALERT = "pre_alert";
     private static final String CHANNEL_ID = "family_hub_reminders";
+    private static final String URGENT_CHANNEL_ID = "family_hub_urgent_reminders";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -50,8 +53,11 @@ public class ReminderReceiver extends BroadcastReceiver {
         String title = intent.getStringExtra(EXTRA_TITLE);
         String note = intent.getStringExtra(EXTRA_NOTE);
         String repeatType = intent.getStringExtra(EXTRA_REPEAT_TYPE);
+        String priority = intent.getStringExtra(EXTRA_PRIORITY);
+        boolean preAlert = intent.getBooleanExtra(EXTRA_PRE_ALERT, false);
 
-        showNotification(context, reminderId, title, note, repeatType);
+        showNotification(context, reminderId, title, note, repeatType, priority, preAlert);
+        if (preAlert) return;
         if (intent.getBooleanExtra(EXTRA_SNOOZE_DELIVERY, false)) return;
         if (!Reminder.REPEAT_ONCE.equals(repeatType)) {
             PendingResult pendingResult = goAsync();
@@ -63,14 +69,15 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     private void showNotification(Context context, long reminderId, String title, String note,
-                                  String repeatType) {
+                                  String repeatType, String priority, boolean preAlert) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
             return;
         }
 
-        createNotificationChannel(context);
+        boolean urgent = "URGENT".equalsIgnoreCase(priority);
+        createNotificationChannels(context);
         Intent openAppIntent = new Intent(context, MainActivity.class)
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent contentIntent = PendingIntent.getActivity(
@@ -79,15 +86,18 @@ public class ReminderReceiver extends BroadcastReceiver {
                 openAppIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context,
+                urgent ? URGENT_CHANNEL_ID : CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_reminder)
-                .setContentTitle(title == null || title.trim().isEmpty()
+                .setContentTitle((preAlert ? "Upcoming • " : "") + (title == null || title.trim().isEmpty()
                         ? context.getString(R.string.reminder_notification_fallback_title)
-                        : title)
+                        : title))
                 .setContentText(note == null || note.trim().isEmpty()
                         ? context.getString(R.string.reminder_notification_fallback_note)
                         : note)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(urgent ? NotificationCompat.PRIORITY_MAX : NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setOnlyAlertOnce(preAlert)
                 .setAutoCancel(true)
                 .setContentIntent(contentIntent)
                 .addAction(0, "Snooze 10 min", snoozeIntent(context, reminderId,
@@ -111,7 +121,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    private void createNotificationChannel(Context context) {
+    private void createNotificationChannels(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return;
         }
@@ -124,6 +134,12 @@ public class ReminderReceiver extends BroadcastReceiver {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         if (manager != null) {
             manager.createNotificationChannel(channel);
+            NotificationChannel urgent = new NotificationChannel(
+                    URGENT_CHANNEL_ID, "Urgent family reminders",
+                    NotificationManager.IMPORTANCE_HIGH);
+            urgent.setDescription("High-priority reminders that need immediate attention");
+            urgent.enableVibration(true);
+            manager.createNotificationChannel(urgent);
         }
     }
 }

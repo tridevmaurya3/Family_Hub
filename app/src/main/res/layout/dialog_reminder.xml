@@ -228,6 +228,20 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.Form.Dropdown"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/form_field_spacing"
+            android:hint="Notify me before"
+            app:endIconMode="dropdown_menu">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/reminder_pre_alert_input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Card.Subtle"
             android:layout_width="match_parent"

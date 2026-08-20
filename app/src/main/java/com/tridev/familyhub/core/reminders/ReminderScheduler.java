@@ -33,7 +33,13 @@ public final class ReminderScheduler {
             cancel(context, reminder.id);
             return;
         }
-        scheduleAlarm(context, reminder.id, reminder.title, reminder.note, reminder.repeatType, triggerAt);
+        scheduleAlarm(context, reminder.id, reminder.title, reminder.note, reminder.repeatType,
+                reminder.priority, triggerAt, false);
+        long preAlertAt = triggerAt - reminder.preAlertMinutes * 60_000L;
+        if (reminder.preAlertMinutes > 0 && preAlertAt > System.currentTimeMillis()) {
+            scheduleAlarm(context, reminder.id, reminder.title, reminder.note, reminder.repeatType,
+                    reminder.priority, preAlertAt, true);
+        }
     }
 
     public static void cancel(Context context, long reminderId) {
@@ -41,9 +47,14 @@ public final class ReminderScheduler {
         if (alarmManager == null) {
             return;
         }
-        PendingIntent pendingIntent = reminderPendingIntent(context, reminderId, null, null, null);
+        PendingIntent pendingIntent = reminderPendingIntent(context, reminderId,
+                null, null, null, null, false);
         alarmManager.cancel(pendingIntent);
         pendingIntent.cancel();
+        PendingIntent preAlert = reminderPendingIntent(context, reminderId,
+                null, null, null, null, true);
+        alarmManager.cancel(preAlert);
+        preAlert.cancel();
     }
 
     public static void rescheduleRepeatingIfEnabled(Context context, long reminderId, Runnable onComplete) {
@@ -134,12 +145,14 @@ public final class ReminderScheduler {
     }
 
     private static void scheduleAlarm(Context context, long reminderId, String title, String note,
-                                      String repeatType, long triggerAt) {
+                                      String repeatType, String priority, long triggerAt,
+                                      boolean preAlert) {
         AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
         if (alarmManager == null) {
             return;
         }
-        PendingIntent pendingIntent = reminderPendingIntent(context, reminderId, title, note, repeatType);
+        PendingIntent pendingIntent = reminderPendingIntent(context, reminderId, title, note,
+                repeatType, priority, preAlert);
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
@@ -153,10 +166,12 @@ public final class ReminderScheduler {
     }
 
     private static PendingIntent reminderPendingIntent(Context context, long reminderId, String title,
-                                                        String note, String repeatType) {
+                                                        String note, String repeatType,
+                                                        String priority, boolean preAlert) {
         Intent intent = new Intent(context, ReminderReceiver.class)
                 .setAction(ReminderReceiver.ACTION_FIRE)
-                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId);
+                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId)
+                .putExtra(ReminderReceiver.EXTRA_PRE_ALERT, preAlert);
         if (title != null) {
             intent.putExtra(ReminderReceiver.EXTRA_TITLE, title);
         }
@@ -166,9 +181,10 @@ public final class ReminderScheduler {
         if (repeatType != null) {
             intent.putExtra(ReminderReceiver.EXTRA_REPEAT_TYPE, repeatType);
         }
+        if (priority != null) intent.putExtra(ReminderReceiver.EXTRA_PRIORITY, priority);
         return PendingIntent.getBroadcast(
                 context,
-                (int) (reminderId & 0x7fffffff),
+                ((int) (reminderId & 0x7fffffff)) ^ (preAlert ? 0x15151515 : 0),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );

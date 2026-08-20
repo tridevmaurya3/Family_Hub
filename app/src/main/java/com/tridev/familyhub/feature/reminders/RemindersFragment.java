@@ -159,6 +159,10 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                 requireContext(), R.layout.item_form_dropdown, priorities));
         dialogBinding.reminderCategoryInput.setAdapter(new android.widget.ArrayAdapter<>(
                 requireContext(), R.layout.item_form_dropdown, categories));
+        String[] preAlertLabels = {"At reminder time", "10 minutes before", "30 minutes before", "1 hour before", "1 day before"};
+        int[] preAlertValues = {0, 10, 30, 60, 1440};
+        dialogBinding.reminderPreAlertInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, preAlertLabels));
         final List<FamilyMember> memberChoices = new ArrayList<>();
         List<String> memberLabels = new ArrayList<>();
         memberLabels.add("Unassigned");
@@ -192,6 +196,11 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             dialogBinding.reminderAssigneeInput.setText(
                     existingReminder.assignedMemberName.isEmpty()
                             ? "Unassigned" : existingReminder.assignedMemberName, false);
+            int preAlertIndex = 0;
+            for (int i = 0; i < preAlertValues.length; i++) {
+                if (preAlertValues[i] == existingReminder.preAlertMinutes) preAlertIndex = i;
+            }
+            dialogBinding.reminderPreAlertInput.setText(preAlertLabels[preAlertIndex], false);
             dialogBinding.reminderRepeatGroup.check(repeatButtonId(existingReminder.repeatType));
             dialogBinding.reminderEnabledSwitch.setChecked(existingReminder.isEnabled);
             dialogBinding.reminderSharedSwitch.setChecked(existingReminder.isShared);
@@ -203,6 +212,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             dialogBinding.reminderPriorityInput.setText("MEDIUM", false);
             dialogBinding.reminderCategoryInput.setText("GENERAL", false);
             dialogBinding.reminderAssigneeInput.setText("Unassigned", false);
+            dialogBinding.reminderPreAlertInput.setText(preAlertLabels[0], false);
         }
         updateDateTimeInputs(dialogBinding, selectedTime);
 
@@ -235,6 +245,11 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             reminder.repeatType = repeatType;
             reminder.priority = dialogBinding.reminderPriorityInput.getText().toString().trim();
             reminder.category = dialogBinding.reminderCategoryInput.getText().toString().trim();
+            reminder.preAlertMinutes = 0;
+            String selectedPreAlert = dialogBinding.reminderPreAlertInput.getText().toString();
+            for (int i = 0; i < preAlertLabels.length; i++) {
+                if (preAlertLabels[i].equals(selectedPreAlert)) reminder.preAlertMinutes = preAlertValues[i];
+            }
             String assignee = dialogBinding.reminderAssigneeInput.getText().toString().trim();
             reminder.assignedMemberName = "Unassigned".equals(assignee) ? "" : assignee;
             reminder.assignedMemberId = 0L;
