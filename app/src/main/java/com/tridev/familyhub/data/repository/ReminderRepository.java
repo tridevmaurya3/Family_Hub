@@ -164,6 +164,8 @@ public class ReminderRepository {
         values.put("startedAt", reminder.startedAt);
         values.put("completedAt", reminder.completedAt);
         values.put("completedByName", reminder.completedByName);
+        values.put("relatedModule", reminder.relatedModule);
+        values.put("relatedItemTitle", reminder.relatedItemTitle);
         values.put("enabled", reminder.isEnabled);
         values.put("assignedMemberId", reminder.assignedMemberId == 0 ? "" : String.valueOf(reminder.assignedMemberId));
         values.put("assignedMemberName", reminder.assignedMemberName);
@@ -199,6 +201,8 @@ public class ReminderRepository {
             reminder.seenAt=number(s,"seenAt"); reminder.acceptedAt=number(s,"acceptedAt");
             reminder.startedAt=number(s,"startedAt"); reminder.completedAt=number(s,"completedAt");
             reminder.completedByName=text(s,"completedByName");
+            reminder.relatedModule=text(s,"relatedModule");
+            reminder.relatedItemTitle=text(s,"relatedItemTitle");
             reminder.isEnabled=bool(s,"enabled");
             reminder.assignedMemberName=text(s,"assignedMemberName");
             reminder.assignedMemberId=resolveLocalMemberId(

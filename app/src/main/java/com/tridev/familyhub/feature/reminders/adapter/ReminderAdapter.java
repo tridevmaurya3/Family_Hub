@@ -30,6 +30,8 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
         void onStatusChanged(Reminder reminder);
 
         void onSeen(Reminder reminder);
+
+        void onOpenModule(Reminder reminder);
     }
 
     private final List<Reminder> reminders = new ArrayList<>();
@@ -84,6 +86,17 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
             binding.reminderCollaborationTimeline.setText(collaborationTimeline(reminder));
             binding.reminderStatusButton.setText(friendly(reminder.collaborationStatus) + "  ›");
             binding.reminderStatusButton.setOnClickListener(v -> listener.onStatusChanged(reminder));
+            boolean linked = !reminder.relatedModule.trim().isEmpty();
+            binding.reminderOpenModuleButton.setVisibility(linked
+                    ? android.view.View.VISIBLE : android.view.View.GONE);
+            if (linked) {
+                String item = reminder.relatedItemTitle.trim().isEmpty()
+                        ? "" : " • " + reminder.relatedItemTitle.trim();
+                binding.reminderOpenModuleButton.setText(
+                        "Open " + friendly(reminder.relatedModule) + item);
+                binding.reminderOpenModuleButton.setOnClickListener(
+                        v -> listener.onOpenModule(reminder));
+            }
             if (reminder.isShared && reminder.seenAt == 0L) listener.onSeen(reminder);
             binding.reminderEnabledSwitch.setOnCheckedChangeListener(null);
             binding.reminderEnabledSwitch.setChecked(reminder.isEnabled);

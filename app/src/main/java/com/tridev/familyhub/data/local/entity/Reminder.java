@@ -48,6 +48,8 @@ public class Reminder {
     @ColumnInfo(defaultValue = "0") public long startedAt;
     @ColumnInfo(defaultValue = "0") public long completedAt;
     @NonNull @ColumnInfo(defaultValue = "''") public String completedByName = "";
+    @NonNull @ColumnInfo(defaultValue = "''") public String relatedModule = "";
+    @NonNull @ColumnInfo(defaultValue = "''") public String relatedItemTitle = "";
 
     public boolean isEnabled = true;
 

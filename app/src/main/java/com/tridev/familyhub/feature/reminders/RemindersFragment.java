@@ -31,6 +31,11 @@ import com.tridev.familyhub.databinding.DialogReminderBinding;
 import com.tridev.familyhub.databinding.FragmentRemindersBinding;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.reminders.adapter.ReminderAdapter;
+import com.tridev.familyhub.feature.documents.DocumentsFragment;
+import com.tridev.familyhub.feature.grocery.GroceryFragment;
+import com.tridev.familyhub.feature.health.HealthFragment;
+import com.tridev.familyhub.feature.property.PropertyFragment;
+import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -93,6 +98,11 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                     if (binding != null) loadReminders(
                             binding.reminderSearchInput.getText().toString());
                 });
+            }
+
+            @Override
+            public void onOpenModule(Reminder reminder) {
+                openRelatedModule(reminder.relatedModule);
             }
         });
 
@@ -178,6 +188,9 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
         int[] preAlertValues = {0, 10, 30, 60, 1440};
         dialogBinding.reminderPreAlertInput.setAdapter(new android.widget.ArrayAdapter<>(
                 requireContext(), R.layout.item_form_dropdown, preAlertLabels));
+        String[] relatedModules = {"None", "FINANCE", "GROCERY", "HEALTH", "VEHICLE", "DOCUMENTS", "PROPERTY"};
+        dialogBinding.reminderRelatedModuleInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, relatedModules));
         final List<FamilyMember> memberChoices = new ArrayList<>();
         List<String> memberLabels = new ArrayList<>();
         memberLabels.add("Unassigned");
@@ -216,6 +229,10 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                 if (preAlertValues[i] == existingReminder.preAlertMinutes) preAlertIndex = i;
             }
             dialogBinding.reminderPreAlertInput.setText(preAlertLabels[preAlertIndex], false);
+            dialogBinding.reminderRelatedModuleInput.setText(
+                    existingReminder.relatedModule.isEmpty()
+                            ? "None" : existingReminder.relatedModule, false);
+            dialogBinding.reminderRelatedItemInput.setText(existingReminder.relatedItemTitle);
             dialogBinding.reminderRepeatGroup.check(repeatButtonId(existingReminder.repeatType));
             dialogBinding.reminderEnabledSwitch.setChecked(existingReminder.isEnabled);
             dialogBinding.reminderSharedSwitch.setChecked(existingReminder.isShared);
@@ -228,6 +245,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             dialogBinding.reminderCategoryInput.setText("GENERAL", false);
             dialogBinding.reminderAssigneeInput.setText("Unassigned", false);
             dialogBinding.reminderPreAlertInput.setText(preAlertLabels[0], false);
+            dialogBinding.reminderRelatedModuleInput.setText("None", false);
         }
         updateDateTimeInputs(dialogBinding, selectedTime);
 
@@ -265,6 +283,12 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             for (int i = 0; i < preAlertLabels.length; i++) {
                 if (preAlertLabels[i].equals(selectedPreAlert)) reminder.preAlertMinutes = preAlertValues[i];
             }
+            String relatedModule = dialogBinding.reminderRelatedModuleInput
+                    .getText().toString().trim();
+            reminder.relatedModule = "None".equalsIgnoreCase(relatedModule)
+                    ? "" : relatedModule;
+            reminder.relatedItemTitle = dialogBinding.reminderRelatedItemInput
+                    .getText().toString().trim();
             String assignee = dialogBinding.reminderAssigneeInput.getText().toString().trim();
             reminder.assignedMemberName = "Unassigned".equals(assignee) ? "" : assignee;
             reminder.assignedMemberId = 0L;
@@ -432,6 +456,24 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
             reminder.completedAt = now;
             reminder.completedByName = reminder.assignedMemberName.trim().isEmpty()
                     ? "Family member" : reminder.assignedMemberName.trim();
+        }
+    }
+
+    private void openRelatedModule(@Nullable String module) {
+        if (module == null || module.trim().isEmpty()) return;
+        MainActivity activity = (MainActivity) requireActivity();
+        if ("FINANCE".equalsIgnoreCase(module)) {
+            activity.openTab(R.id.nav_finance);
+        } else if ("GROCERY".equalsIgnoreCase(module)) {
+            activity.openFeature(new GroceryFragment());
+        } else if ("HEALTH".equalsIgnoreCase(module)) {
+            activity.openFeature(new HealthFragment());
+        } else if ("VEHICLE".equalsIgnoreCase(module)) {
+            activity.openFeature(new VehicleFragment());
+        } else if ("DOCUMENTS".equalsIgnoreCase(module)) {
+            activity.openFeature(new DocumentsFragment());
+        } else if ("PROPERTY".equalsIgnoreCase(module)) {
+            activity.openFeature(new PropertyFragment());
         }
     }
 

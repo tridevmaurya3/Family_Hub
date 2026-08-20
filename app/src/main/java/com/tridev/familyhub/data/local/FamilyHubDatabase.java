@@ -69,7 +69,7 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PendingLocationUpload.class,
                 SafePlaceAlert.class
         },
-        version = 34,
+        version = 35,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -382,6 +382,12 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE `reminders` ADD COLUMN `startedAt` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("ALTER TABLE `reminders` ADD COLUMN `completedAt` INTEGER NOT NULL DEFAULT 0");
             database.execSQL("ALTER TABLE `reminders` ADD COLUMN `completedByName` TEXT NOT NULL DEFAULT ''");
+        }
+    };
+    private static final Migration MIGRATION_34_35 = new Migration(34, 35) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `relatedModule` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `reminders` ADD COLUMN `relatedItemTitle` TEXT NOT NULL DEFAULT ''");
         }
     };
 
@@ -904,7 +910,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_30_31,
                                     MIGRATION_31_32,
                                     MIGRATION_32_33,
-                                    MIGRATION_33_34
+                                    MIGRATION_33_34,
+                                    MIGRATION_34_35
                             )
                             .build();
                 }
