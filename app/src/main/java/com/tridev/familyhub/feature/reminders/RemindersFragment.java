@@ -4,6 +4,9 @@ import android.Manifest;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.pm.PackageManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
@@ -16,6 +19,7 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -43,6 +47,9 @@ import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
+import java.io.File;
+import java.util.Date;
+import java.util.concurrent.Executors;
 
 /** Create, manage, and schedule private local reminders. */
 public class RemindersFragment extends Fragment implements com.tridev.familyhub.feature.main.AddActionHost {
@@ -55,6 +62,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
     private final List<Reminder> loadedReminders = new ArrayList<>();
+    private final List<Reminder> visibleReminders = new ArrayList<>();
     private String periodFilter = "ALL";
     private String priorityFilter = "ALL";
     private String categoryFilter = "ALL";
@@ -146,6 +154,7 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
                 "Status", new String[]{"ALL", "PENDING", "ACCEPTED", "IN_PROGRESS", "COMPLETED"},
                 statusFilter, value -> { statusFilter = value; applyFilters(); }));
         binding.reminderMemberFilter.setOnClickListener(v -> showMemberFilter());
+        binding.reminderReportButton.setOnClickListener(v -> showReportOptions());
         binding.reminderSearchInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -261,6 +270,8 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
         }
 
         reminderAdapter.submitList(filtered);
+        visibleReminders.clear();
+        visibleReminders.addAll(filtered);
         boolean empty = filtered.isEmpty();
         binding.reminderRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
         binding.remindersEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
@@ -286,6 +297,76 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
     @NonNull
     private String filterLabel(@NonNull String value, @NonNull String fallback) {
         return ("ALL".equals(value) ? fallback : value.replace('_', ' ')) + "  ▾";
+    }
+
+    private void showReportOptions() {
+        String[] options = {"View analytics", "Export PDF", "Export Excel", "Share PDF"};
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Reminder analytics & report")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) showAnalytics();
+                    else exportReminderReport(which != 2);
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void showAnalytics() {
+        int completed = 0, overdue = 0, urgent = 0, shared = 0;
+        long now = System.currentTimeMillis();
+        for (Reminder reminder : visibleReminders) {
+            if ("COMPLETED".equalsIgnoreCase(reminder.collaborationStatus)) completed++;
+            if (Reminder.REPEAT_ONCE.equals(reminder.repeatType)
+                    && reminder.isEnabled && reminder.reminderAt < now) overdue++;
+            if ("URGENT".equalsIgnoreCase(reminder.priority)) urgent++;
+            if (reminder.isShared) shared++;
+        }
+        int total = visibleReminders.size();
+        double completion = total == 0 ? 0D : completed * 100D / total;
+        String message = "Current filtered reminders  •  " + total
+                + "\n\nCompleted  •  " + completed
+                + "\nPending / active  •  " + Math.max(0, total - completed)
+                + "\nOverdue  •  " + overdue
+                + "\nUrgent  •  " + urgent
+                + "\nShared with family  •  " + shared
+                + "\n\nCompletion rate  •  "
+                + String.format(Locale.getDefault(), "%.1f%%", completion);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Smart reminder analytics")
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void exportReminderReport(boolean pdf) {
+        Context context = requireContext().getApplicationContext();
+        List<Reminder> reportRows = new ArrayList<>(visibleReminders);
+        Executors.newSingleThreadExecutor().execute(() -> {
+            try {
+                File folder = new File(context.getCacheDir(), "reminder_reports");
+                if (!folder.exists() && !folder.mkdirs()) throw new java.io.IOException();
+                String stamp = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(new Date());
+                File file = new File(folder, "Reminder_Report_" + stamp
+                        + (pdf ? ".pdf" : ".xls"));
+                if (pdf) ReminderReportExporter.pdf(file, reportRows);
+                else ReminderReportExporter.excel(file, reportRows);
+                if (isAdded()) requireActivity().runOnUiThread(() -> shareReminderFile(
+                        file, pdf ? "application/pdf" : "application/vnd.ms-excel"));
+            } catch (Exception error) {
+                if (isAdded()) requireActivity().runOnUiThread(() -> Snackbar.make(
+                        binding.getRoot(), "Reminder report could not be created",
+                        Snackbar.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void shareReminderFile(@NonNull File file, @NonNull String mime) {
+        Uri uri = FileProvider.getUriForFile(requireContext(),
+                requireContext().getPackageName() + ".backupfiles", file);
+        Intent intent = new Intent(Intent.ACTION_SEND).setType(mime)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(Intent.createChooser(intent, "Reminder report"));
     }
 
     private void showReminderEditor(@Nullable Reminder existingReminder) {
