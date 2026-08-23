@@ -1699,60 +1699,117 @@ public class GroceryOverlayService extends Service {
         popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
         popup.setOverlapAnchor(false);
-        String lastCategory = "";
+
+        Map<String, List<GroceryItem>> categoryGroups = new LinkedHashMap<>();
         for (GroceryItem suggestion : suggestions) {
             String categoryName = smartSuggestionCategory(suggestion);
-            if (!categoryName.equalsIgnoreCase(lastCategory)) {
-                int categoryPurchaseTotal = 0;
-                int categoryItemCount = 0;
-                for (GroceryItem candidate : suggestions) {
-                    if (categoryName.equalsIgnoreCase(smartSuggestionCategory(candidate))) {
-                        categoryPurchaseTotal += Math.max(0, candidate.purchaseCount);
-                        categoryItemCount++;
+            categoryGroups.computeIfAbsent(categoryName, key -> new ArrayList<>()).add(suggestion);
+        }
+
+        final LinearLayout[] openItemsContainer = {null};
+        final TextView[] openArrow = {null};
+
+        for (Map.Entry<String, List<GroceryItem>> categoryEntry : categoryGroups.entrySet()) {
+            String categoryName = categoryEntry.getKey();
+            List<GroceryItem> categoryItems = categoryEntry.getValue();
+            int categoryPurchaseTotal = 0;
+            for (GroceryItem candidate : categoryItems) {
+                categoryPurchaseTotal += Math.max(0, candidate.purchaseCount);
+            }
+
+            LinearLayout categoryBlock = new LinearLayout(this);
+            categoryBlock.setOrientation(LinearLayout.VERTICAL);
+
+            LinearLayout header = new LinearLayout(this);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+            header.setPadding(dp(8), dp(4), dp(8), dp(4));
+            header.setBackground(roundedFill(Color.argb(235, 225, 246, 238), 9));
+
+            TextView arrow = text("▸", 13, true);
+            arrow.setTextColor(Color.rgb(12, 99, 75));
+            arrow.setGravity(Gravity.CENTER);
+            header.addView(arrow, new LinearLayout.LayoutParams(dp(26), dp(30)));
+
+            TextView headerText = text(categoryName + "  •  " + categoryItems.size() + "  •  "
+                    + categoryPurchaseTotal + "×", 12, true);
+            headerText.setTextColor(Color.rgb(12, 99, 75));
+            headerText.setSingleLine(true);
+            headerText.setEllipsize(TextUtils.TruncateAt.END);
+            header.addView(headerText, new LinearLayout.LayoutParams(0, dp(30), 1f));
+
+            LinearLayout itemsContainer = new LinearLayout(this);
+            itemsContainer.setOrientation(LinearLayout.VERTICAL);
+            itemsContainer.setVisibility(View.GONE);
+            itemsContainer.setPadding(dp(2), dp(3), dp(2), 0);
+
+            for (GroceryItem suggestion : categoryItems) {
+                LinearLayout itemRow = new LinearLayout(this);
+                itemRow.setOrientation(LinearLayout.HORIZONTAL);
+                itemRow.setGravity(Gravity.CENTER_VERTICAL);
+                itemRow.setPadding(dp(10), dp(3), dp(8), dp(3));
+                itemRow.setBackground(rounded(Color.argb(247, 255, 255, 255),
+                        Color.argb(125, 212, 222, 226), 9));
+
+                TextView itemText = text(suggestion.name, 13, false);
+                itemText.setTextColor(Color.rgb(38, 45, 50));
+                itemText.setSingleLine(true);
+                itemText.setEllipsize(TextUtils.TruncateAt.END);
+                itemText.setPadding(0, dp(1), dp(8), dp(1));
+                itemRow.addView(itemText, new LinearLayout.LayoutParams(0, dp(34), 1f));
+
+                TextView countBadge = text(suggestion.purchaseCount + "×", 11, true);
+                countBadge.setTextColor(Color.rgb(15, 108, 89));
+                countBadge.setGravity(Gravity.CENTER);
+                countBadge.setPadding(dp(7), dp(2), dp(7), dp(2));
+                countBadge.setBackground(roundedFill(Color.argb(230, 235, 248, 241), 12));
+                itemRow.addView(countBadge, new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+                itemRow.setOnClickListener(v -> {
+                    applySmartSuggestion(suggestion, name, quantity, unit, units,
+                            category, categories, price);
+                    popup.dismiss();
+                });
+
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(38));
+                rowParams.bottomMargin = dp(3);
+                itemsContainer.addView(itemRow, rowParams);
+            }
+
+            header.setOnClickListener(v -> {
+                boolean shouldOpen = itemsContainer.getVisibility() != View.VISIBLE;
+
+                if (openItemsContainer[0] != null && openItemsContainer[0] != itemsContainer) {
+                    openItemsContainer[0].setVisibility(View.GONE);
+                    if (openArrow[0] != null) openArrow[0].setText("▸");
+                }
+
+                if (shouldOpen) {
+                    itemsContainer.setVisibility(View.VISIBLE);
+                    arrow.setText("▾");
+                    openItemsContainer[0] = itemsContainer;
+                    openArrow[0] = arrow;
+                } else {
+                    itemsContainer.setVisibility(View.GONE);
+                    arrow.setText("▸");
+                    if (openItemsContainer[0] == itemsContainer) {
+                        openItemsContainer[0] = null;
+                        openArrow[0] = null;
                     }
                 }
-                TextView header = text(categoryName + "  •  " + categoryItemCount + "  •  "
-                        + categoryPurchaseTotal + "×", 12, true);
-                header.setTextColor(Color.rgb(12, 99, 75));
-                header.setSingleLine(true);
-                header.setEllipsize(TextUtils.TruncateAt.END);
-                header.setPadding(dp(10), dp(5), dp(10), dp(5));
-                header.setBackground(roundedFill(Color.argb(235, 225, 246, 238), 9));
-                LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                headerParams.topMargin = groupedList.getChildCount() == 0 ? 0 : dp(5);
-                headerParams.bottomMargin = dp(3);
-                groupedList.addView(header, headerParams);
-                lastCategory = categoryName;
-            }
-            LinearLayout itemRow = new LinearLayout(this);
-            itemRow.setOrientation(LinearLayout.HORIZONTAL);
-            itemRow.setGravity(Gravity.CENTER_VERTICAL);
-            itemRow.setPadding(dp(10), dp(3), dp(8), dp(3));
-            itemRow.setBackground(rounded(Color.argb(247, 255, 255, 255),
-                    Color.argb(125, 212, 222, 226), 9));
-            TextView itemText = text(suggestion.name, 13, false);
-            itemText.setTextColor(Color.rgb(38, 45, 50));
-            itemText.setSingleLine(true);
-            itemText.setEllipsize(TextUtils.TruncateAt.END);
-            itemText.setPadding(0, dp(1), dp(8), dp(1));
-            itemRow.addView(itemText, new LinearLayout.LayoutParams(0, dp(34), 1f));
-            TextView countBadge = text(suggestion.purchaseCount + "×", 11, true);
-            countBadge.setTextColor(Color.rgb(15, 108, 89));
-            countBadge.setGravity(Gravity.CENTER);
-            countBadge.setPadding(dp(7), dp(2), dp(7), dp(2));
-            countBadge.setBackground(roundedFill(Color.argb(230, 235, 248, 241), 12));
-            itemRow.addView(countBadge, new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-            itemRow.setOnClickListener(v -> {
-                applySmartSuggestion(suggestion, name, quantity, unit, units,
-                        category, categories, price);
-                popup.dismiss();
             });
-            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+
+            LinearLayout.LayoutParams headerParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(38));
-            rowParams.bottomMargin = dp(3);
-            groupedList.addView(itemRow, rowParams);
+            headerParams.topMargin = groupedList.getChildCount() == 0 ? 0 : dp(5);
+            headerParams.bottomMargin = dp(2);
+            categoryBlock.addView(header, headerParams);
+            categoryBlock.addView(itemsContainer, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            groupedList.addView(categoryBlock, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         }
         int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(40)));
         popup.showAsDropDown(anchor, xOffset, dp(5));
