@@ -1,0 +1,93 @@
+name: Temporary grocery opacity patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/chatgpt-temp-opacity.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-grocery-overlay:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Move opacity control into list row
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
+          text = path.read_text(encoding='utf-8')
+
+          old_header = '''        Button opacityToggle = compactAction("◐",
+                  Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
+          opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
+          LinearLayout.LayoutParams opacityHeaderParams = new LinearLayout.LayoutParams(dp(40), dp(34));
+          opacityHeaderParams.setMarginStart(dp(6));
+          header.addView(opacityToggle, opacityHeaderParams);
+
+'''
+          if old_header not in text:
+              raise SystemExit('Expected header opacity block not found')
+          text = text.replace(old_header, '', 1)
+
+          old_row = '''        LinearLayout listTypeControls = new LinearLayout(this);
+          listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
+          listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
+          root.addView(listTypeControls, new LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
+'''
+
+          new_row = '''        LinearLayout listTypeControls = new LinearLayout(this);
+          listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
+
+          LinearLayout.LayoutParams listTypeGroupParams = new LinearLayout.LayoutParams(
+                  0, dp(36), 1f);
+          listTypeControls.addView(listTypeGroup, listTypeGroupParams);
+
+          Button opacityToggle = compactAction("◐",
+                  Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
+          opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
+          opacityToggle.setTextSize(10f);
+          opacityToggle.setPadding(0, 0, 0, 0);
+          opacityToggle.setElevation(dp(1));
+          LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(28), dp(28));
+          opacityRowParams.setMarginStart(dp(2));
+          listTypeControls.addView(opacityToggle, opacityRowParams);
+
+          root.addView(listTypeControls, new LinearLayout.LayoutParams(
+                  LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
+'''
+          if old_row not in text:
+              raise SystemExit('Expected list-type row block not found')
+          text = text.replace(old_row, new_row, 1)
+
+          # Give all four cycle labels one extra autosize step now that the opacity control shares the row.
+          marker_start = text.index('        RadioButton daily = new RadioButton(this);')
+          marker_end = text.index('        listTypeGroup.setOnCheckedChangeListener', marker_start)
+          radio_block = text[marker_start:marker_end]
+          radio_block = radio_block.replace(', 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);',
+                                            ', 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);')
+          text = text[:marker_start] + radio_block + text[marker_end:]
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          if ! git diff --cached --quiet; then
+            git commit -m "Move opacity control into grocery list row"
+            git push
+          fi
