@@ -3,6 +3,7 @@ package com.tridev.familyhub.feature.grocery;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.graphics.Typeface;
 import android.view.Gravity;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
@@ -13,6 +14,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
@@ -47,6 +52,7 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
         super.onCreate(state);
         binding = ActivityGroceryStoreAnalyticsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        installSystemBarInsets();
         binding.storeAnalyticsOverview.setNavigationAction(
                 R.drawable.ic_arrow_back, R.string.back, view -> finish());
         binding.storeAnalyticsPdf.setOnClickListener(view -> export(true));
@@ -57,6 +63,19 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
             setupFilters();
             render();
         });
+    }
+
+    private void installSystemBarInsets() {
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        ViewCompat.setOnApplyWindowInsetsListener(
+                binding.storeAnalyticsRoot,
+                (view, windowInsets) -> {
+                    Insets bars = windowInsets.getInsets(
+                            WindowInsetsCompat.Type.systemBars());
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                    return windowInsets;
+                });
+        ViewCompat.requestApplyInsets(binding.storeAnalyticsRoot);
     }
 
     private void setupFilters() {
@@ -132,22 +151,48 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
                     getString(R.string.grocery_store_analytics_empty)));
             return;
         }
+        int rank = 1;
         for (StoreStat stat : stats) {
             MaterialCardView card = new MaterialCardView(this);
             card.setCardBackgroundColor(ContextCompat.getColor(this,
                     R.color.fh_module_grocery_container));
             card.setStrokeColor(ContextCompat.getColor(this, R.color.fh_module_grocery));
-            card.setStrokeWidth(dp(1)); card.setRadius(dp(16)); card.setCardElevation(0);
-            TextView text = label(stat.name + "\n" + money.format(stat.spend)
-                    + "  •  " + stat.count + " purchases  •  "
-                    + stat.wins + " best-price wins\n"
+            card.setStrokeWidth(dp(1));
+            card.setRadius(dp(18));
+            card.setCardElevation(dp(2));
+
+            LinearLayout content = new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(dp(14), dp(12), dp(14), dp(12));
+
+            TextView title = label("#" + rank + "  " + stat.name);
+            title.setTextSize(15);
+            title.setTypeface(title.getTypeface(), Typeface.BOLD);
+            title.setTextColor(ContextCompat.getColor(this, R.color.fh_module_grocery));
+            title.setPadding(0, 0, 0, dp(5));
+            content.addView(title);
+
+            TextView amount = label(money.format(stat.spend)
+                    + "  •  " + stat.count + " purchases");
+            amount.setTextSize(13);
+            amount.setTypeface(amount.getTypeface(), Typeface.BOLD);
+            amount.setPadding(0, 0, 0, dp(3));
+            content.addView(amount);
+
+            TextView detail = label(stat.wins + " best-price wins  •  "
                     + stat.categories.size() + " categories");
-            text.setTextColor(ContextCompat.getColor(this, R.color.fh_module_grocery));
-            card.addView(text);
+            detail.setTextSize(12);
+            detail.setTextColor(ContextCompat.getColor(this, R.color.fh_text_secondary));
+            detail.setPadding(0, 0, 0, 0);
+            content.addView(detail);
+
+            card.addView(content);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.bottomMargin = dp(7); binding.storeAnalyticsCards.addView(card, params);
+            params.bottomMargin = dp(9);
+            binding.storeAnalyticsCards.addView(card, params);
+            rank++;
         }
     }
 
@@ -162,11 +207,37 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
             List<GroceryPurchase> values = entry.getValue();
             if (values.size() < 2) continue;
             GroceryPurchase first = values.get(0), last = values.get(values.size() - 1);
-            String arrow = last.actualCost < first.actualCost ? " ↓ "
-                    : last.actualCost > first.actualCost ? " ↑ " : " → ";
-            binding.storeAnalyticsTrends.addView(label(entry.getKey() + ": "
+            boolean lower = last.actualCost < first.actualCost;
+            boolean higher = last.actualCost > first.actualCost;
+            String arrow = lower ? " ↓ " : higher ? " ↑ " : " → ";
+
+            MaterialCardView card = new MaterialCardView(this);
+            int fill = lower ? R.color.fh_success_container
+                    : higher ? R.color.fh_warning_container
+                    : R.color.fh_primary_container;
+            int accent = lower ? R.color.fh_success
+                    : higher ? R.color.fh_warning
+                    : R.color.fh_primary;
+            card.setCardBackgroundColor(ContextCompat.getColor(this, fill));
+            card.setStrokeColor(ContextCompat.getColor(this, accent));
+            card.setStrokeWidth(dp(1));
+            card.setRadius(dp(16));
+            card.setCardElevation(0);
+
+            TextView trend = label(entry.getKey() + "\n"
                     + money.format(first.actualCost) + arrow + money.format(last.actualCost)
-                    + "  •  " + store(last)));
+                    + "  •  " + store(last));
+            trend.setTextSize(13);
+            trend.setTypeface(trend.getTypeface(), Typeface.BOLD);
+            trend.setTextColor(ContextCompat.getColor(this, accent));
+            trend.setPadding(dp(13), dp(10), dp(13), dp(10));
+            card.addView(trend);
+
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            params.bottomMargin = dp(8);
+            binding.storeAnalyticsTrends.addView(card, params);
             if (++shown == 8) break;
         }
         if (shown == 0) binding.storeAnalyticsTrends.addView(label(
