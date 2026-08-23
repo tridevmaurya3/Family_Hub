@@ -107,6 +107,7 @@ public class GroceryOverlayService extends Service {
     private boolean overlayShoppingMode;
     private boolean overlayShoppingScreenOn;
     private String overlayShoppingSelection = SHOPPING_ALL;
+    private boolean overlayInlinePurchaseEditorOpen;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -1035,12 +1036,12 @@ public class GroceryOverlayService extends Service {
     }
 
     private void refreshPanel() {
-        if (repository == null || itemContainer == null) return;
+        if (repository == null || itemContainer == null || overlayInlinePurchaseEditorOpen) return;
         repository.loadItems("", this::renderItems);
     }
 
     private void renderItems(List<GroceryItem> items) {
-        if (itemContainer == null) return;
+        if (itemContainer == null || overlayInlinePurchaseEditorOpen) return;
         itemContainer.removeAllViews();
         if (!overlayShoppingMode) {
             renderSection(items, visibleListType, overlaySectionHeading(visibleListType), 0);
@@ -1193,6 +1194,7 @@ public class GroceryOverlayService extends Service {
 
     private void showInlinePurchaseEditor(GroceryItem item) {
         if (itemContainer == null) return;
+        overlayInlinePurchaseEditorOpen = true;
         itemContainer.removeAllViews();
         setOverlayFormCollapsed(true);
         TextView title = text(getString(R.string.grocery_complete_title), 14, true);
@@ -1272,9 +1274,13 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(46));
         actionsParams.topMargin = dp(8);
         itemContainer.addView(actions, actionsParams);
-        cancel.setOnClickListener(v -> refreshPanel());
+        cancel.setOnClickListener(v -> {
+            overlayInlinePurchaseEditorOpen = false;
+            refreshPanel();
+        });
         skip.setOnClickListener(v -> {
             rememberPurchaseMoneySelections(item, moneyAccount, moneyCategory);
+            overlayInlinePurchaseEditorOpen = false;
             repository.setPurchased(item, true, () -> showFloatingUndo(item));
         });
         save.setOnClickListener(v -> {
@@ -1297,6 +1303,7 @@ public class GroceryOverlayService extends Service {
             Object selectedStore = store.getSelectedItem();
             item.storeName = selectedStore == null ? "" : selectedStore.toString().trim();
             rememberPurchaseMoneySelections(item, moneyAccount, moneyCategory);
+            overlayInlinePurchaseEditorOpen = false;
             repository.setPurchased(item, true, () -> showFloatingUndo(item));
         });
     }
@@ -1446,6 +1453,7 @@ public class GroceryOverlayService extends Service {
 
     private void showFloatingUndo(GroceryItem item) {
         if (itemContainer == null) return;
+        overlayInlinePurchaseEditorOpen = false;
         itemContainer.removeAllViews();
         TextView message = text(getString(R.string.grocery_purchase_completed, item.name), 12, true);
         message.setGravity(Gravity.CENTER);
@@ -1766,8 +1774,8 @@ public class GroceryOverlayService extends Service {
         }
         if (shoppingSubtitle != null) {
             shoppingSubtitle.setText(overlayShoppingMode
-                    ? "(Shopping mode • " + shoppingSelectionLabel(overlayShoppingSelection) + ")"
-                    : "(" + getString(R.string.grocery_list_type) + ")");
+                    ? "Mode On • " + shoppingSelectionLabel(overlayShoppingSelection)
+                    : "Shopping list");
         }
     }
 
@@ -1874,6 +1882,7 @@ public class GroceryOverlayService extends Service {
             overlayShoppingMode = false;
             overlayShoppingScreenOn = false;
             overlayShoppingSelection = SHOPPING_ALL;
+            overlayInlinePurchaseEditorOpen = false;
             cornerResizeActive = false;
         }
     }
