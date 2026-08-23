@@ -576,42 +576,24 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     private void showFilterMenu(@NonNull View anchor) {
         PopupMenu popup = new PopupMenu(requireContext(), anchor);
-        popup.getMenu().setGroupCheckable(1, true, true);
-        popup.getMenu().add(1, MENU_CYCLE_DAILY, 0, R.string.grocery_filter_daily);
-        popup.getMenu().add(1, MENU_CYCLE_MONTHLY, 1, R.string.grocery_filter_monthly);
-        popup.getMenu().add(1, MENU_CYCLE_TWO_MONTH, 2, "2 Month");
-        popup.getMenu().add(1, MENU_CYCLE_THREE_MONTH, 3, "3 Month");
-        popup.getMenu().setGroupCheckable(3, true, true);
-        popup.getMenu().add(3, R.id.filter_pending, 4, R.string.grocery_filter_pending);
-        popup.getMenu().add(3, R.id.filter_purchased, 5, R.string.grocery_filter_purchased);
-        popup.getMenu().add(0, View.generateViewId(), 6,
+        popup.getMenu().add(0, View.generateViewId(), 0,
                 R.string.grocery_filter_category_heading).setEnabled(false);
         popup.getMenu().setGroupCheckable(2, true, true);
         android.view.MenuItem allCategories = popup.getMenu().add(
-                2, 10_000, 7, R.string.grocery_filter_all_categories);
+                2, 10_000, 1, R.string.grocery_filter_all_categories);
         allCategories.setChecked(activeCategoryFilter.isEmpty());
         String[] categories = GroceryOptionCatalog.categoryLabels(requireContext());
         for (int index = 1; index < categories.length; index++) {
             android.view.MenuItem categoryItem = popup.getMenu().add(
-                    2, 10_000 + index, 7 + index, categories[index]);
+                    2, 10_000 + index, 1 + index, categories[index]);
             categoryItem.setChecked(categories[index]
                     .equalsIgnoreCase(activeCategoryFilter));
         }
-        android.view.MenuItem selectedList = popup.getMenu().findItem(
-                menuIdForCycle(activeCycleFilter));
-        if (selectedList != null) selectedList.setChecked(true);
-        android.view.MenuItem selectedStatus = popup.getMenu().findItem(activeStatusFilterId);
-        if (selectedStatus != null) selectedStatus.setChecked(true);
         popup.setOnMenuItemClickListener(item -> {
-            if (item.getGroupId() == 1) {
-                activeCycleFilter = cycleFromMenuId(item.getItemId());
-            } else if (item.getGroupId() == 3) {
-                activeStatusFilterId = item.getItemId();
-            } else if (item.getGroupId() == 2) {
-                int categoryIndex = item.getItemId() - 10_000;
-                activeCategoryFilter = categoryIndex <= 0
-                        ? "" : categories[categoryIndex];
-            }
+            if (item.getGroupId() != 2) return false;
+            int categoryIndex = item.getItemId() - 10_000;
+            activeCategoryFilter = categoryIndex <= 0
+                    ? "" : categories[categoryIndex];
             item.setChecked(true);
             syncPrimaryFilterChips();
             loadItems(currentQuery());
