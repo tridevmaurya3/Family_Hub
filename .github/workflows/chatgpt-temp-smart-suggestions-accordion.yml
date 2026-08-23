@@ -158,3 +158,5 @@ jobs:
             git commit -m "Make smart suggestion categories collapsible"
             git push
           fi
+
+# trigger
