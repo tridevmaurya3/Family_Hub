@@ -105,7 +105,17 @@
     </style>
 
     <style name="Widget.FamilyHub.Form.Dropdown" parent="Widget.FamilyHub.TextInputLayout">
+        <item name="android:elevation">2dp</item>
+        <item name="boxBackgroundColor">@color/fh_surface</item>
+        <item name="boxCornerRadiusTopStart">@dimen/radius_18</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/radius_18</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/radius_18</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/radius_18</item>
+        <item name="boxStrokeColor">@color/fh_form_outline</item>
+        <item name="boxStrokeWidth">@dimen/border_width</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
         <item name="endIconMode">dropdown_menu</item>
+        <item name="endIconTint">@color/fh_form_accent</item>
     </style>
 
     <style name="Widget.FamilyHub.Form.Date" parent="Widget.FamilyHub.TextInputLayout">
