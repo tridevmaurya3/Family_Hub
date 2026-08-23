@@ -35,8 +35,6 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -80,6 +78,7 @@ public class GroceryOverlayService extends Service {
     private static final String CHANNEL_ID = "grocery_overlay_channel";
     private static final int NOTIFICATION_ID = 4107;
     private static final int SMART_VISIBLE_CHIPS = 5;
+    private static final String SHOPPING_ALL = "ALL";
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams stripParams;
@@ -107,6 +106,7 @@ public class GroceryOverlayService extends Service {
     private boolean collapseAllCategories;
     private boolean overlayShoppingMode;
     private boolean overlayShoppingScreenOn;
+    private String overlayShoppingSelection = SHOPPING_ALL;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -352,19 +352,6 @@ public class GroceryOverlayService extends Service {
 
         header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(48), 1f));
 
-        Button shoppingMode = compactAction("Shopping Mode",
-                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
-        shoppingMode.setTextSize(8.5f);
-        shoppingMode.setSingleLine(true);
-        shoppingMode.setPadding(dp(4), 0, dp(4), 0);
-        shoppingMode.setElevation(dp(2));
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                shoppingMode, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        shoppingMode.setContentDescription("Floating Shopping Mode");
-        LinearLayout.LayoutParams shoppingHeaderParams = new LinearLayout.LayoutParams(dp(72), dp(32));
-        shoppingHeaderParams.setMarginStart(dp(4));
-        header.addView(shoppingMode, shoppingHeaderParams);
-
         overlayFormToggle = compactAction(getString(R.string.grocery_overlay_hide_form),
                 Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
         overlayFormToggle.setTextSize(8.5f);
@@ -373,7 +360,7 @@ public class GroceryOverlayService extends Service {
         overlayFormToggle.setElevation(dp(2));
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
                 overlayFormToggle, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        LinearLayout.LayoutParams formHeaderParams = new LinearLayout.LayoutParams(dp(72), dp(32));
+        LinearLayout.LayoutParams formHeaderParams = new LinearLayout.LayoutParams(dp(78), dp(32));
         formHeaderParams.setMarginStart(dp(4));
         header.addView(overlayFormToggle, formHeaderParams);
 
@@ -393,110 +380,26 @@ public class GroceryOverlayService extends Service {
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
 
         final String[] selectedListType = {visibleListType};
-        RadioGroup listTypeGroup = new RadioGroup(this);
-        listTypeGroup.setOrientation(RadioGroup.HORIZONTAL);
-        listTypeGroup.setGravity(Gravity.CENTER_VERTICAL);
 
-        RadioButton daily = new RadioButton(this);
-        daily.setId(View.generateViewId());
-        daily.setText("Daily");
-        daily.setTextSize(8.5f);
-        daily.setSingleLine(true);
-        daily.setMinWidth(0);
-        daily.setMinimumWidth(0);
-        daily.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                daily, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        daily.setChecked(GroceryItem.LIST_DAILY.equals(visibleListType));
-
-        RadioButton monthly = new RadioButton(this);
-        monthly.setId(View.generateViewId());
-        monthly.setText("Monthly");
-        monthly.setTextSize(8.5f);
-        monthly.setSingleLine(true);
-        monthly.setMinWidth(0);
-        monthly.setMinimumWidth(0);
-        monthly.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                monthly, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
-
-        RadioButton twoMonth = new RadioButton(this);
-        twoMonth.setId(View.generateViewId());
-        twoMonth.setText("2 Monthly");
-        twoMonth.setTextSize(8.5f);
-        twoMonth.setSingleLine(true);
-        twoMonth.setMinWidth(0);
-        twoMonth.setMinimumWidth(0);
-        twoMonth.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                twoMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        twoMonth.setChecked(GroceryItem.LIST_TWO_MONTH.equals(visibleListType));
-
-        RadioButton threeMonth = new RadioButton(this);
-        threeMonth.setId(View.generateViewId());
-        threeMonth.setText("3 Monthly");
-        threeMonth.setTextSize(8.5f);
-        threeMonth.setSingleLine(true);
-        threeMonth.setMinWidth(0);
-        threeMonth.setMinimumWidth(0);
-        threeMonth.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                threeMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
-
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.72f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 0.92f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.18f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.18f));
-        listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == -1) return;
-            overlayShoppingMode = false;
-            overlayShoppingScreenOn = false;
-            applyOverlayScreenOn(false);
-            if (checkedId == threeMonth.getId()) {
-                selectedListType[0] = GroceryItem.LIST_THREE_MONTH;
-            } else if (checkedId == twoMonth.getId()) {
-                selectedListType[0] = GroceryItem.LIST_TWO_MONTH;
-            } else if (checkedId == monthly.getId()) {
-                selectedListType[0] = GroceryItem.LIST_MONTHLY;
-            } else {
-                selectedListType[0] = GroceryItem.LIST_DAILY;
-            }
-            visibleListType = selectedListType[0];
-            updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
-            refreshPanel();
-        });
-
-        shoppingMode.setOnClickListener(v -> {
-            FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-            overlayShoppingMode = !overlayShoppingMode;
-            if (overlayShoppingMode) {
-                listTypeGroup.clearCheck();
-            } else {
-                overlayShoppingScreenOn = false;
-                applyOverlayScreenOn(false);
-                if (GroceryItem.LIST_THREE_MONTH.equals(visibleListType)) {
-                    threeMonth.setChecked(true);
-                } else if (GroceryItem.LIST_TWO_MONTH.equals(visibleListType)) {
-                    twoMonth.setChecked(true);
-                } else if (GroceryItem.LIST_MONTHLY.equals(visibleListType)) {
-                    monthly.setChecked(true);
-                } else {
-                    daily.setChecked(true);
-                }
-            }
-            updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
-            refreshPanel();
-        });
+        Button shoppingListDropdown = compactAction("Shopping Mode: Off  ▾",
+                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
+        shoppingListDropdown.setTextSize(10f);
+        shoppingListDropdown.setSingleLine(true);
+        shoppingListDropdown.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        shoppingListDropdown.setPadding(dp(12), 0, dp(10), 0);
+        shoppingListDropdown.setElevation(dp(2));
+        shoppingListDropdown.setContentDescription("Floating shopping list menu");
 
         screenOn.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
             if (!overlayShoppingMode) return;
             overlayShoppingScreenOn = !overlayShoppingScreenOn;
             applyOverlayScreenOn(overlayShoppingScreenOn);
-            updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
+            updateOverlayShoppingModeUi(shoppingListDropdown, screenOn, shoppingSubtitle);
         });
+
+        shoppingListDropdown.setOnClickListener(v -> showOverlayShoppingMenu(
+                shoppingListDropdown, selectedListType, screenOn, shoppingSubtitle));
 
         Button opacityToggle = compactAction("◐",
                 Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
@@ -508,13 +411,13 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout listTypeControls = new LinearLayout(this);
         listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
-        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(
+        listTypeControls.addView(shoppingListDropdown, new LinearLayout.LayoutParams(
                 0, dp(36), 1f));
-        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(34), dp(30));
-        opacityRowParams.setMarginStart(dp(4));
+        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(38), dp(32));
+        opacityRowParams.setMarginStart(dp(6));
         listTypeControls.addView(opacityToggle, opacityRowParams);
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
         LinearLayout opacityPanel = new LinearLayout(this);
         opacityPanel.setOrientation(LinearLayout.VERTICAL);
@@ -911,11 +814,123 @@ public class GroceryOverlayService extends Service {
         panelParams.y = clamp(panelParams.y, 0, Math.max(0, screenHeight - resolvedPanelHeight));
         windowManager.addView(panelView, panelParams);
         root.requestFocus();
-        updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
+        updateOverlayShoppingModeUi(shoppingListDropdown, screenOn, shoppingSubtitle);
         refreshPanel();
         input.requestFocus();
         input.postDelayed(() -> ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
                 .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT), 150L);
+    }
+
+    private void showOverlayShoppingMenu(Button anchor, String[] selectedListType,
+                                         Button screenOn, TextView shoppingSubtitle) {
+        FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+
+        LinearLayout popupRoot = new LinearLayout(this);
+        popupRoot.setOrientation(LinearLayout.VERTICAL);
+        popupRoot.setPadding(dp(6), dp(6), dp(6), dp(6));
+        popupRoot.setBackground(premiumDropdownBackground());
+        popupRoot.setElevation(dp(12));
+
+        android.widget.PopupWindow popup = new android.widget.PopupWindow(this);
+        popup.setContentView(popupRoot);
+        popup.setWidth(Math.min(dp(230), getResources().getDisplayMetrics().widthPixels - dp(32)));
+        popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        popup.setElevation(dp(12));
+        popup.setOverlapAnchor(false);
+
+        LinearLayout modeRow = premiumShoppingMenuRow(
+                overlayShoppingMode ? "Shopping Mode  •  On" : "Shopping Mode  •  Off",
+                overlayShoppingMode, true);
+        popupRoot.addView(modeRow, shoppingMenuRowParams(false));
+        modeRow.setOnClickListener(v -> {
+            overlayShoppingMode = !overlayShoppingMode;
+            if (!overlayShoppingMode) {
+                overlayShoppingScreenOn = false;
+                overlayShoppingSelection = SHOPPING_ALL;
+                applyOverlayScreenOn(false);
+            }
+            updateOverlayShoppingModeUi(anchor, screenOn, shoppingSubtitle);
+            refreshPanel();
+            popup.dismiss();
+            if (overlayShoppingMode && anchor.isShown()) {
+                anchor.postDelayed(() -> showOverlayShoppingMenu(
+                        anchor, selectedListType, screenOn, shoppingSubtitle), 80L);
+            }
+        });
+
+        if (overlayShoppingMode) {
+            addShoppingSelectionRow(popupRoot, popup, anchor, selectedListType,
+                    screenOn, shoppingSubtitle, SHOPPING_ALL, "All", false);
+            addShoppingSelectionRow(popupRoot, popup, anchor, selectedListType,
+                    screenOn, shoppingSubtitle, GroceryItem.LIST_DAILY, "Daily", false);
+            addShoppingSelectionRow(popupRoot, popup, anchor, selectedListType,
+                    screenOn, shoppingSubtitle, GroceryItem.LIST_MONTHLY, "Monthly", false);
+            addShoppingSelectionRow(popupRoot, popup, anchor, selectedListType,
+                    screenOn, shoppingSubtitle, GroceryItem.LIST_TWO_MONTH, "2 Monthly", false);
+            addShoppingSelectionRow(popupRoot, popup, anchor, selectedListType,
+                    screenOn, shoppingSubtitle, GroceryItem.LIST_THREE_MONTH, "3 Monthly", true);
+        }
+
+        int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(120)));
+        popup.showAsDropDown(anchor, xOffset, dp(5));
+    }
+
+    private void addShoppingSelectionRow(LinearLayout popupRoot,
+                                         android.widget.PopupWindow popup,
+                                         Button anchor,
+                                         String[] selectedListType,
+                                         Button screenOn,
+                                         TextView shoppingSubtitle,
+                                         String value,
+                                         String label,
+                                         boolean last) {
+        boolean selected = value.equals(overlayShoppingSelection);
+        LinearLayout row = premiumShoppingMenuRow(label, selected, false);
+        popupRoot.addView(row, shoppingMenuRowParams(last));
+        row.setOnClickListener(v -> {
+            overlayShoppingSelection = value;
+            if (!SHOPPING_ALL.equals(value)) {
+                visibleListType = value;
+                selectedListType[0] = value;
+            }
+            updateOverlayShoppingModeUi(anchor, screenOn, shoppingSubtitle);
+            refreshPanel();
+            popup.dismiss();
+        });
+    }
+
+    private LinearLayout premiumShoppingMenuRow(String label, boolean selected, boolean modeRow) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(5), dp(8), dp(5));
+        row.setBackground(rounded(
+                selected ? Color.argb(242, 229, 247, 239) : Color.argb(248, 255, 255, 255),
+                selected ? Color.argb(210, 126, 190, 165) : Color.argb(125, 212, 222, 226),
+                10));
+
+        TextView labelView = text(label, modeRow ? 12 : 11, modeRow || selected);
+        labelView.setTextColor(selected ? Color.rgb(15, 108, 89) : Color.rgb(31, 42, 49));
+        labelView.setSingleLine(true);
+        row.addView(labelView, new LinearLayout.LayoutParams(0, dp(30), 1f));
+
+        if (selected) {
+            TextView check = text("✓", 13, true);
+            check.setTextColor(Color.rgb(15, 108, 89));
+            check.setGravity(Gravity.CENTER);
+            row.addView(check, new LinearLayout.LayoutParams(dp(28), dp(30)));
+        }
+        return row;
+    }
+
+    private LinearLayout.LayoutParams shoppingMenuRowParams(boolean last) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
+        params.bottomMargin = last ? 0 : dp(4);
+        return params;
     }
 
     private void showCategoryFilterPopup(ImageButton anchor, EditText search,
@@ -1029,6 +1044,11 @@ public class GroceryOverlayService extends Service {
         itemContainer.removeAllViews();
         if (!overlayShoppingMode) {
             renderSection(items, visibleListType, overlaySectionHeading(visibleListType), 0);
+            return;
+        }
+        if (!SHOPPING_ALL.equals(overlayShoppingSelection)) {
+            renderSection(items, overlayShoppingSelection,
+                    overlaySectionHeading(overlayShoppingSelection), 0);
             return;
         }
         int shown = 0;
@@ -1722,14 +1742,19 @@ public class GroceryOverlayService extends Service {
         return params;
     }
 
-    private void updateOverlayShoppingModeUi(Button shoppingMode, Button screenOn,
+    private void updateOverlayShoppingModeUi(Button shoppingDropdown, Button screenOn,
                                              TextView shoppingSubtitle) {
-        if (shoppingMode != null) {
-            shoppingMode.setText(overlayShoppingMode ? "Shopping Mode ✓" : "Shopping Mode");
-            shoppingMode.setTextColor(overlayShoppingMode
-                    ? Color.WHITE : Color.rgb(15, 108, 89));
-            shoppingMode.setBackground(roundedFill(overlayShoppingMode
-                    ? Color.rgb(15, 108, 89) : Color.argb(230, 226, 244, 238), 16));
+        if (shoppingDropdown != null) {
+            if (!overlayShoppingMode) {
+                shoppingDropdown.setText("Shopping Mode: Off  ▾");
+                shoppingDropdown.setTextColor(Color.rgb(15, 108, 89));
+                shoppingDropdown.setBackground(roundedFill(Color.argb(230, 226, 244, 238), 16));
+            } else {
+                String label = shoppingSelectionLabel(overlayShoppingSelection);
+                shoppingDropdown.setText("Shopping: " + label + "  ▾");
+                shoppingDropdown.setTextColor(Color.rgb(15, 108, 89));
+                shoppingDropdown.setBackground(roundedFill(Color.argb(238, 226, 244, 238), 16));
+            }
         }
         if (screenOn != null) {
             screenOn.setVisibility(overlayShoppingMode ? View.VISIBLE : View.GONE);
@@ -1741,9 +1766,17 @@ public class GroceryOverlayService extends Service {
         }
         if (shoppingSubtitle != null) {
             shoppingSubtitle.setText(overlayShoppingMode
-                    ? "(Shopping mode • all pending)"
+                    ? "(Shopping mode • " + shoppingSelectionLabel(overlayShoppingSelection) + ")"
                     : "(" + getString(R.string.grocery_list_type) + ")");
         }
+    }
+
+    private String shoppingSelectionLabel(String selection) {
+        if (GroceryItem.LIST_DAILY.equals(selection)) return "Daily";
+        if (GroceryItem.LIST_MONTHLY.equals(selection)) return "Monthly";
+        if (GroceryItem.LIST_TWO_MONTH.equals(selection)) return "2 Monthly";
+        if (GroceryItem.LIST_THREE_MONTH.equals(selection)) return "3 Monthly";
+        return "All";
     }
 
     private void applyOverlayScreenOn(boolean keepOn) {
@@ -1840,6 +1873,7 @@ public class GroceryOverlayService extends Service {
             overlayFormCollapsed = false;
             overlayShoppingMode = false;
             overlayShoppingScreenOn = false;
+            overlayShoppingSelection = SHOPPING_ALL;
             cornerResizeActive = false;
         }
     }
