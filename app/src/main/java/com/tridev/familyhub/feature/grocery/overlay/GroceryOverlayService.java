@@ -55,7 +55,6 @@ import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
 import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
-import com.tridev.familyhub.feature.grocery.ShoppingModeActivity;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.ArrayList;
@@ -107,6 +106,7 @@ public class GroceryOverlayService extends Service {
     private String overlayCategoryFilter = "";
     private boolean collapseAllCategories;
     private boolean overlayShoppingMode;
+    private boolean overlayShoppingScreenOn;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -272,7 +272,7 @@ public class GroceryOverlayService extends Service {
                     FamilyHubAppLockManager.noteTrustedOverlayInteraction();
                     if (handlePanelCornerResizeGesture(this, event)) return true;
                     if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
-                        closePanel();
+                        if (!overlayShoppingMode) closePanel();
                         return true;
                     }
                 }
@@ -287,7 +287,9 @@ public class GroceryOverlayService extends Service {
         root.setClipToPadding(false);
         root.setFocusableInTouchMode(true);
         root.setClickable(true);
-        root.setOnClickListener(v -> closePanel());
+        root.setOnClickListener(v -> {
+            if (!overlayShoppingMode) closePanel();
+        });
         panelRoot.addView(root, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -312,18 +314,58 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
+
         LinearLayout titleStack = new LinearLayout(this);
         titleStack.setOrientation(LinearLayout.VERTICAL);
         titleStack.setGravity(Gravity.CENTER_VERTICAL);
+
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = text(getString(R.string.grocery_overlay_title), 16, true);
-        titleStack.addView(title, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(24)));
-        TextView shoppingSubtitle = text("(" + getString(R.string.grocery_list_type) + ")", 11, true);
+        title.setSingleLine(true);
+        titleRow.addView(title, new LinearLayout.LayoutParams(0, dp(26), 1f));
+
+        Button shoppingMode = compactAction("Shopping Mode",
+                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
+        shoppingMode.setTextSize(8.5f);
+        shoppingMode.setSingleLine(true);
+        shoppingMode.setPadding(dp(3), 0, dp(3), 0);
+        shoppingMode.setElevation(dp(2));
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                shoppingMode, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+        shoppingMode.setContentDescription("Floating Shopping Mode");
+        LinearLayout.LayoutParams shoppingHeaderParams = new LinearLayout.LayoutParams(dp(78), dp(28));
+        shoppingHeaderParams.setMarginStart(dp(4));
+        titleRow.addView(shoppingMode, shoppingHeaderParams);
+        titleStack.addView(titleRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(28)));
+
+        LinearLayout subtitleRow = new LinearLayout(this);
+        subtitleRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView shoppingSubtitle = text("(" + getString(R.string.grocery_list_type) + ")", 10, true);
         shoppingSubtitle.setTextColor(Color.rgb(84, 93, 105));
         shoppingSubtitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        titleStack.addView(shoppingSubtitle, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
-        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        shoppingSubtitle.setSingleLine(true);
+        shoppingSubtitle.setEllipsize(TextUtils.TruncateAt.END);
+        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 1f));
+
+        Button screenOn = compactAction("Screen On",
+                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
+        screenOn.setTextSize(8f);
+        screenOn.setSingleLine(true);
+        screenOn.setPadding(dp(3), 0, dp(3), 0);
+        screenOn.setElevation(dp(1));
+        screenOn.setVisibility(View.GONE);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                screenOn, 7, 8, 1, TypedValue.COMPLEX_UNIT_SP);
+        screenOn.setContentDescription("Keep screen on in floating Shopping Mode");
+        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(62), dp(20));
+        screenOnParams.setMarginStart(dp(4));
+        subtitleRow.addView(screenOn, screenOnParams);
+        titleStack.addView(subtitleRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(20)));
+
+        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(50), 1f));
 
         overlayFormToggle = new Button(this);
         overlayFormToggle.setText(R.string.grocery_overlay_hide_form);
@@ -352,7 +394,7 @@ public class GroceryOverlayService extends Service {
         close.setOnClickListener(v -> closePanel());
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(44)));
         root.addView(header, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(46)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(52)));
 
         overlayFormDetails = new LinearLayout(this);
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
@@ -410,13 +452,15 @@ public class GroceryOverlayService extends Service {
                 threeMonth, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
 
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.72f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 0.98f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.15f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.15f));
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.78f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 1.00f));
+        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.12f));
+        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.12f));
         listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == -1) return;
             overlayShoppingMode = false;
+            overlayShoppingScreenOn = false;
+            applyOverlayScreenOn(false);
             if (checkedId == threeMonth.getId()) {
                 selectedListType[0] = GroceryItem.LIST_THREE_MONTH;
             } else if (checkedId == twoMonth.getId()) {
@@ -427,34 +471,44 @@ public class GroceryOverlayService extends Service {
                 selectedListType[0] = GroceryItem.LIST_DAILY;
             }
             visibleListType = selectedListType[0];
+            updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
             refreshPanel();
         });
-        LinearLayout listTypeControls = new LinearLayout(this);
-        listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
 
-        LinearLayout.LayoutParams groupParams = new LinearLayout.LayoutParams(
-                0, dp(36), 1f);
-        listTypeControls.addView(listTypeGroup, groupParams);
-
-        Button shoppingMode = compactAction("Shopping Mode",
-                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
-        shoppingMode.setTextSize(8.5f);
-        shoppingMode.setSingleLine(true);
-        shoppingMode.setPadding(dp(3), 0, dp(3), 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                shoppingMode, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        shoppingMode.setContentDescription("Floating Shopping Mode");
         shoppingMode.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-            overlayShoppingMode = true;
-            listTypeGroup.clearCheck();
+            overlayShoppingMode = !overlayShoppingMode;
+            if (overlayShoppingMode) {
+                listTypeGroup.clearCheck();
+            } else {
+                overlayShoppingScreenOn = false;
+                applyOverlayScreenOn(false);
+                if (GroceryItem.LIST_THREE_MONTH.equals(visibleListType)) {
+                    threeMonth.setChecked(true);
+                } else if (GroceryItem.LIST_TWO_MONTH.equals(visibleListType)) {
+                    twoMonth.setChecked(true);
+                } else if (GroceryItem.LIST_MONTHLY.equals(visibleListType)) {
+                    monthly.setChecked(true);
+                } else {
+                    daily.setChecked(true);
+                }
+            }
+            updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
             refreshPanel();
         });
-        LinearLayout.LayoutParams shoppingParams = new LinearLayout.LayoutParams(
-                dp(76), dp(32));
-        shoppingParams.setMarginStart(dp(2));
-        listTypeControls.addView(shoppingMode, shoppingParams);
 
+        screenOn.setOnClickListener(v -> {
+            FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+            if (!overlayShoppingMode) return;
+            overlayShoppingScreenOn = !overlayShoppingScreenOn;
+            applyOverlayScreenOn(overlayShoppingScreenOn);
+            updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
+        });
+
+        LinearLayout listTypeControls = new LinearLayout(this);
+        listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
+        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
 
@@ -759,7 +813,9 @@ public class GroceryOverlayService extends Service {
         overlayItemScroll.setScrollbarFadingEnabled(false);
         overlayItemScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         overlayItemScroll.setClickable(true);
-        overlayItemScroll.setOnClickListener(v -> closePanel());
+        overlayItemScroll.setOnClickListener(v -> {
+            if (!overlayShoppingMode) closePanel();
+        });
         overlayItemScroll.addView(itemContainer, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
@@ -851,6 +907,7 @@ public class GroceryOverlayService extends Service {
         panelParams.y = clamp(panelParams.y, 0, Math.max(0, screenHeight - resolvedPanelHeight));
         windowManager.addView(panelView, panelParams);
         root.requestFocus();
+        updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
         refreshPanel();
         input.requestFocus();
         input.postDelayed(() -> ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
@@ -1661,6 +1718,34 @@ public class GroceryOverlayService extends Service {
         return params;
     }
 
+    private void updateOverlayShoppingModeUi(Button shoppingMode, Button screenOn,
+                                             TextView shoppingSubtitle) {
+        if (shoppingMode != null) {
+            shoppingMode.setText(overlayShoppingMode ? "Shopping Mode ✓" : "Shopping Mode");
+            shoppingMode.setTextColor(overlayShoppingMode
+                    ? Color.WHITE : Color.rgb(15, 108, 89));
+            shoppingMode.setBackground(roundedFill(overlayShoppingMode
+                    ? Color.rgb(15, 108, 89) : Color.argb(230, 226, 244, 238), 16));
+        }
+        if (screenOn != null) {
+            screenOn.setVisibility(overlayShoppingMode ? View.VISIBLE : View.GONE);
+            screenOn.setText(overlayShoppingScreenOn ? "Screen On ✓" : "Screen On");
+            screenOn.setTextColor(overlayShoppingScreenOn
+                    ? Color.WHITE : Color.rgb(15, 108, 189));
+            screenOn.setBackground(roundedFill(overlayShoppingScreenOn
+                    ? Color.rgb(15, 108, 189) : Color.argb(220, 232, 243, 252), 14));
+        }
+        if (shoppingSubtitle != null) {
+            shoppingSubtitle.setText(overlayShoppingMode
+                    ? "(Shopping mode • all pending)"
+                    : "(" + getString(R.string.grocery_list_type) + ")");
+        }
+    }
+
+    private void applyOverlayScreenOn(boolean keepOn) {
+        if (panelView != null) panelView.setKeepScreenOn(keepOn);
+    }
+
     private boolean handlePanelCornerResizeGesture(View panel, MotionEvent event) {
         if (event == null || panelParams == null || panelView == null) return false;
         int action = event.getActionMasked();
@@ -1739,6 +1824,7 @@ public class GroceryOverlayService extends Service {
 
     private void closePanel() {
         if (panelView != null) {
+            applyOverlayScreenOn(false);
             windowManager.removeView(panelView);
             panelView = null;
             itemContainer = null;
@@ -1749,6 +1835,7 @@ public class GroceryOverlayService extends Service {
             pendingMoneyCatalogAction = null;
             overlayFormCollapsed = false;
             overlayShoppingMode = false;
+            overlayShoppingScreenOn = false;
             cornerResizeActive = false;
         }
     }
