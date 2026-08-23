@@ -55,6 +55,7 @@ import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
 import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
+import com.tridev.familyhub.feature.grocery.ShoppingModeActivity;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.ArrayList;
@@ -362,29 +363,29 @@ public class GroceryOverlayService extends Service {
 
         RadioButton daily = new RadioButton(this);
         daily.setId(View.generateViewId());
-        daily.setText(R.string.grocery_list_daily);
-        daily.setTextSize(10f);
+        daily.setText("Daily");
+        daily.setTextSize(9f);
         daily.setSingleLine(true);
         daily.setChecked(GroceryItem.LIST_DAILY.equals(visibleListType));
 
         RadioButton monthly = new RadioButton(this);
         monthly.setId(View.generateViewId());
-        monthly.setText(R.string.grocery_list_monthly);
-        monthly.setTextSize(10f);
+        monthly.setText("Monthly");
+        monthly.setTextSize(9f);
         monthly.setSingleLine(true);
         monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
 
         RadioButton twoMonth = new RadioButton(this);
         twoMonth.setId(View.generateViewId());
-        twoMonth.setText("2 Month");
-        twoMonth.setTextSize(10f);
+        twoMonth.setText("2 Monthly");
+        twoMonth.setTextSize(9f);
         twoMonth.setSingleLine(true);
         twoMonth.setChecked(GroceryItem.LIST_TWO_MONTH.equals(visibleListType));
 
         RadioButton threeMonth = new RadioButton(this);
         threeMonth.setId(View.generateViewId());
-        threeMonth.setText("3 Month");
-        threeMonth.setTextSize(10f);
+        threeMonth.setText("3 Monthly");
+        threeMonth.setTextSize(9f);
         threeMonth.setSingleLine(true);
         threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
 
@@ -407,8 +408,26 @@ public class GroceryOverlayService extends Service {
         });
         LinearLayout listTypeControls = new LinearLayout(this);
         listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
-        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
+
+        LinearLayout.LayoutParams groupParams = new LinearLayout.LayoutParams(
+                0, dp(36), 1f);
+        listTypeControls.addView(listTypeGroup, groupParams);
+
+        Button shoppingMode = compactAction("Shopping Mode",
+                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
+        shoppingMode.setTextSize(9f);
+        shoppingMode.setSingleLine(true);
+        shoppingMode.setContentDescription("Open Shopping Mode");
+        shoppingMode.setOnClickListener(v -> {
+            closePanel();
+            startActivity(new Intent(this, ShoppingModeActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        });
+        LinearLayout.LayoutParams shoppingParams = new LinearLayout.LayoutParams(
+                dp(88), dp(32));
+        shoppingParams.setMarginStart(dp(4));
+        listTypeControls.addView(shoppingMode, shoppingParams);
+
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
 
