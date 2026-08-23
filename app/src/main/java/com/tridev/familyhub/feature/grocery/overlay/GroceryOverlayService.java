@@ -106,6 +106,7 @@ public class GroceryOverlayService extends Service {
     private String overlaySearchQuery = "";
     private String overlayCategoryFilter = "";
     private boolean collapseAllCategories;
+    private boolean overlayShoppingMode;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -366,6 +367,11 @@ public class GroceryOverlayService extends Service {
         daily.setText("Daily");
         daily.setTextSize(9f);
         daily.setSingleLine(true);
+        daily.setMinWidth(0);
+        daily.setMinimumWidth(0);
+        daily.setPadding(0, 0, 0, 0);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                daily, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         daily.setChecked(GroceryItem.LIST_DAILY.equals(visibleListType));
 
         RadioButton monthly = new RadioButton(this);
@@ -373,6 +379,11 @@ public class GroceryOverlayService extends Service {
         monthly.setText("Monthly");
         monthly.setTextSize(9f);
         monthly.setSingleLine(true);
+        monthly.setMinWidth(0);
+        monthly.setMinimumWidth(0);
+        monthly.setPadding(0, 0, 0, 0);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                monthly, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
 
         RadioButton twoMonth = new RadioButton(this);
@@ -380,6 +391,11 @@ public class GroceryOverlayService extends Service {
         twoMonth.setText("2 Monthly");
         twoMonth.setTextSize(9f);
         twoMonth.setSingleLine(true);
+        twoMonth.setMinWidth(0);
+        twoMonth.setMinimumWidth(0);
+        twoMonth.setPadding(0, 0, 0, 0);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                twoMonth, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         twoMonth.setChecked(GroceryItem.LIST_TWO_MONTH.equals(visibleListType));
 
         RadioButton threeMonth = new RadioButton(this);
@@ -387,13 +403,20 @@ public class GroceryOverlayService extends Service {
         threeMonth.setText("3 Monthly");
         threeMonth.setTextSize(9f);
         threeMonth.setSingleLine(true);
+        threeMonth.setMinWidth(0);
+        threeMonth.setMinimumWidth(0);
+        threeMonth.setPadding(0, 0, 0, 0);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                threeMonth, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
 
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 1f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 1f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1f));
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.72f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 0.98f));
+        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.15f));
+        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.15f));
         listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == -1) return;
+            overlayShoppingMode = false;
             if (checkedId == threeMonth.getId()) {
                 selectedListType[0] = GroceryItem.LIST_THREE_MONTH;
             } else if (checkedId == twoMonth.getId()) {
@@ -415,17 +438,21 @@ public class GroceryOverlayService extends Service {
 
         Button shoppingMode = compactAction("Shopping Mode",
                 Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
-        shoppingMode.setTextSize(9f);
+        shoppingMode.setTextSize(8.5f);
         shoppingMode.setSingleLine(true);
-        shoppingMode.setContentDescription("Open Shopping Mode");
+        shoppingMode.setPadding(dp(3), 0, dp(3), 0);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                shoppingMode, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+        shoppingMode.setContentDescription("Floating Shopping Mode");
         shoppingMode.setOnClickListener(v -> {
-            closePanel();
-            startActivity(new Intent(this, ShoppingModeActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+            overlayShoppingMode = true;
+            listTypeGroup.clearCheck();
+            refreshPanel();
         });
         LinearLayout.LayoutParams shoppingParams = new LinearLayout.LayoutParams(
-                dp(88), dp(32));
-        shoppingParams.setMarginStart(dp(4));
+                dp(76), dp(32));
+        shoppingParams.setMarginStart(dp(2));
         listTypeControls.addView(shoppingMode, shoppingParams);
 
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
@@ -939,7 +966,19 @@ public class GroceryOverlayService extends Service {
     private void renderItems(List<GroceryItem> items) {
         if (itemContainer == null) return;
         itemContainer.removeAllViews();
-        renderSection(items, visibleListType, overlaySectionHeading(visibleListType), 0);
+        if (!overlayShoppingMode) {
+            renderSection(items, visibleListType, overlaySectionHeading(visibleListType), 0);
+            return;
+        }
+        int shown = 0;
+        shown = renderSection(items, GroceryItem.LIST_DAILY,
+                overlaySectionHeading(GroceryItem.LIST_DAILY), shown);
+        shown = renderSection(items, GroceryItem.LIST_MONTHLY,
+                overlaySectionHeading(GroceryItem.LIST_MONTHLY), shown);
+        shown = renderSection(items, GroceryItem.LIST_TWO_MONTH,
+                overlaySectionHeading(GroceryItem.LIST_TWO_MONTH), shown);
+        renderSection(items, GroceryItem.LIST_THREE_MONTH,
+                overlaySectionHeading(GroceryItem.LIST_THREE_MONTH), shown);
     }
 
     private String overlaySectionHeading(String listType) {
@@ -1709,6 +1748,7 @@ public class GroceryOverlayService extends Service {
             panelParams = null;
             pendingMoneyCatalogAction = null;
             overlayFormCollapsed = false;
+            overlayShoppingMode = false;
             cornerResizeActive = false;
         }
     }
