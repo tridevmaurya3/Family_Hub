@@ -319,26 +319,11 @@ public class GroceryOverlayService extends Service {
         titleStack.setOrientation(LinearLayout.VERTICAL);
         titleStack.setGravity(Gravity.CENTER_VERTICAL);
 
-        LinearLayout titleRow = new LinearLayout(this);
-        titleRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = text(getString(R.string.grocery_overlay_title), 16, true);
         title.setSingleLine(true);
-        titleRow.addView(title, new LinearLayout.LayoutParams(0, dp(26), 1f));
-
-        Button shoppingMode = compactAction("Shopping Mode",
-                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
-        shoppingMode.setTextSize(8.5f);
-        shoppingMode.setSingleLine(true);
-        shoppingMode.setPadding(dp(3), 0, dp(3), 0);
-        shoppingMode.setElevation(dp(2));
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                shoppingMode, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        shoppingMode.setContentDescription("Floating Shopping Mode");
-        LinearLayout.LayoutParams shoppingHeaderParams = new LinearLayout.LayoutParams(dp(78), dp(28));
-        shoppingHeaderParams.setMarginStart(dp(4));
-        titleRow.addView(shoppingMode, shoppingHeaderParams);
-        titleStack.addView(titleRow, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(28)));
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        titleStack.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(26)));
 
         LinearLayout subtitleRow = new LinearLayout(this);
         subtitleRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -359,42 +344,50 @@ public class GroceryOverlayService extends Service {
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
                 screenOn, 7, 8, 1, TypedValue.COMPLEX_UNIT_SP);
         screenOn.setContentDescription("Keep screen on in floating Shopping Mode");
-        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(62), dp(20));
-        screenOnParams.setMarginStart(dp(4));
+        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(60), dp(20));
+        screenOnParams.setMarginStart(dp(3));
         subtitleRow.addView(screenOn, screenOnParams);
         titleStack.addView(subtitleRow, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(20)));
 
-        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(48), 1f));
 
-        overlayFormToggle = new Button(this);
-        overlayFormToggle.setText(R.string.grocery_overlay_hide_form);
-        overlayFormToggle.setTextSize(10f);
-        overlayFormToggle.setTextColor(Color.rgb(15, 108, 189));
-        overlayFormToggle.setAllCaps(false);
-        overlayFormToggle.setMinWidth(0);
-        overlayFormToggle.setMinimumWidth(0);
-        overlayFormToggle.setPadding(dp(6), 0, dp(6), 0);
-        overlayFormToggle.setBackground(rounded(Color.argb(220, 232, 243, 252),
-                Color.argb(190, 190, 216, 236), 16));
+        Button shoppingMode = compactAction("Shopping Mode",
+                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
+        shoppingMode.setTextSize(8.5f);
+        shoppingMode.setSingleLine(true);
+        shoppingMode.setPadding(dp(4), 0, dp(4), 0);
+        shoppingMode.setElevation(dp(2));
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                shoppingMode, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+        shoppingMode.setContentDescription("Floating Shopping Mode");
+        LinearLayout.LayoutParams shoppingHeaderParams = new LinearLayout.LayoutParams(dp(72), dp(32));
+        shoppingHeaderParams.setMarginStart(dp(4));
+        header.addView(shoppingMode, shoppingHeaderParams);
+
+        overlayFormToggle = compactAction(getString(R.string.grocery_overlay_hide_form),
+                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
+        overlayFormToggle.setTextSize(8.5f);
+        overlayFormToggle.setSingleLine(true);
+        overlayFormToggle.setPadding(dp(4), 0, dp(4), 0);
         overlayFormToggle.setElevation(dp(2));
-        header.addView(overlayFormToggle, new LinearLayout.LayoutParams(dp(78), dp(34)));
-
-        Button opacityToggle = compactAction("◐",
-                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
-        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
-        LinearLayout.LayoutParams opacityHeaderParams = new LinearLayout.LayoutParams(dp(40), dp(34));
-        opacityHeaderParams.setMarginStart(dp(6));
-        header.addView(opacityToggle, opacityHeaderParams);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                overlayFormToggle, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+        LinearLayout.LayoutParams formHeaderParams = new LinearLayout.LayoutParams(dp(72), dp(32));
+        formHeaderParams.setMarginStart(dp(4));
+        header.addView(overlayFormToggle, formHeaderParams);
 
         Button close = new Button(this);
         close.setText("×");
         close.setTextSize(20f);
+        close.setMinWidth(0);
+        close.setMinimumWidth(0);
+        close.setPadding(0, 0, 0, 0);
         close.setBackgroundColor(Color.TRANSPARENT);
         close.setOnClickListener(v -> closePanel());
-        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(44)));
+        header.addView(close, new LinearLayout.LayoutParams(dp(34), dp(42)));
         root.addView(header, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(52)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(50)));
 
         overlayFormDetails = new LinearLayout(this);
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
@@ -407,55 +400,55 @@ public class GroceryOverlayService extends Service {
         RadioButton daily = new RadioButton(this);
         daily.setId(View.generateViewId());
         daily.setText("Daily");
-        daily.setTextSize(9f);
+        daily.setTextSize(8.5f);
         daily.setSingleLine(true);
         daily.setMinWidth(0);
         daily.setMinimumWidth(0);
         daily.setPadding(0, 0, 0, 0);
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                daily, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+                daily, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         daily.setChecked(GroceryItem.LIST_DAILY.equals(visibleListType));
 
         RadioButton monthly = new RadioButton(this);
         monthly.setId(View.generateViewId());
         monthly.setText("Monthly");
-        monthly.setTextSize(9f);
+        monthly.setTextSize(8.5f);
         monthly.setSingleLine(true);
         monthly.setMinWidth(0);
         monthly.setMinimumWidth(0);
         monthly.setPadding(0, 0, 0, 0);
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                monthly, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+                monthly, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
 
         RadioButton twoMonth = new RadioButton(this);
         twoMonth.setId(View.generateViewId());
         twoMonth.setText("2 Monthly");
-        twoMonth.setTextSize(9f);
+        twoMonth.setTextSize(8.5f);
         twoMonth.setSingleLine(true);
         twoMonth.setMinWidth(0);
         twoMonth.setMinimumWidth(0);
         twoMonth.setPadding(0, 0, 0, 0);
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                twoMonth, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+                twoMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         twoMonth.setChecked(GroceryItem.LIST_TWO_MONTH.equals(visibleListType));
 
         RadioButton threeMonth = new RadioButton(this);
         threeMonth.setId(View.generateViewId());
         threeMonth.setText("3 Monthly");
-        threeMonth.setTextSize(9f);
+        threeMonth.setTextSize(8.5f);
         threeMonth.setSingleLine(true);
         threeMonth.setMinWidth(0);
         threeMonth.setMinimumWidth(0);
         threeMonth.setPadding(0, 0, 0, 0);
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                threeMonth, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+                threeMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
 
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.78f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 1.00f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.12f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.12f));
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.72f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 0.92f));
+        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.18f));
+        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.18f));
         listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == -1) return;
             overlayShoppingMode = false;
@@ -505,10 +498,21 @@ public class GroceryOverlayService extends Service {
             updateOverlayShoppingModeUi(shoppingMode, screenOn, shoppingSubtitle);
         });
 
+        Button opacityToggle = compactAction("◐",
+                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
+        opacityToggle.setTextSize(13f);
+        opacityToggle.setSingleLine(true);
+        opacityToggle.setPadding(0, 0, 0, 0);
+        opacityToggle.setElevation(dp(1));
+        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
+
         LinearLayout listTypeControls = new LinearLayout(this);
         listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
         listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
+                0, dp(36), 1f));
+        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(34), dp(30));
+        opacityRowParams.setMarginStart(dp(4));
+        listTypeControls.addView(opacityToggle, opacityRowParams);
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(38)));
 
