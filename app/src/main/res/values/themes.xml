@@ -97,9 +97,13 @@
         <item name="android:fontFamily">sans</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:includeFontPadding">false</item>
-        <item name="android:minHeight">48dp</item>
-        <item name="android:dropDownVerticalOffset">4dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:dropDownVerticalOffset">8dp</item>
         <item name="android:dropDownHorizontalOffset">0dp</item>
+        <item name="android:popupBackground">@drawable/bg_premium_dropdown_popup</item>
+        <item name="android:popupElevation">12dp</item>
         <item name="android:lineSpacingExtra">0dp</item>
         <item name="android:singleLine">true</item>
         <item name="android:textColor">@color/fh_on_surface</item>
