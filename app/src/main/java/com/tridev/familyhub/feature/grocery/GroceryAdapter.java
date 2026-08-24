@@ -275,7 +275,9 @@ public class GroceryAdapter
             binding.groceryPriority.setTextColor(ContextCompat.getColor(
                     binding.getRoot().getContext(), priorityColor));
 
-            String listLabel = cycleLabel(item.listType);
+            long now = System.currentTimeMillis();
+            String listLabel = cycleLabel(GroceryRecurrenceEngine.effectiveCycle(item, now));
+            String recurrenceBadge = GroceryRecurrenceEngine.badgeLabel(item, now);
             String assignment;
             if (item.isPurchased && !item.purchasedByName.isEmpty()) {
                 assignment = binding.getRoot().getContext().getString(
@@ -298,10 +300,14 @@ public class GroceryAdapter
                 );
             }
 
-            StringBuilder assignmentLine = new StringBuilder(listLabel)
+            StringBuilder assignmentLine = new StringBuilder();
+            if (!recurrenceBadge.isEmpty()) {
+                assignmentLine.append("◆ ").append(recurrenceBadge).append("  •  ");
+            }
+            assignmentLine.append(listLabel)
                     .append(" • ")
                     .append(assignment);
-            if (item.isPurchased && item.purchasedAt > 0L) {
+            if (item.purchasedAt > 0L) {
                 assignmentLine.append(" • ").append(lastPurchaseLabel(item.purchasedAt));
             }
             binding.groceryAssignment.setText(assignmentLine.toString());
@@ -381,8 +387,17 @@ public class GroceryAdapter
             } else if (days < 30L) {
                 age = days + " days ago";
             } else {
-                long months = days / 30L;
-                long remainingDays = days % 30L;
+                java.util.Calendar cursor = (java.util.Calendar) purchaseDay.clone();
+                long months = 0L;
+                while (true) {
+                    java.util.Calendar next = (java.util.Calendar) cursor.clone();
+                    next.add(java.util.Calendar.MONTH, 1);
+                    if (next.after(today)) break;
+                    cursor = next;
+                    months++;
+                }
+                long remainingDays = (today.getTimeInMillis()
+                        - cursor.getTimeInMillis()) / DAY_MILLIS;
                 String monthText = months == 1L ? "1 month" : months + " months";
                 if (remainingDays == 0L) {
                     age = monthText + " ago";

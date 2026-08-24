@@ -127,4 +127,9 @@ public class GroceryItem {
 
     /** Runtime-only signal used to explain duplicate reuse in the UI. */
     @Ignore public boolean duplicateMerged;
+    @Ignore @NonNull public String originalRecurringType = "";
+    @Ignore @NonNull public String effectiveListType = "";
+    @Ignore public boolean recurrenceShadowed;
+    @Ignore @NonNull public String lastPurchaseOccurrenceCloudId = "";
+    @Ignore public long previousRecurrenceAnchorAt;
 }

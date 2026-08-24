@@ -54,6 +54,7 @@ import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
+import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
@@ -1156,7 +1157,10 @@ public class GroceryOverlayService extends Service {
     private int renderSection(List<GroceryItem> items, String listType, String heading, int alreadyShown) {
         int count = 0;
         for (GroceryItem item : items) {
-            if (!item.isPurchased && listType.equals(item.listType) && matchesOverlayFilters(item)) count++;
+            if (!item.isPurchased && !item.recurrenceShadowed
+                    && listType.equals(GroceryRecurrenceEngine.effectiveCycle(
+                            item, System.currentTimeMillis()))
+                    && matchesOverlayFilters(item)) count++;
         }
         TextView sectionTitle = text(heading + "  (" + count + ")", 12, true);
         sectionTitle.setTextColor(GroceryItem.LIST_MONTHLY.equals(listType)
@@ -1170,7 +1174,10 @@ public class GroceryOverlayService extends Service {
         ordered.sort((left, right) -> Integer.compare(priorityRank(left), priorityRank(right)));
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : ordered) {
-            if (item.isPurchased || !listType.equals(item.listType) || !matchesOverlayFilters(item)) continue;
+            if (item.isPurchased || item.recurrenceShadowed
+                    || !listType.equals(GroceryRecurrenceEngine.effectiveCycle(
+                            item, System.currentTimeMillis()))
+                    || !matchesOverlayFilters(item)) continue;
             String categoryName = item.category.isEmpty()
                     ? getString(R.string.grocery_uncategorized) : item.category;
             grouped.computeIfAbsent(categoryName, key -> new ArrayList<>()).add(item);
@@ -1199,6 +1206,9 @@ public class GroceryOverlayService extends Service {
             for (GroceryItem item : group.getValue()) {
                 CheckBox row = new CheckBox(this);
                 String detail = (shownHere + 1) + ".  " + item.name;
+                String badge = GroceryRecurrenceEngine.badgeLabel(
+                        item, System.currentTimeMillis());
+                if (!badge.isEmpty()) detail += "  ◆ " + badge;
                 if (!item.quantity.isEmpty()) detail += "  •  " + item.quantity;
                 if (!item.assignedMemberName.isEmpty()) detail += "  •  " + item.assignedMemberName;
                 if (GroceryItem.PRIORITY_URGENT.equals(item.priority)) {

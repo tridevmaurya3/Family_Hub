@@ -8,6 +8,8 @@ import android.widget.RemoteViewsService;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.repository.GroceryRepository;
+import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,8 +36,15 @@ public class GroceryWidgetService extends RemoteViewsService {
         @Override
         public void onDataSetChanged() {
             items.clear();
-            items.addAll(FamilyHubDatabase.getInstance(context)
-                    .groceryItemDao().getPendingForWidget());
+            List<GroceryItem> all = FamilyHubDatabase.getInstance(context)
+                    .groceryItemDao().getAll();
+            List<GroceryItem> pending = FamilyHubDatabase.getInstance(context)
+                    .groceryItemDao().getPendingForWidget();
+            GroceryRepository.annotateRecurrence(
+                    pending, all, System.currentTimeMillis());
+            for (GroceryItem item : pending) {
+                if (!item.recurrenceShadowed) items.add(item);
+            }
         }
 
         @Override public int getCount() { return items.size(); }
@@ -54,11 +63,14 @@ public class GroceryWidgetService extends RemoteViewsService {
             String detail = item.quantity.isEmpty()
                     ? item.category
                     : item.quantity + " • " + item.category;
-            String type = context.getString(
-                    GroceryItem.LIST_MONTHLY.equals(item.listType)
-                            ? R.string.grocery_filter_monthly
-                            : R.string.grocery_filter_daily
-            );
+            String effective = GroceryRecurrenceEngine.effectiveCycle(
+                    item, System.currentTimeMillis());
+            String type = GroceryItem.LIST_THREE_MONTH.equals(effective) ? "3 Monthly"
+                    : GroceryItem.LIST_TWO_MONTH.equals(effective) ? "2 Monthly"
+                    : GroceryItem.LIST_MONTHLY.equals(effective) ? "Monthly" : "Daily";
+            String badge = GroceryRecurrenceEngine.badgeLabel(
+                    item, System.currentTimeMillis());
+            if (!badge.isEmpty()) type += " • " + badge;
             detail = type + " • " + detail;
             if (!item.assignedMemberName.isEmpty()) {
                 detail += " • " + item.assignedMemberName;

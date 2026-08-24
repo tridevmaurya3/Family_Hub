@@ -23,6 +23,7 @@ import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
 import com.tridev.familyhub.feature.grocery.GroceryNotificationHelper;
+import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -141,6 +142,7 @@ public class GroceryRepository {
             List<GroceryItem> items = trimmedQuery.isEmpty()
                     ? groceryItemDao.getAll()
                     : groceryItemDao.search(trimmedQuery);
+            annotateRecurrence(items, groceryItemDao.getAll(), System.currentTimeMillis());
             mainHandler.post(() -> callback.onItemsLoaded(items));
         });
     }
@@ -193,6 +195,13 @@ public class GroceryRepository {
             boolean purchased,
             @NonNull ActionCallback callback
     ) {
+        String originalCycle = GroceryRecurrenceEngine.originalCycle(item);
+        if (purchased && !item.isPurchased
+                && GroceryRecurrenceEngine.isRecurringType(originalCycle)
+                && !GroceryItem.LIST_DAILY.equals(item.listType)) {
+            purchaseRecurringMaster(item, originalCycle, callback);
+            return;
+        }
         boolean recordPurchase = purchased && !item.isPurchased;
         item.isPurchased = purchased;
         item.purchasedAt = purchased ? System.currentTimeMillis() : 0L;
@@ -221,13 +230,21 @@ public class GroceryRepository {
                     .getInstance(appContext).groceryPurchaseDao()
                     .insert(purchase));
         }
-        save(item, callback);
+        ActionCallback completion = callback;
+        if (recordPurchase && GroceryRecurrenceEngine.isRecurringType(originalCycle)) {
+            completion = () -> resetMasterAnchor(item.name, item.purchasedAt, callback);
+        }
+        save(item, completion);
     }
 
     public void undoPurchase(
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
+        if (!item.lastPurchaseOccurrenceCloudId.isEmpty()) {
+            undoRecurringMasterPurchase(item, callback);
+            return;
+        }
         long completedAt = item.purchasedAt;
         DATABASE_EXECUTOR.execute(() -> {
             FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
@@ -670,29 +687,170 @@ public class GroceryRepository {
         return value == null ? fallback : value;
     }
 
-    private void resetMonthlyMastersIfNeeded() {
-        String month = currentMonth();
-        for (GroceryItem item : groceryItemDao.getAll()) {
-            if (!item.isMonthlyMaster || month.equals(item.lastResetMonth)) {
-                continue;
+    /**
+     * Completes a recurring master through a purchased history occurrence, while
+     * keeping the same master row as the one active occurrence for its next cycle.
+     */
+    private void purchaseRecurringMaster(@NonNull GroceryItem master,
+                                         @NonNull String originalCycle,
+                                         @NonNull ActionCallback callback) {
+        long purchasedAt = System.currentTimeMillis();
+        GroceryItem purchase = copyForPurchase(master);
+        purchase.id = 0L;
+        purchase.cloudId = "recurrence-purchase-" + UUID.randomUUID();
+        purchase.listType = GroceryItem.LIST_DAILY;
+        purchase.isMonthlyMaster = false;
+        purchase.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(originalCycle);
+        purchase.createdAt = purchasedAt;
+        purchase.purchasedAt = purchasedAt;
+        purchase.updatedAt = purchasedAt;
+        purchase.isPurchased = true;
+        purchase.buyingStatus = GroceryItem.STATUS_PURCHASED;
+        purchase.purchaseCount = master.purchaseCount + 1;
+        purchase.financeEntryId = 0L;
+        purchase.purchasedByName = displayName(FirebaseAuth.getInstance().getCurrentUser());
+        if (purchase.actualCost <= 0D) purchase.actualCost = purchase.estimatedCost;
+
+        master.previousRecurrenceAnchorAt = master.purchasedAt > 0L
+                ? master.purchasedAt : master.createdAt;
+        master.createdAt = purchasedAt;
+        master.purchasedAt = purchasedAt; // preserved Last Purchase and new anchor
+        master.lastResetMonth = "";
+        master.purchaseCount++;
+        master.isPurchased = false;
+        master.buyingStatus = GroceryItem.STATUS_PENDING;
+        master.purchasedByName = "";
+        master.actualCost = 0D;
+        master.financeEntryId = 0L;
+        master.updatedAt = purchasedAt;
+        markCurrentEditor(master);
+
+        DATABASE_EXECUTOR.execute(() -> {
+            GroceryPurchase history = new GroceryPurchase();
+            history.sourceItemId = master.id;
+            history.itemName = purchase.name;
+            history.category = purchase.category;
+            history.quantity = purchase.quantity;
+            history.storeName = purchase.storeName;
+            history.actualCost = purchase.actualCost;
+            history.purchasedAt = purchasedAt;
+            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao().insert(history);
+            linkFinance(purchase);
+            upsertLocal(purchase);
+            upsertLocal(master);
+            master.lastPurchaseOccurrenceCloudId = purchase.cloudId;
+            GroceryWidgetProvider.refreshAll(appContext);
+            mainHandler.post(() -> {
+                callback.onComplete();
+                syncItem(purchase);
+                syncItem(master);
+            });
+        });
+    }
+
+    @NonNull
+    private static GroceryItem copyForPurchase(@NonNull GroceryItem source) {
+        GroceryItem target = new GroceryItem();
+        target.name = source.name; target.category = source.category;
+        target.quantity = source.quantity; target.estimatedCost = source.estimatedCost;
+        target.actualCost = source.actualCost; target.storeName = source.storeName;
+        target.autoPriceEnabled = source.autoPriceEnabled;
+        target.priceLocationKey = source.priceLocationKey;
+        target.priceConfidence = source.priceConfidence; target.priority = source.priority;
+        target.notes = source.notes; target.assignedMemberId = source.assignedMemberId;
+        target.assignedMemberName = source.assignedMemberName; target.familyId = source.familyId;
+        target.updatedByUid = source.updatedByUid; target.updatedByName = source.updatedByName;
+        return target;
+    }
+
+    private void resetMasterAnchor(@NonNull String name, long purchasedAt,
+                                   @NonNull ActionCallback callback) {
+        DATABASE_EXECUTOR.execute(() -> {
+            GroceryItem master = groceryItemDao.findRecurringMaster(name);
+            if (master != null) {
+                master.createdAt = purchasedAt;
+                master.purchasedAt = purchasedAt;
+                master.lastResetMonth = "";
+                master.isPurchased = false;
+                master.buyingStatus = GroceryItem.STATUS_PENDING;
+                master.purchasedByName = "";
+                master.financeEntryId = 0L;
+                master.updatedAt = purchasedAt;
+                markCurrentEditor(master);
+                groceryItemDao.update(master);
+                mainHandler.post(() -> syncItem(master));
             }
-            item.lastResetMonth = month;
-            item.isPurchased = false;
-            item.purchasedAt = 0L;
-            item.purchasedByName = "";
-            item.actualCost = 0D;
-            // Preserve the previous month's Finance entry as purchase history.
-            item.financeEntryId = 0L;
-            item.buyingStatus = GroceryItem.STATUS_PENDING;
-            item.updatedAt = System.currentTimeMillis();
-            markCurrentEditor(item);
-            groceryItemDao.update(item);
-            if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
-                firebaseRoot.child("sharedShopping").child(activeFamilyId)
-                        .child("items").child(item.cloudId)
-                        .updateChildren(toCloudValues(item));
+            mainHandler.post(callback::onComplete);
+        });
+    }
+
+    public static void annotateRecurrence(@NonNull List<GroceryItem> visible,
+                                           @NonNull List<GroceryItem> all,
+                                           long now) {
+        Map<String, GroceryItem> masters = new HashMap<>();
+        Set<String> activeLegacyOccurrences = new HashSet<>();
+        for (GroceryItem candidate : all) {
+            if (GroceryRecurrenceEngine.isRecurringType(candidate.listType)) {
+                masters.put(candidate.name.trim().toLowerCase(Locale.ENGLISH), candidate);
             }
         }
+        for (GroceryItem candidate : all) {
+            if (!candidate.isPurchased && GroceryItem.LIST_DAILY.equals(candidate.listType)
+                    && candidate.cloudId.startsWith("recurrence-")) {
+                String key = candidate.name.trim().toLowerCase(Locale.ENGLISH);
+                if (masters.containsKey(key)) activeLegacyOccurrences.add(key);
+            }
+        }
+        for (GroceryItem item : visible) {
+            String key = item.name.trim().toLowerCase(Locale.ENGLISH);
+            GroceryItem master = masters.get(key);
+            if (master != null && item.id != master.id
+                    && GroceryItem.LIST_DAILY.equals(item.listType)) {
+                item.originalRecurringType = master.listType;
+            }
+            if (master != null && item.id == master.id && activeLegacyOccurrences.contains(key)) {
+                item.recurrenceShadowed = true;
+            }
+            item.effectiveListType = GroceryRecurrenceEngine.effectiveCycle(item, now);
+        }
+    }
+
+    private void resetMonthlyMastersIfNeeded() {
+        // Recurrence is purchase-date anchored and projected by GroceryRecurrenceEngine.
+        // The former calendar-month reset erased Last Purchase and is intentionally retired.
+    }
+
+    private void undoRecurringMasterPurchase(@NonNull GroceryItem master,
+                                             @NonNull ActionCallback callback) {
+        String occurrenceCloudId = master.lastPurchaseOccurrenceCloudId;
+        long completedAt = master.purchasedAt;
+        DATABASE_EXECUTOR.execute(() -> {
+            GroceryItem occurrence = groceryItemDao.getByCloudId(occurrenceCloudId);
+            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                    .deletePurchase(master.id, completedAt);
+            if (occurrence != null) {
+                occurrence.isPurchased = false;
+                linkFinance(occurrence);
+                groceryItemDao.delete(occurrence);
+                if (!activeFamilyId.isEmpty()) {
+                    firebaseRoot.child("sharedShopping").child(activeFamilyId)
+                            .child("items").child(occurrenceCloudId).removeValue();
+                }
+            }
+            long previous = master.previousRecurrenceAnchorAt;
+            master.createdAt = previous > 0L ? previous : master.createdAt;
+            master.purchasedAt = previous > 0L ? previous : 0L;
+            if (master.purchaseCount > 0) master.purchaseCount--;
+            master.updatedAt = System.currentTimeMillis();
+            master.lastPurchaseOccurrenceCloudId = "";
+            markCurrentEditor(master);
+            groceryItemDao.update(master);
+            GroceryWidgetProvider.refreshAll(appContext);
+            mainHandler.post(() -> {
+                callback.onComplete();
+                syncItem(master);
+            });
+        });
     }
 
     private void reconcileFinanceLinksInternal() {

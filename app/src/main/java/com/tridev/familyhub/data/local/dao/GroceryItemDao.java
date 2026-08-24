@@ -48,6 +48,11 @@ public interface GroceryItemDao {
     GroceryItem findDuplicate(String name);
 
     @Query("SELECT * FROM grocery_items WHERE name = :name COLLATE NOCASE "
+            + "AND listType IN ('MONTHLY','TWO_MONTH','THREE_MONTH') "
+            + "ORDER BY isMonthlyMaster DESC, createdAt ASC LIMIT 1")
+    GroceryItem findRecurringMaster(String name);
+
+    @Query("SELECT * FROM grocery_items WHERE name = :name COLLATE NOCASE "
             + "AND actualCost > 0 AND priceLocationKey = :locationKey "
             + "ORDER BY purchasedAt DESC LIMIT 1")
     GroceryItem findLocalPrice(String name, String locationKey);
