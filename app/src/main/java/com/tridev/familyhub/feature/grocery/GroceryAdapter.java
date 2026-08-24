@@ -354,8 +354,8 @@ public class GroceryAdapter
 
         @NonNull
         private String cycleLabel(@NonNull String listType) {
-            if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "3 Month";
-            if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "2 Month";
+            if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "3 Monthly";
+            if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "2 Monthly";
             if (GroceryItem.LIST_MONTHLY.equals(listType)) {
                 return binding.getRoot().getContext().getString(R.string.grocery_list_monthly);
             }

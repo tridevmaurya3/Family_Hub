@@ -363,8 +363,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] labels = new String[]{
                 getString(R.string.grocery_filter_daily),
                 getString(R.string.grocery_filter_monthly),
-                "2 Month",
-                "3 Month"
+                "2 Monthly",
+                "3 Monthly"
         };
         String[] values = new String[]{
                 GroceryItem.LIST_DAILY,
@@ -621,8 +621,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     @NonNull
     private String cycleLabel(@Nullable String cycle) {
         String normalized = GroceryRecurrenceEngine.normalizeCycle(cycle);
-        if (GroceryItem.LIST_THREE_MONTH.equals(normalized)) return "3 Month";
-        if (GroceryItem.LIST_TWO_MONTH.equals(normalized)) return "2 Month";
+        if (GroceryItem.LIST_THREE_MONTH.equals(normalized)) return "3 Monthly";
+        if (GroceryItem.LIST_TWO_MONTH.equals(normalized)) return "2 Monthly";
         if (GroceryItem.LIST_MONTHLY.equals(normalized)) {
             return getString(R.string.grocery_filter_monthly);
         }
@@ -631,8 +631,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     @NonNull
     private String listTypeFromLabel(@NonNull String label) {
-        if ("3 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_THREE_MONTH;
-        if ("2 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_TWO_MONTH;
+        if ("3 Monthly".equalsIgnoreCase(label)
+                || "3 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_THREE_MONTH;
+        if ("2 Monthly".equalsIgnoreCase(label)
+                || "2 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_TWO_MONTH;
         if (getString(R.string.grocery_filter_monthly).equalsIgnoreCase(label)
                 || "Monthly".equalsIgnoreCase(label)) {
             return GroceryItem.LIST_MONTHLY;
@@ -788,8 +790,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] listTypeLabels = new String[]{
                 getString(R.string.grocery_filter_daily),
                 getString(R.string.grocery_filter_monthly),
-                "2 Month",
-                "3 Month"
+                "2 Monthly",
+                "3 Monthly"
         };
         String[] quantityUnits = getResources().getStringArray(
                 R.array.grocery_quantity_units

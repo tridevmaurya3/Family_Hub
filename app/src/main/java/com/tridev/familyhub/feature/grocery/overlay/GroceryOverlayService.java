@@ -1146,8 +1146,8 @@ public class GroceryOverlayService extends Service {
     }
 
     private String overlaySectionHeading(String listType) {
-        if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "3 Month items";
-        if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "2 Month items";
+        if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "3 Monthly items";
+        if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "2 Monthly items";
         if (GroceryItem.LIST_MONTHLY.equals(listType)) {
             return getString(R.string.grocery_overlay_monthly_section);
         }
@@ -1245,9 +1245,9 @@ public class GroceryOverlayService extends Service {
         if (count == 0) {
             String emptyLabel;
             if (GroceryItem.LIST_THREE_MONTH.equals(listType)) {
-                emptyLabel = "No 3 Month items";
+                emptyLabel = "No 3 Monthly items";
             } else if (GroceryItem.LIST_TWO_MONTH.equals(listType)) {
-                emptyLabel = "No 2 Month items";
+                emptyLabel = "No 2 Monthly items";
             } else if (GroceryItem.LIST_MONTHLY.equals(listType)) {
                 emptyLabel = getString(R.string.grocery_overlay_monthly_empty);
             } else {
