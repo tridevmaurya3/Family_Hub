@@ -14,10 +14,18 @@ public interface GroceryPurchaseDao {
     List<GroceryPurchase> getAll();
 
     @Query("UPDATE grocery_purchases SET itemName = :itemName, category = :category, "
-            + "quantity = :quantity, storeName = :storeName, actualCost = :actualCost "
-            + "WHERE id = :purchaseId")
+            + "quantity = :quantity, storeName = :storeName, actualCost = :actualCost, "
+            + "purchasedAt = :purchasedAt WHERE id = :purchaseId")
     int updateRecovered(long purchaseId, String itemName, String category,
-                        String quantity, String storeName, double actualCost);
+                        String quantity, String storeName, double actualCost,
+                        long purchasedAt);
+
+    @Query("UPDATE grocery_purchases SET purchasedAt = :newPurchasedAt "
+            + "WHERE id = (SELECT id FROM grocery_purchases "
+            + "WHERE itemName = :itemName COLLATE NOCASE AND purchasedAt = :oldPurchasedAt "
+            + "ORDER BY id DESC LIMIT 1)")
+    int updateMatchingPurchaseDate(String itemName, long oldPurchasedAt,
+                                   long newPurchasedAt);
 
     @Query("DELETE FROM grocery_purchases WHERE id = :purchaseId")
     int deleteById(long purchaseId);
