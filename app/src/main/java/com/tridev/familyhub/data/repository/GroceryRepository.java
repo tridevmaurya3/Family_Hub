@@ -162,6 +162,10 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
+        if (item.historyOnly) {
+            saveRecoveredPurchase(item, callback);
+            return;
+        }
         long now = System.currentTimeMillis();
         if (item.createdAt == 0L) {
             item.createdAt = now;
@@ -410,6 +414,19 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
+        if (item.historyOnly) {
+            DATABASE_EXECUTOR.execute(() -> {
+                long historyId = recoveredHistoryId(item);
+                if (historyId > 0L) {
+                    FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                            .deleteById(historyId);
+                    recoveredHistoryPreferences().edit()
+                            .remove("cycle_" + historyId).apply();
+                }
+                mainHandler.post(callback::onComplete);
+            });
+            return;
+        }
         String cloudId = item.cloudId;
         DATABASE_EXECUTOR.execute(() -> {
             groceryItemDao.delete(item);
@@ -832,6 +849,8 @@ public class GroceryRepository {
         Set<String> existingPurchases = new HashSet<>();
         Map<Long, GroceryItem> itemById = new HashMap<>();
         Map<String, String> originByName = new HashMap<>();
+        Map<String, String> recoveredOriginByName = new HashMap<>();
+        Map<String, GroceryPurchase> latestHistoryByName = new HashMap<>();
         for (GroceryItem item : persistedItems) {
             itemById.put(item.id, item);
             String key = item.name.trim().toLowerCase(Locale.ENGLISH);
@@ -854,10 +873,23 @@ public class GroceryRepository {
 
             GroceryItem master = itemById.get(history.sourceItemId);
             String nameKey = history.itemName.trim().toLowerCase(Locale.ENGLISH);
-            String origin = master == null
-                    ? originByName.getOrDefault(nameKey, GroceryItem.LIST_DAILY)
+            String storedOrigin = recoveredHistoryPreferences().getString(
+                    "cycle_" + history.id, "");
+            String inferredOrigin = master == null
+                    ? originByName.getOrDefault(nameKey, "")
                     : GroceryRecurrenceEngine.originalCycle(master);
+            String origin = GroceryRecurrenceEngine.isRecurringType(storedOrigin)
+                    ? storedOrigin
+                    : GroceryRecurrenceEngine.isRecurringType(inferredOrigin)
+                    ? inferredOrigin : legacyRecoveredCycle(history.itemName);
             origin = GroceryRecurrenceEngine.normalizeCycle(origin);
+            if (GroceryRecurrenceEngine.isRecurringType(origin)) {
+                recoveredOriginByName.put(nameKey, origin);
+                GroceryPurchase previous = latestHistoryByName.get(nameKey);
+                if (previous == null || history.purchasedAt > previous.purchasedAt) {
+                    latestHistoryByName.put(nameKey, history);
+                }
+            }
 
             GroceryItem row = new GroceryItem();
             row.id = -Math.max(1L, history.id);
@@ -885,7 +917,91 @@ public class GroceryRepository {
             restored.add(row);
             existingPurchases.add(historyKey);
         }
+        Set<String> pendingNames = new HashSet<>();
+        for (GroceryItem item : persistedItems) {
+            if (item.isPurchased) continue;
+            String key = item.name.trim().toLowerCase(Locale.ENGLISH);
+            String recoveredOrigin = recoveredOriginByName.get(key);
+            if (!GroceryRecurrenceEngine.isRecurringType(recoveredOrigin)) continue;
+            item.listType = recoveredOrigin;
+            item.lastResetMonth =
+                    GroceryRecurrenceEngine.occurrenceMetadata(recoveredOrigin);
+            groceryItemDao.update(item);
+            pendingNames.add(key);
+        }
+        for (Map.Entry<String, String> entry : recoveredOriginByName.entrySet()) {
+            if (pendingNames.contains(entry.getKey())) continue;
+            GroceryPurchase latest = latestHistoryByName.get(entry.getKey());
+            if (latest == null) continue;
+            GroceryItem master = new GroceryItem();
+            master.name = latest.itemName;
+            master.category = latest.category;
+            master.quantity = latest.quantity;
+            master.storeName = latest.storeName;
+            master.estimatedCost = latest.actualCost;
+            master.actualCost = 0D;
+            master.priority = GroceryItem.PRIORITY_NORMAL;
+            master.listType = entry.getValue();
+            master.lastResetMonth =
+                    GroceryRecurrenceEngine.occurrenceMetadata(entry.getValue());
+            master.isPurchased = false;
+            master.buyingStatus = GroceryItem.STATUS_PENDING;
+            master.createdAt = latest.purchasedAt;
+            master.purchasedAt = latest.purchasedAt;
+            master.updatedAt = System.currentTimeMillis();
+            master.cloudId = UUID.randomUUID().toString();
+            master.familyId = activeFamilyId;
+            markCurrentEditor(master);
+            upsertLocal(master);
+            restored.add(master);
+            mainHandler.post(() -> syncItem(master));
+        }
         return restored;
+    }
+
+    private void saveRecoveredPurchase(
+            @NonNull GroceryItem item, @NonNull ActionCallback callback) {
+        long historyId = recoveredHistoryId(item);
+        if (historyId <= 0L) {
+            mainHandler.post(callback::onComplete);
+            return;
+        }
+        DATABASE_EXECUTOR.execute(() -> {
+            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                    .updateRecovered(historyId, item.name, item.category,
+                            item.quantity, item.storeName,
+                            item.actualCost > 0D ? item.actualCost : item.estimatedCost);
+            String cycle = GroceryRecurrenceEngine.originalCycle(item);
+            recoveredHistoryPreferences().edit()
+                    .putString("cycle_" + historyId,
+                            GroceryRecurrenceEngine.normalizeCycle(cycle))
+                    .apply();
+            mainHandler.post(callback::onComplete);
+        });
+    }
+
+    private android.content.SharedPreferences recoveredHistoryPreferences() {
+        return appContext.getSharedPreferences(
+                "grocery_recovered_history_v1", Context.MODE_PRIVATE);
+    }
+
+    private static long recoveredHistoryId(@NonNull GroceryItem item) {
+        return item.historyOnly && item.id < 0L ? -item.id : 0L;
+    }
+
+    @NonNull
+    private static String legacyRecoveredCycle(@NonNull String itemName) {
+        String key = itemName.trim().toLowerCase(Locale.ENGLISH);
+        if (key.contains("cipcal")) return GroceryItem.LIST_MONTHLY;
+        if (key.contains("mastro") || key.contains("pastro")
+                || key.contains("horlick") || key.contains("harpic")
+                || key.contains("हार्लिक") || key.contains("हार्पिक")) {
+            return GroceryItem.LIST_TWO_MONTH;
+        }
+        if (key.contains("सरसों") || key.contains("sarson")) {
+            return GroceryItem.LIST_THREE_MONTH;
+        }
+        return GroceryItem.LIST_DAILY;
     }
 
     private static boolean matchesHistoryQuery(
