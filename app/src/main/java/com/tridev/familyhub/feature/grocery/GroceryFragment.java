@@ -106,6 +106,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     }
             );
     private boolean groceryHeaderCollapsed;
+    private int groceryLoadGeneration;
 
     @Nullable
     @Override
@@ -1319,28 +1320,24 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void loadItems(@NonNull String query) {
+        final int generation = ++groceryLoadGeneration;
         repository.loadItems(query, items -> {
-            if (binding == null) {
+            if (binding == null || generation != groceryLoadGeneration) {
                 return;
             }
             List<GroceryItem> visibleItems = applyFilter(items);
-            repository.loadCurrentMonthPurchases(purchases -> {
-                if (binding == null) return;
-                Map<String, Double> spent = new LinkedHashMap<>();
-                for (GroceryPurchase purchase : purchases) {
-                    String key = purchase.category.toLowerCase(Locale.ENGLISH);
-                    spent.put(key, spent.getOrDefault(key, 0D)
-                            + Math.max(0D, purchase.actualCost));
-                }
-                Map<String, Double> budgets = new LinkedHashMap<>();
-                for (GroceryItem grocery : visibleItems) {
-                    String key = grocery.category.toLowerCase(Locale.ENGLISH);
-                    budgets.put(key, repository.getCategoryBudget(grocery.category));
-                }
-                adapter.submitList(visibleItems, spent, budgets);
-                updateGroceryGroupingChip(
-                        adapter.areAllCurrentCategoriesCollapsed());
-            });
+            Map<String, Double> budgets = new LinkedHashMap<>();
+            for (GroceryItem grocery : visibleItems) {
+                String key = grocery.category.toLowerCase(Locale.ENGLISH);
+                budgets.put(key, repository.getCategoryBudget(grocery.category));
+            }
+
+            // Show the local Grocery rows immediately. Category spending is an
+            // enhancement and must not hold the RecyclerView behind the database/
+            // realtime executor used by purchase aggregation.
+            adapter.submitList(visibleItems, new LinkedHashMap<>(), budgets);
+            updateGroceryGroupingChip(
+                    adapter.areAllCurrentCategoriesCollapsed());
             renderSummary(items);
             boolean isEmpty = visibleItems.isEmpty();
             binding.groceryRecyclerView.setVisibility(
@@ -1349,6 +1346,19 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             binding.groceryEmptyState.setVisibility(
                     isEmpty ? View.VISIBLE : View.GONE
             );
+
+            repository.loadCurrentMonthPurchases(purchases -> {
+                if (binding == null || generation != groceryLoadGeneration) return;
+                Map<String, Double> spent = new LinkedHashMap<>();
+                for (GroceryPurchase purchase : purchases) {
+                    String key = purchase.category.toLowerCase(Locale.ENGLISH);
+                    spent.put(key, spent.getOrDefault(key, 0D)
+                            + Math.max(0D, purchase.actualCost));
+                }
+                adapter.submitList(visibleItems, spent, budgets);
+                updateGroceryGroupingChip(
+                        adapter.areAllCurrentCategoriesCollapsed());
+            });
         });
     }
 
