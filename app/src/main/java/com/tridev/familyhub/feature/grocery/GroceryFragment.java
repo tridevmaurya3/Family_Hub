@@ -187,7 +187,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 int firstVisible = manager instanceof LinearLayoutManager
                         ? ((LinearLayoutManager) manager).findFirstVisibleItemPosition()
                         : RecyclerView.NO_POSITION;
-                if (dy > 6 && !groceryHeaderCollapsed) {
+                // Use the same stable scroll rule for Daily, Monthly,
+                // 2 Monthly and 3 Monthly in both Pending and Purchased views.
+                // A short recurring list must not collapse the header when there
+                // is no remaining list content to scroll into.
+                if (dy > 6 && !groceryHeaderCollapsed
+                        && recyclerView.canScrollVertically(1)) {
                     setGroceryHeaderCollapsed(true);
                 } else if (groceryHeaderCollapsed
                         && (!recyclerView.canScrollVertically(-1)
