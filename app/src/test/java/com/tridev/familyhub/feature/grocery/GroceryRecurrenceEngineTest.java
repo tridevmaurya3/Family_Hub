@@ -64,6 +64,26 @@ public class GroceryRecurrenceEngineTest {
         assertEquals(origin, GroceryRecurrenceEngine.effectiveCycle(occurrence, at(2026, 8, 25)));
     }
 
+    @Test public void purchasedHistoryIsNotHiddenByPendingShadowing() {
+        GroceryItem history = new GroceryItem();
+        history.listType = GroceryItem.LIST_MONTHLY;
+        history.isPurchased = true;
+        history.recurrenceShadowed = true;
+        assertEquals(true, GroceryRecurrenceEngine.matchesCycle(
+                history, GroceryItem.LIST_MONTHLY, at(2026, 8, 25)));
+    }
+
+    @Test public void dailyPurchaseStaysDailyAndDoesNotBecomeRecurring() {
+        GroceryItem daily = new GroceryItem();
+        daily.listType = GroceryItem.LIST_DAILY;
+        daily.isPurchased = true;
+        daily.purchasedAt = at(2026, 8, 25);
+        assertEquals(GroceryItem.LIST_DAILY,
+                GroceryRecurrenceEngine.effectiveCycle(daily, at(2026, 11, 25)));
+        assertEquals(false, GroceryRecurrenceEngine.isRecurringType(
+                GroceryRecurrenceEngine.originalCycle(daily)));
+    }
+
     private static GroceryItem recurring(String type, long anchor) {
         GroceryItem item = new GroceryItem();
         item.listType = type; item.createdAt = anchor; item.isPurchased = false;
