@@ -805,7 +805,10 @@ public class GroceryRepository {
         Map<String, GroceryItem> masters = new HashMap<>();
         Set<String> activeLegacyOccurrences = new HashSet<>();
         for (GroceryItem candidate : all) {
-            if (GroceryRecurrenceEngine.isRecurringType(candidate.listType)) {
+            // A completed history row can share the same name/listType, but it
+            // must never replace the one active pending recurring master.
+            if (!candidate.isPurchased
+                    && GroceryRecurrenceEngine.isRecurringType(candidate.listType)) {
                 masters.put(candidate.name.trim().toLowerCase(Locale.ENGLISH), candidate);
             }
         }
@@ -817,6 +820,11 @@ public class GroceryRepository {
             }
         }
         for (GroceryItem item : visible) {
+            // These are @Ignore runtime fields. Recompute them from persisted
+            // state on every load so Fragment and Overlay receive identical data.
+            item.originalRecurringType = "";
+            item.effectiveListType = "";
+            item.recurrenceShadowed = false;
             String key = item.name.trim().toLowerCase(Locale.ENGLISH);
             GroceryItem master = masters.get(key);
             if (master != null && item.id != master.id
