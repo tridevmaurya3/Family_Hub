@@ -535,6 +535,10 @@ public class GroceryRepository {
         }
         String cloudId = item.cloudId;
         DATABASE_EXECUTOR.execute(() -> {
+            if (item.isPurchased && item.purchasedAt > 0L) {
+                FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                        .deleteMatchingPurchase(item.name, item.purchasedAt);
+            }
             groceryItemDao.delete(item);
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
@@ -554,6 +558,10 @@ public class GroceryRepository {
             for (GroceryItem item : all) {
                 if (!item.isPurchased) {
                     continue;
+                }
+                if (item.purchasedAt > 0L) {
+                    FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                            .deleteMatchingPurchase(item.name, item.purchasedAt);
                 }
                 groceryItemDao.delete(item);
                 if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
