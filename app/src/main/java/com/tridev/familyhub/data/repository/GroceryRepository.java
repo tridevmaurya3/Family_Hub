@@ -524,6 +524,7 @@ public class GroceryRepository {
         if (item.historyOnly) {
             markDeletedCloudId(item.cloudId);
             USER_ACTION_EXECUTOR.execute(() -> {
+                removeLinkedFinance(item);
                 long historyId = recoveredHistoryId(item);
                 if (historyId > 0L) {
                     FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
@@ -549,6 +550,7 @@ public class GroceryRepository {
             if (item.isPurchased && item.purchasedAt > 0L) {
                 deleteMatchingPurchaseHistory(item);
             }
+            removeLinkedFinance(item);
             groceryItemDao.delete(item);
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
@@ -569,12 +571,35 @@ public class GroceryRepository {
                     deleteMatchingPurchaseHistory(item);
                 }
                 markDeletedCloudId(item.cloudId);
+                removeLinkedFinance(item);
                 groceryItemDao.delete(item);
                 mainHandler.post(() -> removeRemoteItem(item));
             }
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    private void removeLinkedFinance(@NonNull GroceryItem item) {
+        FinanceEntry linked = item.financeEntryId > 0L
+                ? financeEntryDao.getById(item.financeEntryId)
+                : null;
+        String linkedCloudId = linked != null && !linked.cloudId.trim().isEmpty()
+                ? linked.cloudId.trim()
+                : linkedFinanceCloudId(item);
+        String familyId = linked != null && !linked.familyId.trim().isEmpty()
+                ? linked.familyId.trim()
+                : financeFamilyId(item);
+        if (linked != null) {
+            financeEntryDao.delete(linked);
+        } else if (!linkedCloudId.isEmpty()) {
+            financeEntryDao.deleteByCloudId(linkedCloudId);
+        }
+        if (!familyId.isEmpty() && !linkedCloudId.isEmpty()) {
+            firebaseRoot.child("sharedModules").child(familyId)
+                    .child("finance").child(linkedCloudId).removeValue();
+        }
+        item.financeEntryId = 0L;
     }
 
     private void attachListener(@NonNull String familyId) {
