@@ -783,7 +783,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         GroceryItem item = existing == null
                 ? new GroceryItem()
                 : existing;
-        final long[] selectedPurchaseAt = {System.currentTimeMillis()};
+        final long originalPurchaseAt = item.purchasedAt;
+        final boolean editingPurchasedOccurrence =
+                existing != null && item.isPurchased && !completeAfterSave;
+        final long[] selectedPurchaseAt = {
+                editingPurchasedOccurrence && item.purchasedAt > 0L
+                        ? item.purchasedAt : System.currentTimeMillis()
+        };
         form.groceryMoneyCatalogStatus.bindItem(item);
         String[] priorityLabels = getResources().getStringArray(
                 R.array.grocery_priority_labels
@@ -847,7 +853,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         form.groceryStoreInput.setThreshold(0);
 
         form.groceryPurchaseDateCard.setVisibility(
-                completeAfterSave ? View.VISIBLE : View.GONE);
+                completeAfterSave || editingPurchasedOccurrence
+                        ? View.VISIBLE : View.GONE);
         form.groceryPurchaseDateInput.setText(formatPurchaseDate(
                 selectedPurchaseAt[0]));
         Runnable openPurchaseDatePicker = () -> showPurchaseDatePicker(
@@ -998,7 +1005,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             Snackbar.LENGTH_SHORT).show();
                 }
             };
-            estimateAndSave(item, saveComplete);
+            if (editingPurchasedOccurrence) {
+                repository.savePurchasedEdit(item, originalPurchaseAt,
+                        selectedPurchaseAt[0], saveComplete::run);
+            } else {
+                estimateAndSave(item, saveComplete);
+            }
         });
         dialog.show();
     }
