@@ -699,7 +699,10 @@ public class GroceryRepository {
         GroceryItem purchase = copyForPurchase(master);
         purchase.id = 0L;
         purchase.cloudId = "recurrence-purchase-" + UUID.randomUUID();
-        purchase.listType = GroceryItem.LIST_DAILY;
+        // Persist purchase history in its original recurring list. The row is
+        // purchased/immutable, while the separate master remains the only pending
+        // occurrence. Daily purchases never enter this recurring-only method.
+        purchase.listType = GroceryRecurrenceEngine.normalizeCycle(originalCycle);
         purchase.isMonthlyMaster = false;
         purchase.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(originalCycle);
         purchase.createdAt = purchasedAt;
