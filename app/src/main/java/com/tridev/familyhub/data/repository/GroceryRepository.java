@@ -140,10 +140,12 @@ public class GroceryRepository {
             resetMonthlyMastersIfNeeded();
             reconcileFinanceLinksInternal();
             String trimmedQuery = query.trim();
+            List<GroceryItem> all = groceryItemDao.getAll();
+            repairRecurringIdentity(all);
             List<GroceryItem> items = trimmedQuery.isEmpty()
-                    ? groceryItemDao.getAll()
+                    ? all
                     : groceryItemDao.search(trimmedQuery);
-            annotateRecurrence(items, groceryItemDao.getAll(), System.currentTimeMillis());
+            annotateRecurrence(items, all, System.currentTimeMillis());
             mainHandler.post(() -> callback.onItemsLoaded(items));
         });
     }
@@ -730,7 +732,8 @@ public class GroceryRepository {
                 ? master.purchasedAt : master.createdAt;
         master.createdAt = purchasedAt;
         master.purchasedAt = purchasedAt; // preserved Last Purchase and new anchor
-        master.lastResetMonth = "";
+        master.listType = GroceryRecurrenceEngine.normalizeCycle(originalCycle);
+        master.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(originalCycle);
         master.purchaseCount++;
         master.isPurchased = false;
         master.buyingStatus = GroceryItem.STATUS_PENDING;
@@ -794,9 +797,14 @@ public class GroceryRepository {
         DATABASE_EXECUTOR.execute(() -> {
             GroceryItem master = groceryItemDao.findRecurringMaster(name);
             if (master != null) {
+                String originalCycle = GroceryRecurrenceEngine.originalCycle(master);
                 master.createdAt = purchasedAt;
                 master.purchasedAt = purchasedAt;
-                master.lastResetMonth = "";
+                if (GroceryRecurrenceEngine.isRecurringType(originalCycle)) {
+                    master.listType = GroceryRecurrenceEngine.normalizeCycle(originalCycle);
+                    master.lastResetMonth =
+                            GroceryRecurrenceEngine.occurrenceMetadata(originalCycle);
+                }
                 master.isPurchased = false;
                 master.buyingStatus = GroceryItem.STATUS_PENDING;
                 master.purchasedByName = "";
@@ -810,6 +818,44 @@ public class GroceryRepository {
         });
     }
 
+    /**
+     * Repairs rows created by older/editable list-type flows. Recurrence origin is
+     * recovered from immutable purchased occurrences and persisted without a
+     * schema migration, so both Overlay and Grocery filters see the same rows.
+     */
+    private void repairRecurringIdentity(@NonNull List<GroceryItem> all) {
+        Map<String, String> originByName = new HashMap<>();
+        Map<String, Long> originTimeByName = new HashMap<>();
+        for (GroceryItem item : all) {
+            String origin = GroceryRecurrenceEngine.originFromMetadata(item.lastResetMonth);
+            if (!item.isPurchased || !GroceryRecurrenceEngine.isRecurringType(origin)) continue;
+            String key = item.name.trim().toLowerCase(Locale.ENGLISH);
+            long time = item.purchasedAt > 0L ? item.purchasedAt : item.updatedAt;
+            if (time >= originTimeByName.getOrDefault(key, Long.MIN_VALUE)) {
+                originByName.put(key, origin);
+                originTimeByName.put(key, time);
+            }
+            if (!origin.equals(item.listType)) {
+                item.listType = origin;
+                groceryItemDao.update(item);
+            }
+        }
+        for (GroceryItem item : all) {
+            if (item.isPurchased) continue;
+            String key = item.name.trim().toLowerCase(Locale.ENGLISH);
+            String recovered = originByName.get(key);
+            if (!GroceryRecurrenceEngine.isRecurringType(recovered)) continue;
+            String currentOrigin = GroceryRecurrenceEngine.originalCycle(item);
+            if (!GroceryRecurrenceEngine.isRecurringType(currentOrigin)
+                    || !recovered.equals(currentOrigin)
+                    || !recovered.equals(item.listType)) {
+                item.listType = recovered;
+                item.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(recovered);
+                groceryItemDao.update(item);
+            }
+        }
+    }
+
     public static void annotateRecurrence(@NonNull List<GroceryItem> visible,
                                            @NonNull List<GroceryItem> all,
                                            long now) {
@@ -819,7 +865,8 @@ public class GroceryRepository {
             // A completed history row can share the same name/listType, but it
             // must never replace the one active pending recurring master.
             if (!candidate.isPurchased
-                    && GroceryRecurrenceEngine.isRecurringType(candidate.listType)) {
+                    && GroceryRecurrenceEngine.isRecurringType(
+                            GroceryRecurrenceEngine.originalCycle(candidate))) {
                 masters.put(candidate.name.trim().toLowerCase(Locale.ENGLISH), candidate);
             }
         }
