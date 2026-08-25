@@ -231,6 +231,10 @@ public class GroceryRepository {
             return;
         }
         long now = System.currentTimeMillis();
+        if (!item.isPurchased) {
+            recoveredHistoryPreferences().edit()
+                    .remove(deletedMasterKey(item.name)).apply();
+        }
         if (item.createdAt == 0L) {
             item.createdAt = now;
         }
@@ -524,17 +528,18 @@ public class GroceryRepository {
                 }
                 mainHandler.post(() -> {
                     callback.onComplete();
-                    if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
-                        firebaseRoot.child("sharedShopping")
-                                .child(activeFamilyId).child("items")
-                                .child(item.cloudId).removeValue();
-                    }
+                    removeRemoteItem(item);
                 });
             });
             return;
         }
         String cloudId = item.cloudId;
         DATABASE_EXECUTOR.execute(() -> {
+            if (!item.isPurchased && GroceryRecurrenceEngine.isRecurringType(
+                    GroceryRecurrenceEngine.originalCycle(item))) {
+                recoveredHistoryPreferences().edit()
+                        .putBoolean(deletedMasterKey(item.name), true).apply();
+            }
             if (item.isPurchased && item.purchasedAt > 0L) {
                 FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
                         .deleteMatchingPurchase(item.name, item.purchasedAt);
@@ -543,11 +548,7 @@ public class GroceryRepository {
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
                 callback.onComplete();
-                if (!activeFamilyId.isEmpty() && !cloudId.isEmpty()) {
-                    firebaseRoot.child("sharedShopping")
-                            .child(activeFamilyId).child("items")
-                            .child(cloudId).removeValue();
-                }
+                removeRemoteItem(item);
             });
         });
     }
@@ -564,11 +565,7 @@ public class GroceryRepository {
                             .deleteMatchingPurchase(item.name, item.purchasedAt);
                 }
                 groceryItemDao.delete(item);
-                if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
-                    firebaseRoot.child("sharedShopping")
-                            .child(activeFamilyId).child("items")
-                            .child(item.cloudId).removeValue();
-                }
+                mainHandler.post(() -> removeRemoteItem(item));
             }
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(callback::onComplete);
@@ -1061,6 +1058,8 @@ public class GroceryRepository {
         for (Map.Entry<String, String> entry : recoveredOriginByName.entrySet()) {
             if (pendingNames.contains(entry.getKey())) continue;
             GroceryPurchase latest = latestHistoryByName.get(entry.getKey());
+            if (latest != null && recoveredHistoryPreferences().getBoolean(
+                    deletedMasterKey(latest.itemName), false)) continue;
             if (latest == null) continue;
             GroceryItem master = new GroceryItem();
             master.name = latest.itemName;
@@ -1119,6 +1118,43 @@ public class GroceryRepository {
     private android.content.SharedPreferences recoveredHistoryPreferences() {
         return appContext.getSharedPreferences(
                 "grocery_recovered_history_v1", Context.MODE_PRIVATE);
+    }
+
+    @NonNull
+    private static String deletedMasterKey(@NonNull String itemName) {
+        return "deleted_master_"
+                + itemName.trim().toLowerCase(Locale.ENGLISH);
+    }
+
+    private void removeRemoteItem(@NonNull GroceryItem item) {
+        if (item.cloudId == null || item.cloudId.isEmpty()) return;
+        String familyId = !activeFamilyId.isEmpty()
+                ? activeFamilyId
+                : item.familyId == null ? "" : item.familyId.trim();
+        if (!familyId.isEmpty()) {
+            firebaseRoot.child("sharedShopping").child(familyId)
+                    .child("items").child(item.cloudId).removeValue();
+            return;
+        }
+        accountRepository.loadSession(
+                new FamilyAccountRepository.ResultCallback<
+                        FamilyAccountRepository.SessionState>() {
+                    @Override
+                    public void onSuccess(
+                            @Nullable FamilyAccountRepository.SessionState state) {
+                        if (state == null || !state.isActive()
+                                || state.familyId == null) return;
+                        firebaseRoot.child("sharedShopping")
+                                .child(state.familyId).child("items")
+                                .child(item.cloudId).removeValue();
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception error) {
+                        // Local delete remains complete; Firebase can be retried
+                        // after the family session becomes available again.
+                    }
+                });
     }
 
     private static long recoveredHistoryId(@NonNull GroceryItem item) {
