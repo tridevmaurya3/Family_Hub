@@ -69,6 +69,9 @@ public class GroceryRepository {
             Executors.newSingleThreadExecutor();
     private static final ExecutorService MAINTENANCE_EXECUTOR =
             Executors.newSingleThreadExecutor();
+    // Explicit user removals must never wait behind realtime snapshot merges.
+    private static final ExecutorService USER_ACTION_EXECUTOR =
+            Executors.newSingleThreadExecutor();
 
     private final GroceryItemDao groceryItemDao;
     private final FinanceEntryDao financeEntryDao;
@@ -520,7 +523,7 @@ public class GroceryRepository {
     ) {
         if (item.historyOnly) {
             markDeletedCloudId(item.cloudId);
-            DATABASE_EXECUTOR.execute(() -> {
+            USER_ACTION_EXECUTOR.execute(() -> {
                 long historyId = recoveredHistoryId(item);
                 if (historyId > 0L) {
                     FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
@@ -537,7 +540,7 @@ public class GroceryRepository {
         }
         String cloudId = item.cloudId;
         markDeletedCloudId(cloudId);
-        DATABASE_EXECUTOR.execute(() -> {
+        USER_ACTION_EXECUTOR.execute(() -> {
             if (!item.isPurchased && GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))) {
                 recoveredHistoryPreferences().edit()
@@ -556,7 +559,7 @@ public class GroceryRepository {
     }
 
     public void clearPurchased(@NonNull ActionCallback callback) {
-        DATABASE_EXECUTOR.execute(() -> {
+        USER_ACTION_EXECUTOR.execute(() -> {
             List<GroceryItem> all = groceryItemDao.getAll();
             for (GroceryItem item : all) {
                 if (!item.isPurchased) {
