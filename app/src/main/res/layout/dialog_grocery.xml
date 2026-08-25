@@ -97,49 +97,44 @@
                         android:layout_height="wrap_content"
                         android:inputType="textCapWords"
                         android:maxLines="1"
-                        android:textSize="13sp" />
+                        android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.Form.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_8"
-                    android:orientation="horizontal">
+                    android:hint="@string/grocery_category">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
-                        android:layout_width="0dp"
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/grocery_category_input"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="@dimen/space_4"
-                        android:layout_weight="1"
-                        android:hint="@string/grocery_category">
+                        android:ellipsize="end"
+                        android:includeFontPadding="false"
+                        android:inputType="none"
+                        android:maxLines="1"
+                        android:textSize="12.5sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/grocery_category_input"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:inputType="none"
-                            android:maxLines="1"
-                            android:textSize="13sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_8"
+                    android:hint="@string/grocery_list_type">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
-                        android:layout_width="0dp"
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/grocery_list_type_input"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/space_4"
-                        android:layout_weight="1"
-                        android:hint="@string/grocery_list_type">
-
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/grocery_list_type_input"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="none"
-                            android:textSize="13sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
+                        android:includeFontPadding="false"
+                        android:inputType="none"
+                        android:maxLines="1"
+                        android:textSize="12.5sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.FamilyHub.Form.Dropdown"
@@ -153,7 +148,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="none"
-                        android:textSize="13sp" />
+                        android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -186,7 +182,8 @@
                         android:ellipsize="end"
                         android:inputType="none"
                         android:maxLines="1"
-                        android:textSize="13sp" />
+                        android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -204,7 +201,8 @@
                         android:ellipsize="end"
                         android:inputType="none"
                         android:maxLines="1"
-                        android:textSize="13sp" />
+                        android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.tridev.familyhub.feature.grocery.GroceryMoneyManagerDialogCatalogView
@@ -218,6 +216,39 @@
                     android:text="@string/money_manager_catalog_loading"
                     android:textColor="@color/fh_on_surface_variant" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/grocery_purchase_date_card"
+            style="@style/Widget.FamilyHub.Form.Section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/fh_form_surface_tint"
+            app:strokeColor="@color/fh_form_accent">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/grocery_purchase_date_layout"
+                style="@style/Widget.FamilyHub.Form.Date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/space_10"
+                android:hint="@string/grocery_purchase_date"
+                app:helperText="@string/grocery_purchase_date_help">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/grocery_purchase_date_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:focusable="false"
+                    android:inputType="none"
+                    android:maxLines="1"
+                    android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
+            </com.google.android.material.textfield.TextInputLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
@@ -253,7 +284,8 @@
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
                             android:maxLines="1"
-                            android:textSize="13sp" />
+                            android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -269,7 +301,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="none"
-                            android:textSize="13sp" />
+                            android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -294,7 +327,8 @@
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
                             android:maxLines="1"
-                            android:textSize="13sp" />
+                            android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -312,7 +346,8 @@
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
                             android:maxLines="1"
-                            android:textSize="13sp" />
+                            android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -330,7 +365,8 @@
                         android:ellipsize="end"
                         android:inputType="none"
                         android:maxLines="1"
-                        android:textSize="13sp" />
+                        android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.materialswitch.MaterialSwitch
@@ -397,7 +433,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="none"
-                            android:textSize="13sp" />
+                            android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -416,7 +453,8 @@
                         android:inputType="textCapSentences|textMultiLine"
                         android:maxLines="4"
                         android:minLines="2"
-                        android:textSize="13sp" />
+                        android:includeFontPadding="false"
+                            android:textSize="12.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
