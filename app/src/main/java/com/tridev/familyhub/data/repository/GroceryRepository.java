@@ -142,6 +142,7 @@ public class GroceryRepository {
             reconcileFinanceLinksInternal();
             String trimmedQuery = query.trim();
             List<GroceryItem> all = groceryItemDao.getAll();
+            markRecoveredHistoryRows(all);
             repairRecurringIdentity(all);
             List<GroceryItem> restoredHistory = restoreMissingPurchaseHistory(all);
             all.addAll(restoredHistory);
@@ -163,7 +164,8 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
-        if (item.historyOnly) {
+        if (isRecoveredPurchaseRow(item)) {
+            item.historyOnly = true;
             saveRecoveredPurchase(item, callback);
             return;
         }
@@ -450,7 +452,7 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
-        if (item.historyOnly) {
+        if (isRecoveredPurchaseRow(item)) {
             DATABASE_EXECUTOR.execute(() -> {
                 long historyId = recoveredHistoryId(item);
                 if (historyId > 0L) {
@@ -459,6 +461,8 @@ public class GroceryRepository {
                     recoveredHistoryPreferences().edit()
                             .remove("cycle_" + historyId).apply();
                 }
+                groceryItemDao.delete(item);
+                GroceryWidgetProvider.refreshAll(appContext);
                 mainHandler.post(() -> {
                     callback.onComplete();
                     if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
@@ -665,10 +669,21 @@ public class GroceryRepository {
         values.put("purchased", item.isPurchased);
         values.put("buyingStatus", item.buyingStatus);
         values.put("isMonthlyMaster", item.isMonthlyMaster);
-        values.put("lastResetMonth", item.lastResetMonth);
+        String recurringOrigin = GroceryRecurrenceEngine.originalCycle(item);
+        boolean legacyRecurringWireFormat =
+                GroceryItem.LIST_TWO_MONTH.equals(recurringOrigin)
+                        || GroceryItem.LIST_THREE_MONTH.equals(recurringOrigin);
+        // Keep TWO/THREE Monthly records compatible with installations whose live
+        // Firebase rules still accept only DAILY/MONTHLY. The exact origin travels
+        // separately and is restored by updated clients. DAILY is unchanged.
+        values.put("lastResetMonth",
+                legacyRecurringWireFormat ? "" : item.lastResetMonth);
         values.put("purchaseCount", item.purchaseCount);
         values.put("notes", item.notes);
-        values.put("listType", item.listType);
+        values.put("listType",
+                legacyRecurringWireFormat ? GroceryItem.LIST_MONTHLY : item.listType);
+        values.put("recurringOrigin",
+                legacyRecurringWireFormat ? recurringOrigin : "");
         values.put("assignedMemberId", item.assignedMemberId);
         values.put("assignedMemberName", item.assignedMemberName);
         values.put("purchasedByName", item.purchasedByName);
@@ -719,8 +734,16 @@ public class GroceryRepository {
         item.purchaseCount = intValue(snapshot.child("purchaseCount"));
         item.notes = stringValue(snapshot.child("notes"));
         item.listType = stringValue(snapshot.child("listType"));
-        if (item.listType.isEmpty()) {
+        String recurringOrigin = stringValue(snapshot.child("recurringOrigin"));
+        if (GroceryRecurrenceEngine.isRecurringType(recurringOrigin)) {
+            item.listType = GroceryRecurrenceEngine.normalizeCycle(recurringOrigin);
+            item.lastResetMonth =
+                    GroceryRecurrenceEngine.occurrenceMetadata(recurringOrigin);
+        } else if (item.listType.isEmpty()) {
             item.listType = GroceryItem.LIST_DAILY;
+        }
+        if (isRecoveredPurchaseRow(item)) {
+            item.historyOnly = true;
         }
         item.assignedMemberId = stringValue(
                 snapshot.child("assignedMemberId")
@@ -944,7 +967,7 @@ public class GroceryRepository {
             }
 
             GroceryItem row = new GroceryItem();
-            row.id = -Math.max(1L, history.id);
+            row.id = 0L;
             row.name = history.itemName;
             row.category = history.category;
             row.quantity = history.quantity;
@@ -970,6 +993,10 @@ public class GroceryRepository {
             row.familyId = activeFamilyId;
             markCurrentEditor(row);
             row.historyOnly = true;
+            // Persist the reconstructed occurrence before cloud export. This gives
+            // MoneyManager backfill and Firebase retry a stable positive Room id
+            // across process restarts instead of a temporary negative display id.
+            upsertLocal(row);
             restored.add(row);
             existingPurchases.add(historyKey);
             // Older immutable purchase history used to exist only in the owner's
@@ -1041,6 +1068,8 @@ public class GroceryRepository {
                             GroceryRecurrenceEngine.normalizeCycle(cycle))
                     .apply();
             refreshRecurringAnchorFromHistory(item.name);
+            upsertLocal(item);
+            GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
                 callback.onComplete();
                 syncItem(item);
@@ -1053,8 +1082,31 @@ public class GroceryRepository {
                 "grocery_recovered_history_v1", Context.MODE_PRIVATE);
     }
 
+    private static void markRecoveredHistoryRows(
+            @NonNull List<GroceryItem> items) {
+        for (GroceryItem item : items) {
+            if (isRecoveredPurchaseRow(item)) item.historyOnly = true;
+        }
+    }
+
+    private static boolean isRecoveredPurchaseRow(@NonNull GroceryItem item) {
+        return item.historyOnly
+                || (item.cloudId != null
+                && item.cloudId.startsWith("recovered-purchase-"));
+    }
+
     private static long recoveredHistoryId(@NonNull GroceryItem item) {
-        return item.historyOnly && item.id < 0L ? -item.id : 0L;
+        if (item.historyOnly && item.id < 0L) return -item.id;
+        String cloudId = item.cloudId == null ? "" : item.cloudId;
+        final String prefix = "recovered-purchase-";
+        if (!cloudId.startsWith(prefix)) return 0L;
+        int separator = cloudId.indexOf('-', prefix.length());
+        if (separator <= prefix.length()) return 0L;
+        try {
+            return Long.parseLong(cloudId.substring(prefix.length(), separator));
+        } catch (NumberFormatException ignored) {
+            return 0L;
+        }
     }
 
     @NonNull
