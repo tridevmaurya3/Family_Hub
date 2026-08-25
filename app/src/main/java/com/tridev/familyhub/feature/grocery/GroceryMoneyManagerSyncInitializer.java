@@ -218,6 +218,17 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                     continue;
                 }
 
+                // Reconstructed recurring purchases were previously visible only
+                // in Grocery's local history and were therefore baselined before
+                // MoneyManager ever received them. Backfill only those surviving
+                // recovered occurrences once. Deleted Grocery rows are absent from
+                // this scan, and PREFIX_SENT keeps successful rows idempotent.
+                if (isRecoveredRecurringPurchase(item) && !previousSent) {
+                    postNewPurchase(context, preferences, key, item,
+                            currentEvent, currentSource, currentPayload);
+                    continue;
+                }
+
                 if (canonicalEvent.isEmpty() || canonicalSource.isEmpty()) {
                     postNewPurchase(context, preferences, key, item,
                             currentEvent, currentSource, currentPayload);
@@ -262,6 +273,14 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         }
 
         cancelAndPruneDeletedItems(context, preferences, existingKeys);
+    }
+
+    private static boolean isRecoveredRecurringPurchase(
+            @NonNull GroceryItem item) {
+        String cloudId = item.cloudId == null ? "" : item.cloudId.trim();
+        if (!cloudId.startsWith("recovered-purchase-")) return false;
+        String cycle = GroceryRecurrenceEngine.normalizeCycle(item.listType);
+        return GroceryRecurrenceEngine.isRecurringType(cycle);
     }
 
     private void postNewPurchase(
