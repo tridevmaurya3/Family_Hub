@@ -22,6 +22,7 @@ import com.tridev.familyhub.data.local.entity.FinanceEntry;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.GroceryPurchase;
 import com.tridev.familyhub.feature.grocery.widget.GroceryWidgetProvider;
+import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
 import com.tridev.familyhub.feature.grocery.GroceryNotificationHelper;
 import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 
@@ -737,6 +738,17 @@ public class GroceryRepository {
             FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao().insert(history);
             linkFinance(purchase);
             upsertLocal(purchase);
+            // The recurring master remains pending, so send the immutable
+            // purchased occurrence to MoneyManager. Carry over the exact routing
+            // selected in the purchase editor before using the same bridge as a
+            // normal Daily purchase.
+            GroceryMoneyManagerBridge.rememberNextPurchaseSelections(
+                    appContext,
+                    purchase,
+                    GroceryMoneyManagerBridge.selectedAccountRef(appContext, master),
+                    GroceryMoneyManagerBridge.selectedCategoryRef(appContext, master)
+            );
+            GroceryMoneyManagerBridge.sendPurchase(appContext, purchase);
             upsertLocal(master);
             master.lastPurchaseOccurrenceCloudId = purchase.cloudId;
             GroceryWidgetProvider.refreshAll(appContext);
