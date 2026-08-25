@@ -28,6 +28,10 @@ public final class GroceryRecurrenceEngine {
     public static String effectiveCycle(@NonNull GroceryItem item, long now) {
         String origin = originalCycle(item);
         int interval = intervalMonths(origin);
+        // Purchased recurrence occurrences are stored as immutable Daily rows so
+        // they cannot become another active pending occurrence. For history
+        // filtering, however, they still belong to their original recurring list.
+        if (item.isPurchased && isRecurringType(origin)) return origin;
         if (interval <= 0 || item.isPurchased) return normalizeCycle(item.listType);
         long anchor = item.purchasedAt > 0L ? item.purchasedAt : item.createdAt;
         int remaining = Math.max(0, interval - completedCalendarMonths(anchor, now));
