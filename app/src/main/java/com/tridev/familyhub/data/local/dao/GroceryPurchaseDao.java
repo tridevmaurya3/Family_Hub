@@ -34,6 +34,12 @@ public interface GroceryPurchaseDao {
             + "WHERE itemName = :itemName COLLATE NOCASE AND purchasedAt = :purchasedAt "
             + "ORDER BY id DESC LIMIT 1)")
     int deleteMatchingPurchase(String itemName, long purchasedAt);
+
+    @Query("DELETE FROM grocery_purchases WHERE id = (SELECT id FROM grocery_purchases "
+            + "WHERE itemName = :itemName COLLATE NOCASE "
+            + "AND purchasedAt >= :dayStart AND purchasedAt < :dayEnd "
+            + "ORDER BY purchasedAt DESC, id DESC LIMIT 1)")
+    int deleteMatchingPurchaseDay(String itemName, long dayStart, long dayEnd);
     @Query("SELECT * FROM grocery_purchases WHERE purchasedAt >= :from AND purchasedAt < :to "
             + "ORDER BY category COLLATE NOCASE, itemName COLLATE NOCASE, purchasedAt")
     List<GroceryPurchase> getForPeriod(long from, long to);
