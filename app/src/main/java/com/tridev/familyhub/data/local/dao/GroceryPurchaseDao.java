@@ -9,6 +9,9 @@ import java.util.List;
 @Dao
 public interface GroceryPurchaseDao {
     @Insert long insert(GroceryPurchase purchase);
+
+    @Query("SELECT * FROM grocery_purchases ORDER BY purchasedAt DESC, id DESC")
+    List<GroceryPurchase> getAll();
     @Query("SELECT * FROM grocery_purchases WHERE purchasedAt >= :from AND purchasedAt < :to "
             + "ORDER BY category COLLATE NOCASE, itemName COLLATE NOCASE, purchasedAt")
     List<GroceryPurchase> getForPeriod(long from, long to);
