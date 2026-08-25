@@ -329,14 +329,24 @@ public class GroceryAdapter
                 binding.getRoot().setAlpha(1f);
             }
 
-            binding.groceryPurchased.setOnCheckedChangeListener(
-                    (button, checked) -> listener.onPurchasedChanged(item, checked)
-            );
-            binding.getRoot().setOnClickListener(view -> listener.onEdit(item));
-            binding.editGroceryButton.setOnClickListener(view -> listener.onEdit(item));
-            binding.deleteGroceryButton.setOnClickListener(view -> listener.onDelete(item));
-            binding.buyingGroceryButton.setEnabled(!item.isPurchased);
-            binding.buyingGroceryButton.setOnClickListener(view -> listener.onBuying(item));
+            int actionVisibility = item.historyOnly ? View.GONE : View.VISIBLE;
+            binding.editGroceryButton.setVisibility(actionVisibility);
+            binding.deleteGroceryButton.setVisibility(actionVisibility);
+            binding.buyingGroceryButton.setVisibility(actionVisibility);
+            binding.groceryPurchased.setEnabled(!item.historyOnly);
+            if (item.historyOnly) {
+                binding.groceryPurchased.setOnCheckedChangeListener(null);
+                binding.getRoot().setOnClickListener(null);
+            } else {
+                binding.groceryPurchased.setOnCheckedChangeListener(
+                        (button, checked) -> listener.onPurchasedChanged(item, checked)
+                );
+                binding.getRoot().setOnClickListener(view -> listener.onEdit(item));
+                binding.editGroceryButton.setOnClickListener(view -> listener.onEdit(item));
+                binding.deleteGroceryButton.setOnClickListener(view -> listener.onDelete(item));
+                binding.buyingGroceryButton.setEnabled(!item.isPurchased);
+                binding.buyingGroceryButton.setOnClickListener(view -> listener.onBuying(item));
+            }
         }
 
         @NonNull
