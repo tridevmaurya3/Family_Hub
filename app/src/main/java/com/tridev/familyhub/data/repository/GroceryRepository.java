@@ -205,6 +205,41 @@ public class GroceryRepository {
         });
     }
 
+    /**
+     * Saves edits made from the Purchased list and keeps the immutable purchase
+     * history date aligned with the visible purchased occurrence.
+     */
+    public void savePurchasedEdit(
+            @NonNull GroceryItem item,
+            long originalPurchasedAt,
+            long selectedPurchasedAt,
+            @NonNull ActionCallback callback
+    ) {
+        long normalizedPurchasedAt = normalizePurchaseTimestamp(selectedPurchasedAt);
+        item.purchasedAt = normalizedPurchasedAt;
+        save(item, () -> DATABASE_EXECUTOR.execute(() -> {
+            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                    .updateMatchingPurchaseDate(item.name, originalPurchasedAt,
+                            normalizedPurchasedAt);
+            refreshRecurringAnchorFromHistory(item.name);
+            mainHandler.post(callback::onComplete);
+        }));
+    }
+
+    private void refreshRecurringAnchorFromHistory(@NonNull String itemName) {
+        GroceryItem master = groceryItemDao.findRecurringMaster(itemName);
+        if (master == null) return;
+        GroceryPurchase latest = FamilyHubDatabase.getInstance(appContext)
+                .groceryPurchaseDao().getLatestForItem(itemName);
+        if (latest == null || latest.purchasedAt <= 0L) return;
+        master.createdAt = latest.purchasedAt;
+        master.purchasedAt = latest.purchasedAt;
+        master.updatedAt = System.currentTimeMillis();
+        markCurrentEditor(master);
+        groceryItemDao.update(master);
+        mainHandler.post(() -> syncItem(master));
+    }
+
     public void setPurchased(
             @NonNull GroceryItem item,
             boolean purchased,
@@ -423,7 +458,14 @@ public class GroceryRepository {
                     recoveredHistoryPreferences().edit()
                             .remove("cycle_" + historyId).apply();
                 }
-                mainHandler.post(callback::onComplete);
+                mainHandler.post(() -> {
+                    callback.onComplete();
+                    if (!activeFamilyId.isEmpty() && !item.cloudId.isEmpty()) {
+                        firebaseRoot.child("sharedShopping")
+                                .child(activeFamilyId).child("items")
+                                .child(item.cloudId).removeValue();
+                    }
+                });
             });
             return;
         }
@@ -913,9 +955,17 @@ public class GroceryRepository {
             row.updatedAt = history.purchasedAt;
             row.purchasedByName = master == null
                     ? "" : master.updatedByName;
+            row.cloudId = "recovered-purchase-" + history.id + "-"
+                    + history.purchasedAt;
+            row.familyId = activeFamilyId;
+            markCurrentEditor(row);
             row.historyOnly = true;
             restored.add(row);
             existingPurchases.add(historyKey);
+            // Older immutable purchase history used to exist only in the owner's
+            // Room database. Publish the reconstructed occurrence through the
+            // existing family grocery realtime path so every joined device sees it.
+            mainHandler.post(() -> syncItem(row));
         }
         Set<String> pendingNames = new HashSet<>();
         for (GroceryItem item : persistedItems) {
@@ -967,16 +1017,24 @@ public class GroceryRepository {
             return;
         }
         DATABASE_EXECUTOR.execute(() -> {
+            item.purchasedAt = normalizePurchaseTimestamp(item.purchasedAt);
             FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
                     .updateRecovered(historyId, item.name, item.category,
                             item.quantity, item.storeName,
-                            item.actualCost > 0D ? item.actualCost : item.estimatedCost);
+                            item.actualCost > 0D ? item.actualCost : item.estimatedCost,
+                            item.purchasedAt);
+            item.updatedAt = System.currentTimeMillis();
+            markCurrentEditor(item);
             String cycle = GroceryRecurrenceEngine.originalCycle(item);
             recoveredHistoryPreferences().edit()
                     .putString("cycle_" + historyId,
                             GroceryRecurrenceEngine.normalizeCycle(cycle))
                     .apply();
-            mainHandler.post(callback::onComplete);
+            refreshRecurringAnchorFromHistory(item.name);
+            mainHandler.post(() -> {
+                callback.onComplete();
+                syncItem(item);
+            });
         });
     }
 
