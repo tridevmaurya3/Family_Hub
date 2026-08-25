@@ -1029,6 +1029,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             com.google.android.material.textfield.MaterialAutoCompleteTextView... fields) {
         for (com.google.android.material.textfield.MaterialAutoCompleteTextView field : fields) {
             field.setSingleLine(true);
+            field.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            field.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            field.setPadding(dp(14), field.getPaddingTop(),
+                    dp(12), field.getPaddingBottom());
             field.setTextSize(12.5f);
             field.setTypeface(android.graphics.Typeface.create(
                     "sans-serif-medium", android.graphics.Typeface.NORMAL));
