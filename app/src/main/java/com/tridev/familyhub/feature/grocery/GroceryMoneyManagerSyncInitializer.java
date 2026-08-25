@@ -298,27 +298,12 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
                     currentPayload, item.updatedAt, item.purchaseCount, true);
             return;
         }
-        if (!"MAPPING_REQUIRED".equals(direct.status)) return;
-
-        Activity activity = foregroundActivity.get();
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
-        if (!promptingKeys.add(key)) return;
-        GroceryMoneyManagerAccountPicker.chooseForCompletedPurchase(
-                activity, item, () -> EXECUTOR.execute(() -> {
-                    try {
-                        GroceryMoneyManagerBridge.Result result =
-                                GroceryMoneyManagerBridge.sendPurchase(context, item);
-                        if (result.accepted) {
-                            rememberNew(preferences, key,
-                                    GroceryMoneyManagerBridge.eventIdFor(item),
-                                    GroceryMoneyManagerBridge.sourceRecordIdFor(item),
-                                    GroceryMoneyManagerBridge.moneyPayloadSignature(context, item),
-                                    item.updatedAt, item.purchaseCount, true);
-                        }
-                    } finally {
-                        promptingKeys.remove(key);
-                    }
-                }));
+        // A background startup/realtime scan must never open an account picker.
+        // Shared or recovered history can arrive in batches and previously caused
+        // repeated "Paid from" dialogs on family-member devices. When mapping is
+        // missing, preserve the unsent state and retry silently after the user
+        // selects account/category in the normal Grocery Add/Edit/Post Purchase UI.
+        if ("MAPPING_REQUIRED".equals(direct.status)) return;
     }
 
     private void updateExistingPurchase(
@@ -339,26 +324,9 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
         }
         // PRESERVED means MoneyManager deliberately did not rewrite the linked
         // row. It is not an edit success and must never advance local applied state.
-        if (!"MAPPING_REQUIRED".equals(direct.status)) return;
-
-        Activity activity = foregroundActivity.get();
-        if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
-        if (!promptingKeys.add(key)) return;
-        GroceryMoneyManagerAccountPicker.chooseForCompletedPurchase(
-                activity, item, () -> EXECUTOR.execute(() -> {
-                    try {
-                        GroceryMoneyManagerBridge.Result result =
-                                GroceryMoneyManagerBridge.updateLinkedPurchase(
-                                        context, item, canonicalEvent, canonicalSource);
-                        if ("UPDATED".equalsIgnoreCase(result.status)) {
-                            rememberApplied(preferences, key,
-                                    GroceryMoneyManagerBridge.moneyPayloadSignature(context, item),
-                                    item.updatedAt, item.purchaseCount, true);
-                        }
-                    } finally {
-                        promptingKeys.remove(key);
-                    }
-                }));
+        // Do not interrupt a family member with a picker from a background edit
+        // retry; the normal Grocery form remains the explicit mapping surface.
+        if ("MAPPING_REQUIRED".equals(direct.status)) return;
     }
 
     private void cancelAndPruneDeletedItems(
