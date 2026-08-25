@@ -665,22 +665,10 @@ public class GroceryRepository {
         values.put("purchased", item.isPurchased);
         values.put("buyingStatus", item.buyingStatus);
         values.put("isMonthlyMaster", item.isMonthlyMaster);
-        String recurringOrigin = GroceryRecurrenceEngine.originalCycle(item);
-        boolean legacyRecurringWireFormat =
-                GroceryItem.LIST_TWO_MONTH.equals(recurringOrigin)
-                        || GroceryItem.LIST_THREE_MONTH.equals(recurringOrigin);
-        // Live Firebase rules on older installations accepted only DAILY/MONTHLY
-        // and a short reset marker. Keep the wire payload compatible while sending
-        // the exact recurring identity separately. DAILY remains byte-for-byte on
-        // its existing list/reset path.
-        values.put("lastResetMonth",
-                legacyRecurringWireFormat ? "" : item.lastResetMonth);
+        values.put("lastResetMonth", item.lastResetMonth);
         values.put("purchaseCount", item.purchaseCount);
         values.put("notes", item.notes);
-        values.put("listType",
-                legacyRecurringWireFormat ? GroceryItem.LIST_MONTHLY : item.listType);
-        values.put("recurringOrigin",
-                legacyRecurringWireFormat ? recurringOrigin : "");
+        values.put("listType", item.listType);
         values.put("assignedMemberId", item.assignedMemberId);
         values.put("assignedMemberName", item.assignedMemberName);
         values.put("purchasedByName", item.purchasedByName);
@@ -731,12 +719,7 @@ public class GroceryRepository {
         item.purchaseCount = intValue(snapshot.child("purchaseCount"));
         item.notes = stringValue(snapshot.child("notes"));
         item.listType = stringValue(snapshot.child("listType"));
-        String recurringOrigin = stringValue(snapshot.child("recurringOrigin"));
-        if (GroceryRecurrenceEngine.isRecurringType(recurringOrigin)) {
-            item.listType = GroceryRecurrenceEngine.normalizeCycle(recurringOrigin);
-            item.lastResetMonth =
-                    GroceryRecurrenceEngine.occurrenceMetadata(recurringOrigin);
-        } else if (item.listType.isEmpty()) {
+        if (item.listType.isEmpty()) {
             item.listType = GroceryItem.LIST_DAILY;
         }
         item.assignedMemberId = stringValue(
@@ -992,10 +975,6 @@ public class GroceryRepository {
             // Older immutable purchase history used to exist only in the owner's
             // Room database. Publish the reconstructed occurrence through the
             // existing family grocery realtime path so every joined device sees it.
-            // Also retry the same stable purchase event through the existing
-            // MoneyManager contract. Its event/source ids are derived from this
-            // recovered cloud id and purchase date, so retries stay idempotent.
-            GroceryMoneyManagerBridge.sendPurchase(appContext, row);
             mainHandler.post(() -> syncItem(row));
         }
         Set<String> pendingNames = new HashSet<>();
