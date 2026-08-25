@@ -1216,8 +1216,14 @@ public class GroceryOverlayService extends Service {
                 } else if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) {
                     detail += "  •  " + getString(R.string.grocery_priority_high);
                 }
+                boolean showLastPurchase = !GroceryItem.LIST_DAILY.equals(listType)
+                        && item.purchasedAt > 0L;
+                if (showLastPurchase) {
+                    detail += "\n" + overlayLastPurchaseLabel(item.purchasedAt);
+                }
                 row.setText(detail);
-                row.setTextSize(13f);
+                row.setTextSize(showLastPurchase ? 12f : 13f);
+                row.setMaxLines(showLastPurchase ? 2 : 1);
                 row.setTextColor(Color.rgb(36, 36, 36));
                 row.setMinHeight(dp(38));
                 row.setPadding(dp(6), 0, dp(6), 0);
@@ -1236,7 +1242,8 @@ public class GroceryOverlayService extends Service {
                     }
                 });
                 LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(showLastPurchase ? 54 : 40));
                 rowParams.bottomMargin = dp(3);
                 itemContainer.addView(row, rowParams);
                 shownHere++;
@@ -1260,6 +1267,56 @@ public class GroceryOverlayService extends Service {
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
         }
         return alreadyShown + shownHere;
+    }
+
+    private String overlayLastPurchaseLabel(long purchasedAt) {
+        java.util.Calendar today = java.util.Calendar.getInstance();
+        today.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        today.set(java.util.Calendar.MINUTE, 0);
+        today.set(java.util.Calendar.SECOND, 0);
+        today.set(java.util.Calendar.MILLISECOND, 0);
+
+        java.util.Calendar purchaseDay = java.util.Calendar.getInstance();
+        purchaseDay.setTimeInMillis(purchasedAt);
+        purchaseDay.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        purchaseDay.set(java.util.Calendar.MINUTE, 0);
+        purchaseDay.set(java.util.Calendar.SECOND, 0);
+        purchaseDay.set(java.util.Calendar.MILLISECOND, 0);
+
+        final long dayMillis = 24L * 60L * 60L * 1000L;
+        long days = Math.max(0L, (today.getTimeInMillis()
+                - purchaseDay.getTimeInMillis()) / dayMillis);
+        String relative;
+        if (days == 0L) {
+            relative = "Today";
+        } else if (days == 1L) {
+            relative = "Yesterday";
+        } else if (days < 30L) {
+            relative = days + " days ago";
+        } else {
+            java.util.Calendar cursor = (java.util.Calendar) purchaseDay.clone();
+            long months = 0L;
+            while (true) {
+                java.util.Calendar next = (java.util.Calendar) cursor.clone();
+                next.add(java.util.Calendar.MONTH, 1);
+                if (next.after(today)) break;
+                cursor = next;
+                months++;
+            }
+            long remainingDays = (today.getTimeInMillis()
+                    - cursor.getTimeInMillis()) / dayMillis;
+            String monthText = months == 1L ? "1 month" : months + " months";
+            if (remainingDays == 0L) {
+                relative = monthText + " ago";
+            } else {
+                relative = monthText + " "
+                        + (remainingDays == 1L
+                        ? "1 day" : remainingDays + " days") + " ago";
+            }
+        }
+        CharSequence exactDate = android.text.format.DateFormat.format(
+                "dd MMM yyyy", purchasedAt);
+        return "Last purchase: " + relative + " • " + exactDate;
     }
 
     private int priorityRank(GroceryItem item) {
