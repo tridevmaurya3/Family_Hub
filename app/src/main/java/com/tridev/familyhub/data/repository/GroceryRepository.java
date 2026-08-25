@@ -73,6 +73,7 @@ public class GroceryRepository {
     @Nullable private DatabaseReference activeItemsReference;
     @Nullable private ValueEventListener activeListener;
     @Nullable private Runnable changeCallback;
+    @Nullable private Set<String> lastRemoteItemIds;
     @NonNull private String activeFamilyId = "";
 
     public GroceryRepository(@NonNull Context context) {
@@ -548,14 +549,22 @@ public class GroceryRepository {
                             }
                         }
                     }
-                    for (GroceryItem local : groceryItemDao.getAllSynced()) {
-                        if (familyId.equals(local.familyId)
-                                && !remoteIds.contains(local.cloudId)
-                                && System.currentTimeMillis() - local.updatedAt
-                                > 30_000L) {
-                            groceryItemDao.delete(local);
+                    // Never treat the first remote snapshot as an authoritative
+                    // delete list. A previously rejected/offline upload can be absent
+                    // remotely while still being valid locally. Only remove an item
+                    // after this listener has actually observed that same cloud id
+                    // in an earlier successful snapshot and it later disappears.
+                    Set<String> previousRemoteIds = lastRemoteItemIds;
+                    if (previousRemoteIds != null) {
+                        for (GroceryItem local : groceryItemDao.getAllSynced()) {
+                            if (familyId.equals(local.familyId)
+                                    && previousRemoteIds.contains(local.cloudId)
+                                    && !remoteIds.contains(local.cloudId)) {
+                                groceryItemDao.delete(local);
+                            }
                         }
                     }
+                    lastRemoteItemIds = new HashSet<>(remoteIds);
                     GroceryWidgetProvider.refreshAll(appContext);
                     Runnable callback = changeCallback;
                     if (callback != null) {
@@ -578,6 +587,7 @@ public class GroceryRepository {
         }
         activeItemsReference = null;
         activeListener = null;
+        lastRemoteItemIds = null;
     }
 
     private void uploadLocalOnlyItems(@NonNull String familyId) {
@@ -586,9 +596,9 @@ public class GroceryRepository {
                 if (!item.familyId.isEmpty() && !familyId.equals(item.familyId)) {
                     continue;
                 }
-                if (familyId.equals(item.familyId) && !item.cloudId.isEmpty()) {
-                    continue;
-                }
+                // Retry every family-owned row with its stable cloud id. This is
+                // idempotent and repairs records whose earlier Firebase write was
+                // rejected or interrupted; previously such rows were skipped forever.
                 if (item.cloudId.isEmpty()) {
                     item.cloudId = UUID.randomUUID().toString();
                 }
