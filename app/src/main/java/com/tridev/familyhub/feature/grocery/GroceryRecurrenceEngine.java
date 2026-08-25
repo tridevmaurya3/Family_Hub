@@ -19,7 +19,9 @@ public final class GroceryRecurrenceEngine {
 
     public static boolean matchesCycle(@NonNull GroceryItem item,
                                        @NonNull String selectedCycle, long now) {
-        return !item.recurrenceShadowed
+        // Shadowing suppresses only duplicate pending occurrences. A completed
+        // history row must remain visible in its Purchased filter.
+        return (item.isPurchased || !item.recurrenceShadowed)
                 && normalizeCycle(selectedCycle).equals(effectiveCycle(item, now));
     }
 
