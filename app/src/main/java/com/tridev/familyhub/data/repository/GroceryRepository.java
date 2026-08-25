@@ -142,9 +142,17 @@ public class GroceryRepository {
             String trimmedQuery = query.trim();
             List<GroceryItem> all = groceryItemDao.getAll();
             repairRecurringIdentity(all);
-            List<GroceryItem> items = trimmedQuery.isEmpty()
-                    ? all
-                    : groceryItemDao.search(trimmedQuery);
+            List<GroceryItem> restoredHistory = restoreMissingPurchaseHistory(all);
+            all.addAll(restoredHistory);
+            List<GroceryItem> items;
+            if (trimmedQuery.isEmpty()) {
+                items = all;
+            } else {
+                items = groceryItemDao.search(trimmedQuery);
+                for (GroceryItem history : restoredHistory) {
+                    if (matchesHistoryQuery(history, trimmedQuery)) items.add(history);
+                }
+            }
             annotateRecurrence(items, all, System.currentTimeMillis());
             mainHandler.post(() -> callback.onItemsLoaded(items));
         });
@@ -816,6 +824,83 @@ public class GroceryRepository {
             }
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    @NonNull
+    private List<GroceryItem> restoreMissingPurchaseHistory(
+            @NonNull List<GroceryItem> persistedItems) {
+        Set<String> existingPurchases = new HashSet<>();
+        Map<Long, GroceryItem> itemById = new HashMap<>();
+        Map<String, String> originByName = new HashMap<>();
+        for (GroceryItem item : persistedItems) {
+            itemById.put(item.id, item);
+            String key = item.name.trim().toLowerCase(Locale.ENGLISH);
+            String origin = GroceryRecurrenceEngine.originalCycle(item);
+            if (GroceryRecurrenceEngine.isRecurringType(origin)) {
+                originByName.put(key, origin);
+            }
+            if (item.isPurchased && item.purchasedAt > 0L) {
+                existingPurchases.add(purchaseHistoryKey(item.name, item.purchasedAt));
+            }
+        }
+
+        List<GroceryItem> restored = new java.util.ArrayList<>();
+        List<GroceryPurchase> purchases = FamilyHubDatabase.getInstance(appContext)
+                .groceryPurchaseDao().getAll();
+        for (GroceryPurchase history : purchases) {
+            String historyKey = purchaseHistoryKey(
+                    history.itemName, history.purchasedAt);
+            if (existingPurchases.contains(historyKey)) continue;
+
+            GroceryItem master = itemById.get(history.sourceItemId);
+            String nameKey = history.itemName.trim().toLowerCase(Locale.ENGLISH);
+            String origin = master == null
+                    ? originByName.getOrDefault(nameKey, GroceryItem.LIST_DAILY)
+                    : GroceryRecurrenceEngine.originalCycle(master);
+            origin = GroceryRecurrenceEngine.normalizeCycle(origin);
+
+            GroceryItem row = new GroceryItem();
+            row.id = -Math.max(1L, history.id);
+            row.name = history.itemName;
+            row.category = history.category;
+            row.quantity = history.quantity;
+            row.storeName = history.storeName;
+            row.actualCost = history.actualCost;
+            row.estimatedCost = history.actualCost;
+            row.priority = master == null
+                    ? GroceryItem.PRIORITY_NORMAL : master.priority;
+            row.listType = origin;
+            row.lastResetMonth = GroceryRecurrenceEngine.isRecurringType(origin)
+                    ? GroceryRecurrenceEngine.occurrenceMetadata(origin) : "";
+            row.originalRecurringType = GroceryRecurrenceEngine.isRecurringType(origin)
+                    ? origin : "";
+            row.isPurchased = true;
+            row.buyingStatus = GroceryItem.STATUS_PURCHASED;
+            row.purchasedAt = history.purchasedAt;
+            row.createdAt = history.purchasedAt;
+            row.updatedAt = history.purchasedAt;
+            row.purchasedByName = master == null
+                    ? "" : master.updatedByName;
+            row.historyOnly = true;
+            restored.add(row);
+            existingPurchases.add(historyKey);
+        }
+        return restored;
+    }
+
+    private static boolean matchesHistoryQuery(
+            @NonNull GroceryItem item, @NonNull String query) {
+        String wanted = query.toLowerCase(Locale.ENGLISH);
+        return item.name.toLowerCase(Locale.ENGLISH).contains(wanted)
+                || item.category.toLowerCase(Locale.ENGLISH).contains(wanted)
+                || item.quantity.toLowerCase(Locale.ENGLISH).contains(wanted)
+                || item.storeName.toLowerCase(Locale.ENGLISH).contains(wanted);
+    }
+
+    @NonNull
+    private static String purchaseHistoryKey(
+            @NonNull String name, long purchasedAt) {
+        return name.trim().toLowerCase(Locale.ENGLISH) + "|" + purchasedAt;
     }
 
     /**
