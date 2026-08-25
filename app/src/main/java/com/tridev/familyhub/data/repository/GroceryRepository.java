@@ -63,6 +63,12 @@ public class GroceryRepository {
 
     private static final ExecutorService DATABASE_EXECUTOR =
             Executors.newSingleThreadExecutor();
+    // UI reads must not wait behind Firebase uploads, snapshot merges, purchase
+    // writes or cross-app reconciliation queued on DATABASE_EXECUTOR.
+    private static final ExecutorService LOAD_EXECUTOR =
+            Executors.newSingleThreadExecutor();
+    private static final ExecutorService MAINTENANCE_EXECUTOR =
+            Executors.newSingleThreadExecutor();
 
     private final GroceryItemDao groceryItemDao;
     private final FinanceEntryDao financeEntryDao;
@@ -141,7 +147,7 @@ public class GroceryRepository {
             @NonNull String query,
             @NonNull ItemsCallback callback
     ) {
-        DATABASE_EXECUTOR.execute(() -> {
+        LOAD_EXECUTOR.execute(() -> {
             resetMonthlyMastersIfNeeded();
             String trimmedQuery = query.trim();
             List<GroceryItem> all = groceryItemDao.getAll();
@@ -170,7 +176,7 @@ public class GroceryRepository {
 
     private void scheduleFinanceReconciliation() {
         if (!financeReconciliationScheduled.compareAndSet(false, true)) return;
-        DATABASE_EXECUTOR.execute(this::reconcileFinanceLinksInternal);
+        MAINTENANCE_EXECUTOR.execute(this::reconcileFinanceLinksInternal);
     }
 
     private void syncRecoveredHistoryBatch(
