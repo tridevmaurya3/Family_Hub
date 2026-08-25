@@ -329,14 +329,17 @@ public class GroceryAdapter
                 binding.getRoot().setAlpha(1f);
             }
 
-            int actionVisibility = item.historyOnly ? View.GONE : View.VISIBLE;
-            binding.editGroceryButton.setVisibility(actionVisibility);
-            binding.deleteGroceryButton.setVisibility(actionVisibility);
-            binding.buyingGroceryButton.setVisibility(actionVisibility);
+            binding.editGroceryButton.setVisibility(View.VISIBLE);
+            binding.deleteGroceryButton.setVisibility(View.VISIBLE);
+            binding.buyingGroceryButton.setVisibility(View.VISIBLE);
             binding.groceryPurchased.setEnabled(!item.historyOnly);
             if (item.historyOnly) {
                 binding.groceryPurchased.setOnCheckedChangeListener(null);
-                binding.getRoot().setOnClickListener(null);
+                binding.getRoot().setOnClickListener(view -> listener.onEdit(item));
+                binding.editGroceryButton.setOnClickListener(view -> listener.onEdit(item));
+                binding.deleteGroceryButton.setOnClickListener(view -> listener.onDelete(item));
+                binding.buyingGroceryButton.setEnabled(false);
+                binding.buyingGroceryButton.setOnClickListener(null);
             } else {
                 binding.groceryPurchased.setOnCheckedChangeListener(
                         (button, checked) -> listener.onPurchasedChanged(item, checked)
