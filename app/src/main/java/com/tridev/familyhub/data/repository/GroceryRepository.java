@@ -519,6 +519,7 @@ public class GroceryRepository {
             @NonNull ActionCallback callback
     ) {
         if (item.historyOnly) {
+            markDeletedCloudId(item.cloudId);
             DATABASE_EXECUTOR.execute(() -> {
                 long historyId = recoveredHistoryId(item);
                 if (historyId > 0L) {
@@ -535,6 +536,7 @@ public class GroceryRepository {
             return;
         }
         String cloudId = item.cloudId;
+        markDeletedCloudId(cloudId);
         DATABASE_EXECUTOR.execute(() -> {
             if (!item.isPurchased && GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))) {
@@ -542,8 +544,7 @@ public class GroceryRepository {
                         .putBoolean(deletedMasterKey(item.name), true).apply();
             }
             if (item.isPurchased && item.purchasedAt > 0L) {
-                FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
-                        .deleteMatchingPurchase(item.name, item.purchasedAt);
+                deleteMatchingPurchaseHistory(item);
             }
             groceryItemDao.delete(item);
             GroceryWidgetProvider.refreshAll(appContext);
@@ -562,9 +563,9 @@ public class GroceryRepository {
                     continue;
                 }
                 if (item.purchasedAt > 0L) {
-                    FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
-                            .deleteMatchingPurchase(item.name, item.purchasedAt);
+                    deleteMatchingPurchaseHistory(item);
                 }
+                markDeletedCloudId(item.cloudId);
                 groceryItemDao.delete(item);
                 mainHandler.post(() -> removeRemoteItem(item));
             }
@@ -588,6 +589,17 @@ public class GroceryRepository {
                 DATABASE_EXECUTOR.execute(() -> {
                     Set<String> remoteIds = new HashSet<>();
                     for (DataSnapshot child : snapshot.getChildren()) {
+                        String snapshotCloudId = stringValue(child.child("cloudId"));
+                        if (snapshotCloudId.isEmpty() && child.getKey() != null) {
+                            snapshotCloudId = child.getKey();
+                        }
+                        if (isDeletedCloudId(snapshotCloudId)) {
+                            if (!snapshotCloudId.isEmpty()) {
+                                firebaseRoot.child("sharedShopping").child(familyId)
+                                        .child("items").child(snapshotCloudId).removeValue();
+                            }
+                            continue;
+                        }
                         GroceryItem remote = fromSnapshot(child, familyId);
                         if (remote == null) {
                             continue;
@@ -1132,6 +1144,37 @@ public class GroceryRepository {
     private android.content.SharedPreferences recoveredHistoryPreferences() {
         return appContext.getSharedPreferences(
                 "grocery_recovered_history_v1", Context.MODE_PRIVATE);
+    }
+
+    private void deleteMatchingPurchaseHistory(@NonNull GroceryItem item) {
+        java.util.Calendar start = java.util.Calendar.getInstance();
+        start.setTimeInMillis(item.purchasedAt);
+        start.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        start.set(java.util.Calendar.MINUTE, 0);
+        start.set(java.util.Calendar.SECOND, 0);
+        start.set(java.util.Calendar.MILLISECOND, 0);
+        java.util.Calendar end = (java.util.Calendar) start.clone();
+        end.add(java.util.Calendar.DAY_OF_MONTH, 1);
+        FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                .deleteMatchingPurchaseDay(item.name,
+                        start.getTimeInMillis(), end.getTimeInMillis());
+    }
+
+    private android.content.SharedPreferences deletedCloudPreferences() {
+        return appContext.getSharedPreferences(
+                "grocery_deleted_cloud_ids_v1", Context.MODE_PRIVATE);
+    }
+
+    private void markDeletedCloudId(@Nullable String cloudId) {
+        if (cloudId == null || cloudId.trim().isEmpty()) return;
+        deletedCloudPreferences().edit()
+                .putBoolean(cloudId.trim(), true).apply();
+    }
+
+    private boolean isDeletedCloudId(@Nullable String cloudId) {
+        return cloudId != null && !cloudId.trim().isEmpty()
+                && deletedCloudPreferences()
+                .getBoolean(cloudId.trim(), false);
     }
 
     @NonNull
