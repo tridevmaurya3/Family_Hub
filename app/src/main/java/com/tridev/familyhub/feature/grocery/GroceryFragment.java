@@ -189,6 +189,19 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     setGroceryHeaderCollapsed(false);
                 }
             }
+
+            @Override
+            public void onScrollStateChanged(
+                    @NonNull RecyclerView recyclerView, int newState) {
+                if (newState != RecyclerView.SCROLL_STATE_IDLE
+                        || !groceryHeaderCollapsed) return;
+                RecyclerView.LayoutManager manager = recyclerView.getLayoutManager();
+                if (manager instanceof LinearLayoutManager
+                        && ((LinearLayoutManager) manager)
+                        .findFirstVisibleItemPosition() <= 0) {
+                    setGroceryHeaderCollapsed(false);
+                }
+            }
         });
         binding.emptyAddGroceryButton.setOnClickListener(
                 clickedView -> showEditor(null)
@@ -385,6 +398,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 ContextCompat.getColor(requireContext(), R.color.fh_success), index -> {
                     activeCycleFilter = values[index];
                     syncPrimaryFilterChips();
+                    resetGroceryScrollForFilter();
                     loadItems(currentQuery());
                 });
     }
@@ -400,8 +414,17 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     activeStatusFilterId = index == 1
                             ? R.id.filter_purchased : R.id.filter_pending;
                     syncPrimaryFilterChips();
+                    resetGroceryScrollForFilter();
                     loadItems(currentQuery());
                 });
+    }
+
+    private void resetGroceryScrollForFilter() {
+        if (binding == null) return;
+        binding.groceryRecyclerView.stopScroll();
+        setGroceryHeaderCollapsed(false);
+        binding.groceryRecyclerView.post(
+                () -> binding.groceryRecyclerView.scrollToPosition(0));
     }
 
     private void showPremiumFilterPopup(
