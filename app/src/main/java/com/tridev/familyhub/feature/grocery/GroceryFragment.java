@@ -45,6 +45,7 @@ import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
 
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -782,6 +783,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         GroceryItem item = existing == null
                 ? new GroceryItem()
                 : existing;
+        final long[] selectedPurchaseAt = {System.currentTimeMillis()};
         form.groceryMoneyCatalogStatus.bindItem(item);
         String[] priorityLabels = getResources().getStringArray(
                 R.array.grocery_priority_labels
@@ -832,9 +834,32 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 R.layout.item_form_dropdown,
                 storePresets
         ));
+        configurePremiumDropdowns(
+                form.groceryCategoryInput,
+                form.groceryPriorityInput,
+                form.groceryListTypeInput,
+                form.groceryAssigneeInput,
+                form.groceryQuantityUnitInput,
+                form.groceryStoreInput,
+                form.groceryMoneyAccountInput,
+                form.groceryMoneyCategoryInput
+        );
         form.groceryStoreInput.setThreshold(0);
-        form.groceryStoreInput.setOnClickListener(v ->
-                form.groceryStoreInput.showDropDown());
+
+        form.groceryPurchaseDateCard.setVisibility(
+                completeAfterSave ? View.VISIBLE : View.GONE);
+        form.groceryPurchaseDateInput.setText(formatPurchaseDate(
+                selectedPurchaseAt[0]));
+        Runnable openPurchaseDatePicker = () -> showPurchaseDatePicker(
+                selectedPurchaseAt[0], selected -> {
+                    selectedPurchaseAt[0] = selected;
+                    form.groceryPurchaseDateInput.setText(
+                            formatPurchaseDate(selected));
+                });
+        form.groceryPurchaseDateInput.setOnClickListener(v ->
+                openPurchaseDatePicker.run());
+        form.groceryPurchaseDateLayout.setEndIconOnClickListener(v ->
+                openPurchaseDatePicker.run());
         form.groceryNameLayout.setEndIconOnClickListener(v -> {
             activeDialogVoiceInput = form.groceryNameInput;
             startVoiceAdd();
@@ -894,7 +919,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         form.skipGroceryButton.setVisibility(
                 completeAfterSave ? View.VISIBLE : View.GONE);
         form.skipGroceryButton.setOnClickListener(clickedView ->
-                completeWithUndo(item, dialog));
+                completeWithUndo(item, selectedPurchaseAt[0], dialog));
         form.saveGroceryButton.setOnClickListener(clickedView -> {
             String name = textOf(form.groceryNameInput);
             int priorityIndex = findPriorityIndex(
@@ -961,7 +986,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 }
                 dialog.dismiss();
                 if (completeAfterSave) {
-                    completeWithUndo(item, dialog);
+                    completeWithUndo(item, selectedPurchaseAt[0], dialog);
                 } else {
                     loadItems(currentQuery());
                     Snackbar.make(binding.getRoot(),
@@ -979,8 +1004,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void completeWithUndo(@NonNull GroceryItem item,
+                                  long purchasedAt,
                                   @NonNull AlertDialog dialog) {
-        repository.setPurchased(item, true, () -> {
+        repository.setPurchased(item, true, purchasedAt, () -> {
             dialog.dismiss();
             if (binding == null) return;
             loadItems(currentQuery());
@@ -997,6 +1023,77 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                                 }
                             })).show();
         });
+    }
+
+    private void configurePremiumDropdowns(
+            com.google.android.material.textfield.MaterialAutoCompleteTextView... fields) {
+        for (com.google.android.material.textfield.MaterialAutoCompleteTextView field : fields) {
+            field.setSingleLine(true);
+            field.setTextSize(12.5f);
+            field.setTypeface(android.graphics.Typeface.create(
+                    "sans-serif-medium", android.graphics.Typeface.NORMAL));
+            field.setDropDownVerticalOffset(dp(6));
+            android.graphics.drawable.GradientDrawable popup =
+                    new android.graphics.drawable.GradientDrawable();
+            popup.setColor(ContextCompat.getColor(requireContext(), R.color.fh_surface));
+            popup.setCornerRadius(dp(16));
+            popup.setStroke(dp(1), ContextCompat.getColor(
+                    requireContext(), R.color.fh_form_outline));
+            field.setDropDownBackgroundDrawable(popup);
+            field.setOnClickListener(v -> field.showDropDown());
+        }
+    }
+
+    private interface PurchaseDateSelectionListener {
+        void onSelected(long timestamp);
+    }
+
+    private void showPurchaseDatePicker(
+            long currentSelection,
+            @NonNull PurchaseDateSelectionListener onSelected) {
+        com.google.android.material.datepicker.CalendarConstraints constraints =
+                new com.google.android.material.datepicker.CalendarConstraints.Builder()
+                        .setEnd(com.google.android.material.datepicker.MaterialDatePicker
+                                .todayInUtcMilliseconds())
+                        .build();
+        com.google.android.material.datepicker.MaterialDatePicker<Long> picker =
+                com.google.android.material.datepicker.MaterialDatePicker.Builder
+                        .datePicker()
+                        .setTitleText(R.string.grocery_choose_purchase_date)
+                        .setSelection(toUtcDateSelection(currentSelection))
+                        .setCalendarConstraints(constraints)
+                        .build();
+        picker.addOnPositiveButtonClickListener(selection ->
+                onSelected.onSelected(fromUtcDateSelection(selection)));
+        picker.show(getParentFragmentManager(), "grocery_purchase_date");
+    }
+
+    private static long toUtcDateSelection(long timestamp) {
+        Calendar local = Calendar.getInstance();
+        local.setTimeInMillis(timestamp);
+        Calendar utc = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        utc.clear();
+        utc.set(local.get(Calendar.YEAR), local.get(Calendar.MONTH),
+                local.get(Calendar.DAY_OF_MONTH));
+        return utc.getTimeInMillis();
+    }
+
+    private static long fromUtcDateSelection(long selection) {
+        Calendar utc = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+        utc.setTimeInMillis(selection);
+        Calendar local = Calendar.getInstance();
+        int hour = local.get(Calendar.HOUR_OF_DAY);
+        int minute = local.get(Calendar.MINUTE);
+        local.clear();
+        local.set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH),
+                utc.get(Calendar.DAY_OF_MONTH), hour, minute, 0);
+        return Math.min(local.getTimeInMillis(), System.currentTimeMillis());
+    }
+
+    @NonNull
+    private static String formatPurchaseDate(long timestamp) {
+        return new SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                .format(new java.util.Date(timestamp));
     }
 
     @NonNull
