@@ -80,6 +80,7 @@ public class GroceryRepository {
     @Nullable private DatabaseReference activeItemsReference;
     @Nullable private ValueEventListener activeListener;
     @Nullable private Runnable changeCallback;
+    @Nullable private Runnable pendingChangeDispatch;
     @Nullable private Set<String> lastRemoteItemIds;
     @NonNull private String activeFamilyId = "";
     private final AtomicBoolean financeReconciliationScheduled =
@@ -634,10 +635,7 @@ public class GroceryRepository {
                     }
                     lastRemoteItemIds = new HashSet<>(remoteIds);
                     GroceryWidgetProvider.refreshAll(appContext);
-                    Runnable callback = changeCallback;
-                    if (callback != null) {
-                        mainHandler.post(callback);
-                    }
+                    dispatchRealtimeChange();
                 });
             }
 
@@ -649,7 +647,23 @@ public class GroceryRepository {
         activeItemsReference.addValueEventListener(activeListener);
     }
 
+    private void dispatchRealtimeChange() {
+        if (pendingChangeDispatch != null) {
+            mainHandler.removeCallbacks(pendingChangeDispatch);
+        }
+        pendingChangeDispatch = () -> {
+            pendingChangeDispatch = null;
+            Runnable callback = changeCallback;
+            if (callback != null) callback.run();
+        };
+        mainHandler.postDelayed(pendingChangeDispatch, 180L);
+    }
+
     private void stopListenerOnly() {
+        if (pendingChangeDispatch != null) {
+            mainHandler.removeCallbacks(pendingChangeDispatch);
+            pendingChangeDispatch = null;
+        }
         if (activeItemsReference != null && activeListener != null) {
             activeItemsReference.removeEventListener(activeListener);
         }
