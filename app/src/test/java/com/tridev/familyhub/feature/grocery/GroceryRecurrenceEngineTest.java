@@ -50,6 +50,20 @@ public class GroceryRecurrenceEngineTest {
                 GroceryRecurrenceEngine.badgeLabel(item, at(2026, 5, 25)));
     }
 
+    @Test public void purchasedRecurringOccurrencesStayInOriginalPurchasedFilter() {
+        assertPurchasedOccurrenceUsesOriginalCycle(GroceryItem.LIST_MONTHLY);
+        assertPurchasedOccurrenceUsesOriginalCycle(GroceryItem.LIST_TWO_MONTH);
+        assertPurchasedOccurrenceUsesOriginalCycle(GroceryItem.LIST_THREE_MONTH);
+    }
+
+    private static void assertPurchasedOccurrenceUsesOriginalCycle(String origin) {
+        GroceryItem occurrence = new GroceryItem();
+        occurrence.listType = GroceryItem.LIST_DAILY;
+        occurrence.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(origin);
+        occurrence.isPurchased = true;
+        assertEquals(origin, GroceryRecurrenceEngine.effectiveCycle(occurrence, at(2026, 8, 25)));
+    }
+
     private static GroceryItem recurring(String type, long anchor) {
         GroceryItem item = new GroceryItem();
         item.listType = type; item.createdAt = anchor; item.isPurchased = false;
