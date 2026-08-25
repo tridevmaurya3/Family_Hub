@@ -183,9 +183,18 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                if (dy > 6 && !groceryHeaderCollapsed) {
+                RecyclerView.LayoutManager manager = recyclerView.getLayoutManager();
+                int firstVisible = manager instanceof LinearLayoutManager
+                        ? ((LinearLayoutManager) manager).findFirstVisibleItemPosition()
+                        : RecyclerView.NO_POSITION;
+                if (dy > 6 && !groceryHeaderCollapsed
+                        && recyclerView.canScrollVertically(1)) {
+                    // Short Monthly/2 Monthly/3 Monthly lists must never collapse
+                    // into a state from which there is no remaining scroll range.
                     setGroceryHeaderCollapsed(true);
-                } else if (!recyclerView.canScrollVertically(-1) && groceryHeaderCollapsed) {
+                } else if (groceryHeaderCollapsed
+                        && (!recyclerView.canScrollVertically(-1)
+                        || (dy < 0 && firstVisible <= 0))) {
                     setGroceryHeaderCollapsed(false);
                 }
             }
