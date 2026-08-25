@@ -37,6 +37,7 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Offline-first Room cache backed by the family's private Firebase list. */
 public class GroceryRepository {
@@ -75,6 +76,9 @@ public class GroceryRepository {
     @Nullable private Runnable changeCallback;
     @Nullable private Set<String> lastRemoteItemIds;
     @NonNull private String activeFamilyId = "";
+    private final AtomicBoolean financeReconciliationScheduled =
+            new AtomicBoolean(false);
+    private final Set<String> recoveredSyncScheduled = new HashSet<>();
 
     public GroceryRepository(@NonNull Context context) {
         appContext = context.getApplicationContext();
@@ -139,7 +143,6 @@ public class GroceryRepository {
     ) {
         DATABASE_EXECUTOR.execute(() -> {
             resetMonthlyMastersIfNeeded();
-            reconcileFinanceLinksInternal();
             String trimmedQuery = query.trim();
             List<GroceryItem> all = groceryItemDao.getAll();
             repairRecurringIdentity(all);
@@ -155,8 +158,62 @@ public class GroceryRepository {
                 }
             }
             annotateRecurrence(items, all, System.currentTimeMillis());
-            mainHandler.post(() -> callback.onItemsLoaded(items));
+            // Render Room/history results first. Expensive cross-app reconciliation
+            // and recovered cloud uploads must never sit ahead of the UI callback.
+            mainHandler.post(() -> {
+                callback.onItemsLoaded(items);
+                scheduleFinanceReconciliation();
+                syncRecoveredHistoryBatch(restoredHistory);
+            });
         });
+    }
+
+    private void scheduleFinanceReconciliation() {
+        if (!financeReconciliationScheduled.compareAndSet(false, true)) return;
+        DATABASE_EXECUTOR.execute(this::reconcileFinanceLinksInternal);
+    }
+
+    private void syncRecoveredHistoryBatch(
+            @NonNull List<GroceryItem> recoveredItems) {
+        if (recoveredItems.isEmpty()) return;
+        List<GroceryItem> pending = new java.util.ArrayList<>();
+        synchronized (recoveredSyncScheduled) {
+            for (GroceryItem item : recoveredItems) {
+                if (item.cloudId.isEmpty()
+                        || !recoveredSyncScheduled.add(item.cloudId)) {
+                    continue;
+                }
+                pending.add(item);
+            }
+        }
+        if (pending.isEmpty()) return;
+        accountRepository.loadSession(
+                new FamilyAccountRepository.ResultCallback<
+                        FamilyAccountRepository.SessionState>() {
+                    @Override
+                    public void onSuccess(
+                            @Nullable FamilyAccountRepository.SessionState state) {
+                        if (state == null || !state.isActive()
+                                || state.familyId == null) return;
+                        String familyId = state.familyId;
+                        activeFamilyId = familyId;
+                        for (GroceryItem item : pending) {
+                            item.familyId = familyId;
+                            firebaseRoot.child("sharedShopping").child(familyId)
+                                    .child("items").child(item.cloudId)
+                                    .updateChildren(toCloudValues(item));
+                        }
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception error) {
+                        synchronized (recoveredSyncScheduled) {
+                            for (GroceryItem item : pending) {
+                                recoveredSyncScheduled.remove(item.cloudId);
+                            }
+                        }
+                    }
+                });
     }
 
     public void save(
@@ -972,10 +1029,8 @@ public class GroceryRepository {
             row.historyOnly = true;
             restored.add(row);
             existingPurchases.add(historyKey);
-            // Older immutable purchase history used to exist only in the owner's
-            // Room database. Publish the reconstructed occurrence through the
-            // existing family grocery realtime path so every joined device sees it.
-            mainHandler.post(() -> syncItem(row));
+            // Upload is batched only after the UI has rendered. Do not enqueue one
+            // realtime-session lookup per historical row here.
         }
         Set<String> pendingNames = new HashSet<>();
         for (GroceryItem item : persistedItems) {
@@ -1014,7 +1069,6 @@ public class GroceryRepository {
             markCurrentEditor(master);
             upsertLocal(master);
             restored.add(master);
-            mainHandler.post(() -> syncItem(master));
         }
         return restored;
     }
