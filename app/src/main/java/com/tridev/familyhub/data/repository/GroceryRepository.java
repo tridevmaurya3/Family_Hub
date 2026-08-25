@@ -196,16 +196,26 @@ public class GroceryRepository {
             boolean purchased,
             @NonNull ActionCallback callback
     ) {
+        setPurchased(item, purchased, System.currentTimeMillis(), callback);
+    }
+
+    public void setPurchased(
+            @NonNull GroceryItem item,
+            boolean purchased,
+            long requestedPurchasedAt,
+            @NonNull ActionCallback callback
+    ) {
+        long purchasedAt = normalizePurchaseTimestamp(requestedPurchasedAt);
         String originalCycle = GroceryRecurrenceEngine.originalCycle(item);
         if (purchased && !item.isPurchased
                 && GroceryRecurrenceEngine.isRecurringType(originalCycle)
                 && !GroceryItem.LIST_DAILY.equals(item.listType)) {
-            purchaseRecurringMaster(item, originalCycle, callback);
+            purchaseRecurringMaster(item, originalCycle, purchasedAt, callback);
             return;
         }
         boolean recordPurchase = purchased && !item.isPurchased;
         item.isPurchased = purchased;
-        item.purchasedAt = purchased ? System.currentTimeMillis() : 0L;
+        item.purchasedAt = purchased ? purchasedAt : 0L;
         item.buyingStatus = purchased
                 ? GroceryItem.STATUS_PURCHASED : GroceryItem.STATUS_PENDING;
         if (purchased) {
@@ -694,8 +704,9 @@ public class GroceryRepository {
      */
     private void purchaseRecurringMaster(@NonNull GroceryItem master,
                                          @NonNull String originalCycle,
+                                         long purchasedAt,
                                          @NonNull ActionCallback callback) {
-        long purchasedAt = System.currentTimeMillis();
+        long updatedAt = System.currentTimeMillis();
         GroceryItem purchase = copyForPurchase(master);
         purchase.id = 0L;
         purchase.cloudId = "recurrence-purchase-" + UUID.randomUUID();
@@ -707,7 +718,7 @@ public class GroceryRepository {
         purchase.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(originalCycle);
         purchase.createdAt = purchasedAt;
         purchase.purchasedAt = purchasedAt;
-        purchase.updatedAt = purchasedAt;
+        purchase.updatedAt = updatedAt;
         purchase.isPurchased = true;
         purchase.buyingStatus = GroceryItem.STATUS_PURCHASED;
         purchase.purchaseCount = master.purchaseCount + 1;
@@ -726,7 +737,7 @@ public class GroceryRepository {
         master.purchasedByName = "";
         master.actualCost = 0D;
         master.financeEntryId = 0L;
-        master.updatedAt = purchasedAt;
+        master.updatedAt = updatedAt;
         markCurrentEditor(master);
 
         DATABASE_EXECUTOR.execute(() -> {
@@ -1016,6 +1027,11 @@ public class GroceryRepository {
                 ? item.purchasedAt : System.currentTimeMillis();
         return new SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 .format(new Date(timestamp));
+    }
+
+    private static long normalizePurchaseTimestamp(long requested) {
+        long now = System.currentTimeMillis();
+        return requested > 0L && requested <= now ? requested : now;
     }
 
     @NonNull
