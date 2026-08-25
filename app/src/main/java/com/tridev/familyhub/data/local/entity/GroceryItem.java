@@ -132,4 +132,6 @@ public class GroceryItem {
     @Ignore public boolean recurrenceShadowed;
     @Ignore @NonNull public String lastPurchaseOccurrenceCloudId = "";
     @Ignore public long previousRecurrenceAnchorAt;
+    /** Display-only reconstruction of an immutable GroceryPurchase history row. */
+    @Ignore public boolean historyOnly;
 }
