@@ -20,11 +20,31 @@ public interface GroceryItemDao {
             + "createdAt DESC")
     List<GroceryItem> getAll();
 
+    /**
+     * One-box Grocery search over the fields users actually see while shopping.
+     * This is query-only: no entity column, migration or sync contract changes.
+     */
     @Query("SELECT * FROM grocery_items "
             + "WHERE name LIKE '%' || :query || '%' "
             + "OR category LIKE '%' || :query || '%' "
             + "OR notes LIKE '%' || :query || '%' "
+            + "OR quantity LIKE '%' || :query || '%' "
+            + "OR storeName LIKE '%' || :query || '%' "
             + "OR assignedMemberName LIKE '%' || :query || '%' "
+            + "OR purchasedByName LIKE '%' || :query || '%' "
+            + "OR updatedByName LIKE '%' || :query || '%' "
+            + "OR priority LIKE '%' || :query || '%' "
+            + "OR buyingStatus LIKE '%' || :query || '%' "
+            + "OR listType LIKE '%' || :query || '%' "
+            + "OR CAST(purchaseCount AS TEXT) LIKE '%' || :query || '%' "
+            + "OR CAST(estimatedCost AS TEXT) LIKE '%' || "
+            + "REPLACE(REPLACE(:query, '₹', ''), ',', '') || '%' "
+            + "OR CAST(actualCost AS TEXT) LIKE '%' || "
+            + "REPLACE(REPLACE(:query, '₹', ''), ',', '') || '%' "
+            + "OR (LOWER(:query) = 'weekly' AND listType = 'TWO_MONTH') "
+            + "OR (LOWER(:query) = 'fortnightly' AND listType = 'THREE_MONTH') "
+            + "OR (LOWER(:query) = 'daily' AND listType = 'DAILY') "
+            + "OR (LOWER(:query) = 'monthly' AND listType = 'MONTHLY') "
             + "ORDER BY isPurchased ASC, "
             + "CASE priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END, "
             + "createdAt DESC")
