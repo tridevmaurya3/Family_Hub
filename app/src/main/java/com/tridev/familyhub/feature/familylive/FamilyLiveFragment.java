@@ -159,6 +159,8 @@ public class FamilyLiveFragment extends Fragment {
             @Nullable Bundle savedInstanceState
     ) {
         super.onViewCreated(view, savedInstanceState);
+        binding.buttonFamilyLiveBack.setOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         repository = new FamilyLiveRepository(requireContext());
         familyLiveAdapter = new FamilyLiveAdapter();
