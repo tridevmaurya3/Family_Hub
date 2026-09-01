@@ -1291,13 +1291,36 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         item.name
                 ))
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.remove, (dialog, which) ->
-                        repository.delete(item, () -> {
-                            if (binding != null) {
-                                loadItems(currentQuery());
+                .setPositiveButton(R.string.remove, (dialog, which) -> {
+                    adapter.temporarilyHide(item);
+                    final boolean[] restored = {false};
+                    Snackbar undo = Snackbar.make(
+                            requireView(),
+                            item.name + " removed",
+                            Snackbar.LENGTH_LONG
+                    );
+                    undo.setAction("UNDO", view -> {
+                        restored[0] = true;
+                        adapter.restoreTemporarilyHidden(item);
+                    });
+                    undo.addCallback(new Snackbar.Callback() {
+                        @Override
+                        public void onDismissed(
+                                Snackbar transientBottomBar, int event) {
+                            if (restored[0]
+                                    || event == Snackbar.Callback.DISMISS_EVENT_ACTION) {
+                                return;
                             }
-                        })
-                )
+                            adapter.finishTemporaryHide(item);
+                            repository.delete(item, () -> {
+                                if (binding != null) {
+                                    loadItems(currentQuery());
+                                }
+                            });
+                        }
+                    });
+                    undo.show();
+                })
                 .show();
     }
 
