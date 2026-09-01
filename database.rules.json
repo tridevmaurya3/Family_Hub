@@ -110,7 +110,7 @@
     "locationHistory": {
       "$familyId": {
         "$ownerUid": {
-          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $ownerUid || root.child('journeyPrivacy').child($familyId).child($ownerUid).child('viewers').child(auth.uid).val() === true)",
+          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $ownerUid || root.child('journeyPrivacy').child($familyId).child($ownerUid).child('historyEnabled').val() === true)",
           ".write": "auth != null && auth.uid === $ownerUid && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
           "$dayKey": {
             ".validate": "!newData.exists() || $dayKey.matches(/^[0-9]{8}$/)",
