@@ -418,6 +418,18 @@ public class GroceryOverlayService extends Service {
         formHeaderParams.setMarginStart(dp(4));
         header.addView(overlayFormToggle, formHeaderParams);
 
+        Button headerMenu = compactAction("⋮",
+                Color.rgb(73, 86, 98), Color.argb(218, 242, 246, 248));
+        headerMenu.setTextSize(18f);
+        headerMenu.setSingleLine(true);
+        headerMenu.setPadding(0, 0, 0, 0);
+        headerMenu.setElevation(dp(1));
+        headerMenu.setContentDescription("More Grocery overlay options");
+        LinearLayout.LayoutParams headerMenuParams =
+                new LinearLayout.LayoutParams(dp(32), dp(32));
+        headerMenuParams.setMarginStart(dp(3));
+        header.addView(headerMenu, headerMenuParams);
+
         Button close = new Button(this);
         close.setText("×");
         close.setTextSize(20f);
@@ -507,21 +519,7 @@ public class GroceryOverlayService extends Service {
         shoppingModeDropdown.setOnClickListener(v -> showOverlayShoppingMenu(
                 shoppingModeDropdown, screenOn, shoppingSubtitle));
 
-        Button opacityToggle = compactAction("◐",
-                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
-        opacityToggle.setTextSize(13f);
-        opacityToggle.setSingleLine(true);
-        opacityToggle.setPadding(0, 0, 0, 0);
-        opacityToggle.setElevation(dp(1));
-        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));
-
-        LinearLayout listTypeControls = new LinearLayout(this);
-        listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
-        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(0, dp(36), 1f));
-        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(30), dp(30));
-        opacityRowParams.setMarginStart(dp(2));
-        listTypeControls.addView(opacityToggle, opacityRowParams);
-        root.addView(listTypeControls, new LinearLayout.LayoutParams(
+        root.addView(listTypeGroup, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
         LinearLayout opacityPanel = new LinearLayout(this);
@@ -547,8 +545,18 @@ public class GroceryOverlayService extends Service {
         });
         opacityPanel.addView(opacity, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
-        opacityToggle.setOnClickListener(v -> opacityPanel.setVisibility(
-                opacityPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        headerMenu.setOnClickListener(v -> {
+            FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+            PopupMenu menu = new PopupMenu(this, headerMenu);
+            menu.getMenu().add(0, 1, 0, getString(R.string.grocery_overlay_opacity));
+            menu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() != 1) return false;
+                boolean show = opacityPanel.getVisibility() != View.VISIBLE;
+                opacityPanel.setVisibility(show ? View.VISIBLE : View.GONE);
+                return true;
+            });
+            menu.show();
+        });
         root.addView(opacityPanel);
 
         final String[] quantityUnits = getResources().getStringArray(R.array.grocery_quantity_units);
