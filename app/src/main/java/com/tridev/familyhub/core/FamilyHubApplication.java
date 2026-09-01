@@ -13,6 +13,7 @@ import com.tridev.familyhub.feature.automation.FamilyAutomationLiveMonitor;
 import com.tridev.familyhub.feature.automation.FamilyAutomationRuntime;
 import com.tridev.familyhub.feature.automation.FamilyAutomationScheduler;
 import com.tridev.familyhub.feature.documents.DocumentExpiryScheduler;
+import com.tridev.familyhub.feature.grocery.GroceryListCalendarUiBinder;
 import com.tridev.familyhub.feature.grocery.GroceryProfessionalUiBinder;
 import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 import com.tridev.familyhub.feature.integration.MoneyManagerAccountAnalyticsBinder;
@@ -58,6 +59,7 @@ public class FamilyHubApplication extends Application {
         enableFirebaseOfflinePersistence();
         GroceryRecurrenceEngine.register(this);
         GroceryProfessionalUiBinder.register(this);
+        GroceryListCalendarUiBinder.register(this);
         BackupScheduler.sync(this);
         DocumentExpiryScheduler.sync(this);
         registerActivityLifecycleCallbacks(new FamilyLivePrecisionActivityCallbacks());
