@@ -1,0 +1,54 @@
+name: Patch Grocery Overlay Header Menu
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-grocery-overlay-header-menu.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move transparency control into header menu
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
+          text = path.read_text(encoding='utf-8')
+
+          header_anchor = '''        header.addView(overlayFormToggle, formHeaderParams);\n\n        Button close = new Button(this);\n'''
+          header_replacement = '''        header.addView(overlayFormToggle, formHeaderParams);\n\n        Button headerMenu = compactAction("⋮",\n                Color.rgb(73, 86, 98), Color.argb(218, 242, 246, 248));\n        headerMenu.setTextSize(18f);\n        headerMenu.setSingleLine(true);\n        headerMenu.setPadding(0, 0, 0, 0);\n        headerMenu.setElevation(dp(1));\n        headerMenu.setContentDescription("More Grocery overlay options");\n        LinearLayout.LayoutParams headerMenuParams =\n                new LinearLayout.LayoutParams(dp(32), dp(32));\n        headerMenuParams.setMarginStart(dp(3));\n        header.addView(headerMenu, headerMenuParams);\n\n        Button close = new Button(this);\n'''
+          if text.count(header_anchor) != 1:
+              raise SystemExit(f'Expected one header anchor, found {text.count(header_anchor)}')
+          text = text.replace(header_anchor, header_replacement, 1)
+
+          row_anchor = '''        Button opacityToggle = compactAction("◐",\n                Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));\n        opacityToggle.setTextSize(13f);\n        opacityToggle.setSingleLine(true);\n        opacityToggle.setPadding(0, 0, 0, 0);\n        opacityToggle.setElevation(dp(1));\n        opacityToggle.setContentDescription(getString(R.string.grocery_overlay_opacity));\n\n        LinearLayout listTypeControls = new LinearLayout(this);\n        listTypeControls.setGravity(Gravity.CENTER_VERTICAL);\n        listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(0, dp(36), 1f));\n        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(30), dp(30));\n        opacityRowParams.setMarginStart(dp(2));\n        listTypeControls.addView(opacityToggle, opacityRowParams);\n        root.addView(listTypeControls, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));\n'''
+          row_replacement = '''        root.addView(listTypeGroup, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));\n'''
+          if text.count(row_anchor) != 1:
+              raise SystemExit(f'Expected one opacity row anchor, found {text.count(row_anchor)}')
+          text = text.replace(row_anchor, row_replacement, 1)
+
+          listener_anchor = '''        opacityToggle.setOnClickListener(v -> opacityPanel.setVisibility(\n                opacityPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));\n        root.addView(opacityPanel);\n'''
+          listener_replacement = '''        headerMenu.setOnClickListener(v -> {\n            FamilyHubAppLockManager.noteTrustedOverlayInteraction();\n            PopupMenu menu = new PopupMenu(this, headerMenu);\n            menu.getMenu().add(0, 1, 0, getString(R.string.grocery_overlay_opacity));\n            menu.setOnMenuItemClickListener(item -> {\n                if (item.getItemId() != 1) return false;\n                boolean show = opacityPanel.getVisibility() != View.VISIBLE;\n                opacityPanel.setVisibility(show ? View.VISIBLE : View.GONE);\n                return true;\n            });\n            menu.show();\n        });\n        root.addView(opacityPanel);\n'''
+          if text.count(listener_anchor) != 1:
+              raise SystemExit(f'Expected one opacity listener anchor, found {text.count(listener_anchor)}')
+          text = text.replace(listener_anchor, listener_replacement, 1)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          git commit -m "Move Grocery overlay transparency into header menu"
+          git push
