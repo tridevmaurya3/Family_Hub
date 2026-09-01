@@ -126,7 +126,8 @@ public final class GrocerySmartCategoryPicker {
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(side, gap, side, dp(context, 6));
+        root.setClipToPadding(false);
+        root.setPadding(side, gap, side, dp(context, 10));
         root.setBackground(roundedBackground(
                 Color.rgb(250, 252, 253), Color.rgb(195, 218, 211), dp(context, 18)));
 
@@ -196,11 +197,13 @@ public final class GrocerySmartCategoryPicker {
         scroll.addView(rows, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
-        int maxListHeight = Math.min(dp(context, 168),
-                Math.max(dp(context, 124), context.getResources()
-                        .getDisplayMetrics().heightPixels / 5));
-        root.addView(scroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, maxListHeight));
+        int availableListHeight = context.getResources()
+                .getDisplayMetrics().heightPixels - dp(context, 214);
+        int maxListHeight = Math.max(dp(context, 96),
+                Math.min(dp(context, 210), availableListHeight));
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, maxListHeight);
+        root.addView(scroll, scrollParams);
 
         TextView status = new TextView(context);
         status.setText("Loading saved categories…");
@@ -220,11 +223,11 @@ public final class GrocerySmartCategoryPicker {
         LinearLayout footer = new LinearLayout(context);
         footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(
-                dp(context, 78), dp(context, 30));
-        cancelParams.topMargin = dp(context, 3);
+                dp(context, 84), dp(context, 32));
+        cancelParams.bottomMargin = dp(context, 2);
         footer.addView(cancel, cancelParams);
         root.addView(footer, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 40)));
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setView(root)
@@ -248,6 +251,12 @@ public final class GrocerySmartCategoryPicker {
             renderCategoryRows(context, rows, allCategories, query, current, choose);
             if (loaded[0]) {
                 int shown = countMatches(allCategories, query);
+                int contentHeight = shown == 0
+                        ? dp(context, 56)
+                        : shown * dp(context, 34);
+                scrollParams.height = Math.min(maxListHeight,
+                        Math.max(dp(context, 34), contentHeight));
+                scroll.setLayoutParams(scrollParams);
                 status.setText(shown + " categor" + (shown == 1 ? "y" : "ies")
                         + " • type to filter");
             }
@@ -293,6 +302,7 @@ public final class GrocerySmartCategoryPicker {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(
                     new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().getDecorView().setPadding(0, 0, 0, 0);
         }
     }
 
