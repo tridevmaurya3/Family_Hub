@@ -584,6 +584,28 @@ public final class FamilyJourneyActivity extends AppCompatActivity {
                         @Override
                         public void onSuccess() {
                             dialog.dismiss();
+                            if (enabled.isChecked()
+                                    && (androidx.core.content.ContextCompat
+                                    .checkSelfPermission(
+                                            FamilyJourneyActivity.this,
+                                            android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                    == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                    || androidx.core.content.ContextCompat
+                                    .checkSelfPermission(
+                                            FamilyJourneyActivity.this,
+                                            android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                                    == android.content.pm.PackageManager.PERMISSION_GRANTED)) {
+                                android.content.Intent tracking = new android.content.Intent(
+                                        FamilyJourneyActivity.this,
+                                        com.tridev.familyhub.location
+                                                .FamilyLocationService.class)
+                                        .setAction(com.tridev.familyhub.location
+                                                .FamilyLocationService.ACTION_START);
+                                androidx.core.content.ContextCompat.startForegroundService(
+                                        FamilyJourneyActivity.this, tracking);
+                                FamilyJourneyRecorder.start(
+                                        FamilyJourneyActivity.this);
+                            }
                             Toast.makeText(
                                     FamilyJourneyActivity.this,
                                     R.string.family_journey_privacy_saved,
