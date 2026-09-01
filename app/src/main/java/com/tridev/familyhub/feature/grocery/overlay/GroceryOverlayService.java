@@ -815,12 +815,11 @@ public class GroceryOverlayService extends Service {
         voice.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
             pendingVoiceText = input.getText().toString();
-            closePanel();
-            new android.os.Handler(getMainLooper()).postDelayed(() -> {
-                Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(capture);
-            }, 180L);
+            // Keep the Grocery overlay visible while the system recognizer runs.
+            // The result receiver writes the recognized text back into this form.
+            Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(capture);
         });
 
         add.setOnClickListener(v -> {
@@ -1198,8 +1197,25 @@ public class GroceryOverlayService extends Service {
             categoryParams.bottomMargin = dp(3);
             itemContainer.addView(categoryHeader, categoryParams);
             categoryHeader.setOnClickListener(v -> {
+                boolean openThisCategory = collapseAllCategories
+                        || collapsedCategories.contains(collapseKey);
                 collapseAllCategories = false;
-                if (!collapsedCategories.add(collapseKey)) collapsedCategories.remove(collapseKey);
+                collapsedCategories.clear();
+                if (openThisCategory) {
+                    // Accordion behavior: open the tapped category and keep every
+                    // other category closed.
+                    for (String categoryName : grouped.keySet()) {
+                        String key = listType + "|" + categoryName.toLowerCase(
+                                java.util.Locale.ENGLISH);
+                        if (!key.equals(collapseKey)) collapsedCategories.add(key);
+                    }
+                } else {
+                    // Tapping the already-open category closes it as well.
+                    for (String categoryName : grouped.keySet()) {
+                        collapsedCategories.add(listType + "|"
+                                + categoryName.toLowerCase(java.util.Locale.ENGLISH));
+                    }
+                }
                 refreshPanel();
             });
             if (collapsed) continue;
