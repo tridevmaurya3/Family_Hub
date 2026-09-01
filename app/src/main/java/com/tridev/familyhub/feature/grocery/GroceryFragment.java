@@ -1496,16 +1496,24 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void suspendFloatingOverlayForVoice() {
+        if (!isFloatingOverlayEnabled()) return;
         requireContext().startService(new Intent(
                 requireContext(), GroceryOverlayService.class
         ).setAction(GroceryOverlayService.ACTION_SUSPEND_FOR_VOICE));
     }
 
     private void resumeFloatingOverlayAfterVoice() {
-        if (!isAdded()) return;
+        if (!isAdded() || !isFloatingOverlayEnabled()) return;
         requireContext().startService(new Intent(
                 requireContext(), GroceryOverlayService.class
         ).setAction(GroceryOverlayService.ACTION_RESUME_AFTER_VOICE));
+    }
+
+    private boolean isFloatingOverlayEnabled() {
+        return requireContext().getSharedPreferences(
+                GroceryOverlayService.PREFS,
+                android.content.Context.MODE_PRIVATE
+        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
     }
 
     private void addFromVoice(@NonNull String spoken) {
