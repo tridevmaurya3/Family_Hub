@@ -400,41 +400,22 @@ public class GroceryOverlayService extends Service {
 
         header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(40), 1f));
 
-        Button shoppingModeDropdown = compactAction("Shopping Mode  ▾",
-                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
-        shoppingModeDropdown.setTextSize(8.5f);
-        shoppingModeDropdown.setSingleLine(true);
-        shoppingModeDropdown.setPadding(dp(4), 0, dp(4), 0);
-        shoppingModeDropdown.setElevation(dp(2));
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                shoppingModeDropdown, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+        Button shoppingModeDropdown = overlayHeaderChip("Shopping Mode  ▾");
         shoppingModeDropdown.setContentDescription("Floating Shopping Mode menu");
-        LinearLayout.LayoutParams shoppingHeaderParams = new LinearLayout.LayoutParams(dp(76), dp(32));
-        shoppingHeaderParams.setMarginStart(dp(4));
+        LinearLayout.LayoutParams shoppingHeaderParams =
+                overlayHeaderChipParams(76, 4);
         header.addView(shoppingModeDropdown, shoppingHeaderParams);
 
-        overlayFormToggle = compactAction("More details  ▾",
-                Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
-        overlayFormToggle.setTextSize(8.5f);
-        overlayFormToggle.setSingleLine(true);
-        overlayFormToggle.setPadding(dp(4), 0, dp(4), 0);
-        overlayFormToggle.setElevation(dp(2));
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
-                overlayFormToggle, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        LinearLayout.LayoutParams formHeaderParams = new LinearLayout.LayoutParams(dp(78), dp(32));
-        formHeaderParams.setMarginStart(dp(4));
+        overlayFormToggle = overlayHeaderChip("More details  ▾");
+        overlayFormToggle.setContentDescription("Show more Grocery details");
+        LinearLayout.LayoutParams formHeaderParams =
+                overlayHeaderChipParams(78, 4);
         header.addView(overlayFormToggle, formHeaderParams);
 
-        Button headerMenu = compactAction("⋮",
-                Color.rgb(73, 86, 98), Color.argb(218, 242, 246, 248));
-        headerMenu.setTextSize(18f);
-        headerMenu.setSingleLine(true);
-        headerMenu.setPadding(0, 0, 0, 0);
-        headerMenu.setElevation(dp(1));
+        Button headerMenu = overlayHeaderChip("More  ⋮");
         headerMenu.setContentDescription("More Grocery overlay options");
         LinearLayout.LayoutParams headerMenuParams =
-                new LinearLayout.LayoutParams(dp(32), dp(32));
-        headerMenuParams.setMarginStart(dp(3));
+                overlayHeaderChipParams(48, 3);
         header.addView(headerMenu, headerMenuParams);
 
         Button close = new Button(this);
@@ -2298,6 +2279,37 @@ public class GroceryOverlayService extends Service {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(66));
         params.topMargin = dp(4);
+        return params;
+    }
+
+    private Button overlayHeaderChip(@NonNull String label) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setAllCaps(false);
+        button.setSingleLine(true);
+        button.setGravity(Gravity.CENTER);
+        button.setIncludeFontPadding(false);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(dp(6), 0, dp(6), 0);
+        button.setTextColor(Color.rgb(13, 91, 73));
+        button.setBackground(rounded(
+                Color.argb(232, 229, 246, 240),
+                Color.argb(205, 91, 166, 143),
+                16
+        ));
+        button.setElevation(dp(2));
+        button.setStateListAnimator(null);
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                button, 7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
+        return button;
+    }
+
+    private LinearLayout.LayoutParams overlayHeaderChipParams(
+            int widthDp, int startMarginDp) {
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(dp(widthDp), dp(32));
+        params.setMarginStart(dp(startMarginDp));
         return params;
     }
 
