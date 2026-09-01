@@ -374,8 +374,11 @@ public class GroceryOverlayService extends Service {
         overlayLiveStatus = text("● Connecting", 9, true);
         overlayLiveStatus.setSingleLine(true);
         overlayLiveStatus.setTextColor(Color.rgb(84, 93, 105));
-        subtitleRow.addView(overlayLiveStatus, new LinearLayout.LayoutParams(0, dp(20), 0.55f));
-        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 0.45f));
+        LinearLayout.LayoutParams liveStatusParams =
+                new LinearLayout.LayoutParams(dp(48), dp(20));
+        subtitleRow.addView(overlayLiveStatus, liveStatusParams);
+        subtitleRow.addView(shoppingSubtitle,
+                new LinearLayout.LayoutParams(0, dp(20), 1f));
 
         Button screenOn = compactAction("Screen On",
                 Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
@@ -387,7 +390,7 @@ public class GroceryOverlayService extends Service {
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
                 screenOn, 7, 8, 1, TypedValue.COMPLEX_UNIT_SP);
         screenOn.setContentDescription("Keep screen on in floating Shopping Mode");
-        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(60), dp(20));
+        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(42), dp(20));
         screenOnParams.setMarginStart(dp(3));
         subtitleRow.addView(screenOn, screenOnParams);
         titleStack.addView(subtitleRow, new LinearLayout.LayoutParams(
@@ -498,10 +501,10 @@ public class GroceryOverlayService extends Service {
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(threeMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
 
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(36), 0.75f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(36), 0.92f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(36), 1.35f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(36), 0.98f));
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(36), 1f));
+        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(36), 1f));
+        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(36), 1f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(36), 1f));
         listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == -1) return;
             if (checkedId == threeMonth.getId()) selectedListType[0] = GroceryItem.LIST_THREE_MONTH;
@@ -2137,14 +2140,14 @@ public class GroceryOverlayService extends Service {
         }
         if (screenOn != null) {
             screenOn.setVisibility(overlayShoppingMode ? View.VISIBLE : View.GONE);
-            screenOn.setText(overlayShoppingScreenOn ? "Screen On ✓" : "Screen On");
+            screenOn.setText(overlayShoppingScreenOn ? "On ✓" : "On");
             screenOn.setTextColor(overlayShoppingScreenOn ? Color.WHITE : Color.rgb(15, 108, 189));
             screenOn.setBackground(roundedFill(overlayShoppingScreenOn
                     ? Color.rgb(15, 108, 189) : Color.argb(220, 232, 243, 252), 14));
         }
         if (shoppingSubtitle != null) {
             if (overlayShoppingMode) {
-                shoppingSubtitle.setText("Shopping • "
+                shoppingSubtitle.setText("Shop • "
                         + shoppingSelectionLabel(overlayShoppingSelection));
             } else {
                 shoppingSubtitle.setText(overlayFormCollapsed ? "Mini" : "Normal");

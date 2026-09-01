@@ -121,8 +121,8 @@ public final class GrocerySmartCategoryPicker {
     private static void show(@NonNull Context context,
                              @NonNull String current,
                              @NonNull SelectionListener listener) {
-        int gap = dp(context, 8);
-        int side = dp(context, 14);
+        int gap = dp(context, 5);
+        int side = dp(context, 10);
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -134,7 +134,7 @@ public final class GrocerySmartCategoryPicker {
         search.setHint("Search category");
         search.setPadding(dp(context, 12), 0, dp(context, 12), 0);
         root.addView(search, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 46)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 38)));
 
         TextView recentTitle = sectionTitle(context, "Recent");
         root.addView(recentTitle, sectionTitleParams(context));
@@ -143,7 +143,7 @@ public final class GrocerySmartCategoryPicker {
         LinearLayout recentRow = chipRow(context);
         recentScroll.addView(recentRow);
         root.addView(recentScroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 46)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
 
         TextView popularTitle = sectionTitle(context, "Popular");
         root.addView(popularTitle, sectionTitleParams(context));
@@ -152,18 +152,18 @@ public final class GrocerySmartCategoryPicker {
         LinearLayout popularRow = chipRow(context);
         popularScroll.addView(popularRow);
         root.addView(popularScroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 46)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
 
         LinearLayout listHeader = new LinearLayout(context);
         listHeader.setGravity(Gravity.CENTER_VERTICAL);
         TextView allTitle = sectionTitle(context, "All categories");
         listHeader.addView(allTitle, new LinearLayout.LayoutParams(
-                0, dp(context, 34), 1f));
+                0, dp(context, 28), 1f));
         MaterialButton add = smallAction(context, "+ Add category");
         listHeader.addView(add, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 38)));
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 32)));
         root.addView(listHeader, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 42)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
 
         ScrollView scroll = new ScrollView(context);
         scroll.setFillViewport(false);
@@ -172,8 +172,11 @@ public final class GrocerySmartCategoryPicker {
         scroll.addView(rows, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
+        int maxListHeight = Math.min(dp(context, 196),
+                Math.max(dp(context, 142), context.getResources()
+                        .getDisplayMetrics().heightPixels / 4));
         root.addView(scroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 270)));
+                ViewGroup.LayoutParams.MATCH_PARENT, maxListHeight));
 
         TextView status = new TextView(context);
         status.setText("Loading saved categories…");
@@ -344,11 +347,11 @@ public final class GrocerySmartCategoryPicker {
             MaterialButton row = new MaterialButton(context);
             row.setAllCaps(false);
             row.setText((selected ? "✓  " : "") + category);
-            row.setTextSize(12.5f);
+            row.setTextSize(11.5f);
             row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-            row.setMinHeight(dp(context, 44));
-            row.setMinimumHeight(dp(context, 44));
-            row.setCornerRadius(dp(context, 12));
+            row.setMinHeight(dp(context, 36));
+            row.setMinimumHeight(dp(context, 36));
+            row.setCornerRadius(dp(context, 11));
             row.setStrokeWidth(dp(context, 1));
             row.setStrokeColor(android.content.res.ColorStateList.valueOf(
                     selected ? Color.rgb(126, 190, 165) : Color.rgb(212, 222, 226)));
@@ -357,8 +360,8 @@ public final class GrocerySmartCategoryPicker {
             row.setTextColor(selected ? Color.rgb(15, 108, 89) : Color.rgb(31, 42, 49));
             row.setOnClickListener(v -> listener.onSelected(category));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 44));
-            params.bottomMargin = dp(context, 5);
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 36));
+            params.bottomMargin = dp(context, 4);
             rows.addView(row, params);
         }
         if (rows.getChildCount() == 0) {
@@ -381,8 +384,8 @@ public final class GrocerySmartCategoryPicker {
             MaterialButton chip = smallAction(context, value);
             chip.setOnClickListener(v -> listener.onSelected(value));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 38));
-            params.setMarginEnd(dp(context, 6));
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 30));
+            params.setMarginEnd(dp(context, 5));
             row.addView(chip, params);
         }
     }
@@ -392,11 +395,11 @@ public final class GrocerySmartCategoryPicker {
         MaterialButton button = new MaterialButton(context);
         button.setText(text);
         button.setAllCaps(false);
-        button.setTextSize(11.5f);
+        button.setTextSize(10.5f);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
-        button.setPadding(dp(context, 10), 0, dp(context, 10), 0);
-        button.setCornerRadius(dp(context, 14));
+        button.setPadding(dp(context, 8), 0, dp(context, 8), 0);
+        button.setCornerRadius(dp(context, 12));
         button.setStrokeWidth(dp(context, 1));
         button.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.rgb(187, 208, 201)));
         button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(241, 249, 246)));
@@ -408,7 +411,7 @@ public final class GrocerySmartCategoryPicker {
     private static TextView sectionTitle(@NonNull Context context, @NonNull String text) {
         TextView title = new TextView(context);
         title.setText(text);
-        title.setTextSize(11.5f);
+        title.setTextSize(10.5f);
         title.setTextColor(Color.rgb(84, 93, 105));
         title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
         title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -418,8 +421,8 @@ public final class GrocerySmartCategoryPicker {
     @NonNull
     private static LinearLayout.LayoutParams sectionTitleParams(@NonNull Context context) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 30));
-        params.topMargin = dp(context, 4);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 22));
+        params.topMargin = dp(context, 2);
         return params;
     }
 
