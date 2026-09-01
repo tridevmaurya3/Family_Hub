@@ -82,7 +82,7 @@ public final class FamilyJourneyRecorder {
 
     private synchronized void attachForUser(@Nullable FirebaseUser user) {
         detachAll();
-        if (user == null || !user.isEmailVerified()) {
+        if (user == null) {
             return;
         }
         uid = user.getUid();
@@ -171,8 +171,7 @@ public final class FamilyJourneyRecorder {
             @NonNull DataSnapshot snapshot,
             int requestGeneration
     ) {
-        if (!booleanValue(snapshot.child("sharingEnabled"), false)
-                || !"RELIABLE".equals(
+        if (!"RELIABLE".equals(
                 stringValue(snapshot.child("locationQuality"))
         )) {
             return;
