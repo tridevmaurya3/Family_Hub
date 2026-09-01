@@ -112,6 +112,8 @@ public class GroceryOverlayService extends Service {
     private boolean overlayShoppingScreenOn;
     private String overlayShoppingSelection = SHOPPING_ALL;
     private boolean overlayInlinePurchaseEditorOpen;
+    private boolean voicePanelDetached;
+    private boolean voiceStripWasVisible;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -133,6 +135,7 @@ public class GroceryOverlayService extends Service {
                 pendingVoiceText = result.trim();
             }
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+            resumeOverlayAfterVoice();
             if (panelView == null) togglePanel();
         }
     };
@@ -191,6 +194,14 @@ public class GroceryOverlayService extends Service {
         if (intent != null && ACTION_SHOW.equals(intent.getAction())) {
             if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
             if (stripView != null) stripView.setVisibility(View.VISIBLE);
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_SUSPEND_FOR_VOICE.equals(intent.getAction())) {
+            suspendOverlayForVoice();
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_RESUME_AFTER_VOICE.equals(intent.getAction())) {
+            resumeOverlayAfterVoice();
             return START_STICKY;
         }
         return START_STICKY;
@@ -818,8 +829,10 @@ public class GroceryOverlayService extends Service {
         voice.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
             pendingVoiceText = input.getText().toString();
-            // Keep the Grocery overlay visible while the system recognizer runs.
-            // The result receiver writes the recognized text back into this form.
+            // Temporarily detach the system-overlay window so Google's recognizer
+            // is the top foreground surface. The same form/state is reattached
+            // when recognition finishes.
+            suspendOverlayForVoice();
             Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(capture);
@@ -2083,10 +2096,43 @@ public class GroceryOverlayService extends Service {
         canvas.drawLine(width - edge, height - edge, width - edge, height - edge - length, paint);
     }
 
+    private void suspendOverlayForVoice() {
+        if (voicePanelDetached) return;
+        voiceStripWasVisible = stripView != null
+                && stripView.getVisibility() == View.VISIBLE;
+        if (stripView != null) stripView.setVisibility(View.GONE);
+        if (panelView != null && panelView.isAttachedToWindow()) {
+            windowManager.removeView(panelView);
+            voicePanelDetached = true;
+        }
+    }
+
+    private void resumeOverlayAfterVoice() {
+        if (stripView != null && voiceStripWasVisible) {
+            stripView.setVisibility(View.VISIBLE);
+        }
+        voiceStripWasVisible = false;
+        if (!voicePanelDetached || panelView == null || panelParams == null) {
+            voicePanelDetached = false;
+            return;
+        }
+        try {
+            windowManager.addView(panelView, panelParams);
+        } catch (RuntimeException ignored) {
+            panelView = null;
+            itemContainer = null;
+            overlayFormDetails = null;
+            overlayItemScroll = null;
+            overlayFormToggle = null;
+            panelParams = null;
+        }
+        voicePanelDetached = false;
+    }
+
     private void closePanel() {
         if (panelView != null) {
             applyOverlayScreenOn(false);
-            windowManager.removeView(panelView);
+            if (panelView.isAttachedToWindow()) windowManager.removeView(panelView);
             panelView = null;
             itemContainer = null;
             overlayFormDetails = null;
@@ -2100,6 +2146,7 @@ public class GroceryOverlayService extends Service {
             overlayShoppingSelection = SHOPPING_ALL;
             overlayInlinePurchaseEditorOpen = false;
             cornerResizeActive = false;
+            voicePanelDetached = false;
         }
     }
 
