@@ -1,0 +1,247 @@
+name: Apply Grocery Overlay Professional UI Patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/overlay-professional-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply exact Grocery overlay patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old, new, label):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 anchor, found {count}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              'import androidx.core.widget.TextViewCompat;\n\nimport com.tridev.familyhub.R;',
+              'import androidx.core.widget.TextViewCompat;\n\n'
+              'import com.google.firebase.database.DataSnapshot;\n'
+              'import com.google.firebase.database.DatabaseError;\n'
+              'import com.google.firebase.database.DatabaseReference;\n'
+              'import com.google.firebase.database.FirebaseDatabase;\n'
+              'import com.google.firebase.database.ValueEventListener;\n'
+              'import com.tridev.familyhub.R;',
+              'firebase imports')
+
+          replace_once(
+              '    private static final int SMART_VISIBLE_CHIPS = 5;\n'
+              '    private static final String SHOPPING_ALL = "ALL";',
+              '    private static final int SMART_VISIBLE_CHIPS = 5;\n'
+              '    private static final String SHOPPING_ALL = "ALL";\n'
+              '    private static final String KEY_OVERLAY_MODE = "professional_mode";\n'
+              '    private static final String KEY_LAST_STANDARD_MODE = "last_standard_mode";\n'
+              '    private static final String MODE_NORMAL = "NORMAL";\n'
+              '    private static final String MODE_MINI = "MINI";\n'
+              '    private static final String MODE_SHOPPING = "SHOPPING";',
+              'mode constants')
+
+          replace_once(
+              '    private boolean overlayInlinePurchaseEditorOpen;\n'
+              '    private boolean voicePanelDetached;',
+              '    private boolean overlayInlinePurchaseEditorOpen;\n'
+              '    @Nullable private TextView overlayLiveStatus;\n'
+              '    @Nullable private DatabaseReference overlayConnectionReference;\n'
+              '    @Nullable private ValueEventListener overlayConnectionListener;\n'
+              '    private boolean voicePanelDetached;',
+              'connection fields')
+
+          replace_once(
+              '        getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n'
+              '                .putBoolean(KEY_ENABLED, true).apply();\n'
+              '        repository = new GroceryRepository(this);',
+              '        getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n'
+              '                .putBoolean(KEY_ENABLED, true).apply();\n'
+              '        String savedOverlayMode = getSharedPreferences(PREFS, MODE_PRIVATE)\n'
+              '                .getString(KEY_OVERLAY_MODE, MODE_NORMAL);\n'
+              '        overlayShoppingMode = MODE_SHOPPING.equals(savedOverlayMode);\n'
+              '        overlayFormCollapsed = overlayShoppingMode || MODE_MINI.equals(savedOverlayMode);\n'
+              '        repository = new GroceryRepository(this);',
+              'restore startup mode')
+
+          replace_once(
+              '        TextView title = text(getString(R.string.grocery_overlay_title), 16, true);',
+              '        TextView title = text("Family Grocery", 16, true);',
+              'compact title')
+
+          replace_once(
+              '        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 1f));\n\n'
+              '        Button screenOn = compactAction("Screen On",',
+              '        overlayLiveStatus = text("● Connecting", 9, true);\n'
+              '        overlayLiveStatus.setSingleLine(true);\n'
+              '        overlayLiveStatus.setTextColor(Color.rgb(84, 93, 105));\n'
+              '        subtitleRow.addView(overlayLiveStatus, new LinearLayout.LayoutParams(0, dp(20), 0.55f));\n'
+              '        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 0.45f));\n\n'
+              '        Button screenOn = compactAction("Screen On",',
+              'live status header')
+
+          replace_once(
+              '        overlayFormCollapsed = false;\n'
+              '        overlayFormToggle.setOnClickListener(v -> setOverlayFormCollapsed(!overlayFormCollapsed));',
+              '        String savedPanelMode = getSharedPreferences(PREFS, MODE_PRIVATE)\n'
+              '                .getString(KEY_OVERLAY_MODE, MODE_NORMAL);\n'
+              '        overlayShoppingMode = MODE_SHOPPING.equals(savedPanelMode);\n'
+              '        overlayFormCollapsed = overlayShoppingMode || MODE_MINI.equals(savedPanelMode);\n'
+              '        overlayFormToggle.setOnClickListener(v -> {\n'
+              '            if (overlayShoppingMode) return;\n'
+              '            setOverlayFormCollapsed(!overlayFormCollapsed);\n'
+              '            rememberStandardOverlayMode(overlayFormCollapsed ? MODE_MINI : MODE_NORMAL);\n'
+              '        });\n'
+              '        setOverlayFormCollapsed(overlayFormCollapsed);',
+              'restore panel mode')
+
+          replace_once(
+              '        windowManager.addView(panelView, panelParams);\n'
+              '        root.requestFocus();\n'
+              '        updateOverlayShoppingModeUi(shoppingModeDropdown, screenOn, shoppingSubtitle);',
+              '        windowManager.addView(panelView, panelParams);\n'
+              '        startOverlayConnectionStatus();\n'
+              '        root.requestFocus();\n'
+              '        updateOverlayShoppingModeUi(shoppingModeDropdown, screenOn, shoppingSubtitle);',
+              'start connection status')
+
+          replace_once(
+              '        modeSwitch.setOnCheckedChangeListener((buttonView, checked) -> {\n'
+              '            overlayShoppingMode = checked;\n'
+              '            if (!checked) {\n'
+              '                overlayShoppingScreenOn = false;\n'
+              '                overlayShoppingSelection = SHOPPING_ALL;\n'
+              '                applyOverlayScreenOn(false);\n'
+              '            }\n'
+              '            selectionContainer.setVisibility(checked ? View.VISIBLE : View.GONE);',
+              '        modeSwitch.setOnCheckedChangeListener((buttonView, checked) -> {\n'
+              '            overlayShoppingMode = checked;\n'
+              '            if (checked) {\n'
+              '                String standard = overlayFormCollapsed ? MODE_MINI : MODE_NORMAL;\n'
+              '                getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n'
+              '                        .putString(KEY_LAST_STANDARD_MODE, standard)\n'
+              '                        .putString(KEY_OVERLAY_MODE, MODE_SHOPPING).apply();\n'
+              '                setOverlayFormCollapsed(true);\n'
+              '            } else {\n'
+              '                overlayShoppingScreenOn = false;\n'
+              '                overlayShoppingSelection = SHOPPING_ALL;\n'
+              '                applyOverlayScreenOn(false);\n'
+              '                String standard = getSharedPreferences(PREFS, MODE_PRIVATE)\n'
+              '                        .getString(KEY_LAST_STANDARD_MODE, MODE_NORMAL);\n'
+              '                boolean mini = MODE_MINI.equals(standard);\n'
+              '                setOverlayFormCollapsed(mini);\n'
+              '                rememberStandardOverlayMode(mini ? MODE_MINI : MODE_NORMAL);\n'
+              '            }\n'
+              '            selectionContainer.setVisibility(checked ? View.VISIBLE : View.GONE);',
+              'shopping mode memory')
+
+          replace_once(
+              '    private void updateOverlayShoppingModeUi(Button shoppingDropdown, Button screenOn,\n'
+              '                                             TextView shoppingSubtitle) {',
+              '    private void rememberStandardOverlayMode(String mode) {\n'
+              '        String resolved = MODE_MINI.equals(mode) ? MODE_MINI : MODE_NORMAL;\n'
+              '        getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n'
+              '                .putString(KEY_LAST_STANDARD_MODE, resolved)\n'
+              '                .putString(KEY_OVERLAY_MODE, resolved).apply();\n'
+              '    }\n\n'
+              '    private void startOverlayConnectionStatus() {\n'
+              '        stopOverlayConnectionStatus();\n'
+              '        if (overlayLiveStatus == null) return;\n'
+              '        overlayConnectionReference = FirebaseDatabase.getInstance()\n'
+              '                .getReference(".info/connected");\n'
+              '        overlayConnectionListener = new ValueEventListener() {\n'
+              '            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {\n'
+              '                boolean connected = Boolean.TRUE.equals(snapshot.getValue(Boolean.class));\n'
+              '                TextView status = overlayLiveStatus;\n'
+              '                if (status == null) return;\n'
+              '                status.setText(connected ? "● Live" : "● Offline");\n'
+              '                status.setTextColor(connected\n'
+              '                        ? Color.rgb(15, 122, 90) : Color.rgb(176, 98, 34));\n'
+              '            }\n'
+              '            @Override public void onCancelled(@NonNull DatabaseError error) {\n'
+              '                TextView status = overlayLiveStatus;\n'
+              '                if (status != null) {\n'
+              '                    status.setText("● Offline");\n'
+              '                    status.setTextColor(Color.rgb(176, 98, 34));\n'
+              '                }\n'
+              '            }\n'
+              '        };\n'
+              '        overlayConnectionReference.addValueEventListener(overlayConnectionListener);\n'
+              '    }\n\n'
+              '    private void stopOverlayConnectionStatus() {\n'
+              '        if (overlayConnectionReference != null && overlayConnectionListener != null) {\n'
+              '            overlayConnectionReference.removeEventListener(overlayConnectionListener);\n'
+              '        }\n'
+              '        overlayConnectionReference = null;\n'
+              '        overlayConnectionListener = null;\n'
+              '    }\n\n'
+              '    private void updateOverlayShoppingModeUi(Button shoppingDropdown, Button screenOn,\n'
+              '                                             TextView shoppingSubtitle) {',
+              'professional helpers')
+
+          replace_once(
+              '        if (shoppingSubtitle != null) {\n'
+              '            shoppingSubtitle.setText("(" + getString(R.string.grocery_list_type) + ")");\n'
+              '        }',
+              '        if (shoppingSubtitle != null) {\n'
+              '            if (overlayShoppingMode) {\n'
+              '                shoppingSubtitle.setText("Shopping • "\n'
+              '                        + shoppingSelectionLabel(overlayShoppingSelection));\n'
+              '            } else {\n'
+              '                shoppingSubtitle.setText(overlayFormCollapsed ? "Mini" : "Normal");\n'
+              '            }\n'
+              '        }',
+              'mode subtitle')
+
+          replace_once(
+              '    private void closePanel() {\n'
+              '        if (panelView != null) {\n'
+              '            applyOverlayScreenOn(false);',
+              '    private void closePanel() {\n'
+              '        stopOverlayConnectionStatus();\n'
+              '        overlayLiveStatus = null;\n'
+              '        if (panelView != null) {\n'
+              '            applyOverlayScreenOn(false);',
+              'connection cleanup')
+
+          replace_once(
+              '        overlayFormToggle.setText(collapsed\n'
+              '                ? R.string.grocery_overlay_show_form : R.string.grocery_overlay_hide_form);',
+              '        overlayFormToggle.setText(collapsed ? "Normal" : "Mini");\n'
+              '        overlayFormToggle.setContentDescription(collapsed\n'
+              '                ? "Switch floating Grocery to Normal mode"\n'
+              '                : "Switch floating Grocery to Mini mode");',
+              'professional mode button')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit targeted overlay update
+        shell: bash
+        run: |
+          if git diff --quiet -- app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java; then
+            echo 'No source change produced.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          git commit -m 'Add remembered professional Grocery overlay modes'
+          git push origin HEAD:main
