@@ -63,6 +63,7 @@ public class GroceryAdapter
     private final Map<String, Double> submittedSpent = new LinkedHashMap<>();
     private final Map<String, Double> submittedBudgets = new LinkedHashMap<>();
     private final Set<String> collapsedCategories = new HashSet<>();
+    private final Set<String> temporarilyHiddenItems = new HashSet<>();
     private final Set<String> currentCategoryKeys = new LinkedHashSet<>();
     private final ItemActionListener listener;
     private final NumberFormat currencyFormat =
@@ -84,6 +85,30 @@ public class GroceryAdapter
         submittedBudgets.clear();
         submittedBudgets.putAll(budgets);
         rebuildRows();
+    }
+
+    public void temporarilyHide(@NonNull GroceryItem item) {
+        temporarilyHiddenItems.add(itemKey(item));
+        rebuildRows();
+    }
+
+    public void restoreTemporarilyHidden(@NonNull GroceryItem item) {
+        temporarilyHiddenItems.remove(itemKey(item));
+        rebuildRows();
+    }
+
+    public void finishTemporaryHide(@NonNull GroceryItem item) {
+        temporarilyHiddenItems.remove(itemKey(item));
+    }
+
+    @NonNull
+    private String itemKey(@NonNull GroceryItem item) {
+        if (item.cloudId != null && !item.cloudId.trim().isEmpty()) {
+            return "cloud:" + item.cloudId.trim();
+        }
+        if (item.id > 0L) return "local:" + item.id;
+        return "name:" + item.name.trim().toLowerCase(Locale.ROOT)
+                + ":" + item.createdAt;
     }
 
     /** Collapse every currently visible category, or expand all when already collapsed. */
@@ -115,6 +140,7 @@ public class GroceryAdapter
 
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : ordered) {
+            if (temporarilyHiddenItems.contains(itemKey(item))) continue;
             String category = item.category.isEmpty() ? "Uncategorized" : item.category;
             grouped.computeIfAbsent(category, key -> new ArrayList<>()).add(item);
         }
