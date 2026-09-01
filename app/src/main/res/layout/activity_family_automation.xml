@@ -257,6 +257,40 @@
             android:layout_marginTop="2dp"
             android:text="@string/family_automation_rules_detail" />
 
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/groupAutomationDateFilter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_10"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonAutomationDaily"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:checked="true"
+                android:text="Daily" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonAutomationMonthly"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Monthly" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonAutomationCustomDate"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Custom date" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
         <LinearLayout
             android:id="@+id/listAutomationRules"
             android:layout_width="match_parent"
