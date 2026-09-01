@@ -516,12 +516,14 @@ public class GroceryOverlayService extends Service {
 
         final String[] quantityUnits = getResources().getStringArray(R.array.grocery_quantity_units);
         final String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
+        final String[] categoryChoices = GroceryOptionCatalog.categoryLabelsWithAdd(this);
         EditText quantity = compactInput(getString(R.string.grocery_quantity_amount_hint));
         quantity.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         Spinner quantityUnit = compactSpinner(quantityUnits);
         EditText price = compactInput(getString(R.string.grocery_overlay_price_hint));
         price.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        Spinner category = compactSpinner(categoryLabels);
+        Spinner category = compactSpinner(categoryChoices);
+        enableCustomCategoryCreation(category, "");
         Spinner moneyAccount = moneyAccountSpinner();
         Spinner moneyCategory = moneyCategorySpinner();
         Spinner priority = compactSpinner(getResources().getStringArray(R.array.grocery_priority_labels));
@@ -1383,9 +1385,10 @@ public class GroceryOverlayService extends Service {
         String[] units = getResources().getStringArray(R.array.grocery_quantity_units);
         Spinner unit = compactSpinner(units);
         if (parts.length > 1) selectSpinner(unit, units, parts[1]);
-        String[] categories = GroceryOptionCatalog.categoryLabels(this);
+        String[] categories = GroceryOptionCatalog.categoryLabelsWithAdd(this);
         Spinner category = compactSpinner(categories);
         selectSpinner(category, categories, item.category);
+        enableCustomCategoryCreation(category, item.category);
         Spinner moneyAccount = moneyAccountSpinner();
         Spinner moneyCategory = moneyCategorySpinner();
 
@@ -2211,6 +2214,56 @@ public class GroceryOverlayService extends Service {
         text.setLayoutParams(new android.widget.AbsListView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
         return text;
+    }
+
+    private void enableCustomCategoryCreation(
+            @NonNull Spinner spinner, @NonNull String initialSelection) {
+        final int[] previous = {Math.max(0, spinner.getSelectedItemPosition())};
+        spinner.setOnItemSelectedListener(
+                new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                                                 View view, int position, long id) {
+                Object selected = spinner.getSelectedItem();
+                if (!GroceryOptionCatalog.ADD_CATEGORY_LABEL.equals(
+                        selected == null ? "" : selected.toString())) {
+                    previous[0] = position;
+                    return;
+                }
+                EditText input = compactInput("New category name");
+                input.setSingleLine(true);
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(
+                        GroceryOverlayService.this)
+                        .setTitle("Add grocery category")
+                        .setView(input)
+                        .setNegativeButton(R.string.cancel, (dialog, which) ->
+                                spinner.setSelection(previous[0]))
+                        .setPositiveButton("Add", (dialog, which) -> {
+                            String value = input.getText() == null ? ""
+                                    : input.getText().toString().trim();
+                            if (!GroceryOptionCatalog.addCustomCategory(
+                                    GroceryOverlayService.this, value)) {
+                                spinner.setSelection(previous[0]);
+                                return;
+                            }
+                            String[] updated =
+                                    GroceryOptionCatalog.categoryLabelsWithAdd(
+                                            GroceryOverlayService.this);
+                            spinner.setAdapter(compactSpinnerAdapter(updated));
+                            spinner.setDropDownWidth(adaptivePopupWidth(updated, 12.5f));
+                            selectSpinner(spinner, updated, value);
+                            previous[0] = spinner.getSelectedItemPosition();
+                        }).show();
+            }
+
+            @Override public void onNothingSelected(
+                    android.widget.AdapterView<?> parent) { }
+        });
+        if (!initialSelection.trim().isEmpty()) {
+            selectSpinner(spinner,
+                    GroceryOptionCatalog.categoryLabelsWithAdd(this),
+                    initialSelection);
+            previous[0] = spinner.getSelectedItemPosition();
+        }
     }
 
     private Spinner compactSpinner(String[] values) {
