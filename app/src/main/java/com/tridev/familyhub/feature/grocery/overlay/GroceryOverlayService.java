@@ -960,16 +960,12 @@ public class GroceryOverlayService extends Service {
         int popupWidth = Math.min(dp(252),
                 getResources().getDisplayMetrics().widthPixels - dp(28));
 
-        LinearLayout popupRoot = new LinearLayout(this);
-        popupRoot.setOrientation(LinearLayout.VERTICAL);
-        popupRoot.setPadding(dp(6), dp(6), dp(6), dp(6));
-        popupRoot.setBackground(premiumDropdownBackground());
-        popupRoot.setElevation(dp(12));
+        LinearLayout popupRoot = overlayPopupSurface();
 
         LinearLayout transparencyRow = new LinearLayout(this);
         transparencyRow.setGravity(Gravity.CENTER_VERTICAL);
         transparencyRow.setPadding(dp(8), dp(3), dp(7), dp(3));
-        transparencyRow.setBackground(premiumDropdownRowBackground());
+        transparencyRow.setBackground(overlayPopupRowBackground(false));
 
         TextView icon = text("◐", 15, true);
         icon.setGravity(Gravity.CENTER);
@@ -1040,14 +1036,7 @@ public class GroceryOverlayService extends Service {
         controlsParams.topMargin = dp(5);
         popupRoot.addView(opacityControls, controlsParams);
 
-        PopupWindow popup = new PopupWindow(this);
-        popup.setContentView(popupRoot);
-        popup.setWidth(popupWidth);
-        popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
-        popup.setFocusable(true);
-        popup.setOutsideTouchable(true);
-        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-        popup.setElevation(dp(12));
+        PopupWindow popup = overlayPopupWindow(popupRoot, popupWidth);
         anchor.setText("More  ▴");
         anchor.setContentDescription("Close more Grocery overlay options");
         applyOverlayHeaderChipState(anchor, false, true);
@@ -1063,10 +1052,7 @@ public class GroceryOverlayService extends Service {
             boolean expanded = opacityControls.getVisibility() != View.VISIBLE;
             opacityControls.setVisibility(expanded ? View.VISIBLE : View.GONE);
             expandIndicator.setText(expanded ? "▴" : "▾");
-            transparencyRow.setBackground(expanded
-                    ? rounded(Color.argb(242, 229, 247, 239),
-                            Color.argb(210, 126, 190, 165), 10)
-                    : premiumDropdownRowBackground());
+            transparencyRow.setBackground(overlayPopupRowBackground(expanded));
             popupRoot.requestLayout();
             popup.update();
         });
@@ -1117,20 +1103,10 @@ public class GroceryOverlayService extends Service {
         FamilyHubAppLockManager.noteTrustedOverlayInteraction();
         dismissOverlayHeaderPopup();
 
-        LinearLayout popupRoot = new LinearLayout(this);
-        popupRoot.setOrientation(LinearLayout.VERTICAL);
-        popupRoot.setPadding(dp(6), dp(6), dp(6), dp(6));
-        popupRoot.setBackground(premiumDropdownBackground());
-        popupRoot.setElevation(dp(12));
+        LinearLayout popupRoot = overlayPopupSurface();
 
-        android.widget.PopupWindow popup = new android.widget.PopupWindow(this);
-        popup.setContentView(popupRoot);
-        popup.setWidth(Math.min(dp(230), getResources().getDisplayMetrics().widthPixels - dp(32)));
-        popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
-        popup.setFocusable(true);
-        popup.setOutsideTouchable(true);
-        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-        popup.setElevation(dp(12));
+        PopupWindow popup = overlayPopupWindow(popupRoot,
+                Math.min(dp(230), getResources().getDisplayMetrics().widthPixels - dp(32)));
         popup.setOverlapAnchor(false);
         applyOverlayHeaderChipState(anchor, overlayShoppingMode, true);
         popup.setOnDismissListener(() ->
@@ -1140,9 +1116,7 @@ public class GroceryOverlayService extends Service {
         modeRow.setOrientation(LinearLayout.HORIZONTAL);
         modeRow.setGravity(Gravity.CENTER_VERTICAL);
         modeRow.setPadding(dp(12), dp(4), dp(8), dp(4));
-        modeRow.setBackground(rounded(
-                overlayShoppingMode ? Color.argb(242, 229, 247, 239) : Color.argb(248, 255, 255, 255),
-                overlayShoppingMode ? Color.argb(210, 126, 190, 165) : Color.argb(125, 212, 222, 226), 10));
+        modeRow.setBackground(overlayPopupRowBackground(overlayShoppingMode));
 
         TextView modeLabel = text("Shopping Mode", 12, true);
         modeLabel.setTextColor(Color.rgb(15, 108, 89));
@@ -1195,9 +1169,7 @@ public class GroceryOverlayService extends Service {
                 rememberStandardOverlayMode(mini ? MODE_MINI : MODE_NORMAL);
             }
             selectionContainer.setVisibility(checked ? View.VISIBLE : View.GONE);
-            modeRow.setBackground(rounded(
-                    checked ? Color.argb(242, 229, 247, 239) : Color.argb(248, 255, 255, 255),
-                    checked ? Color.argb(210, 126, 190, 165) : Color.argb(125, 212, 222, 226), 10));
+            modeRow.setBackground(overlayPopupRowBackground(checked));
             updateOverlayShoppingModeUi(anchor, screenOn, shoppingSubtitle);
             refreshPanel();
         });
@@ -1231,9 +1203,7 @@ public class GroceryOverlayService extends Service {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(12), dp(5), dp(8), dp(5));
-        row.setBackground(rounded(
-                selected ? Color.argb(242, 229, 247, 239) : Color.argb(248, 255, 255, 255),
-                selected ? Color.argb(210, 126, 190, 165) : Color.argb(125, 212, 222, 226), 10));
+        row.setBackground(overlayPopupRowBackground(selected));
         TextView labelView = text(label, modeRow ? 12 : 11, modeRow || selected);
         labelView.setTextColor(selected ? Color.rgb(15, 108, 89) : Color.rgb(31, 42, 49));
         labelView.setSingleLine(true);
@@ -2851,6 +2821,37 @@ public class GroceryOverlayService extends Service {
         drawable.setCornerRadius(dp(12));
         drawable.setStroke(dp(1), Color.argb(190, 204, 214, 222));
         return drawable;
+    }
+
+    private LinearLayout overlayPopupSurface() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(6), dp(6), dp(6), dp(6));
+        root.setBackground(premiumDropdownBackground());
+        root.setElevation(dp(12));
+        return root;
+    }
+
+    private PopupWindow overlayPopupWindow(@NonNull View content, int widthPx) {
+        PopupWindow popup = new PopupWindow(this);
+        popup.setContentView(content);
+        popup.setWidth(widthPx);
+        popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        popup.setElevation(dp(12));
+        return popup;
+    }
+
+    private GradientDrawable overlayPopupRowBackground(boolean selected) {
+        return rounded(
+                selected ? Color.argb(242, 229, 247, 239)
+                        : Color.argb(248, 255, 255, 255),
+                selected ? Color.argb(210, 126, 190, 165)
+                        : Color.argb(125, 212, 222, 226),
+                10);
     }
 
     private GradientDrawable premiumDropdownBackground() {
