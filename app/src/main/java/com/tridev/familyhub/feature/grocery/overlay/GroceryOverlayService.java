@@ -461,10 +461,10 @@ public class GroceryOverlayService extends Service {
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(threeMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
 
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(34), 0.72f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(34), 1.18f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(34), 1.18f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(34), 0.92f));
+        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(36), 0.75f));
+        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(36), 0.92f));
+        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(36), 1.35f));
+        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(36), 0.98f));
         listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == -1) return;
             if (checkedId == threeMonth.getId()) selectedListType[0] = GroceryItem.LIST_THREE_MONTH;
@@ -497,8 +497,8 @@ public class GroceryOverlayService extends Service {
         LinearLayout listTypeControls = new LinearLayout(this);
         listTypeControls.setGravity(Gravity.CENTER_VERTICAL);
         listTypeControls.addView(listTypeGroup, new LinearLayout.LayoutParams(0, dp(36), 1f));
-        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(38), dp(32));
-        opacityRowParams.setMarginStart(dp(6));
+        LinearLayout.LayoutParams opacityRowParams = new LinearLayout.LayoutParams(dp(30), dp(30));
+        opacityRowParams.setMarginStart(dp(2));
         listTypeControls.addView(opacityToggle, opacityRowParams);
         root.addView(listTypeControls, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
@@ -2283,8 +2283,10 @@ public class GroceryOverlayService extends Service {
                 }
                 EditText input = compactInput("New category name");
                 input.setSingleLine(true);
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(
-                        GroceryOverlayService.this)
+                android.app.AlertDialog categoryDialog =
+                        new android.app.AlertDialog.Builder(
+                                GroceryOverlayService.this,
+                                android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
                         .setTitle("Add grocery category")
                         .setView(input)
                         .setNegativeButton(R.string.cancel, (dialog, which) ->
@@ -2304,7 +2306,14 @@ public class GroceryOverlayService extends Service {
                             spinner.setDropDownWidth(adaptivePopupWidth(updated, 12.5f));
                             selectSpinner(spinner, updated, value);
                             previous[0] = spinner.getSelectedItemPosition();
-                        }).show();
+                        }).create();
+                if (categoryDialog.getWindow() != null) {
+                    categoryDialog.getWindow().setType(
+                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                }
+                categoryDialog.setOnCancelListener(dialog ->
+                        spinner.setSelection(previous[0]));
+                categoryDialog.show();
             }
 
             @Override public void onNothingSelected(
