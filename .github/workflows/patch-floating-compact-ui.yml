@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply targeted compact UI fixes
+      - name: Apply final compact UI polish
         shell: python
         run: |
           from pathlib import Path
@@ -30,110 +30,49 @@ jobs:
 
           picker_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/GrocerySmartCategoryPicker.java')
           picker = picker_path.read_text(encoding='utf-8')
-
           picker = replace_once(picker,
-              '''        int gap = dp(context, 8);\n        int side = dp(context, 14);\n\n        LinearLayout root = new LinearLayout(context);\n        root.setOrientation(LinearLayout.VERTICAL);\n        root.setPadding(side, gap, side, side);\n''',
-              '''        int gap = dp(context, 5);\n        int side = dp(context, 10);\n\n        LinearLayout root = new LinearLayout(context);\n        root.setOrientation(LinearLayout.VERTICAL);\n        root.setPadding(side, gap, side, dp(context, 8));\n        root.setBackground(roundedBackground(\n                Color.rgb(250, 252, 253), Color.rgb(215, 226, 230), 18));\n''',
-              'picker root')
-
+              '''        root.setPadding(side, gap, side, side);\n''',
+              '''        root.setPadding(side, gap, side, dp(context, 8));\n        root.setBackground(roundedBackground(\n                Color.rgb(250, 252, 253), Color.rgb(215, 226, 230), dp(context, 18)));\n''',
+              'picker card background')
           picker = replace_once(picker,
-              '''        search.setTextSize(13f);\n        search.setHint("Search category");\n        search.setPadding(dp(context, 12), 0, dp(context, 12), 0);\n        root.addView(search, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 46)));\n''',
-              '''        search.setTextSize(12f);\n        search.setHint("Search category");\n        search.setSingleLine(true);\n        search.setBackground(roundedBackground(\n                Color.WHITE, Color.rgb(196, 215, 220), 12));\n        search.setPadding(dp(context, 11), 0, dp(context, 11), 0);\n        root.addView(search, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 40)));\n''',
-              'picker search')
-
-          picker = picker.replace('ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 46)))',
-                                  'ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 36)))', 2)
-
-          picker = replace_once(picker,
-              '''        listHeader.addView(allTitle, new LinearLayout.LayoutParams(\n                0, dp(context, 34), 1f));\n        MaterialButton add = smallAction(context, "+ Add category");\n        listHeader.addView(add, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 38)));\n        root.addView(listHeader, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 42)));\n''',
-              '''        listHeader.addView(allTitle, new LinearLayout.LayoutParams(\n                0, dp(context, 28), 1f));\n        MaterialButton add = smallAction(context, "+ Add category");\n        listHeader.addView(add, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 32)));\n        root.addView(listHeader, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));\n''',
-              'picker list header')
-
-          picker = replace_once(picker,
-              '''        root.addView(scroll, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 270)));\n''',
-              '''        root.addView(scroll, new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 190)));\n''',
-              'picker scroll height')
-
+              '''        search.setTextSize(13f);\n        search.setHint("Search category");\n        search.setPadding(dp(context, 12), 0, dp(context, 12), 0);\n''',
+              '''        search.setTextSize(12f);\n        search.setHint("Search category");\n        search.setBackground(roundedBackground(\n                Color.WHITE, Color.rgb(196, 215, 220), dp(context, 12)));\n        search.setPadding(dp(context, 11), 0, dp(context, 11), 0);\n''',
+              'picker search style')
           picker = replace_once(picker,
               '''        status.setTextSize(11f);\n        status.setTextColor(Color.rgb(94, 104, 114));\n        status.setPadding(dp(context, 4), dp(context, 6), dp(context, 4), 0);\n''',
               '''        status.setTextSize(9.5f);\n        status.setTextColor(Color.rgb(94, 104, 114));\n        status.setPadding(dp(context, 3), dp(context, 3), dp(context, 3), 0);\n''',
-              'picker status')
-
-          picker = replace_once(picker,
-              '''            row.setTextSize(12.5f);\n            row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);\n            row.setMinHeight(dp(context, 44));\n            row.setMinimumHeight(dp(context, 44));\n            row.setCornerRadius(dp(context, 12));\n''',
-              '''            row.setTextSize(11.5f);\n            row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);\n            row.setMinHeight(dp(context, 38));\n            row.setMinimumHeight(dp(context, 38));\n            row.setCornerRadius(dp(context, 11));\n''',
-              'picker row style')
-
+              'picker status compact')
           picker = replace_once(picker,
               '''            row.setBackgroundTintList(android.content.res.ColorStateList.valueOf(\n                    selected ? Color.rgb(229, 247, 239) : Color.WHITE));\n''',
               '''            row.setBackgroundTintList(android.content.res.ColorStateList.valueOf(\n                    selected ? Color.rgb(229, 247, 239) : Color.rgb(241, 248, 252)));\n''',
-              'picker row tint')
-
+              'picker dropdown row tint')
           picker = replace_once(picker,
-              '''            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                    ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 44));\n            params.bottomMargin = dp(context, 5);\n''',
-              '''            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                    ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 38));\n            params.bottomMargin = dp(context, 4);\n''',
-              'picker row params')
-
-          picker = replace_once(picker,
-              '''            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 38));\n            params.setMarginEnd(dp(context, 6));\n''',
-              '''            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 32));\n            params.setMarginEnd(dp(context, 5));\n''',
-              'picker chip params')
-
-          picker = replace_once(picker,
-              '''        button.setTextSize(11.5f);\n''',
-              '''        button.setTextSize(10.5f);\n''',
-              'picker small action text')
-
-          picker = replace_once(picker,
-              '''        button.setPadding(dp(context, 10), 0, dp(context, 10), 0);\n        button.setCornerRadius(dp(context, 14));\n''',
-              '''        button.setPadding(dp(context, 9), 0, dp(context, 9), 0);\n        button.setCornerRadius(dp(context, 12));\n''',
-              'picker small action shape')
-
-          picker = replace_once(picker,
-              '''        title.setTextSize(11.5f);\n''',
-              '''        title.setTextSize(10f);\n''',
-              'picker section title size')
-
-          picker = replace_once(picker,
-              '''        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 30));\n        params.topMargin = dp(context, 4);\n''',
-              '''        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 22));\n        params.topMargin = dp(context, 2);\n''',
-              'picker section title params')
-
-          insert_anchor = '''    private static int dp(@NonNull Context context, int value) {\n        return Math.round(value * context.getResources().getDisplayMetrics().density);\n    }\n'''
-          helper = '''    @NonNull\n    private static android.graphics.drawable.GradientDrawable roundedBackground(\n            int fill, int stroke, int radiusDp) {\n        android.graphics.drawable.GradientDrawable drawable =\n                new android.graphics.drawable.GradientDrawable();\n        drawable.setColor(fill);\n        drawable.setCornerRadius(radiusDp);\n        drawable.setStroke(1, stroke);\n        return drawable;\n    }\n\n    private static int dp(@NonNull Context context, int value) {\n        return Math.round(value * context.getResources().getDisplayMetrics().density);\n    }\n'''
-          picker = replace_once(picker, insert_anchor, helper, 'picker rounded helper')
+              '''    private static int dp(@NonNull Context context, int value) {\n        return Math.round(value * context.getResources().getDisplayMetrics().density);\n    }\n''',
+              '''    @NonNull\n    private static android.graphics.drawable.GradientDrawable roundedBackground(\n            int fill, int stroke, int radiusPx) {\n        android.graphics.drawable.GradientDrawable drawable =\n                new android.graphics.drawable.GradientDrawable();\n        drawable.setColor(fill);\n        drawable.setCornerRadius(radiusPx);\n        drawable.setStroke(1, stroke);\n        return drawable;\n    }\n\n    private static int dp(@NonNull Context context, int value) {\n        return Math.round(value * context.getResources().getDisplayMetrics().density);\n    }\n''',
+              'picker rounded helper')
           picker_path.write_text(picker, encoding='utf-8')
 
           overlay_path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
           overlay = overlay_path.read_text(encoding='utf-8')
-
           overlay = replace_once(overlay,
-              '''        subtitleRow.addView(overlayLiveStatus, new LinearLayout.LayoutParams(0, dp(20), 0.55f));\n        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 0.45f));\n''',
-              '''        LinearLayout.LayoutParams liveStatusParams = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.WRAP_CONTENT, dp(20));\n        liveStatusParams.setMarginEnd(dp(7));\n        subtitleRow.addView(overlayLiveStatus, liveStatusParams);\n        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 1f));\n''',
-              'overlay subtitle sizing')
-
+              '''        LinearLayout.LayoutParams liveStatusParams =\n                new LinearLayout.LayoutParams(dp(48), dp(20));\n        subtitleRow.addView(overlayLiveStatus, liveStatusParams);\n        subtitleRow.addView(shoppingSubtitle,\n                new LinearLayout.LayoutParams(0, dp(20), 1f));\n''',
+              '''        LinearLayout.LayoutParams liveStatusParams = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.WRAP_CONTENT, dp(20));\n        liveStatusParams.setMarginEnd(dp(7));\n        subtitleRow.addView(overlayLiveStatus, liveStatusParams);\n        subtitleRow.addView(shoppingSubtitle,\n                new LinearLayout.LayoutParams(0, dp(20), 1f));\n''',
+              'overlay live adaptive width')
           overlay = replace_once(overlay,
-              '''        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(60), dp(20));\n        screenOnParams.setMarginStart(dp(3));\n        subtitleRow.addView(screenOn, screenOnParams);\n        titleStack.addView(subtitleRow, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(20)));\n\n        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(48), 1f));\n''',
+              '''        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(42), dp(20));\n        screenOnParams.setMarginStart(dp(3));\n        subtitleRow.addView(screenOn, screenOnParams);\n        titleStack.addView(subtitleRow, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(20)));\n\n        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(48), 1f));\n''',
               '''        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(54), dp(20));\n        screenOnParams.setMarginStart(dp(4));\n        subtitleRow.addView(screenOn, screenOnParams);\n\n        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(40), 1f));\n''',
-              'overlay separate status strip')
-
+              'overlay detach subtitle')
           overlay = replace_once(overlay,
               '''        root.addView(header, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(50)));\n\n        overlayFormDetails = new LinearLayout(this);\n''',
               '''        root.addView(header, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(42)));\n        LinearLayout.LayoutParams subtitleStripParams = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(22));\n        subtitleStripParams.bottomMargin = dp(1);\n        root.addView(subtitleRow, subtitleStripParams);\n\n        overlayFormDetails = new LinearLayout(this);\n''',
-              'overlay full width status strip')
-
-          overlay = replace_once(overlay,
-              '''        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(36), 0.75f));\n        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(36), 0.92f));\n        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(36), 1.35f));\n        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(36), 0.98f));\n''',
-              '''        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(36), 1f));\n        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(36), 1f));\n        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(36), 1f));\n        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(36), 1f));\n''',
-              'overlay equal recurrence columns')
-
+              'overlay full width subtitle strip')
           overlay_path.write_text(overlay, encoding='utf-8')
 
-      - name: Commit compact UI fixes
+      - name: Commit compact UI polish
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java/com/tridev/familyhub/feature/grocery/GrocerySmartCategoryPicker.java
           git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
-          git commit -m "Polish compact floating Grocery UI"
+          git commit -m "Polish floating Grocery compact layout"
           git push
