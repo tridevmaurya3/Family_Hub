@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 
 import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 
 /** Purchase-date anchored recurrence policy for Grocery items. */
 public final class GroceryRecurrenceEngine {
@@ -13,34 +14,33 @@ public final class GroceryRecurrenceEngine {
 
     private GroceryRecurrenceEngine() { }
 
-    /** Compatibility hooks: recurrence is now calculated, not copied. */
+    /** Compatibility hooks: recurrence is calculated from the purchase anchor. */
     public static void register(@NonNull android.app.Application application) { }
     public static void schedule(@NonNull android.content.Context context) { }
 
     public static boolean matchesCycle(@NonNull GroceryItem item,
                                        @NonNull String selectedCycle, long now) {
-        // Shadowing suppresses only duplicate pending occurrences. A completed
-        // history row must remain visible in its Purchased filter.
-        return (item.isPurchased || !item.recurrenceShadowed)
-                && normalizeCycle(selectedCycle).equals(effectiveCycle(item, now));
+        if (item.recurrenceShadowed && !item.isPurchased) return false;
+        String selected = normalizeCycle(selectedCycle);
+        String origin = originalCycle(item);
+        if (item.isPurchased) {
+            return selected.equals(isRecurringType(origin)
+                    ? origin : normalizeCycle(item.listType));
+        }
+        if (!isRecurringType(origin)) {
+            return selected.equals(normalizeCycle(item.listType));
+        }
+        // A fresh recurring item is immediately actionable. After purchase the
+        // pending master stays persisted/synced but is hidden until its interval.
+        if (item.purchasedAt > 0L && now < nextDueAt(item)) return false;
+        return selected.equals(origin);
     }
 
-    /** The only category in which this active item is currently visible. */
+    /** Category in which the item belongs when it is visible. */
     @NonNull
     public static String effectiveCycle(@NonNull GroceryItem item, long now) {
         String origin = originalCycle(item);
-        int interval = intervalMonths(origin);
-        // Purchased recurrence occurrences are stored as immutable Daily rows so
-        // they cannot become another active pending occurrence. For history
-        // filtering, however, they still belong to their original recurring list.
-        if (item.isPurchased && isRecurringType(origin)) return origin;
-        if (interval <= 0 || item.isPurchased) return normalizeCycle(item.listType);
-        long anchor = item.purchasedAt > 0L ? item.purchasedAt : item.createdAt;
-        int remaining = Math.max(0, interval - completedCalendarMonths(anchor, now));
-        if (remaining == 0) return GroceryItem.LIST_DAILY;
-        if (remaining == 1) return GroceryItem.LIST_MONTHLY;
-        if (remaining == 2) return GroceryItem.LIST_TWO_MONTH;
-        return GroceryItem.LIST_THREE_MONTH;
+        return isRecurringType(origin) ? origin : normalizeCycle(item.listType);
     }
 
     @NonNull
@@ -53,43 +53,68 @@ public final class GroceryRecurrenceEngine {
                 ? metadataOrigin : normalizeCycle(item.listType);
     }
 
-    /** Badge is needed only when an item is reflected outside its original list. */
+    /** Badge is retained for immutable purchase history compatibility. */
     @NonNull
     public static String badgeLabel(@NonNull GroceryItem item, long now) {
         String origin = originalCycle(item);
-        if (!isRecurringType(origin) || origin.equals(effectiveCycle(item, now))) return "";
-        if (GroceryItem.LIST_THREE_MONTH.equals(origin)) return "3 MONTHLY";
-        if (GroceryItem.LIST_TWO_MONTH.equals(origin)) return "2 MONTHLY";
+        if (!isRecurringType(origin)
+                || origin.equals(normalizeCycle(item.listType))) return "";
+        if (GroceryItem.LIST_FORTNIGHTLY.equals(origin)) return "FORTNIGHTLY";
+        if (GroceryItem.LIST_WEEKLY.equals(origin)) return "WEEKLY";
         return "MONTHLY";
     }
 
-    public static int monthsUntilNextDue(@NonNull GroceryItem item, long now) {
-        int interval = intervalMonths(originalCycle(item));
-        if (interval <= 0) return Integer.MAX_VALUE;
+    public static long nextDueAt(@NonNull GroceryItem item) {
+        String origin = originalCycle(item);
         long anchor = item.purchasedAt > 0L ? item.purchasedAt : item.createdAt;
-        return Math.max(0, interval - completedCalendarMonths(anchor, now));
+        if (anchor <= 0L || !isRecurringType(origin)) return Long.MAX_VALUE;
+        Calendar due = Calendar.getInstance();
+        due.setTimeInMillis(anchor);
+        if (GroceryItem.LIST_WEEKLY.equals(origin)) {
+            due.add(Calendar.DAY_OF_YEAR, 7);
+        } else if (GroceryItem.LIST_FORTNIGHTLY.equals(origin)) {
+            due.add(Calendar.DAY_OF_YEAR, 15);
+        } else {
+            due.add(Calendar.MONTH, 1);
+        }
+        return due.getTimeInMillis();
+    }
+
+    public static int daysUntilNextDue(@NonNull GroceryItem item, long now) {
+        long due = nextDueAt(item);
+        if (due == Long.MAX_VALUE) return Integer.MAX_VALUE;
+        if (due <= now) return 0;
+        return (int) Math.max(1L,
+                TimeUnit.MILLISECONDS.toDays(due - now + TimeUnit.DAYS.toMillis(1) - 1));
+    }
+
+    /** Kept for callers compiled against the earlier monthly-only engine. */
+    public static int monthsUntilNextDue(@NonNull GroceryItem item, long now) {
+        String origin = originalCycle(item);
+        if (GroceryItem.LIST_MONTHLY.equals(origin)) {
+            return now >= nextDueAt(item) ? 0 : 1;
+        }
+        return daysUntilNextDue(item, now) == 0 ? 0 : 1;
     }
 
     public static boolean isRecurringType(@Nullable String value) {
         String clean = normalizeCycle(value);
         return GroceryItem.LIST_MONTHLY.equals(clean)
-                || GroceryItem.LIST_TWO_MONTH.equals(clean)
-                || GroceryItem.LIST_THREE_MONTH.equals(clean);
+                || GroceryItem.LIST_WEEKLY.equals(clean)
+                || GroceryItem.LIST_FORTNIGHTLY.equals(clean);
     }
 
     public static int intervalMonths(@Nullable String value) {
-        String clean = normalizeCycle(value);
-        if (GroceryItem.LIST_MONTHLY.equals(clean)) return 1;
-        if (GroceryItem.LIST_TWO_MONTH.equals(clean)) return 2;
-        if (GroceryItem.LIST_THREE_MONTH.equals(clean)) return 3;
-        return 0;
+        return GroceryItem.LIST_MONTHLY.equals(normalizeCycle(value)) ? 1 : 0;
     }
 
     @NonNull
     public static String normalizeCycle(@Nullable String value) {
         if (GroceryItem.LIST_MONTHLY.equals(value)) return GroceryItem.LIST_MONTHLY;
-        if (GroceryItem.LIST_TWO_MONTH.equals(value)) return GroceryItem.LIST_TWO_MONTH;
-        if (GroceryItem.LIST_THREE_MONTH.equals(value)) return GroceryItem.LIST_THREE_MONTH;
+        if (GroceryItem.LIST_WEEKLY.equals(value)) return GroceryItem.LIST_WEEKLY;
+        if (GroceryItem.LIST_FORTNIGHTLY.equals(value)) {
+            return GroceryItem.LIST_FORTNIGHTLY;
+        }
         return GroceryItem.LIST_DAILY;
     }
 
