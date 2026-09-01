@@ -34,7 +34,7 @@ import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
+import android.widget.PopupWindow;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
@@ -131,6 +131,7 @@ public class GroceryOverlayService extends Service {
     @Nullable private TextView overlayLiveStatus;
     @Nullable private TextView overlaySearchStatus;
     @Nullable private Button overlaySearchClear;
+    @Nullable private PopupWindow overlayHeaderPopup;
     @Nullable private DatabaseReference overlayConnectionReference;
     @Nullable private ValueEventListener overlayConnectionListener;
     private boolean voicePanelDetached;
@@ -534,42 +535,10 @@ public class GroceryOverlayService extends Service {
         root.addView(listTypeGroup, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
-        LinearLayout opacityPanel = new LinearLayout(this);
-        opacityPanel.setOrientation(LinearLayout.VERTICAL);
-        opacityPanel.setPadding(dp(8), dp(2), dp(8), dp(2));
-        opacityPanel.setBackground(roundedFill(Color.argb(218, 242, 248, 253), 10));
-        opacityPanel.setVisibility(View.GONE);
-        TextView opacityLabel = text(getString(R.string.grocery_overlay_opacity), 10, false);
-        opacityPanel.addView(opacityLabel, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(18)));
-        SeekBar opacity = new SeekBar(this);
-        float savedAlpha = getSharedPreferences(PREFS, MODE_PRIVATE).getFloat("alpha", 0.88f);
-        int savedProgress = Math.round((savedAlpha - 0.35f) / 0.65f * 100f);
-        opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
-        opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onStartTrackingTouch(SeekBar seekBar) { }
-            @Override public void onStopTrackingTouch(SeekBar seekBar) { }
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float alpha = 0.35f + (progress / 100f) * 0.65f;
-                if (stripView != null) stripView.setAlpha(alpha);
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putFloat("alpha", alpha).apply();
-            }
-        });
-        opacityPanel.addView(opacity, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
         headerMenu.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-            PopupMenu menu = new PopupMenu(this, headerMenu);
-            menu.getMenu().add(0, 1, 0, getString(R.string.grocery_overlay_opacity));
-            menu.setOnMenuItemClickListener(item -> {
-                if (item.getItemId() != 1) return false;
-                boolean show = opacityPanel.getVisibility() != View.VISIBLE;
-                opacityPanel.setVisibility(show ? View.VISIBLE : View.GONE);
-                return true;
-            });
-            menu.show();
+            showOverlayHeaderTransparencyMenu(headerMenu);
         });
-        root.addView(opacityPanel);
 
         final String[] quantityUnits = getResources().getStringArray(R.array.grocery_quantity_units);
         final String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
@@ -997,9 +966,168 @@ public class GroceryOverlayService extends Service {
                 .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT), 150L);
     }
 
+    private void showOverlayHeaderTransparencyMenu(@NonNull Button anchor) {
+        if (overlayHeaderPopup != null && overlayHeaderPopup.isShowing()) {
+            dismissOverlayHeaderPopup();
+            return;
+        }
+        dismissOverlayHeaderPopup();
+
+        float savedAlpha = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getFloat("alpha", 0.88f);
+        int popupWidth = Math.min(dp(252),
+                getResources().getDisplayMetrics().widthPixels - dp(28));
+
+        LinearLayout popupRoot = new LinearLayout(this);
+        popupRoot.setOrientation(LinearLayout.VERTICAL);
+        popupRoot.setPadding(dp(6), dp(6), dp(6), dp(6));
+        popupRoot.setBackground(premiumDropdownBackground());
+        popupRoot.setElevation(dp(12));
+
+        LinearLayout transparencyRow = new LinearLayout(this);
+        transparencyRow.setGravity(Gravity.CENTER_VERTICAL);
+        transparencyRow.setPadding(dp(8), dp(3), dp(7), dp(3));
+        transparencyRow.setBackground(premiumDropdownRowBackground());
+
+        TextView icon = text("◐", 15, true);
+        icon.setGravity(Gravity.CENTER);
+        icon.setTextColor(Color.rgb(15, 108, 89));
+        transparencyRow.addView(icon, new LinearLayout.LayoutParams(dp(30), dp(40)));
+
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        labels.setGravity(Gravity.CENTER_VERTICAL);
+        TextView label = text(getString(R.string.grocery_overlay_opacity), 12, true);
+        label.setTextColor(Color.rgb(31, 42, 49));
+        label.setSingleLine(true);
+        TextView subtitle = text("Adjust overlay opacity", 9, false);
+        subtitle.setTextColor(Color.rgb(94, 104, 114));
+        subtitle.setSingleLine(true);
+        labels.addView(label, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(21)));
+        labels.addView(subtitle, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(17)));
+        transparencyRow.addView(labels, new LinearLayout.LayoutParams(0, dp(40), 1f));
+
+        TextView valueBadge = text(Math.round(savedAlpha * 100f) + "%", 10, true);
+        valueBadge.setGravity(Gravity.CENTER);
+        valueBadge.setTextColor(Color.rgb(15, 108, 89));
+        valueBadge.setBackground(rounded(
+                Color.argb(235, 232, 247, 241), Color.argb(170, 166, 207, 191), 12));
+        LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(dp(44), dp(28));
+        valueParams.setMarginStart(dp(5));
+        transparencyRow.addView(valueBadge, valueParams);
+
+        TextView expandIndicator = text("▾", 13, true);
+        expandIndicator.setGravity(Gravity.CENTER);
+        expandIndicator.setTextColor(Color.rgb(73, 86, 98));
+        transparencyRow.addView(expandIndicator, new LinearLayout.LayoutParams(dp(24), dp(36)));
+        popupRoot.addView(transparencyRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));
+
+        LinearLayout opacityControls = new LinearLayout(this);
+        opacityControls.setOrientation(LinearLayout.VERTICAL);
+        opacityControls.setPadding(dp(10), dp(5), dp(10), dp(5));
+        opacityControls.setBackground(rounded(
+                Color.argb(242, 245, 250, 252), Color.argb(160, 205, 218, 224), 12));
+        opacityControls.setVisibility(View.GONE);
+
+        LinearLayout valueRow = new LinearLayout(this);
+        valueRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView opacityTitle = text("Opacity", 10, true);
+        opacityTitle.setTextColor(Color.rgb(73, 86, 98));
+        valueRow.addView(opacityTitle, new LinearLayout.LayoutParams(0, dp(22), 1f));
+        TextView currentValue = text(Math.round(savedAlpha * 100f) + "%", 10, true);
+        currentValue.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        currentValue.setTextColor(Color.rgb(15, 108, 89));
+        valueRow.addView(currentValue, new LinearLayout.LayoutParams(dp(54), dp(22)));
+        opacityControls.addView(valueRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(22)));
+
+        SeekBar opacity = new SeekBar(this);
+        int savedProgress = Math.round((savedAlpha - 0.35f) / 0.65f * 100f);
+        opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
+        opacity.setProgressTintList(android.content.res.ColorStateList.valueOf(
+                Color.rgb(15, 108, 89)));
+        opacity.setThumbTintList(android.content.res.ColorStateList.valueOf(
+                Color.rgb(15, 108, 189)));
+        opacityControls.addView(opacity, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));
+        LinearLayout.LayoutParams controlsParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(66));
+        controlsParams.topMargin = dp(5);
+        popupRoot.addView(opacityControls, controlsParams);
+
+        PopupWindow popup = new PopupWindow(this);
+        popup.setContentView(popupRoot);
+        popup.setWidth(popupWidth);
+        popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        popup.setElevation(dp(12));
+        popup.setOnDismissListener(() -> {
+            if (overlayHeaderPopup == popup) overlayHeaderPopup = null;
+        });
+        overlayHeaderPopup = popup;
+
+        transparencyRow.setOnClickListener(v -> {
+            boolean expanded = opacityControls.getVisibility() != View.VISIBLE;
+            opacityControls.setVisibility(expanded ? View.VISIBLE : View.GONE);
+            expandIndicator.setText(expanded ? "▴" : "▾");
+            transparencyRow.setBackground(expanded
+                    ? rounded(Color.argb(242, 229, 247, 239),
+                            Color.argb(210, 126, 190, 165), 10)
+                    : premiumDropdownRowBackground());
+            popupRoot.requestLayout();
+            popup.update();
+        });
+
+        opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onStartTrackingTouch(SeekBar seekBar) { }
+            @Override public void onStopTrackingTouch(SeekBar seekBar) { }
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float alpha = 0.35f + (progress / 100f) * 0.65f;
+                if (stripView != null) stripView.setAlpha(alpha);
+                String percent = Math.round(alpha * 100f) + "%";
+                valueBadge.setText(percent);
+                currentValue.setText(percent);
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                        .putFloat("alpha", alpha).apply();
+            }
+        });
+
+        showAdaptiveOverlayPopup(popup, anchor, popupWidth, dp(132));
+    }
+
+    private void showAdaptiveOverlayPopup(@NonNull PopupWindow popup,
+                                          @NonNull View anchor,
+                                          int popupWidth,
+                                          int expandedHeight) {
+        int[] location = new int[2];
+        anchor.getLocationOnScreen(location);
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int margin = dp(8);
+        int x = clamp(location[0] + anchor.getWidth() - popupWidth,
+                margin, Math.max(margin, screenWidth - popupWidth - margin));
+        int belowY = location[1] + anchor.getHeight() + dp(4);
+        int y = screenHeight - belowY >= expandedHeight + margin
+                ? belowY
+                : Math.max(margin, location[1] - expandedHeight - dp(4));
+        popup.showAtLocation(anchor, Gravity.TOP | Gravity.START, x, y);
+    }
+
+    private void dismissOverlayHeaderPopup() {
+        PopupWindow popup = overlayHeaderPopup;
+        overlayHeaderPopup = null;
+        if (popup != null && popup.isShowing()) popup.dismiss();
+    }
+
     private void showOverlayShoppingMenu(Button anchor,
                                          Button screenOn, TextView shoppingSubtitle) {
         FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+        dismissOverlayHeaderPopup();
 
         LinearLayout popupRoot = new LinearLayout(this);
         popupRoot.setOrientation(LinearLayout.VERTICAL);
@@ -2346,6 +2474,7 @@ public class GroceryOverlayService extends Service {
     }
 
     private void suspendOverlayForVoice() {
+        dismissOverlayHeaderPopup();
         if (voicePanelDetached) return;
         voiceStripWasVisible = stripView != null
                 && stripView.getVisibility() == View.VISIBLE;
@@ -2379,6 +2508,7 @@ public class GroceryOverlayService extends Service {
     }
 
     private void closePanel() {
+        dismissOverlayHeaderPopup();
         stopOverlayConnectionStatus();
         overlayLiveStatus = null;
         if (panelView != null) {
