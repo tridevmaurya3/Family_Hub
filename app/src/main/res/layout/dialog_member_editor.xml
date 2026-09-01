@@ -100,6 +100,17 @@
             </LinearLayout>
         </LinearLayout>
 
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:background="@drawable/bg_soft_pill"
+            android:paddingHorizontal="@dimen/space_10"
+            android:paddingVertical="@dimen/space_4"
+            android:text="PROFILE &amp; FAMILY ROLE"
+            android:textColor="@color/fh_module_family" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_name_layout"
             style="@style/Widget.FamilyHub.TextInputLayout"
@@ -183,6 +194,17 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:background="@drawable/bg_soft_pill"
+            android:paddingHorizontal="@dimen/space_10"
+            android:paddingVertical="@dimen/space_4"
+            android:text="ADDRESS &amp; EMERGENCY"
+            android:textColor="@color/fh_module_family" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent"
@@ -234,6 +256,17 @@
                 android:inputType="phone"
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            style="@style/TextAppearance.FamilyHub.Overline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_16"
+            android:background="@drawable/bg_soft_pill"
+            android:paddingHorizontal="@dimen/space_10"
+            android:paddingVertical="@dimen/space_4"
+            android:text="CONTACT &amp; PERSONAL DETAILS"
+            android:textColor="@color/fh_module_family" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_phone_layout"
