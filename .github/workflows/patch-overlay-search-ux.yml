@@ -17,56 +17,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply targeted search UX patch
+      - name: Apply compile-safe label size
         shell: python
         run: |
           from pathlib import Path
-
-          def replace_once(text, old, new, label):
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'{label}: expected 1 anchor, found {count}')
-              return text.replace(old, new, 1)
-
           path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
           text = path.read_text(encoding='utf-8')
+          old = '        overlaySearchStatus = text("", 9.5f, true);\n'
+          new = '        overlaySearchStatus = text("", 9, true);\n'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one result-label anchor, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
 
-          text = replace_once(text,
-              '''    @Nullable private TextView overlayLiveStatus;\n    @Nullable private DatabaseReference overlayConnectionReference;\n''',
-              '''    @Nullable private TextView overlayLiveStatus;\n    @Nullable private TextView overlaySearchStatus;\n    @Nullable private Button overlaySearchClear;\n    @Nullable private DatabaseReference overlayConnectionReference;\n''',
-              'search UX fields')
-
-          text = replace_once(text,
-              '''        search.addTextChangedListener(new android.text.TextWatcher() {\n            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }\n            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {\n                overlaySearchQuery = s == null ? "" : s.toString().trim();\n                refreshPanel();\n            }\n            @Override public void afterTextChanged(android.text.Editable s) { }\n        });\n        searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1f));\n        ImageButton categoryFilter = new ImageButton(this);\n''',
-              '''        search.addTextChangedListener(new android.text.TextWatcher() {\n            @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }\n            @Override public void onTextChanged(CharSequence s, int st, int b, int c) {\n                overlaySearchQuery = s == null ? "" : s.toString().trim();\n                if (overlaySearchClear != null) {\n                    overlaySearchClear.setVisibility(overlaySearchQuery.isEmpty()\n                            && overlayCategoryFilter.isEmpty() ? View.GONE : View.VISIBLE);\n                }\n                refreshPanel();\n            }\n            @Override public void afterTextChanged(android.text.Editable s) { }\n        });\n        searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1f));\n        ImageButton categoryFilter = new ImageButton(this);\n''',
-              'live clear visibility')
-
-          text = replace_once(text,
-              '''        categoryFilter.setBackgroundColor(Color.TRANSPARENT);\n        searchBox.addView(categoryFilter, new LinearLayout.LayoutParams(dp(42), dp(42)));\n        listTools.addView(searchBox, new LinearLayout.LayoutParams(0, dp(42), 1f));\n''',
-              '''        categoryFilter.setBackgroundColor(Color.TRANSPARENT);\n        searchBox.addView(categoryFilter, new LinearLayout.LayoutParams(dp(38), dp(42)));\n        overlaySearchClear = compactAction("×",\n                Color.rgb(73, 86, 98), Color.argb(218, 242, 246, 248));\n        overlaySearchClear.setTextSize(16f);\n        overlaySearchClear.setContentDescription("Clear Grocery search and category filter");\n        overlaySearchClear.setPadding(0, 0, 0, 0);\n        overlaySearchClear.setVisibility(overlaySearchQuery.isEmpty()\n                && overlayCategoryFilter.isEmpty() ? View.GONE : View.VISIBLE);\n        searchBox.addView(overlaySearchClear, new LinearLayout.LayoutParams(dp(34), dp(34)));\n        listTools.addView(searchBox, new LinearLayout.LayoutParams(0, dp(42), 1f));\n''',
-              'one tap clear button')
-
-          text = replace_once(text,
-              '''        root.addView(listTools, toolsParams);\n\n        categoryFilter.setOnClickListener(v ->\n                showCategoryFilterPopup(categoryFilter, search, categoryLabels));\n''',
-              '''        root.addView(listTools, toolsParams);\n\n        overlaySearchStatus = text("", 9.5f, true);\n        overlaySearchStatus.setTextColor(Color.rgb(84, 93, 105));\n        overlaySearchStatus.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);\n        overlaySearchStatus.setPadding(dp(6), 0, dp(6), 0);\n        LinearLayout.LayoutParams searchStatusParams = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(20));\n        root.addView(overlaySearchStatus, searchStatusParams);\n\n        categoryFilter.setOnClickListener(v ->\n                showCategoryFilterPopup(categoryFilter, search, categoryLabels));\n        overlaySearchClear.setOnClickListener(v -> {\n            overlayCategoryFilter = "";\n            categoryFilter.setColorFilter(Color.rgb(15, 108, 189));\n            search.setHint(getString(R.string.grocery_search_hint));\n            if (search.getText() != null && search.getText().length() > 0) {\n                search.setText("");\n            } else {\n                overlaySearchQuery = "";\n                overlaySearchClear.setVisibility(View.GONE);\n                refreshPanel();\n            }\n        });\n''',
-              'result status row and clear action')
-
-          text = replace_once(text,
-              '''    private void renderItems(List<GroceryItem> items) {\n        if (itemContainer == null || overlayInlinePurchaseEditorOpen) return;\n        itemContainer.removeAllViews();\n        if (!overlayShoppingMode) {\n''',
-              '''    private void renderItems(List<GroceryItem> items) {\n        if (itemContainer == null || overlayInlinePurchaseEditorOpen) return;\n        itemContainer.removeAllViews();\n        int resultCount = countOverlayVisibleItems(items);\n        boolean searchActive = !overlaySearchQuery.isEmpty() || !overlayCategoryFilter.isEmpty();\n        if (overlaySearchStatus != null) {\n            String label = resultCount + (resultCount == 1 ? " result" : " results");\n            if (!overlayCategoryFilter.isEmpty()) label += " • " + overlayCategoryFilter;\n            overlaySearchStatus.setText(label);\n            overlaySearchStatus.setTextColor(resultCount == 0 && searchActive\n                    ? Color.rgb(154, 84, 84) : Color.rgb(15, 108, 89));\n        }\n        if (overlaySearchClear != null) {\n            overlaySearchClear.setVisibility(searchActive ? View.VISIBLE : View.GONE);\n        }\n        if (searchActive && resultCount == 0) {\n            renderOverlayNoResults();\n            return;\n        }\n        if (!overlayShoppingMode) {\n''',
-              'live result count')
-
-          text = replace_once(text,
-              '''    private String overlaySectionHeading(String listType) {\n''',
-              '''    private int countOverlayVisibleItems(@NonNull List<GroceryItem> items) {\n        int count = 0;\n        long now = System.currentTimeMillis();\n        for (GroceryItem item : items) {\n            if (item == null || item.isPurchased || item.recurrenceShadowed\n                    || !matchesOverlayFilters(item)) continue;\n            String cycle = GroceryRecurrenceEngine.effectiveCycle(item, now);\n            if (!overlayShoppingMode) {\n                if (visibleListType.equals(cycle)) count++;\n                continue;\n            }\n            if (SHOPPING_ALL.equals(overlayShoppingSelection)) {\n                if (GroceryItem.LIST_DAILY.equals(cycle)\n                        || GroceryItem.LIST_TWO_MONTH.equals(cycle)\n                        || GroceryItem.LIST_THREE_MONTH.equals(cycle)\n                        || GroceryItem.LIST_MONTHLY.equals(cycle)) count++;\n            } else if (overlayShoppingSelection.equals(cycle)) {\n                count++;\n            }\n        }\n        return count;\n    }\n\n    private void renderOverlayNoResults() {\n        LinearLayout card = new LinearLayout(this);\n        card.setOrientation(LinearLayout.VERTICAL);\n        card.setGravity(Gravity.CENTER);\n        card.setPadding(dp(16), dp(12), dp(16), dp(12));\n        card.setBackground(rounded(\n                Color.argb(238, 248, 251, 252), Color.argb(190, 205, 218, 224), 14));\n\n        TextView title = text("No matching items", 12, true);\n        title.setGravity(Gravity.CENTER);\n        title.setTextColor(Color.rgb(73, 86, 98));\n        card.addView(title, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(24)));\n\n        TextView hint = text("Try another item, category, amount or tap × to clear filters.", 10, false);\n        hint.setGravity(Gravity.CENTER);\n        hint.setTextColor(Color.rgb(103, 113, 122));\n        card.addView(hint, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));\n\n        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(82));\n        params.topMargin = dp(8);\n        itemContainer.addView(card, params);\n    }\n\n    private String overlaySectionHeading(String listType) {\n''',
-              'professional no results state')
-
-          path.write_text(text, encoding='utf-8')
-
-      - name: Commit search UX patch
+      - name: Commit compile-safe polish
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
-          git commit -m "Add floating Grocery search result UX"
+          git commit -m "Fix floating Grocery search result label size"
           git push
