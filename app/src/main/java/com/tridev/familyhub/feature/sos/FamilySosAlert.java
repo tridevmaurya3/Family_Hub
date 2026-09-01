@@ -23,6 +23,8 @@ public final class FamilySosAlert {
     public long createdAt;
     public long clientCreatedAt;
     public long updatedAt;
+    public long cancelledAt;
+    @NonNull public String cancelledBy = "";
     @NonNull public Map<String, FamilySosResponse> responses =
             new LinkedHashMap<>();
 

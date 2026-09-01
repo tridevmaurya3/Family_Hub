@@ -82,7 +82,9 @@ public final class GrocerySmartCategoryPicker {
             Object selected = input.getSelectedItem();
             String current = selected == null ? "" : selected.toString();
             if (GroceryOptionCatalog.ADD_CATEGORY_LABEL.equals(current)) current = "";
-            show(context, current, handler::onSelected);
+            Context themedContext = new android.view.ContextThemeWrapper(
+                    context, com.tridev.familyhub.R.style.Theme_FamilyHub);
+            show(themedContext, current, handler::onSelected);
         };
         input.setOnTouchListener((view, event) -> {
             int action = event.getActionMasked();
@@ -463,9 +465,20 @@ public final class GrocerySmartCategoryPicker {
 
     private static void configureOverlayWindow(@NonNull Context context,
                                                @NonNull AlertDialog dialog) {
-        if (!(context instanceof android.app.Service) || dialog.getWindow() == null) return;
+        if (!isServiceContext(context) || dialog.getWindow() == null) return;
         dialog.getWindow().setType(
                 android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+    }
+
+    private static boolean isServiceContext(@NonNull Context context) {
+        Context current = context;
+        while (true) {
+            if (current instanceof android.app.Service) return true;
+            if (!(current instanceof android.content.ContextWrapper)) return false;
+            Context base = ((android.content.ContextWrapper) current).getBaseContext();
+            if (base == null || base == current) return false;
+            current = base;
+        }
     }
 
     private static int dp(@NonNull Context context, int value) {

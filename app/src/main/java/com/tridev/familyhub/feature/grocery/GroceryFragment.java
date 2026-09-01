@@ -1607,9 +1607,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         int pending = 0;
         int purchased = 0;
         double total = 0;
-        double actualTotal = 0;
         for (GroceryItem item : items) {
-            actualTotal += Math.max(0D, item.actualCost);
             if (item.isPurchased) {
                 purchased++;
             } else {
@@ -1619,11 +1617,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         }
         binding.groceryPendingValue.setText(String.valueOf(pending));
         binding.groceryTotalValue.setText(currencyFormat.format(total));
-        binding.groceryActualValue.setText(currencyFormat.format(actualTotal));
-        double budget = repository.getMonthlyBudget();
-        binding.groceryBudgetValue.setText(budget <= 0D
-                ? getString(R.string.grocery_set_budget)
-                : currencyFormat.format(Math.max(0D, budget - total)));
+        // GroceryProfessionalUiBinder exclusively owns these two repurposed cards:
+        // Due today and Purchased this month. Do not briefly overwrite them with
+        // the legacy Budget/Actual values during repository refreshes.
         binding.clearPurchasedButton.setEnabled(purchased > 0);
     }
 
