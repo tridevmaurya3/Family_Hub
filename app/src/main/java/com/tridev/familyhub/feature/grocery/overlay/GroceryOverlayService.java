@@ -510,6 +510,7 @@ public class GroceryOverlayService extends Service {
             updateOverlayShoppingModeUi(shoppingModeDropdown, screenOn, shoppingSubtitle);
         });
 
+        applyOverlayHeaderChipState(shoppingModeDropdown, overlayShoppingMode, false);
         shoppingModeDropdown.setOnClickListener(v -> showOverlayShoppingMenu(
                 shoppingModeDropdown, screenOn, shoppingSubtitle));
 
@@ -1047,8 +1048,10 @@ public class GroceryOverlayService extends Service {
         popup.setOutsideTouchable(true);
         popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
+        applyOverlayHeaderChipState(anchor, false, true);
         popup.setOnDismissListener(() -> {
             if (overlayHeaderPopup == popup) overlayHeaderPopup = null;
+            applyOverlayHeaderChipState(anchor, false, false);
         });
         overlayHeaderPopup = popup;
 
@@ -1125,6 +1128,9 @@ public class GroceryOverlayService extends Service {
         popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
         popup.setOverlapAnchor(false);
+        applyOverlayHeaderChipState(anchor, overlayShoppingMode, true);
+        popup.setOnDismissListener(() ->
+                applyOverlayHeaderChipState(anchor, overlayShoppingMode, false));
 
         LinearLayout modeRow = new LinearLayout(this);
         modeRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -2305,6 +2311,33 @@ public class GroceryOverlayService extends Service {
         return button;
     }
 
+    private void applyOverlayHeaderChipState(
+            @NonNull Button button, boolean active, boolean open) {
+        int fill;
+        int stroke;
+        int textColor;
+        if (open) {
+            fill = Color.argb(248, 199, 235, 222);
+            stroke = Color.argb(235, 29, 142, 108);
+            textColor = Color.rgb(7, 83, 64);
+            button.setElevation(dp(5));
+        } else if (active) {
+            fill = Color.argb(242, 211, 241, 230);
+            stroke = Color.argb(225, 55, 157, 123);
+            textColor = Color.rgb(9, 91, 69);
+            button.setElevation(dp(3));
+        } else {
+            fill = Color.argb(232, 229, 246, 240);
+            stroke = Color.argb(205, 91, 166, 143);
+            textColor = Color.rgb(13, 91, 73);
+            button.setElevation(dp(2));
+        }
+        button.setTextColor(textColor);
+        button.setBackground(rounded(fill, stroke, 16));
+        button.setSelected(active || open);
+        button.setActivated(active);
+    }
+
     private LinearLayout.LayoutParams overlayHeaderChipParams(
             int widthDp, int startMarginDp) {
         LinearLayout.LayoutParams params =
@@ -2376,9 +2409,7 @@ public class GroceryOverlayService extends Service {
                                              TextView shoppingSubtitle) {
         if (shoppingDropdown != null) {
             shoppingDropdown.setText("Shopping Mode  ▾");
-            shoppingDropdown.setTextColor(overlayShoppingMode ? Color.WHITE : Color.rgb(15, 108, 89));
-            shoppingDropdown.setBackground(roundedFill(overlayShoppingMode
-                    ? Color.rgb(15, 108, 89) : Color.argb(230, 226, 244, 238), 16));
+            applyOverlayHeaderChipState(shoppingDropdown, overlayShoppingMode, false);
         }
         if (screenOn != null) {
             screenOn.setVisibility(overlayShoppingMode ? View.VISIBLE : View.GONE);
@@ -2553,6 +2584,7 @@ public class GroceryOverlayService extends Service {
         overlayFormToggle.setContentDescription(collapsed
                 ? "Show more Grocery details"
                 : "Hide extra Grocery details");
+        applyOverlayHeaderChipState(overlayFormToggle, !collapsed, false);
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
         params.height = 0;
         params.weight = 1f;
