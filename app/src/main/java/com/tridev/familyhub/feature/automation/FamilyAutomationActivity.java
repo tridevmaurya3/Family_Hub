@@ -1,5 +1,6 @@
 package com.tridev.familyhub.feature.automation;
 
+import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -55,6 +56,8 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
     private LinearLayout eventsList;
     private View addRoutineButton;
     private View addScheduleButton;
+    private long ruleFilterDate = System.currentTimeMillis();
+    private int ruleFilterMode = 0;
 
     @Nullable private FamilyAutomationRepository.Session session;
     @NonNull private List<FamilyAutomationRepository.Member> allMembers =
@@ -79,6 +82,17 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
         eventsList = findViewById(R.id.listAutomationEvents);
         addRoutineButton = findViewById(R.id.buttonAutomationAddRoutine);
         addScheduleButton = findViewById(R.id.buttonAutomationAddSchedule);
+
+        findViewById(R.id.buttonAutomationDaily).setOnClickListener(v -> {
+            ruleFilterMode = 0;
+            ruleFilterDate = System.currentTimeMillis();
+            renderRules();
+        });
+        findViewById(R.id.buttonAutomationMonthly).setOnClickListener(v -> {
+            ruleFilterMode = 1;
+            renderRules();
+        });
+        findViewById(R.id.buttonAutomationCustomDate).setOnClickListener(v -> showRuleDatePicker());
 
         findViewById(R.id.buttonAutomationBack).setOnClickListener(v -> finish());
         findViewById(R.id.buttonAutomationRefresh).setOnClickListener(v ->
@@ -157,9 +171,42 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
         renderEvents();
     }
 
+    private void showRuleDatePicker() {
+        Calendar selected = Calendar.getInstance();
+        selected.setTimeInMillis(ruleFilterDate);
+        new DatePickerDialog(
+                this,
+                (picker, year, month, day) -> {
+                    selected.set(year, month, day, 12, 0, 0);
+                    selected.set(Calendar.MILLISECOND, 0);
+                    ruleFilterDate = selected.getTimeInMillis();
+                    ruleFilterMode = 2;
+                    MaterialButton custom = findViewById(
+                            R.id.buttonAutomationCustomDate
+                    );
+                    custom.setText(new SimpleDateFormat(
+                            "dd MMM",
+                            Locale.getDefault()
+                    ).format(new Date(ruleFilterDate)));
+                    custom.setChecked(true);
+                    renderRules();
+                },
+                selected.get(Calendar.YEAR),
+                selected.get(Calendar.MONTH),
+                selected.get(Calendar.DAY_OF_MONTH)
+        ).show();
+    }
+
     private void renderRules() {
         rulesList.removeAllViews();
-        if (rules.isEmpty()) {
+        List<FamilyAutomationRule> visibleRules = new ArrayList<>();
+        for (FamilyAutomationRule rule : rules) {
+            if (ruleFilterMode == 1
+                    || FamilyAutomationPolicy.isDayEnabled(rule.daysMask, ruleFilterDate)) {
+                visibleRules.add(rule);
+            }
+        }
+        if (visibleRules.isEmpty()) {
             rulesList.addView(emptyCard(
                     R.string.family_automation_empty_rules,
                     R.color.fh_primary,
@@ -167,7 +214,7 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
             ));
             return;
         }
-        for (FamilyAutomationRule rule : rules) {
+        for (FamilyAutomationRule rule : visibleRules) {
             FamilyAutomationRepository.Member member = memberByUid(
                     rule.targetUid
             );
