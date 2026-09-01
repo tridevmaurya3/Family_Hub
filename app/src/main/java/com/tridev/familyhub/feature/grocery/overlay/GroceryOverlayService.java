@@ -425,7 +425,7 @@ public class GroceryOverlayService extends Service {
 
         RadioButton twoMonth = new RadioButton(this);
         twoMonth.setId(View.generateViewId());
-        twoMonth.setText("2 Monthly");
+        twoMonth.setText("Weekly");
         twoMonth.setTextSize(8.5f);
         twoMonth.setSingleLine(true);
         twoMonth.setMinWidth(0);
@@ -436,7 +436,7 @@ public class GroceryOverlayService extends Service {
 
         RadioButton threeMonth = new RadioButton(this);
         threeMonth.setId(View.generateViewId());
-        threeMonth.setText("3 Monthly");
+        threeMonth.setText("Fortnightly");
         threeMonth.setTextSize(8.5f);
         threeMonth.setSingleLine(true);
         threeMonth.setMinWidth(0);
@@ -945,8 +945,8 @@ public class GroceryOverlayService extends Service {
         addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, SHOPPING_ALL, "All", false);
         addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, GroceryItem.LIST_DAILY, "Daily", false);
         addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, GroceryItem.LIST_MONTHLY, "Monthly", false);
-        addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, GroceryItem.LIST_TWO_MONTH, "2 Monthly", false);
-        addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, GroceryItem.LIST_THREE_MONTH, "3 Monthly", true);
+        addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, GroceryItem.LIST_TWO_MONTH, "Weekly", false);
+        addShoppingSelectionRow(selectionContainer, popup, anchor, screenOn, shoppingSubtitle, GroceryItem.LIST_THREE_MONTH, "Fortnightly", true);
 
         modeSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
             overlayShoppingMode = checked;
@@ -1145,8 +1145,8 @@ public class GroceryOverlayService extends Service {
     }
 
     private String overlaySectionHeading(String listType) {
-        if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "3 Monthly items";
-        if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "2 Monthly items";
+        if (GroceryItem.LIST_THREE_MONTH.equals(listType)) return "Fortnightly items";
+        if (GroceryItem.LIST_TWO_MONTH.equals(listType)) return "Weekly items";
         if (GroceryItem.LIST_MONTHLY.equals(listType)) {
             return getString(R.string.grocery_overlay_monthly_section);
         }
@@ -1268,9 +1268,9 @@ public class GroceryOverlayService extends Service {
         if (count == 0) {
             String emptyLabel;
             if (GroceryItem.LIST_THREE_MONTH.equals(listType)) {
-                emptyLabel = "No 3 Monthly items";
+                emptyLabel = "No Fortnightly items";
             } else if (GroceryItem.LIST_TWO_MONTH.equals(listType)) {
-                emptyLabel = "No 2 Monthly items";
+                emptyLabel = "No Weekly items";
             } else if (GroceryItem.LIST_MONTHLY.equals(listType)) {
                 emptyLabel = getString(R.string.grocery_overlay_monthly_empty);
             } else {
@@ -1994,8 +1994,8 @@ public class GroceryOverlayService extends Service {
     private String shoppingSelectionLabel(String selection) {
         if (GroceryItem.LIST_DAILY.equals(selection)) return "Daily";
         if (GroceryItem.LIST_MONTHLY.equals(selection)) return "Monthly";
-        if (GroceryItem.LIST_TWO_MONTH.equals(selection)) return "2 Monthly";
-        if (GroceryItem.LIST_THREE_MONTH.equals(selection)) return "3 Monthly";
+        if (GroceryItem.LIST_TWO_MONTH.equals(selection)) return "Weekly";
+        if (GroceryItem.LIST_THREE_MONTH.equals(selection)) return "Fortnightly";
         return "All";
     }
 
