@@ -72,6 +72,10 @@ public class GroceryRepository {
     // Explicit user removals must never wait behind realtime snapshot merges.
     private static final ExecutorService USER_ACTION_EXECUTOR =
             Executors.newSingleThreadExecutor();
+    // A checked Grocery purchase is an explicit foreground action. Keep it
+    // serialized, but do not leave it behind realtime uploads/reconciliation.
+    private static final ExecutorService PURCHASE_ACTION_EXECUTOR =
+            Executors.newSingleThreadExecutor();
 
     private final GroceryItemDao groceryItemDao;
     private final FinanceEntryDao financeEntryDao;
@@ -250,7 +254,9 @@ public class GroceryRepository {
             item.cloudId = UUID.randomUUID().toString();
         }
 
-        DATABASE_EXECUTOR.execute(() -> {
+        ExecutorService writeExecutor = item.isPurchased
+                ? PURCHASE_ACTION_EXECUTOR : DATABASE_EXECUTOR;
+        writeExecutor.execute(() -> {
             if (item.id == 0L) {
                 GroceryItem duplicate = groceryItemDao.findDuplicate(item.name);
                 if (duplicate != null) {
@@ -988,7 +994,7 @@ public class GroceryRepository {
         master.updatedAt = updatedAt;
         markCurrentEditor(master);
 
-        DATABASE_EXECUTOR.execute(() -> {
+        PURCHASE_ACTION_EXECUTOR.execute(() -> {
             GroceryPurchase history = new GroceryPurchase();
             history.sourceItemId = master.id;
             history.itemName = purchase.name;
