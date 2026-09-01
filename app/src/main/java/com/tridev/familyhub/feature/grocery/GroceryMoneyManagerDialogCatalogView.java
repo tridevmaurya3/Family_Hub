@@ -114,6 +114,12 @@ public final class GroceryMoneyManagerDialogCatalogView extends AppCompatTextVie
         if (detailsInstalled || !isAttachedToWindow()) return;
 
         View root = getRootView();
+        MaterialAutoCompleteTextView groceryCategory = root.findViewById(
+                R.id.grocery_category_input);
+        if (groceryCategory != null) {
+            GrocerySmartCategoryPicker.attach(getContext(), groceryCategory);
+        }
+
         View accountLayout = root.findViewById(R.id.grocery_money_account_layout);
         View moneyCard = findCardAncestor(accountLayout);
         if (moneyCard == null || !(moneyCard.getParent() instanceof ViewGroup)) return;
