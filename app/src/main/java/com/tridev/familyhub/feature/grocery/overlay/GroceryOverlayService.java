@@ -420,6 +420,8 @@ public class GroceryOverlayService extends Service {
 
         Button close = new Button(this);
         close.setText("×");
+        close.setContentDescription("Close Grocery overlay");
+        close.setTextColor(Color.rgb(36, 63, 56));
         close.setTextSize(20f);
         close.setMinWidth(0);
         close.setMinimumWidth(0);
@@ -1175,8 +1177,7 @@ public class GroceryOverlayService extends Service {
         });
         modeRow.setOnClickListener(v -> modeSwitch.toggle());
 
-        int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(120)));
-        popup.showAsDropDown(anchor, xOffset, dp(5));
+        showOverlayPopupBelow(popup, anchor, 5);
     }
 
     private void addShoppingSelectionRow(LinearLayout popupRoot,
@@ -1321,8 +1322,7 @@ public class GroceryOverlayService extends Service {
             rows.addView(row, rowParams);
         }
 
-        int xOffset = -(popupWidth - Math.max(anchor.getWidth(), dp(42)));
-        popup.showAsDropDown(anchor, xOffset, dp(4));
+        showOverlayPopupBelow(popup, anchor, 4);
     }
 
     private void refreshPanel() {
@@ -2204,8 +2204,7 @@ public class GroceryOverlayService extends Service {
             groupedList.addView(categoryBlock, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         }
-        int xOffset = -(popup.getWidth() - Math.max(anchor.getWidth(), dp(40)));
-        popup.showAsDropDown(anchor, xOffset, dp(5));
+        showOverlayPopupBelow(popup, anchor, 5);
     }
 
     private void applyInlineHistory(GroceryPurchase history, GroceryPurchase cheapest,
@@ -2833,16 +2832,31 @@ public class GroceryOverlayService extends Service {
     }
 
     private PopupWindow overlayPopupWindow(@NonNull View content, int widthPx) {
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int safeWidth = clamp(widthPx, dp(160), Math.max(dp(160), screenWidth - dp(16)));
         PopupWindow popup = new PopupWindow(this);
         popup.setContentView(content);
-        popup.setWidth(widthPx);
+        popup.setWidth(safeWidth);
         popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
         popup.setFocusable(true);
         popup.setOutsideTouchable(true);
+        popup.setClippingEnabled(true);
         popup.setBackgroundDrawable(
                 new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
         return popup;
+    }
+
+    private void showOverlayPopupBelow(
+            @NonNull PopupWindow popup, @NonNull View anchor, int verticalOffsetDp) {
+        int[] location = new int[2];
+        anchor.getLocationOnScreen(location);
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int margin = dp(8);
+        int desiredLeft = location[0] + anchor.getWidth() - popup.getWidth();
+        int maxLeft = Math.max(margin, screenWidth - popup.getWidth() - margin);
+        int safeLeft = clamp(desiredLeft, margin, maxLeft);
+        popup.showAsDropDown(anchor, safeLeft - location[0], dp(verticalOffsetDp));
     }
 
     private GradientDrawable overlayPopupRowBackground(boolean selected) {
