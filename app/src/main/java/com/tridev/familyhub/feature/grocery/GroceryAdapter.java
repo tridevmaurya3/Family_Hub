@@ -309,6 +309,14 @@ public class GroceryAdapter
                     .append(assignment);
             if (item.purchasedAt > 0L) {
                 assignmentLine.append(" • ").append(lastPurchaseLabel(item.purchasedAt));
+            } else if (GroceryRecurrenceEngine.isRecurringType(
+                    GroceryRecurrenceEngine.originalCycle(item))) {
+                assignmentLine.append(" • New recurring item");
+            }
+            if (GroceryRecurrenceEngine.isRecurringType(
+                    GroceryRecurrenceEngine.originalCycle(item))
+                    && item.purchasedAt > 0L) {
+                assignmentLine.append("\n").append(nextDueLabel(item, now));
             }
             binding.groceryAssignment.setText(assignmentLine.toString());
 
@@ -375,6 +383,19 @@ public class GroceryAdapter
                 return binding.getRoot().getContext().getString(R.string.grocery_list_monthly);
             }
             return binding.getRoot().getContext().getString(R.string.grocery_list_daily);
+        }
+
+        @NonNull
+        private String nextDueLabel(@NonNull GroceryItem item, long now) {
+            long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
+            if (dueAt == Long.MAX_VALUE) return "";
+            if (dueAt <= now) {
+                return "Due now • " + purchaseDateFormat.format(new java.util.Date(dueAt));
+            }
+            int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
+            String relative = days == 1 ? "Tomorrow" : days + " days";
+            return "Next due: " + relative + " • "
+                    + purchaseDateFormat.format(new java.util.Date(dueAt));
         }
 
         @NonNull
