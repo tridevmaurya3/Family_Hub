@@ -188,7 +188,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         ? ((LinearLayoutManager) manager).findFirstVisibleItemPosition()
                         : RecyclerView.NO_POSITION;
                 // Use the same stable scroll rule for Daily, Monthly,
-                // 2 Monthly and 3 Monthly in both Pending and Purchased views.
+                // Weekly and Fortnightly in both Pending and Purchased views.
                 // A short recurring list must not collapse the header when there
                 // is no remaining list content to scroll into.
                 if (dy > 6 && !groceryHeaderCollapsed
@@ -389,8 +389,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] labels = new String[]{
                 getString(R.string.grocery_filter_daily),
                 getString(R.string.grocery_filter_monthly),
-                "2 Monthly",
-                "3 Monthly"
+                "Weekly",
+                "Fortnightly"
         };
         String[] values = new String[]{
                 GroceryItem.LIST_DAILY,
@@ -657,8 +657,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     @NonNull
     private String cycleLabel(@Nullable String cycle) {
         String normalized = GroceryRecurrenceEngine.normalizeCycle(cycle);
-        if (GroceryItem.LIST_THREE_MONTH.equals(normalized)) return "3 Monthly";
-        if (GroceryItem.LIST_TWO_MONTH.equals(normalized)) return "2 Monthly";
+        if (GroceryItem.LIST_THREE_MONTH.equals(normalized)) return "Fortnightly";
+        if (GroceryItem.LIST_TWO_MONTH.equals(normalized)) return "Weekly";
         if (GroceryItem.LIST_MONTHLY.equals(normalized)) {
             return getString(R.string.grocery_filter_monthly);
         }
@@ -667,9 +667,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     @NonNull
     private String listTypeFromLabel(@NonNull String label) {
-        if ("3 Monthly".equalsIgnoreCase(label)
+        if ("Fortnightly".equalsIgnoreCase(label)
                 || "3 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_THREE_MONTH;
-        if ("2 Monthly".equalsIgnoreCase(label)
+        if ("Weekly".equalsIgnoreCase(label)
                 || "2 Month".equalsIgnoreCase(label)) return GroceryItem.LIST_TWO_MONTH;
         if (getString(R.string.grocery_filter_monthly).equalsIgnoreCase(label)
                 || "Monthly".equalsIgnoreCase(label)) {
@@ -833,8 +833,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String[] listTypeLabels = new String[]{
                 getString(R.string.grocery_filter_daily),
                 getString(R.string.grocery_filter_monthly),
-                "2 Monthly",
-                "3 Monthly"
+                "Weekly",
+                "Fortnightly"
         };
         String[] quantityUnits = getResources().getStringArray(
                 R.array.grocery_quantity_units
@@ -1489,11 +1489,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         String normalized = spoken.trim();
         String lower = normalized.toLowerCase(Locale.ROOT);
         GroceryItem item = new GroceryItem();
-        if (lower.contains("3 month") || lower.contains("three month")
-                || normalized.contains("3 मंथ") || normalized.contains("3 महीने")) {
+        if (lower.contains("fortnight") || lower.contains("15 day")
+                || normalized.contains("15 दिन")) {
             item.listType = GroceryItem.LIST_THREE_MONTH;
-        } else if (lower.contains("2 month") || lower.contains("two month")
-                || normalized.contains("2 मंथ") || normalized.contains("2 महीने")) {
+        } else if (lower.contains("weekly") || lower.contains("week")
+                || normalized.contains("साप्ताहिक") || normalized.contains("हफ्ते")) {
             item.listType = GroceryItem.LIST_TWO_MONTH;
         } else if (lower.contains("monthly") || normalized.contains("मंथली")
                 || normalized.contains("मासिक")) {
@@ -1503,7 +1503,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         }
         item.isMonthlyMaster = GroceryRecurrenceEngine.isRecurringType(item.listType);
         normalized = normalized.replaceAll(
-                "(?i)three\\s*month|two\\s*month|3\\s*month|2\\s*month|monthly|daily|list|add|item|3\\s*मंथ|2\\s*मंथ|3\\s*महीने|2\\s*महीने|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
+                "(?i)fortnight(?:ly)?|15\\s*day(?:s)?|weekly|week|monthly|daily|list|add|item|15\\s*दिन|साप्ताहिक|हफ्ते|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
                 " ").replaceAll("\\s+", " ").trim();
         item.name = normalized.isEmpty() ? spoken.trim() : normalized;
         estimateAndSave(item, () -> {
