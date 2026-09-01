@@ -1294,7 +1294,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             new MaterialAlertDialogBuilder(requireContext())
                     .setTitle("Remove recurring item?")
                     .setMessage(item.name + " • " + cycleLabel(cycle)
-                            + "\\nThis removes the master and stops future cycles. "
+                            + "\nThis removes the master and stops future cycles. "
                             + "Completed purchase history stays unchanged.")
                     .setNegativeButton(R.string.cancel, null)
                     .setPositiveButton(R.string.remove, (dialog, which) ->
@@ -1316,7 +1316,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Remove recurring item?")
                 .setMessage(item.name + " • " + cycleLabel(cycle)
-                        + "\\nChoose what you want to remove.")
+                        + "\nChoose what you want to remove.")
                 .setItems(choices, (dialog, which) -> {
                     if (which == 0) {
                         stageItemDeleteWithUndo(item,
