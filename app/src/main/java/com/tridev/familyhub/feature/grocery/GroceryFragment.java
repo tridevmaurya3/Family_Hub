@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.grocery;
 
 import android.os.Bundle;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
@@ -87,6 +88,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             registerForActivityResult(
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
+                        resumeFloatingOverlayAfterVoice();
                         if (result.getResultCode() != android.app.Activity.RESULT_OK
                                 || result.getData() == null) {
                             return;
@@ -1482,7 +1484,28 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN");
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
                 getString(R.string.grocery_voice_add));
-        voiceLauncher.launch(intent);
+        suspendFloatingOverlayForVoice();
+        try {
+            voiceLauncher.launch(intent);
+        } catch (ActivityNotFoundException error) {
+            resumeFloatingOverlayAfterVoice();
+            Snackbar.make(requireView(),
+                    R.string.grocery_overlay_voice_unavailable,
+                    Snackbar.LENGTH_LONG).show();
+        }
+    }
+
+    private void suspendFloatingOverlayForVoice() {
+        requireContext().startService(new Intent(
+                requireContext(), GroceryOverlayService.class
+        ).setAction(GroceryOverlayService.ACTION_SUSPEND_FOR_VOICE));
+    }
+
+    private void resumeFloatingOverlayAfterVoice() {
+        if (!isAdded()) return;
+        requireContext().startService(new Intent(
+                requireContext(), GroceryOverlayService.class
+        ).setAction(GroceryOverlayService.ACTION_RESUME_AFTER_VOICE));
     }
 
     private void addFromVoice(@NonNull String spoken) {
