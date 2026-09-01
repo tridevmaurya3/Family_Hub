@@ -1256,10 +1256,11 @@ public class GroceryOverlayService extends Service {
                         && item.purchasedAt > 0L;
                 if (showLastPurchase) {
                     detail += "\n" + overlayLastPurchaseLabel(item.purchasedAt);
+                    detail += "\n" + overlayNextDueLabel(item);
                 }
                 row.setText(detail);
-                row.setTextSize(showLastPurchase ? 12f : 13f);
-                row.setMaxLines(showLastPurchase ? 2 : 1);
+                row.setTextSize(showLastPurchase ? 11.5f : 13f);
+                row.setMaxLines(showLastPurchase ? 3 : 1);
                 row.setTextColor(Color.rgb(36, 36, 36));
                 row.setMinHeight(dp(38));
                 row.setPadding(dp(6), 0, dp(6), 0);
@@ -1279,7 +1280,7 @@ public class GroceryOverlayService extends Service {
                 });
                 LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(showLastPurchase ? 54 : 40));
+                        dp(showLastPurchase ? 70 : 40));
                 rowParams.bottomMargin = dp(3);
                 itemContainer.addView(row, rowParams);
                 shownHere++;
@@ -1353,6 +1354,17 @@ public class GroceryOverlayService extends Service {
         CharSequence exactDate = android.text.format.DateFormat.format(
                 "dd MMM yyyy", purchasedAt);
         return "Last purchase: " + relative + " • " + exactDate;
+    }
+
+    private String overlayNextDueLabel(@NonNull GroceryItem item) {
+        long now = System.currentTimeMillis();
+        long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
+        if (dueAt == Long.MAX_VALUE) return "";
+        CharSequence date = android.text.format.DateFormat.format("dd MMM yyyy", dueAt);
+        if (dueAt <= now) return "Due now • " + date;
+        int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
+        return "Next due: " + (days == 1 ? "Tomorrow" : days + " days")
+                + " • " + date;
     }
 
     private int priorityRank(GroceryItem item) {
