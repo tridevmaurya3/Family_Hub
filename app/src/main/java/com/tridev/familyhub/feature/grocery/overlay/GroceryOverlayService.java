@@ -105,6 +105,7 @@ public class GroceryOverlayService extends Service {
     private View panelView;
     private LinearLayout itemContainer;
     private LinearLayout overlayFormDetails;
+    private LinearLayout overlayOptionalDetails;
     private ScrollView overlayItemScroll;
     private Button overlayFormToggle;
     private boolean overlayFormCollapsed;
@@ -406,7 +407,7 @@ public class GroceryOverlayService extends Service {
         shoppingHeaderParams.setMarginStart(dp(4));
         header.addView(shoppingModeDropdown, shoppingHeaderParams);
 
-        overlayFormToggle = compactAction(getString(R.string.grocery_overlay_hide_form),
+        overlayFormToggle = compactAction("More details  ▾",
                 Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
         overlayFormToggle.setTextSize(8.5f);
         overlayFormToggle.setSingleLine(true);
@@ -444,6 +445,8 @@ public class GroceryOverlayService extends Service {
 
         overlayFormDetails = new LinearLayout(this);
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);
+        overlayOptionalDetails = new LinearLayout(this);
+        overlayOptionalDetails.setOrientation(LinearLayout.VERTICAL);
 
         final String[] selectedListType = {visibleListType};
         RadioGroup listTypeGroup = new RadioGroup(this);
@@ -580,27 +583,28 @@ public class GroceryOverlayService extends Service {
         final List<GroceryItem> smartSuggestions = new ArrayList<>();
         Spinner quickPick = compactSpinner(new String[]{"Suggested"});
 
-        LinearLayout detailsOne = new LinearLayout(this);
-        detailsOne.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(detailsOne, labelledField(getString(R.string.grocery_quantity_amount), quantity), false);
-        addCompactColumn(detailsOne, labelledField(getString(R.string.grocery_quantity_unit), quantityUnit), true);
-        addCompactColumn(detailsOne, labelledField(getString(R.string.grocery_overlay_price), price), true);
-        overlayFormDetails.addView(detailsOne);
+        LinearLayout basicDetails = new LinearLayout(this);
+        basicDetails.setOrientation(LinearLayout.HORIZONTAL);
+        addCompactColumn(basicDetails, labelledField(getString(R.string.grocery_quantity_amount), quantity), false);
+        addCompactColumn(basicDetails, labelledField(getString(R.string.grocery_quantity_unit), quantityUnit), true);
+        addCompactColumn(basicDetails, labelledField(getString(R.string.grocery_category), category), true);
+        overlayFormDetails.addView(basicDetails);
 
-        LinearLayout detailsTwo = new LinearLayout(this);
-        detailsTwo.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(detailsTwo, labelledField(getString(R.string.grocery_category), category), false);
-        addCompactColumn(detailsTwo, labelledField(getString(R.string.money_manager_paid_from), moneyAccount), true);
-        addCompactColumn(detailsTwo, labelledField(getString(R.string.money_manager_expense_category), moneyCategory), true);
-        overlayFormDetails.addView(detailsTwo);
+        LinearLayout optionalMoneyDetails = new LinearLayout(this);
+        optionalMoneyDetails.setOrientation(LinearLayout.HORIZONTAL);
+        addCompactColumn(optionalMoneyDetails, labelledField(getString(R.string.grocery_overlay_price), price), false);
+        addCompactColumn(optionalMoneyDetails, labelledField(getString(R.string.money_manager_paid_from), moneyAccount), true);
+        addCompactColumn(optionalMoneyDetails, labelledField(getString(R.string.money_manager_expense_category), moneyCategory), true);
+        overlayOptionalDetails.addView(optionalMoneyDetails);
         attachLiveMoneyCatalog(moneyAccount, moneyCategory);
 
-        LinearLayout detailsThree = new LinearLayout(this);
-        detailsThree.setOrientation(LinearLayout.HORIZONTAL);
-        addCompactColumn(detailsThree, labelledField(getString(R.string.grocery_priority), priority), false);
-        addCompactColumn(detailsThree, labelledField(getString(R.string.grocery_assign_to), member), true);
-        addCompactColumn(detailsThree, labelledField("Quick pick", quickPick), true);
-        overlayFormDetails.addView(detailsThree);
+        LinearLayout optionalAssignmentDetails = new LinearLayout(this);
+        optionalAssignmentDetails.setOrientation(LinearLayout.HORIZONTAL);
+        addCompactColumn(optionalAssignmentDetails, labelledField(getString(R.string.grocery_priority), priority), false);
+        addCompactColumn(optionalAssignmentDetails, labelledField(getString(R.string.grocery_assign_to), member), true);
+        addCompactColumn(optionalAssignmentDetails, labelledField("Quick pick", quickPick), true);
+        overlayOptionalDetails.addView(optionalAssignmentDetails);
+        overlayFormDetails.addView(overlayOptionalDetails);
 
         TextView quickLabel = text(getString(R.string.grocery_overlay_quick_item), 11, true);
         LinearLayout.LayoutParams quickLabelParams = new LinearLayout.LayoutParams(
@@ -2263,13 +2267,15 @@ public class GroceryOverlayService extends Service {
     }
 
     private void setOverlayFormCollapsed(boolean collapsed) {
-        if (overlayFormDetails == null || overlayItemScroll == null || overlayFormToggle == null) return;
+        if (overlayFormDetails == null || overlayOptionalDetails == null
+                || overlayItemScroll == null || overlayFormToggle == null) return;
         overlayFormCollapsed = collapsed;
-        overlayFormDetails.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-        overlayFormToggle.setText(collapsed ? "Normal" : "Mini");
+        overlayFormDetails.setVisibility(View.VISIBLE);
+        overlayOptionalDetails.setVisibility(collapsed ? View.GONE : View.VISIBLE);
+        overlayFormToggle.setText(collapsed ? "More details  ▾" : "Less details  ▴");
         overlayFormToggle.setContentDescription(collapsed
-                ? "Switch floating Grocery to Normal mode"
-                : "Switch floating Grocery to Mini mode");
+                ? "Show more Grocery details"
+                : "Hide extra Grocery details");
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
         params.height = 0;
         params.weight = 1f;
