@@ -276,6 +276,14 @@
                 android:text="@string/grocery_suggestions"
                 android:textColor="@color/fh_module_grocery" />
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/grocery_due_calendar_button"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="@dimen/touch_target_min"
+                android:text="Due calendar"
+                android:textColor="@color/fh_info" />
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_shopping_mode_button"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
