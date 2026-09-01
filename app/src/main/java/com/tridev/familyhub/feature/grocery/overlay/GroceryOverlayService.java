@@ -47,6 +47,11 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.widget.TextViewCompat;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.security.FamilyHubAppLockManager;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
@@ -87,6 +92,11 @@ public class GroceryOverlayService extends Service {
     private static final int NOTIFICATION_ID = 4107;
     private static final int SMART_VISIBLE_CHIPS = 5;
     private static final String SHOPPING_ALL = "ALL";
+    private static final String KEY_OVERLAY_MODE = "professional_mode";
+    private static final String KEY_LAST_STANDARD_MODE = "last_standard_mode";
+    private static final String MODE_NORMAL = "NORMAL";
+    private static final String MODE_MINI = "MINI";
+    private static final String MODE_SHOPPING = "SHOPPING";
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams stripParams;
@@ -116,6 +126,9 @@ public class GroceryOverlayService extends Service {
     private boolean overlayShoppingScreenOn;
     private String overlayShoppingSelection = SHOPPING_ALL;
     private boolean overlayInlinePurchaseEditorOpen;
+    @Nullable private TextView overlayLiveStatus;
+    @Nullable private DatabaseReference overlayConnectionReference;
+    @Nullable private ValueEventListener overlayConnectionListener;
     private boolean voicePanelDetached;
     private boolean voiceStripWasVisible;
     private final Set<String> collapsedCategories = new HashSet<>();
@@ -161,6 +174,10 @@ public class GroceryOverlayService extends Service {
         startForeground(NOTIFICATION_ID, createNotification());
         getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, true).apply();
+        String savedOverlayMode = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getString(KEY_OVERLAY_MODE, MODE_NORMAL);
+        overlayShoppingMode = MODE_SHOPPING.equals(savedOverlayMode);
+        overlayFormCollapsed = overlayShoppingMode || MODE_MINI.equals(savedOverlayMode);
         repository = new GroceryRepository(this);
         memberRepository = new FamilyMemberRepository(this);
         memberRepository.loadMembers("", members -> {
@@ -339,7 +356,7 @@ public class GroceryOverlayService extends Service {
         titleStack.setOrientation(LinearLayout.VERTICAL);
         titleStack.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView title = text(getString(R.string.grocery_overlay_title), 16, true);
+        TextView title = text("Family Grocery", 16, true);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         titleStack.addView(title, new LinearLayout.LayoutParams(
@@ -352,7 +369,11 @@ public class GroceryOverlayService extends Service {
         shoppingSubtitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         shoppingSubtitle.setSingleLine(true);
         shoppingSubtitle.setEllipsize(TextUtils.TruncateAt.END);
-        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 1f));
+        overlayLiveStatus = text("● Connecting", 9, true);
+        overlayLiveStatus.setSingleLine(true);
+        overlayLiveStatus.setTextColor(Color.rgb(84, 93, 105));
+        subtitleRow.addView(overlayLiveStatus, new LinearLayout.LayoutParams(0, dp(20), 0.55f));
+        subtitleRow.addView(shoppingSubtitle, new LinearLayout.LayoutParams(0, dp(20), 0.45f));
 
         Button screenOn = compactAction("Screen On",
                 Color.rgb(15, 108, 189), Color.argb(220, 232, 243, 252));
@@ -824,8 +845,16 @@ public class GroceryOverlayService extends Service {
         listParams.topMargin = dp(2);
         root.addView(overlayItemScroll, listParams);
 
-        overlayFormCollapsed = false;
-        overlayFormToggle.setOnClickListener(v -> setOverlayFormCollapsed(!overlayFormCollapsed));
+        String savedPanelMode = getSharedPreferences(PREFS, MODE_PRIVATE)
+                .getString(KEY_OVERLAY_MODE, MODE_NORMAL);
+        overlayShoppingMode = MODE_SHOPPING.equals(savedPanelMode);
+        overlayFormCollapsed = overlayShoppingMode || MODE_MINI.equals(savedPanelMode);
+        overlayFormToggle.setOnClickListener(v -> {
+            if (overlayShoppingMode) return;
+            setOverlayFormCollapsed(!overlayFormCollapsed);
+            rememberStandardOverlayMode(overlayFormCollapsed ? MODE_MINI : MODE_NORMAL);
+        });
+        setOverlayFormCollapsed(overlayFormCollapsed);
         overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) setOverlayFormCollapsed(true);
         });
@@ -900,6 +929,7 @@ public class GroceryOverlayService extends Service {
         panelParams.y = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("panel_y", dp(74));
         panelParams.y = clamp(panelParams.y, 0, Math.max(0, screenHeight - resolvedPanelHeight));
         windowManager.addView(panelView, panelParams);
+        startOverlayConnectionStatus();
         root.requestFocus();
         updateOverlayShoppingModeUi(shoppingModeDropdown, screenOn, shoppingSubtitle);
         refreshPanel();
@@ -970,10 +1000,21 @@ public class GroceryOverlayService extends Service {
 
         modeSwitch.setOnCheckedChangeListener((buttonView, checked) -> {
             overlayShoppingMode = checked;
-            if (!checked) {
+            if (checked) {
+                String standard = overlayFormCollapsed ? MODE_MINI : MODE_NORMAL;
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                        .putString(KEY_LAST_STANDARD_MODE, standard)
+                        .putString(KEY_OVERLAY_MODE, MODE_SHOPPING).apply();
+                setOverlayFormCollapsed(true);
+            } else {
                 overlayShoppingScreenOn = false;
                 overlayShoppingSelection = SHOPPING_ALL;
                 applyOverlayScreenOn(false);
+                String standard = getSharedPreferences(PREFS, MODE_PRIVATE)
+                        .getString(KEY_LAST_STANDARD_MODE, MODE_NORMAL);
+                boolean mini = MODE_MINI.equals(standard);
+                setOverlayFormCollapsed(mini);
+                rememberStandardOverlayMode(mini ? MODE_MINI : MODE_NORMAL);
             }
             selectionContainer.setVisibility(checked ? View.VISIBLE : View.GONE);
             modeRow.setBackground(rounded(
@@ -2004,6 +2045,46 @@ public class GroceryOverlayService extends Service {
         return params;
     }
 
+    private void rememberStandardOverlayMode(String mode) {
+        String resolved = MODE_MINI.equals(mode) ? MODE_MINI : MODE_NORMAL;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .putString(KEY_LAST_STANDARD_MODE, resolved)
+                .putString(KEY_OVERLAY_MODE, resolved).apply();
+    }
+
+    private void startOverlayConnectionStatus() {
+        stopOverlayConnectionStatus();
+        if (overlayLiveStatus == null) return;
+        overlayConnectionReference = FirebaseDatabase.getInstance()
+                .getReference(".info/connected");
+        overlayConnectionListener = new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                boolean connected = Boolean.TRUE.equals(snapshot.getValue(Boolean.class));
+                TextView status = overlayLiveStatus;
+                if (status == null) return;
+                status.setText(connected ? "● Live" : "● Offline");
+                status.setTextColor(connected
+                        ? Color.rgb(15, 122, 90) : Color.rgb(176, 98, 34));
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {
+                TextView status = overlayLiveStatus;
+                if (status != null) {
+                    status.setText("● Offline");
+                    status.setTextColor(Color.rgb(176, 98, 34));
+                }
+            }
+        };
+        overlayConnectionReference.addValueEventListener(overlayConnectionListener);
+    }
+
+    private void stopOverlayConnectionStatus() {
+        if (overlayConnectionReference != null && overlayConnectionListener != null) {
+            overlayConnectionReference.removeEventListener(overlayConnectionListener);
+        }
+        overlayConnectionReference = null;
+        overlayConnectionListener = null;
+    }
+
     private void updateOverlayShoppingModeUi(Button shoppingDropdown, Button screenOn,
                                              TextView shoppingSubtitle) {
         if (shoppingDropdown != null) {
@@ -2020,7 +2101,12 @@ public class GroceryOverlayService extends Service {
                     ? Color.rgb(15, 108, 189) : Color.argb(220, 232, 243, 252), 14));
         }
         if (shoppingSubtitle != null) {
-            shoppingSubtitle.setText("(" + getString(R.string.grocery_list_type) + ")");
+            if (overlayShoppingMode) {
+                shoppingSubtitle.setText("Shopping • "
+                        + shoppingSelectionLabel(overlayShoppingSelection));
+            } else {
+                shoppingSubtitle.setText(overlayFormCollapsed ? "Mini" : "Normal");
+            }
         }
     }
 
@@ -2146,6 +2232,8 @@ public class GroceryOverlayService extends Service {
     }
 
     private void closePanel() {
+        stopOverlayConnectionStatus();
+        overlayLiveStatus = null;
         if (panelView != null) {
             applyOverlayScreenOn(false);
             if (panelView.isAttachedToWindow()) windowManager.removeView(panelView);
@@ -2170,8 +2258,10 @@ public class GroceryOverlayService extends Service {
         if (overlayFormDetails == null || overlayItemScroll == null || overlayFormToggle == null) return;
         overlayFormCollapsed = collapsed;
         overlayFormDetails.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-        overlayFormToggle.setText(collapsed
-                ? R.string.grocery_overlay_show_form : R.string.grocery_overlay_hide_form);
+        overlayFormToggle.setText(collapsed ? "Normal" : "Mini");
+        overlayFormToggle.setContentDescription(collapsed
+                ? "Switch floating Grocery to Normal mode"
+                : "Switch floating Grocery to Mini mode");
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) overlayItemScroll.getLayoutParams();
         params.height = 0;
         params.weight = 1f;
