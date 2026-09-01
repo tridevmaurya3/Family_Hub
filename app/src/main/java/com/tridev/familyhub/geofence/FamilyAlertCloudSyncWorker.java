@@ -94,6 +94,23 @@ public final class FamilyAlertCloudSyncWorker extends Worker {
         for (int i = 0; i < limit; i++) {
             SafePlaceAlert alert = alerts.get(i);
             String eventId = eventId(alert);
+            DatabaseReference target = branch.child(eventId);
+
+            // familySafetyAlerts are immutable. Cloud history is merged back into
+            // the local Room table, so a later worker run can encounter the same
+            // deterministic eventId again. Skip an existing cloud event instead
+            // of attempting an overwrite that the security rules correctly deny.
+            try {
+                DataSnapshot existing = Tasks.await(target.get(),
+                        TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                if (existing.exists()) {
+                    continue;
+                }
+            } catch (Exception ignored) {
+                // Preserve the previous upload behaviour when a preflight read is
+                // temporarily unavailable; the guarded write below remains safe.
+            }
+
             Map<String, Object> values = new HashMap<>();
             values.put("eventId", eventId);
             values.put("familyId", familyId);
@@ -104,10 +121,10 @@ public final class FamilyAlertCloudSyncWorker extends Worker {
             values.put("deduplicationBucket", alert.deduplicationBucket);
             values.put("createdAt", ServerValue.TIMESTAMP);
             try {
-                Tasks.await(branch.child(eventId).setValue(values),
+                Tasks.await(target.setValue(values),
                         TIMEOUT_SECONDS, TimeUnit.SECONDS);
             } catch (Exception ignored) {
-                // An immutable event already created by another family device.
+                // An immutable event may have been created between preflight and write.
             }
         }
     }
