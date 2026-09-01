@@ -129,6 +129,8 @@ public class GroceryOverlayService extends Service {
     private String overlayShoppingSelection = SHOPPING_ALL;
     private boolean overlayInlinePurchaseEditorOpen;
     @Nullable private TextView overlayLiveStatus;
+    @Nullable private TextView overlaySearchStatus;
+    @Nullable private Button overlaySearchClear;
     @Nullable private DatabaseReference overlayConnectionReference;
     @Nullable private ValueEventListener overlayConnectionListener;
     private boolean voicePanelDetached;
@@ -809,6 +811,10 @@ public class GroceryOverlayService extends Service {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
             @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
                 overlaySearchQuery = s == null ? "" : s.toString().trim();
+                if (overlaySearchClear != null) {
+                    overlaySearchClear.setVisibility(overlaySearchQuery.isEmpty()
+                            && overlayCategoryFilter.isEmpty() ? View.GONE : View.VISIBLE);
+                }
                 refreshPanel();
             }
             @Override public void afterTextChanged(android.text.Editable s) { }
@@ -821,7 +827,15 @@ public class GroceryOverlayService extends Service {
                 ? Color.rgb(15, 108, 189) : Color.rgb(15, 108, 89));
         categoryFilter.setPadding(dp(10), dp(10), dp(10), dp(10));
         categoryFilter.setBackgroundColor(Color.TRANSPARENT);
-        searchBox.addView(categoryFilter, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        searchBox.addView(categoryFilter, new LinearLayout.LayoutParams(dp(38), dp(42)));
+        overlaySearchClear = compactAction("×",
+                Color.rgb(73, 86, 98), Color.argb(218, 242, 246, 248));
+        overlaySearchClear.setTextSize(16f);
+        overlaySearchClear.setContentDescription("Clear Grocery search and category filter");
+        overlaySearchClear.setPadding(0, 0, 0, 0);
+        overlaySearchClear.setVisibility(overlaySearchQuery.isEmpty()
+                && overlayCategoryFilter.isEmpty() ? View.GONE : View.VISIBLE);
+        searchBox.addView(overlaySearchClear, new LinearLayout.LayoutParams(dp(34), dp(34)));
         listTools.addView(searchBox, new LinearLayout.LayoutParams(0, dp(42), 1f));
         Button collapse = compactAction(getString(R.string.grocery_collapse_all),
                 Color.rgb(15, 108, 89), Color.argb(220, 226, 244, 238));
@@ -834,8 +848,28 @@ public class GroceryOverlayService extends Service {
         toolsParams.topMargin = dp(2);
         root.addView(listTools, toolsParams);
 
+        overlaySearchStatus = text("", 9.5f, true);
+        overlaySearchStatus.setTextColor(Color.rgb(84, 93, 105));
+        overlaySearchStatus.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        overlaySearchStatus.setPadding(dp(6), 0, dp(6), 0);
+        LinearLayout.LayoutParams searchStatusParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(20));
+        root.addView(overlaySearchStatus, searchStatusParams);
+
         categoryFilter.setOnClickListener(v ->
                 showCategoryFilterPopup(categoryFilter, search, categoryLabels));
+        overlaySearchClear.setOnClickListener(v -> {
+            overlayCategoryFilter = "";
+            categoryFilter.setColorFilter(Color.rgb(15, 108, 189));
+            search.setHint(getString(R.string.grocery_search_hint));
+            if (search.getText() != null && search.getText().length() > 0) {
+                search.setText("");
+            } else {
+                overlaySearchQuery = "";
+                overlaySearchClear.setVisibility(View.GONE);
+                refreshPanel();
+            }
+        });
         collapse.setOnClickListener(v -> {
             collapseAllCategories = !collapseAllCategories;
             collapsedCategories.clear();
@@ -1210,6 +1244,22 @@ public class GroceryOverlayService extends Service {
     private void renderItems(List<GroceryItem> items) {
         if (itemContainer == null || overlayInlinePurchaseEditorOpen) return;
         itemContainer.removeAllViews();
+        int resultCount = countOverlayVisibleItems(items);
+        boolean searchActive = !overlaySearchQuery.isEmpty() || !overlayCategoryFilter.isEmpty();
+        if (overlaySearchStatus != null) {
+            String label = resultCount + (resultCount == 1 ? " result" : " results");
+            if (!overlayCategoryFilter.isEmpty()) label += " • " + overlayCategoryFilter;
+            overlaySearchStatus.setText(label);
+            overlaySearchStatus.setTextColor(resultCount == 0 && searchActive
+                    ? Color.rgb(154, 84, 84) : Color.rgb(15, 108, 89));
+        }
+        if (overlaySearchClear != null) {
+            overlaySearchClear.setVisibility(searchActive ? View.VISIBLE : View.GONE);
+        }
+        if (searchActive && resultCount == 0) {
+            renderOverlayNoResults();
+            return;
+        }
         if (!overlayShoppingMode) {
             renderSection(items, visibleListType, overlaySectionHeading(visibleListType), 0);
             return;
@@ -1228,6 +1278,55 @@ public class GroceryOverlayService extends Service {
                 overlaySectionHeading(GroceryItem.LIST_THREE_MONTH), shown);
         renderSection(items, GroceryItem.LIST_MONTHLY,
                 overlaySectionHeading(GroceryItem.LIST_MONTHLY), shown);
+    }
+
+    private int countOverlayVisibleItems(@NonNull List<GroceryItem> items) {
+        int count = 0;
+        long now = System.currentTimeMillis();
+        for (GroceryItem item : items) {
+            if (item == null || item.isPurchased || item.recurrenceShadowed
+                    || !matchesOverlayFilters(item)) continue;
+            String cycle = GroceryRecurrenceEngine.effectiveCycle(item, now);
+            if (!overlayShoppingMode) {
+                if (visibleListType.equals(cycle)) count++;
+                continue;
+            }
+            if (SHOPPING_ALL.equals(overlayShoppingSelection)) {
+                if (GroceryItem.LIST_DAILY.equals(cycle)
+                        || GroceryItem.LIST_TWO_MONTH.equals(cycle)
+                        || GroceryItem.LIST_THREE_MONTH.equals(cycle)
+                        || GroceryItem.LIST_MONTHLY.equals(cycle)) count++;
+            } else if (overlayShoppingSelection.equals(cycle)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private void renderOverlayNoResults() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER);
+        card.setPadding(dp(16), dp(12), dp(16), dp(12));
+        card.setBackground(rounded(
+                Color.argb(238, 248, 251, 252), Color.argb(190, 205, 218, 224), 14));
+
+        TextView title = text("No matching items", 12, true);
+        title.setGravity(Gravity.CENTER);
+        title.setTextColor(Color.rgb(73, 86, 98));
+        card.addView(title, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(24)));
+
+        TextView hint = text("Try another item, category, amount or tap × to clear filters.", 10, false);
+        hint.setGravity(Gravity.CENTER);
+        hint.setTextColor(Color.rgb(103, 113, 122));
+        card.addView(hint, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(34)));
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(82));
+        params.topMargin = dp(8);
+        itemContainer.addView(card, params);
     }
 
     private String overlaySectionHeading(String listType) {
