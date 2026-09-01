@@ -75,6 +75,10 @@ public class GroceryOverlayService extends Service {
             "com.tridev.familyhub.action.HIDE_GROCERY_OVERLAY";
     public static final String ACTION_SHOW =
             "com.tridev.familyhub.action.SHOW_GROCERY_OVERLAY";
+    public static final String ACTION_SUSPEND_FOR_VOICE =
+            "com.tridev.familyhub.action.SUSPEND_GROCERY_FOR_VOICE";
+    public static final String ACTION_RESUME_AFTER_VOICE =
+            "com.tridev.familyhub.action.RESUME_GROCERY_AFTER_VOICE";
     public static final String PREFS = "grocery_overlay";
     public static final String KEY_ENABLED = "enabled";
     public static final String KEY_REQUESTED = "permission_requested";
