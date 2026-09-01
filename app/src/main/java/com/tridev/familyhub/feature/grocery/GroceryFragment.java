@@ -1284,6 +1284,52 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void confirmDelete(@NonNull GroceryItem item) {
+        String cycle = GroceryRecurrenceEngine.originalCycle(item);
+        boolean recurring = GroceryRecurrenceEngine.isRecurringType(cycle);
+        if (recurring && (item.isPurchased || item.historyOnly)) {
+            showRecurringDeleteScope(item, cycle);
+            return;
+        }
+        if (recurring) {
+            new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle("Remove recurring item?")
+                    .setMessage(item.name + " • " + cycleLabel(cycle)
+                            + "\\nThis removes the master and stops future cycles. "
+                            + "Completed purchase history stays unchanged.")
+                    .setNegativeButton(R.string.cancel, null)
+                    .setPositiveButton(R.string.remove, (dialog, which) ->
+                            stageRecurringMasterDeleteWithUndo(item, cycle))
+                    .show();
+            return;
+        }
+        showStandardDeleteConfirmation(item);
+    }
+
+    private void showRecurringDeleteScope(
+            @NonNull GroceryItem item,
+            @NonNull String cycle
+    ) {
+        String[] choices = {
+                "Only this purchase",
+                "Master + future cycle"
+        };
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Remove recurring item?")
+                .setMessage(item.name + " • " + cycleLabel(cycle)
+                        + "\\nChoose what you want to remove.")
+                .setItems(choices, (dialog, which) -> {
+                    if (which == 0) {
+                        stageItemDeleteWithUndo(item,
+                                item.name + " purchase removed");
+                    } else {
+                        stageRecurringMasterDeleteWithUndo(item, cycle);
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
+    }
+
+    private void showStandardDeleteConfirmation(@NonNull GroceryItem item) {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.grocery_delete_title)
                 .setMessage(getString(
@@ -1291,37 +1337,73 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         item.name
                 ))
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.remove, (dialog, which) -> {
-                    adapter.temporarilyHide(item);
-                    final boolean[] restored = {false};
-                    Snackbar undo = Snackbar.make(
-                            requireView(),
-                            item.name + " removed",
-                            Snackbar.LENGTH_LONG
-                    );
-                    undo.setAction("UNDO", view -> {
-                        restored[0] = true;
-                        adapter.restoreTemporarilyHidden(item);
-                    });
-                    undo.addCallback(new Snackbar.Callback() {
-                        @Override
-                        public void onDismissed(
-                                Snackbar transientBottomBar, int event) {
-                            if (restored[0]
-                                    || event == Snackbar.Callback.DISMISS_EVENT_ACTION) {
-                                return;
-                            }
-                            adapter.finishTemporaryHide(item);
-                            repository.delete(item, () -> {
-                                if (binding != null) {
-                                    loadItems(currentQuery());
-                                }
-                            });
-                        }
-                    });
-                    undo.show();
-                })
+                .setPositiveButton(R.string.remove, (dialog, which) ->
+                        stageItemDeleteWithUndo(item, item.name + " removed"))
                 .show();
+    }
+
+    private void stageItemDeleteWithUndo(
+            @NonNull GroceryItem item,
+            @NonNull String message
+    ) {
+        adapter.temporarilyHide(item);
+        final boolean[] restored = {false};
+        Snackbar undo = Snackbar.make(
+                requireView(),
+                message,
+                Snackbar.LENGTH_LONG
+        );
+        undo.setAction("UNDO", view -> {
+            restored[0] = true;
+            adapter.restoreTemporarilyHidden(item);
+        });
+        undo.addCallback(new Snackbar.Callback() {
+            @Override
+            public void onDismissed(
+                    Snackbar transientBottomBar, int event) {
+                if (restored[0]
+                        || event == Snackbar.Callback.DISMISS_EVENT_ACTION) {
+                    return;
+                }
+                adapter.finishTemporaryHide(item);
+                repository.delete(item, () -> {
+                    if (binding != null) {
+                        loadItems(currentQuery());
+                    }
+                });
+            }
+        });
+        undo.show();
+    }
+
+    private void stageRecurringMasterDeleteWithUndo(
+            @NonNull GroceryItem item,
+            @NonNull String cycle
+    ) {
+        final boolean[] cancelled = {false};
+        Snackbar undo = Snackbar.make(
+                requireView(),
+                "Future " + cycleLabel(cycle) + " cycle will be removed for "
+                        + item.name,
+                Snackbar.LENGTH_LONG
+        );
+        undo.setAction("UNDO", view -> cancelled[0] = true);
+        undo.addCallback(new Snackbar.Callback() {
+            @Override
+            public void onDismissed(
+                    Snackbar transientBottomBar, int event) {
+                if (cancelled[0]
+                        || event == Snackbar.Callback.DISMISS_EVENT_ACTION) {
+                    return;
+                }
+                repository.deleteRecurringMasterAndFuture(item, () -> {
+                    if (binding != null) {
+                        loadItems(currentQuery());
+                    }
+                });
+            }
+        });
+        undo.show();
     }
 
     private void confirmClearPurchased() {

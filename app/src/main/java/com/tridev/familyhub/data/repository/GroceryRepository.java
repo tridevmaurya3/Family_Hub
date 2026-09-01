@@ -560,6 +560,52 @@ public class GroceryRepository {
         });
     }
 
+    /**
+     * Stops the recurring schedule without deleting any completed purchase history.
+     * The existing tombstone prevents history recovery from recreating the master.
+     */
+    public void deleteRecurringMasterAndFuture(
+            @NonNull GroceryItem source,
+            @NonNull ActionCallback callback
+    ) {
+        final String wantedName = source.name.trim();
+        USER_ACTION_EXECUTOR.execute(() -> {
+            GroceryItem master = null;
+            for (GroceryItem candidate : groceryItemDao.getAll()) {
+                if (candidate == null || candidate.isPurchased
+                        || !candidate.name.equalsIgnoreCase(wantedName)) {
+                    continue;
+                }
+                String origin = GroceryRecurrenceEngine.originalCycle(candidate);
+                if (GroceryRecurrenceEngine.isRecurringType(origin)) {
+                    master = candidate;
+                    break;
+                }
+            }
+            if (master == null) {
+                mainHandler.post(callback::onComplete);
+                return;
+            }
+
+            recoveredHistoryPreferences().edit()
+                    .putBoolean(deletedMasterKey(master.name), true).apply();
+            if (!master.cloudId.isEmpty()) {
+                markDeletedCloudId(master.cloudId);
+            }
+            removeLinkedFinance(master);
+            groceryItemDao.delete(master);
+            GroceryWidgetProvider.refreshAll(appContext);
+
+            GroceryItem removedMaster = master;
+            mainHandler.post(() -> {
+                callback.onComplete();
+                if (!removedMaster.cloudId.isEmpty()) {
+                    removeRemoteItem(removedMaster);
+                }
+            });
+        });
+    }
+
     public void clearPurchased(@NonNull ActionCallback callback) {
         USER_ACTION_EXECUTOR.execute(() -> {
             List<GroceryItem> all = groceryItemDao.getAll();
