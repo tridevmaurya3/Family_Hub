@@ -848,7 +848,7 @@ public class GroceryOverlayService extends Service {
         toolsParams.topMargin = dp(2);
         root.addView(listTools, toolsParams);
 
-        overlaySearchStatus = text("", 9.5f, true);
+        overlaySearchStatus = text("", 9, true);
         overlaySearchStatus.setTextColor(Color.rgb(84, 93, 105));
         overlaySearchStatus.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         overlaySearchStatus.setPadding(dp(6), 0, dp(6), 0);
