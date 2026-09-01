@@ -62,6 +62,7 @@ import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.feature.grocery.GroceryMoneyManagerBridge;
 import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
+import com.tridev.familyhub.feature.grocery.GrocerySmartCategoryPicker;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
 
 import java.util.ArrayList;
@@ -572,6 +573,12 @@ public class GroceryOverlayService extends Service {
         price.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         Spinner category = compactSpinner(categoryChoices);
         enableCustomCategoryCreation(category, "");
+        GrocerySmartCategoryPicker.attach(this, category, value -> {
+            String[] updated = GroceryOptionCatalog.categoryLabelsWithAdd(this);
+            category.setAdapter(compactSpinnerAdapter(updated));
+            category.setDropDownWidth(adaptivePopupWidth(updated, 12.5f));
+            selectSpinner(category, updated, value);
+        });
         Spinner moneyAccount = moneyAccountSpinner();
         Spinner moneyCategory = moneyCategorySpinner();
         Spinner priority = compactSpinner(getResources().getStringArray(R.array.grocery_priority_labels));

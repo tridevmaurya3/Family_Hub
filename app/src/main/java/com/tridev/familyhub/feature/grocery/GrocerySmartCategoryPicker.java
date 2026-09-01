@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -64,6 +65,51 @@ public final class GrocerySmartCategoryPicker {
         TextInputLayout layout = findTextInputLayout(input);
         if (layout != null) layout.setEndIconOnClickListener(v -> open.run());
         input.setContentDescription("Choose Grocery category with search, recent and popular categories");
+    }
+
+    public interface CategorySelectionHandler {
+        void onSelected(@NonNull String value);
+    }
+
+    /**
+     * Reuses the same searchable chooser for the system-overlay Grocery Spinner.
+     * The caller keeps ownership of the Spinner adapter and save contract.
+     */
+    public static void attach(@NonNull Context context,
+                              @NonNull Spinner input,
+                              @NonNull CategorySelectionHandler handler) {
+        Runnable open = () -> {
+            Object selected = input.getSelectedItem();
+            String current = selected == null ? "" : selected.toString();
+            if (GroceryOptionCatalog.ADD_CATEGORY_LABEL.equals(current)) current = "";
+            show(context, current, handler::onSelected);
+        };
+        input.setOnTouchListener((view, event) -> {
+            int action = event.getActionMasked();
+            if (action == android.view.MotionEvent.ACTION_DOWN) {
+                view.setPressed(true);
+                return true;
+            }
+            if (action == android.view.MotionEvent.ACTION_UP) {
+                view.setPressed(false);
+                open.run();
+                return true;
+            }
+            if (action == android.view.MotionEvent.ACTION_CANCEL) {
+                view.setPressed(false);
+                return true;
+            }
+            return true;
+        });
+        input.setOnKeyListener((view, keyCode, event) -> {
+            if (event.getAction() != android.view.KeyEvent.ACTION_UP) return false;
+            if (keyCode != android.view.KeyEvent.KEYCODE_ENTER
+                    && keyCode != android.view.KeyEvent.KEYCODE_DPAD_CENTER) return false;
+            open.run();
+            return true;
+        });
+        input.setContentDescription(
+                "Choose Grocery category with search, recent and popular categories");
     }
 
     private interface SelectionListener {
@@ -199,6 +245,7 @@ public final class GrocerySmartCategoryPicker {
                 });
             });
         });
+        configureOverlayWindow(context, dialog);
         dialog.show();
     }
 
@@ -209,7 +256,7 @@ public final class GrocerySmartCategoryPicker {
         input.setHint("Category name");
         int padding = dp(context, 18);
         input.setPadding(padding, dp(context, 8), padding, dp(context, 8));
-        new MaterialAlertDialogBuilder(context)
+        AlertDialog addDialog = new MaterialAlertDialogBuilder(context)
                 .setTitle("Add grocery category")
                 .setView(input)
                 .setNegativeButton(android.R.string.cancel, null)
@@ -218,7 +265,9 @@ public final class GrocerySmartCategoryPicker {
                             ? "" : input.getText().toString().trim();
                     if (!value.isEmpty()) listener.onSelected(value);
                 })
-                .show();
+                .create();
+        configureOverlayWindow(context, addDialog);
+        addDialog.show();
     }
 
     @NonNull
@@ -410,6 +459,13 @@ public final class GrocerySmartCategoryPicker {
             current = (View) current.getParent();
         }
         return null;
+    }
+
+    private static void configureOverlayWindow(@NonNull Context context,
+                                               @NonNull AlertDialog dialog) {
+        if (!(context instanceof android.app.Service) || dialog.getWindow() == null) return;
+        dialog.getWindow().setType(
+                android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
     }
 
     private static int dp(@NonNull Context context, int value) {
