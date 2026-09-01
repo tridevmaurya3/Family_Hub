@@ -374,8 +374,9 @@ public class GroceryOverlayService extends Service {
         overlayLiveStatus = text("● Connecting", 9, true);
         overlayLiveStatus.setSingleLine(true);
         overlayLiveStatus.setTextColor(Color.rgb(84, 93, 105));
-        LinearLayout.LayoutParams liveStatusParams =
-                new LinearLayout.LayoutParams(dp(48), dp(20));
+        LinearLayout.LayoutParams liveStatusParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(20));
+        liveStatusParams.setMarginEnd(dp(7));
         subtitleRow.addView(overlayLiveStatus, liveStatusParams);
         subtitleRow.addView(shoppingSubtitle,
                 new LinearLayout.LayoutParams(0, dp(20), 1f));
@@ -390,13 +391,11 @@ public class GroceryOverlayService extends Service {
         TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
                 screenOn, 7, 8, 1, TypedValue.COMPLEX_UNIT_SP);
         screenOn.setContentDescription("Keep screen on in floating Shopping Mode");
-        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(42), dp(20));
-        screenOnParams.setMarginStart(dp(3));
+        LinearLayout.LayoutParams screenOnParams = new LinearLayout.LayoutParams(dp(54), dp(20));
+        screenOnParams.setMarginStart(dp(4));
         subtitleRow.addView(screenOn, screenOnParams);
-        titleStack.addView(subtitleRow, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(20)));
 
-        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(48), 1f));
+        header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(40), 1f));
 
         Button shoppingModeDropdown = compactAction("Shopping Mode  ▾",
                 Color.rgb(15, 108, 89), Color.argb(230, 226, 244, 238));
@@ -445,7 +444,11 @@ public class GroceryOverlayService extends Service {
         close.setOnClickListener(v -> closePanel());
         header.addView(close, new LinearLayout.LayoutParams(dp(34), dp(42)));
         root.addView(header, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(50)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(42)));
+        LinearLayout.LayoutParams subtitleStripParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(22));
+        subtitleStripParams.bottomMargin = dp(1);
+        root.addView(subtitleRow, subtitleStripParams);
 
         overlayFormDetails = new LinearLayout(this);
         overlayFormDetails.setOrientation(LinearLayout.VERTICAL);

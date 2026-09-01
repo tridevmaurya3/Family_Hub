@@ -126,13 +126,17 @@ public final class GrocerySmartCategoryPicker {
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(side, gap, side, side);
+        root.setPadding(side, gap, side, dp(context, 8));
+        root.setBackground(roundedBackground(
+                Color.rgb(250, 252, 253), Color.rgb(215, 226, 230), dp(context, 18)));
 
         EditText search = new EditText(context);
         search.setSingleLine(true);
-        search.setTextSize(13f);
+        search.setTextSize(12f);
         search.setHint("Search category");
-        search.setPadding(dp(context, 12), 0, dp(context, 12), 0);
+        search.setBackground(roundedBackground(
+                Color.WHITE, Color.rgb(196, 215, 220), dp(context, 12)));
+        search.setPadding(dp(context, 11), 0, dp(context, 11), 0);
         root.addView(search, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 38)));
 
@@ -180,9 +184,9 @@ public final class GrocerySmartCategoryPicker {
 
         TextView status = new TextView(context);
         status.setText("Loading saved categories…");
-        status.setTextSize(11f);
+        status.setTextSize(9.5f);
         status.setTextColor(Color.rgb(94, 104, 114));
-        status.setPadding(dp(context, 4), dp(context, 6), dp(context, 4), 0);
+        status.setPadding(dp(context, 3), dp(context, 3), dp(context, 3), 0);
         root.addView(status, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -356,7 +360,7 @@ public final class GrocerySmartCategoryPicker {
             row.setStrokeColor(android.content.res.ColorStateList.valueOf(
                     selected ? Color.rgb(126, 190, 165) : Color.rgb(212, 222, 226)));
             row.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    selected ? Color.rgb(229, 247, 239) : Color.WHITE));
+                    selected ? Color.rgb(229, 247, 239) : Color.rgb(241, 248, 252)));
             row.setTextColor(selected ? Color.rgb(15, 108, 89) : Color.rgb(31, 42, 49));
             row.setOnClickListener(v -> listener.onSelected(category));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -482,6 +486,17 @@ public final class GrocerySmartCategoryPicker {
             if (base == null || base == current) return false;
             current = base;
         }
+    }
+
+    @NonNull
+    private static android.graphics.drawable.GradientDrawable roundedBackground(
+            int fill, int stroke, int radiusPx) {
+        android.graphics.drawable.GradientDrawable drawable =
+                new android.graphics.drawable.GradientDrawable();
+        drawable.setColor(fill);
+        drawable.setCornerRadius(radiusPx);
+        drawable.setStroke(1, stroke);
+        return drawable;
     }
 
     private static int dp(@NonNull Context context, int value) {
