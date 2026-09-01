@@ -1073,25 +1073,7 @@ public class GroceryOverlayService extends Service {
             }
         });
 
-        showAdaptiveOverlayPopup(popup, anchor, popupWidth, dp(132));
-    }
-
-    private void showAdaptiveOverlayPopup(@NonNull PopupWindow popup,
-                                          @NonNull View anchor,
-                                          int popupWidth,
-                                          int expandedHeight) {
-        int[] location = new int[2];
-        anchor.getLocationOnScreen(location);
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        int margin = dp(8);
-        int x = clamp(location[0] + anchor.getWidth() - popupWidth,
-                margin, Math.max(margin, screenWidth - popupWidth - margin));
-        int belowY = location[1] + anchor.getHeight() + dp(4);
-        int y = screenHeight - belowY >= expandedHeight + margin
-                ? belowY
-                : Math.max(margin, location[1] - expandedHeight - dp(4));
-        popup.showAtLocation(anchor, Gravity.TOP | Gravity.START, x, y);
+        showOverlayPopupBelow(popup, anchor, 2);
     }
 
     private void dismissOverlayHeaderPopup() {
