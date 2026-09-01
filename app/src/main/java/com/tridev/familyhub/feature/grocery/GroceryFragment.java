@@ -1594,7 +1594,45 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
     }
 
+    private boolean handleVoiceNavigationCommand(@NonNull String spoken) {
+        String lower = spoken.trim().toLowerCase(Locale.ROOT);
+        boolean navigation = lower.contains("show")
+                || lower.contains("open")
+                || lower.contains("दिखाओ")
+                || lower.contains("खोलो");
+        if (!navigation) return false;
+
+        if (lower.contains("fortnight") || lower.contains("15 day")
+                || lower.contains("15 दिन")) {
+            activeCycleFilter = GroceryItem.LIST_FORTNIGHTLY;
+        } else if (lower.contains("weekly") || lower.contains("week")
+                || lower.contains("साप्ताहिक") || lower.contains("हफ्त")) {
+            activeCycleFilter = GroceryItem.LIST_WEEKLY;
+        } else if (lower.contains("monthly") || lower.contains("मंथली")
+                || lower.contains("मासिक")) {
+            activeCycleFilter = GroceryItem.LIST_MONTHLY;
+        } else if (lower.contains("daily") || lower.contains("डेली")
+                || lower.contains("दैनिक")) {
+            activeCycleFilter = GroceryItem.LIST_DAILY;
+        }
+
+        if (lower.contains("purchased") || lower.contains("purchase")
+                || lower.contains("खरीद")) {
+            activeStatusFilterId = R.id.filter_purchased;
+        } else if (lower.contains("pending") || lower.contains("बाकी")
+                || lower.contains("लंबित")) {
+            activeStatusFilterId = R.id.filter_pending;
+        }
+        syncPrimaryFilterChips();
+        resetGroceryScrollForFilter();
+        loadItems(currentQuery());
+        Snackbar.make(requireView(), "Grocery view updated", Snackbar.LENGTH_SHORT)
+                .show();
+        return true;
+    }
+
     private void addFromVoice(@NonNull String spoken) {
+        if (handleVoiceNavigationCommand(spoken)) return;
         String normalized = spoken.trim();
         String lower = normalized.toLowerCase(Locale.ROOT);
         GroceryItem item = new GroceryItem();
