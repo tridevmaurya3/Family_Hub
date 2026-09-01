@@ -2,6 +2,7 @@ package com.tridev.familyhub.feature.grocery;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.TextUtils;
@@ -306,28 +307,80 @@ public final class GrocerySmartCategoryPicker {
             dialog.getWindow().setBackgroundDrawable(
                     new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
             dialog.getWindow().getDecorView().setPadding(0, 0, 0, 0);
+            dialog.getWindow().setLayout(adaptiveCategoryDialogWidth(context),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
         }
     }
 
     private static void showAddCategoryDialog(@NonNull Context context,
                                               @NonNull SelectionListener listener) {
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(context, 14), dp(context, 10),
+                dp(context, 14), dp(context, 10));
+        root.setBackground(roundedBackground(
+                Color.rgb(250, 252, 253), Color.rgb(195, 218, 211), dp(context, 18)));
+
+        TextView title = new TextView(context);
+        title.setText("Add grocery category");
+        title.setTextSize(16f);
+        title.setTextColor(Color.rgb(22, 52, 44));
+        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        root.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
+
         EditText input = new EditText(context);
         input.setSingleLine(true);
+        input.setTextSize(12f);
         input.setHint("Category name");
-        int padding = dp(context, 18);
-        input.setPadding(padding, dp(context, 8), padding, dp(context, 8));
+        input.setPadding(dp(context, 11), 0, dp(context, 11), 0);
+        input.setBackground(roundedBackground(
+                Color.WHITE, Color.rgb(196, 215, 220), dp(context, 12)));
+        root.addView(input, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 40)));
+
+        LinearLayout footer = new LinearLayout(context);
+        footer.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        MaterialButton cancel = smallAction(context, "Cancel");
+        MaterialButton add = smallAction(context, "Add");
+        add.setTextColor(Color.WHITE);
+        add.setStrokeColor(android.content.res.ColorStateList.valueOf(
+                Color.rgb(15, 108, 89)));
+        add.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                Color.rgb(15, 108, 89)));
+        LinearLayout.LayoutParams actionParams = new LinearLayout.LayoutParams(
+                dp(context, 76), dp(context, 32));
+        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(
+                dp(context, 76), dp(context, 32));
+        addParams.setMarginStart(dp(context, 6));
+        footer.addView(cancel, actionParams);
+        footer.addView(add, addParams);
+        LinearLayout.LayoutParams footerParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 40));
+        footerParams.topMargin = dp(context, 4);
+        root.addView(footer, footerParams);
+
         AlertDialog addDialog = new MaterialAlertDialogBuilder(context)
-                .setTitle("Add grocery category")
-                .setView(input)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Add", (dialog, which) -> {
-                    String value = input.getText() == null
-                            ? "" : input.getText().toString().trim();
-                    if (!value.isEmpty()) listener.onSelected(value);
-                })
+                .setView(root)
                 .create();
+        cancel.setOnClickListener(v -> addDialog.dismiss());
+        add.setOnClickListener(v -> {
+            String value = input.getText() == null
+                    ? "" : input.getText().toString().trim();
+            if (value.isEmpty()) return;
+            listener.onSelected(value);
+            addDialog.dismiss();
+        });
         configureOverlayWindow(context, addDialog);
         addDialog.show();
+        if (addDialog.getWindow() != null) {
+            addDialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            addDialog.getWindow().getDecorView().setPadding(0, 0, 0, 0);
+            addDialog.getWindow().setLayout(adaptiveCategoryDialogWidth(context),
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     @NonNull
@@ -558,6 +611,21 @@ public final class GrocerySmartCategoryPicker {
         drawable.setCornerRadius(radiusPx);
         drawable.setStroke(1, stroke);
         return drawable;
+    }
+
+    private static int adaptiveCategoryDialogWidth(@NonNull Context context) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP,
+                12f, context.getResources().getDisplayMetrics()));
+        float longest = Math.max(paint.measureText("Choose category"),
+                paint.measureText("Add grocery category"));
+        for (String value : GroceryOptionCatalog.categoryLabels(context)) {
+            if (value != null) longest = Math.max(longest, paint.measureText(value.trim()));
+        }
+        int desired = Math.round(longest) + dp(context, 64);
+        int screenMax = context.getResources().getDisplayMetrics().widthPixels - dp(context, 20);
+        int minimum = Math.min(dp(context, 240), screenMax);
+        return Math.max(minimum, Math.min(desired, screenMax));
     }
 
     private static int dp(@NonNull Context context, int value) {
