@@ -1436,10 +1436,33 @@ public class GroceryOverlayService extends Service {
     private boolean matchesOverlaySearch(GroceryItem item) {
         if (overlaySearchQuery.isEmpty()) return true;
         String query = overlaySearchQuery.toLowerCase(java.util.Locale.ENGLISH);
-        return item.name.toLowerCase(java.util.Locale.ENGLISH).contains(query)
-                || item.category.toLowerCase(java.util.Locale.ENGLISH).contains(query)
-                || item.quantity.toLowerCase(java.util.Locale.ENGLISH).contains(query)
-                || item.assignedMemberName.toLowerCase(java.util.Locale.ENGLISH).contains(query);
+        String cycleLabel = shoppingSelectionLabel(item.listType);
+        String purchaseState = item.isPurchased ? "purchased" : "pending";
+        String searchable = String.join("\n",
+                item.name,
+                item.category,
+                item.quantity,
+                item.storeName,
+                item.notes,
+                item.assignedMemberName,
+                item.purchasedByName,
+                item.updatedByName,
+                item.priority,
+                item.buyingStatus,
+                item.listType,
+                cycleLabel,
+                purchaseState,
+                String.valueOf(item.purchaseCount),
+                String.valueOf(item.estimatedCost),
+                String.valueOf(item.actualCost)
+        ).toLowerCase(java.util.Locale.ENGLISH);
+        if (searchable.contains(query)) return true;
+
+        // Let a user type either 1200, 1,200 or ₹1,200 for visible Grocery amounts.
+        String amountQuery = query.replace("₹", "").replace(",", "").trim();
+        if (amountQuery.isEmpty()) return false;
+        return String.valueOf(item.estimatedCost).contains(amountQuery)
+                || String.valueOf(item.actualCost).contains(amountQuery);
     }
 
     private boolean matchesOverlayFilters(GroceryItem item) {
