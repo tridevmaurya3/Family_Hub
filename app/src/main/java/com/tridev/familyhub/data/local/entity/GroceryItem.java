@@ -27,8 +27,14 @@ public class GroceryItem {
 
     public static final String LIST_DAILY = "DAILY";
     public static final String LIST_MONTHLY = "MONTHLY";
-    public static final String LIST_TWO_MONTH = "TWO_MONTH";
-    public static final String LIST_THREE_MONTH = "THREE_MONTH";
+    /**
+     * Weekly/Fortnightly intentionally reuse the two legacy stored values.
+     * Existing family records therefore remain readable without a Room migration.
+     */
+    public static final String LIST_WEEKLY = "TWO_MONTH";
+    public static final String LIST_FORTNIGHTLY = "THREE_MONTH";
+    @Deprecated public static final String LIST_TWO_MONTH = LIST_WEEKLY;
+    @Deprecated public static final String LIST_THREE_MONTH = LIST_FORTNIGHTLY;
 
     public static final String PRIORITY_NORMAL = "NORMAL";
     public static final String PRIORITY_HIGH = "HIGH";
