@@ -193,12 +193,8 @@ public final class FamilyJourneyRepository {
             }
             String role = stringValue(child.child("role"));
             boolean self = session.uid.equals(memberUid);
-            boolean granted = Boolean.TRUE.equals(
-                    privacy.child(memberUid)
-                            .child("viewers")
-                            .child(session.uid)
-                            .getValue(Boolean.class)
-            );
+            boolean granted = booleanValue(
+                    privacy.child(memberUid).child("historyEnabled"), false);
             Member member = new Member(
                     memberUid,
                     name,
