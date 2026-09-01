@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Color;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +19,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.widget.TextViewCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -396,22 +399,24 @@ public final class GrocerySmartCategoryPicker {
         for (String category : categories) {
             if (!query.isEmpty() && !category.toLowerCase(Locale.ROOT).contains(query)) continue;
             boolean selected = category.equalsIgnoreCase(current);
-            MaterialButton row = new MaterialButton(context);
-            row.setAllCaps(false);
+            TextView row = new TextView(context);
             row.setText((selected ? "✓  " : "") + category);
             row.setTextSize(11.5f);
+            row.setTextColor(selected ? Color.rgb(15, 108, 89)
+                    : Color.rgb(31, 42, 49));
             row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            row.setIncludeFontPadding(false);
+            row.setSingleLine(true);
+            row.setEllipsize(TextUtils.TruncateAt.END);
+            row.setPadding(dp(context, 12), 0, dp(context, 12), 0);
             row.setMinHeight(dp(context, 32));
             row.setMinimumHeight(dp(context, 32));
-            row.setInsetTop(0);
-            row.setInsetBottom(0);
-            row.setCornerRadius(dp(context, 10));
-            row.setStrokeWidth(dp(context, 1));
-            row.setStrokeColor(android.content.res.ColorStateList.valueOf(
-                    selected ? Color.rgb(126, 190, 165) : Color.rgb(212, 222, 226)));
-            row.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    selected ? Color.rgb(229, 247, 239) : Color.rgb(241, 248, 252)));
-            row.setTextColor(selected ? Color.rgb(15, 108, 89) : Color.rgb(31, 42, 49));
+            row.setBackground(roundedBackground(
+                    selected ? Color.rgb(229, 247, 239) : Color.rgb(241, 248, 252),
+                    selected ? Color.rgb(126, 190, 165) : Color.rgb(212, 222, 226),
+                    dp(context, 10)));
+            TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                    row, 9, 12, 1, TypedValue.COMPLEX_UNIT_SP);
             row.setOnClickListener(v -> listener.onSelected(category));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 32));
@@ -449,6 +454,8 @@ public final class GrocerySmartCategoryPicker {
         MaterialButton button = new MaterialButton(context);
         button.setText(text);
         button.setAllCaps(false);
+        button.setSingleLine(true);
+        button.setEllipsize(TextUtils.TruncateAt.END);
         button.setTextSize(10f);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
@@ -460,6 +467,8 @@ public final class GrocerySmartCategoryPicker {
         button.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.rgb(187, 208, 201)));
         button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(241, 249, 246)));
         button.setTextColor(Color.rgb(15, 108, 89));
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                button, 8, 10, 1, TypedValue.COMPLEX_UNIT_SP);
         return button;
     }
 
