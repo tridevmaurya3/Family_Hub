@@ -65,8 +65,8 @@ public class GroceryWidgetService extends RemoteViewsService {
                     : item.quantity + " • " + item.category;
             String effective = GroceryRecurrenceEngine.effectiveCycle(
                     item, System.currentTimeMillis());
-            String type = GroceryItem.LIST_THREE_MONTH.equals(effective) ? "3 Monthly"
-                    : GroceryItem.LIST_TWO_MONTH.equals(effective) ? "2 Monthly"
+            String type = GroceryItem.LIST_THREE_MONTH.equals(effective) ? "Fortnightly"
+                    : GroceryItem.LIST_TWO_MONTH.equals(effective) ? "Weekly"
                     : GroceryItem.LIST_MONTHLY.equals(effective) ? "Monthly" : "Daily";
             String badge = GroceryRecurrenceEngine.badgeLabel(
                     item, System.currentTimeMillis());
