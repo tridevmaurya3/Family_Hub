@@ -1,0 +1,99 @@
+name: Patch Grocery Transparency UI
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-overlay-transparency-ui.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply targeted transparency UI patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old, new, label):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 anchor, found {count}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              'import android.widget.PopupMenu;\n',
+              'import android.widget.PopupWindow;\n',
+              'popup import')
+
+          replace_once(
+              '    @Nullable private TextView overlaySearchStatus;\n'
+              '    @Nullable private Button overlaySearchClear;\n'
+              '    @Nullable private DatabaseReference overlayConnectionReference;\n',
+              '    @Nullable private TextView overlaySearchStatus;\n'
+              '    @Nullable private Button overlaySearchClear;\n'
+              '    @Nullable private PopupWindow overlayHeaderPopup;\n'
+              '    @Nullable private DatabaseReference overlayConnectionReference;\n',
+              'popup field')
+
+          start_marker = '        LinearLayout opacityPanel = new LinearLayout(this);\n'
+          end_marker = '        root.addView(opacityPanel);\n'
+          start = text.find(start_marker)
+          if start < 0:
+              raise SystemExit('opacity block start not found')
+          end = text.find(end_marker, start)
+          if end < 0:
+              raise SystemExit('opacity block end not found')
+          end += len(end_marker)
+          if text.find(start_marker, start + 1) >= 0:
+              raise SystemExit('opacity block start not unique')
+          replacement = '''        headerMenu.setOnClickListener(v -> {\n            FamilyHubAppLockManager.noteTrustedOverlayInteraction();\n            showOverlayHeaderTransparencyMenu(headerMenu);\n        });\n'''
+          text = text[:start] + replacement + text[end:]
+
+          helper_marker = '''    private void showOverlayShoppingMenu(Button anchor,\n                                         Button screenOn, TextView shoppingSubtitle) {\n'''
+          if text.count(helper_marker) != 1:
+              raise SystemExit('shopping menu helper anchor not unique')
+
+          helper = '''    private void showOverlayHeaderTransparencyMenu(@NonNull Button anchor) {\n        if (overlayHeaderPopup != null && overlayHeaderPopup.isShowing()) {\n            dismissOverlayHeaderPopup();\n            return;\n        }\n        dismissOverlayHeaderPopup();\n\n        float savedAlpha = getSharedPreferences(PREFS, MODE_PRIVATE)\n                .getFloat("alpha", 0.88f);\n        int popupWidth = Math.min(dp(252),\n                getResources().getDisplayMetrics().widthPixels - dp(28));\n\n        LinearLayout popupRoot = new LinearLayout(this);\n        popupRoot.setOrientation(LinearLayout.VERTICAL);\n        popupRoot.setPadding(dp(6), dp(6), dp(6), dp(6));\n        popupRoot.setBackground(premiumDropdownBackground());\n        popupRoot.setElevation(dp(12));\n\n        LinearLayout transparencyRow = new LinearLayout(this);\n        transparencyRow.setGravity(Gravity.CENTER_VERTICAL);\n        transparencyRow.setPadding(dp(8), dp(3), dp(7), dp(3));\n        transparencyRow.setBackground(premiumDropdownRowBackground());\n\n        TextView icon = text("◐", 15, true);\n        icon.setGravity(Gravity.CENTER);\n        icon.setTextColor(Color.rgb(15, 108, 89));\n        transparencyRow.addView(icon, new LinearLayout.LayoutParams(dp(30), dp(40)));\n\n        LinearLayout labels = new LinearLayout(this);\n        labels.setOrientation(LinearLayout.VERTICAL);\n        labels.setGravity(Gravity.CENTER_VERTICAL);\n        TextView label = text(getString(R.string.grocery_overlay_opacity), 12, true);\n        label.setTextColor(Color.rgb(31, 42, 49));\n        label.setSingleLine(true);\n        TextView subtitle = text("Adjust overlay opacity", 9, false);\n        subtitle.setTextColor(Color.rgb(94, 104, 114));\n        subtitle.setSingleLine(true);\n        labels.addView(label, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(21)));\n        labels.addView(subtitle, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(17)));\n        transparencyRow.addView(labels, new LinearLayout.LayoutParams(0, dp(40), 1f));\n\n        TextView valueBadge = text(Math.round(savedAlpha * 100f) + "%", 10, true);\n        valueBadge.setGravity(Gravity.CENTER);\n        valueBadge.setTextColor(Color.rgb(15, 108, 89));\n        valueBadge.setBackground(rounded(\n                Color.argb(235, 232, 247, 241), Color.argb(170, 166, 207, 191), 12));\n        LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(dp(44), dp(28));\n        valueParams.setMarginStart(dp(5));\n        transparencyRow.addView(valueBadge, valueParams);\n\n        TextView expandIndicator = text("▾", 13, true);\n        expandIndicator.setGravity(Gravity.CENTER);\n        expandIndicator.setTextColor(Color.rgb(73, 86, 98));\n        transparencyRow.addView(expandIndicator, new LinearLayout.LayoutParams(dp(24), dp(36)));\n        popupRoot.addView(transparencyRow, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(48)));\n\n        LinearLayout opacityControls = new LinearLayout(this);\n        opacityControls.setOrientation(LinearLayout.VERTICAL);\n        opacityControls.setPadding(dp(10), dp(5), dp(10), dp(5));\n        opacityControls.setBackground(rounded(\n                Color.argb(242, 245, 250, 252), Color.argb(160, 205, 218, 224), 12));\n        opacityControls.setVisibility(View.GONE);\n\n        LinearLayout valueRow = new LinearLayout(this);\n        valueRow.setGravity(Gravity.CENTER_VERTICAL);\n        TextView opacityTitle = text("Opacity", 10, true);\n        opacityTitle.setTextColor(Color.rgb(73, 86, 98));\n        valueRow.addView(opacityTitle, new LinearLayout.LayoutParams(0, dp(22), 1f));\n        TextView currentValue = text(Math.round(savedAlpha * 100f) + "%", 10, true);\n        currentValue.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);\n        currentValue.setTextColor(Color.rgb(15, 108, 89));\n        valueRow.addView(currentValue, new LinearLayout.LayoutParams(dp(54), dp(22)));\n        opacityControls.addView(valueRow, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(22)));\n\n        SeekBar opacity = new SeekBar(this);\n        int savedProgress = Math.round((savedAlpha - 0.35f) / 0.65f * 100f);\n        opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));\n        opacity.setProgressTintList(android.content.res.ColorStateList.valueOf(\n                Color.rgb(15, 108, 89)));\n        opacity.setThumbTintList(android.content.res.ColorStateList.valueOf(\n                Color.rgb(15, 108, 189)));\n        opacityControls.addView(opacity, new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(36)));\n        LinearLayout.LayoutParams controlsParams = new LinearLayout.LayoutParams(\n                LinearLayout.LayoutParams.MATCH_PARENT, dp(66));\n        controlsParams.topMargin = dp(5);\n        popupRoot.addView(opacityControls, controlsParams);\n\n        PopupWindow popup = new PopupWindow(this);\n        popup.setContentView(popupRoot);\n        popup.setWidth(popupWidth);\n        popup.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);\n        popup.setFocusable(true);\n        popup.setOutsideTouchable(true);\n        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));\n        popup.setElevation(dp(12));\n        popup.setOnDismissListener(() -> {\n            if (overlayHeaderPopup == popup) overlayHeaderPopup = null;\n        });\n        overlayHeaderPopup = popup;\n\n        transparencyRow.setOnClickListener(v -> {\n            boolean expanded = opacityControls.getVisibility() != View.VISIBLE;\n            opacityControls.setVisibility(expanded ? View.VISIBLE : View.GONE);\n            expandIndicator.setText(expanded ? "▴" : "▾");\n            transparencyRow.setBackground(expanded\n                    ? rounded(Color.argb(242, 229, 247, 239),\n                            Color.argb(210, 126, 190, 165), 10)\n                    : premiumDropdownRowBackground());\n            popupRoot.requestLayout();\n            popup.update();\n        });\n\n        opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {\n            @Override public void onStartTrackingTouch(SeekBar seekBar) { }\n            @Override public void onStopTrackingTouch(SeekBar seekBar) { }\n            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {\n                float alpha = 0.35f + (progress / 100f) * 0.65f;\n                if (stripView != null) stripView.setAlpha(alpha);\n                String percent = Math.round(alpha * 100f) + "%";\n                valueBadge.setText(percent);\n                currentValue.setText(percent);\n                getSharedPreferences(PREFS, MODE_PRIVATE).edit()\n                        .putFloat("alpha", alpha).apply();\n            }\n        });\n\n        showAdaptiveOverlayPopup(popup, anchor, popupWidth, dp(132));\n    }\n\n    private void showAdaptiveOverlayPopup(@NonNull PopupWindow popup,\n                                          @NonNull View anchor,\n                                          int popupWidth,\n                                          int expandedHeight) {\n        int[] location = new int[2];\n        anchor.getLocationOnScreen(location);\n        int screenWidth = getResources().getDisplayMetrics().widthPixels;\n        int screenHeight = getResources().getDisplayMetrics().heightPixels;\n        int margin = dp(8);\n        int x = clamp(location[0] + anchor.getWidth() - popupWidth,\n                margin, Math.max(margin, screenWidth - popupWidth - margin));\n        int belowY = location[1] + anchor.getHeight() + dp(4);\n        int y = screenHeight - belowY >= expandedHeight + margin\n                ? belowY\n                : Math.max(margin, location[1] - expandedHeight - dp(4));\n        popup.showAtLocation(anchor, Gravity.TOP | Gravity.START, x, y);\n    }\n\n    private void dismissOverlayHeaderPopup() {\n        PopupWindow popup = overlayHeaderPopup;\n        overlayHeaderPopup = null;\n        if (popup != null && popup.isShowing()) popup.dismiss();\n    }\n\n'''
+          text = text.replace(helper_marker, helper + helper_marker, 1)
+
+          replace_once(
+              '    private void suspendOverlayForVoice() {\n        if (voicePanelDetached) return;\n',
+              '    private void suspendOverlayForVoice() {\n        dismissOverlayHeaderPopup();\n        if (voicePanelDetached) return;\n',
+              'voice popup dismiss')
+
+          replace_once(
+              '    private void closePanel() {\n        stopOverlayConnectionStatus();\n',
+              '    private void closePanel() {\n        dismissOverlayHeaderPopup();\n        stopOverlayConnectionStatus();\n',
+              'close popup dismiss')
+
+          replace_once(
+              '    private void showOverlayShoppingMenu(Button anchor,\n'
+              '                                         Button screenOn, TextView shoppingSubtitle) {\n'
+              '        FamilyHubAppLockManager.noteTrustedOverlayInteraction();\n',
+              '    private void showOverlayShoppingMenu(Button anchor,\n'
+              '                                         Button screenOn, TextView shoppingSubtitle) {\n'
+              '        FamilyHubAppLockManager.noteTrustedOverlayInteraction();\n'
+              '        dismissOverlayHeaderPopup();\n',
+              'shopping popup dismiss')
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit transparency UI patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/tridev/familyhub/feature/grocery/overlay/GroceryOverlayService.java
+          git commit -m "Polish adaptive Grocery transparency control"
+          git push
