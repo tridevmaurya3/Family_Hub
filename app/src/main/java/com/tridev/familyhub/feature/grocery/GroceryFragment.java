@@ -187,8 +187,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 int firstVisible = manager instanceof LinearLayoutManager
                         ? ((LinearLayoutManager) manager).findFirstVisibleItemPosition()
                         : RecyclerView.NO_POSITION;
-                // Use the same stable scroll rule for Daily, Monthly,
-                // Weekly and Fortnightly in both Pending and Purchased views.
+                // Use the same stable scroll rule for Daily, Weekly,
+                // Fortnightly and Monthly in both Pending and Purchased views.
                 // A short recurring list must not collapse the header when there
                 // is no remaining list content to scroll into.
                 if (dy > 6 && !groceryHeaderCollapsed
@@ -388,15 +388,15 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private void showCycleDropdown(@NonNull View anchor) {
         String[] labels = new String[]{
                 getString(R.string.grocery_filter_daily),
-                getString(R.string.grocery_filter_monthly),
                 "Weekly",
-                "Fortnightly"
+                "Fortnightly",
+                getString(R.string.grocery_filter_monthly)
         };
         String[] values = new String[]{
                 GroceryItem.LIST_DAILY,
-                GroceryItem.LIST_MONTHLY,
                 GroceryItem.LIST_TWO_MONTH,
-                GroceryItem.LIST_THREE_MONTH
+                GroceryItem.LIST_THREE_MONTH,
+                GroceryItem.LIST_MONTHLY
         };
         int selectedIndex = 0;
         for (int i = 0; i < values.length; i++) {
