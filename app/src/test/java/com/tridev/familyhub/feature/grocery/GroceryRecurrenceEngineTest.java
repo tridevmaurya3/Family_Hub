@@ -9,84 +9,68 @@ import org.junit.Test;
 import java.util.Calendar;
 
 public class GroceryRecurrenceEngineTest {
-    @Test public void monthlyReflectsDailyAfterOneCompletedMonth() {
-        GroceryItem item = recurring(GroceryItem.LIST_MONTHLY, at(2026, 1, 20));
-        assertEquals(GroceryItem.LIST_MONTHLY,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 2, 19)));
-        assertEquals(GroceryItem.LIST_DAILY,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 2, 20)));
+    @Test public void freshRecurringItemIsPendingImmediately() {
+        GroceryItem item = recurring(GroceryItem.LIST_WEEKLY, at(2026, 9, 1));
+        assertEquals(true, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_WEEKLY, at(2026, 9, 1)));
     }
 
-    @Test public void twoMonthlyProgressesThroughMonthlyToDaily() {
-        GroceryItem item = recurring(GroceryItem.LIST_TWO_MONTH, at(2026, 1, 20));
-        assertEquals(GroceryItem.LIST_TWO_MONTH,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 2, 19)));
-        assertEquals(GroceryItem.LIST_MONTHLY,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 2, 20)));
-        assertEquals(GroceryItem.LIST_DAILY,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 3, 20)));
+    @Test public void weeklyReturnsSevenDaysAfterPurchase() {
+        GroceryItem item = purchasedMaster(
+                GroceryItem.LIST_WEEKLY, at(2026, 9, 1));
+        assertEquals(false, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_WEEKLY, at(2026, 9, 7)));
+        assertEquals(true, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_WEEKLY, at(2026, 9, 8)));
     }
 
-    @Test public void threeMonthlyProgressesOneActiveCategoryAtATime() {
-        GroceryItem item = recurring(GroceryItem.LIST_THREE_MONTH, at(2026, 1, 20));
-        assertEquals(GroceryItem.LIST_THREE_MONTH,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 2, 19)));
-        assertEquals(GroceryItem.LIST_TWO_MONTH,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 2, 20)));
-        assertEquals(GroceryItem.LIST_MONTHLY,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 3, 20)));
-        assertEquals(GroceryItem.LIST_DAILY,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 4, 20)));
+    @Test public void fortnightlyReturnsFifteenDaysAfterPurchase() {
+        GroceryItem item = purchasedMaster(
+                GroceryItem.LIST_FORTNIGHTLY, at(2026, 9, 1));
+        assertEquals(false, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_FORTNIGHTLY, at(2026, 9, 15)));
+        assertEquals(true, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_FORTNIGHTLY, at(2026, 9, 16)));
     }
 
-    @Test public void actualPurchaseDateResetsCycleAndBadgeTracksOrigin() {
-        GroceryItem item = recurring(GroceryItem.LIST_THREE_MONTH, at(2026, 1, 1));
-        item.purchasedAt = at(2026, 4, 25);
-        assertEquals(GroceryItem.LIST_THREE_MONTH,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 5, 24)));
-        assertEquals(GroceryItem.LIST_TWO_MONTH,
-                GroceryRecurrenceEngine.effectiveCycle(item, at(2026, 5, 25)));
-        assertEquals("3 MONTHLY",
-                GroceryRecurrenceEngine.badgeLabel(item, at(2026, 5, 25)));
+    @Test public void monthlyReturnsOneCalendarMonthAfterPurchase() {
+        GroceryItem item = purchasedMaster(
+                GroceryItem.LIST_MONTHLY, at(2026, 1, 31));
+        assertEquals(false, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_MONTHLY, at(2026, 2, 27)));
+        assertEquals(true, GroceryRecurrenceEngine.matchesCycle(
+                item, GroceryItem.LIST_MONTHLY, at(2026, 2, 28)));
     }
 
-    @Test public void purchasedRecurringOccurrencesStayInOriginalPurchasedFilter() {
-        assertPurchasedOccurrenceUsesOriginalCycle(GroceryItem.LIST_MONTHLY);
-        assertPurchasedOccurrenceUsesOriginalCycle(GroceryItem.LIST_TWO_MONTH);
-        assertPurchasedOccurrenceUsesOriginalCycle(GroceryItem.LIST_THREE_MONTH);
-    }
-
-    private static void assertPurchasedOccurrenceUsesOriginalCycle(String origin) {
+    @Test public void purchasedHistoryRemainsInOriginalFilter() {
         GroceryItem occurrence = new GroceryItem();
         occurrence.listType = GroceryItem.LIST_DAILY;
-        occurrence.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(origin);
+        occurrence.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(
+                GroceryItem.LIST_WEEKLY);
         occurrence.isPurchased = true;
-        assertEquals(origin, GroceryRecurrenceEngine.effectiveCycle(occurrence, at(2026, 8, 25)));
-    }
-
-    @Test public void purchasedHistoryIsNotHiddenByPendingShadowing() {
-        GroceryItem history = new GroceryItem();
-        history.listType = GroceryItem.LIST_MONTHLY;
-        history.isPurchased = true;
-        history.recurrenceShadowed = true;
         assertEquals(true, GroceryRecurrenceEngine.matchesCycle(
-                history, GroceryItem.LIST_MONTHLY, at(2026, 8, 25)));
+                occurrence, GroceryItem.LIST_WEEKLY, at(2026, 9, 20)));
     }
 
-    @Test public void dailyPurchaseStaysDailyAndDoesNotBecomeRecurring() {
+    @Test public void dailyPurchaseStaysDaily() {
         GroceryItem daily = new GroceryItem();
         daily.listType = GroceryItem.LIST_DAILY;
         daily.isPurchased = true;
-        daily.purchasedAt = at(2026, 8, 25);
         assertEquals(GroceryItem.LIST_DAILY,
-                GroceryRecurrenceEngine.effectiveCycle(daily, at(2026, 11, 25)));
-        assertEquals(false, GroceryRecurrenceEngine.isRecurringType(
-                GroceryRecurrenceEngine.originalCycle(daily)));
+                GroceryRecurrenceEngine.effectiveCycle(daily, at(2026, 9, 20)));
     }
 
-    private static GroceryItem recurring(String type, long anchor) {
+    private static GroceryItem recurring(String type, long createdAt) {
         GroceryItem item = new GroceryItem();
-        item.listType = type; item.createdAt = anchor; item.isPurchased = false;
+        item.listType = type;
+        item.createdAt = createdAt;
+        item.isPurchased = false;
+        return item;
+    }
+
+    private static GroceryItem purchasedMaster(String type, long purchasedAt) {
+        GroceryItem item = recurring(type, purchasedAt);
+        item.purchasedAt = purchasedAt;
         return item;
     }
 
