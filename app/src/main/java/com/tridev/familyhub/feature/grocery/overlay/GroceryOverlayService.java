@@ -413,7 +413,7 @@ public class GroceryOverlayService extends Service {
         header.addView(overlayFormToggle, formHeaderParams);
 
         Button headerMenu = overlayHeaderChip("More  ⋮");
-        headerMenu.setContentDescription("More Grocery overlay options");
+        headerMenu.setContentDescription("Open more Grocery overlay options");
         LinearLayout.LayoutParams headerMenuParams =
                 overlayHeaderChipParams(48, 3);
         header.addView(headerMenu, headerMenuParams);
@@ -1048,9 +1048,13 @@ public class GroceryOverlayService extends Service {
         popup.setOutsideTouchable(true);
         popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
+        anchor.setText("More  ▴");
+        anchor.setContentDescription("Close more Grocery overlay options");
         applyOverlayHeaderChipState(anchor, false, true);
         popup.setOnDismissListener(() -> {
             if (overlayHeaderPopup == popup) overlayHeaderPopup = null;
+            anchor.setText("More  ⋮");
+            anchor.setContentDescription("Open more Grocery overlay options");
             applyOverlayHeaderChipState(anchor, false, false);
         });
         overlayHeaderPopup = popup;
