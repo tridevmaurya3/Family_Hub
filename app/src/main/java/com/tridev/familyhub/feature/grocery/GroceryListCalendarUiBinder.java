@@ -148,8 +148,9 @@ public final class GroceryListCalendarUiBinder
         }
     }
 
-    private final class PageController {
+    private static final class PageController {
         private final Activity activity;
+        private final Context appContext;
         private final RecyclerView recycler;
         private final View emptyState;
         private final ConstraintLayout parent;
@@ -181,7 +182,7 @@ public final class GroceryListCalendarUiBinder
                     || !(dueButton.getParent() instanceof LinearLayout)) {
                 return null;
             }
-            return GroceryListCalendarUiBinder.this.new PageController(
+            return new PageController(
                     activity, recycler, emptyState,
                     (ConstraintLayout) recycler.getParent(),
                     (LinearLayout) dueButton.getParent(), dueButton);
@@ -194,6 +195,7 @@ public final class GroceryListCalendarUiBinder
                        @NonNull LinearLayout actionRow,
                        @NonNull View dueButton) {
             this.activity = activity;
+            this.appContext = activity.getApplicationContext();
             this.recycler = recycler;
             this.emptyState = emptyState;
             this.parent = parent;
