@@ -75,6 +75,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private FamilyMemberRepository memberRepository;
     private GroceryAdapter adapter;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
+    private final List<GroceryItem> latestGroceryItems = new ArrayList<>();
     @NonNull private String activeCycleFilter = GroceryItem.LIST_DAILY;
     private int activeStatusFilterId = R.id.filter_pending;
     @NonNull private String activeCategoryFilter = "";
@@ -233,6 +234,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryBudgetButton.setOnClickListener(v -> showBudgetEditor());
         binding.grocerySuggestionsButton.setOnClickListener(
                 v -> showRecurringSuggestions());
+        binding.groceryDueCalendarButton.setOnClickListener(
+                v -> showDueCalendar());
         binding.groceryShoppingModeButton.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), ShoppingModeActivity.class)));
         binding.groceryScanBillButton.setOnClickListener(v ->
@@ -1355,12 +1358,87 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         : R.string.grocery_export_success)));
     }
 
+    private void showDueCalendar() {
+        List<GroceryItem> recurring = new ArrayList<>();
+        for (GroceryItem item : latestGroceryItems) {
+            if (!item.isPurchased
+                    && GroceryRecurrenceEngine.isRecurringType(
+                    GroceryRecurrenceEngine.originalCycle(item))) {
+                recurring.add(item);
+            }
+        }
+        recurring.sort((left, right) -> Long.compare(
+                GroceryRecurrenceEngine.nextDueAt(left),
+                GroceryRecurrenceEngine.nextDueAt(right)
+        ));
+
+        android.widget.LinearLayout content = new android.widget.LinearLayout(
+                requireContext());
+        content.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int padding = Math.round(16 * getResources().getDisplayMetrics().density);
+        content.setPadding(padding, padding / 2, padding, padding);
+
+        long now = System.currentTimeMillis();
+        if (recurring.isEmpty()) {
+            android.widget.TextView empty = new android.widget.TextView(requireContext());
+            empty.setText("No recurring items yet.");
+            empty.setTextSize(14f);
+            empty.setPadding(0, padding, 0, padding);
+            content.addView(empty);
+        } else {
+            SimpleDateFormat date = new SimpleDateFormat(
+                    "EEE, dd MMM yyyy", Locale.getDefault());
+            for (GroceryItem item : recurring) {
+                long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
+                int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
+                String timing;
+                if (item.purchasedAt <= 0L) {
+                    timing = "Ready now • New recurring item";
+                } else if (dueAt <= now) {
+                    timing = "Due now • " + date.format(new java.util.Date(dueAt));
+                } else {
+                    timing = (days == 1 ? "Tomorrow" : "In " + days + " days")
+                            + " • " + date.format(new java.util.Date(dueAt));
+                }
+                android.widget.TextView row = new android.widget.TextView(
+                        requireContext());
+                row.setText(item.name + "\n" + cycleLabel(
+                        GroceryRecurrenceEngine.originalCycle(item))
+                        + " • " + timing);
+                row.setTextSize(13f);
+                row.setTextColor(ContextCompat.getColor(
+                        requireContext(), R.color.fh_on_surface));
+                row.setBackground(ContextCompat.getDrawable(
+                        requireContext(), R.drawable.bg_form_three_tone));
+                row.setPadding(padding, padding / 2, padding, padding / 2);
+                android.widget.LinearLayout.LayoutParams params =
+                        new android.widget.LinearLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.WRAP_CONTENT);
+                params.bottomMargin = padding / 2;
+                content.addView(row, params);
+            }
+        }
+
+        android.widget.ScrollView scroll = new android.widget.ScrollView(
+                requireContext());
+        scroll.addView(content);
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Recurring due calendar")
+                .setMessage("Upcoming items calculated from existing purchase dates")
+                .setView(scroll)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
     private void loadItems(@NonNull String query) {
         final int generation = ++groceryLoadGeneration;
         repository.loadItems(query, items -> {
             if (binding == null || generation != groceryLoadGeneration) {
                 return;
             }
+            latestGroceryItems.clear();
+            latestGroceryItems.addAll(items);
             List<GroceryItem> visibleItems = applyFilter(items);
             Map<String, Double> budgets = new LinkedHashMap<>();
             for (GroceryItem grocery : visibleItems) {
