@@ -14,6 +14,10 @@ import java.util.Set;
 
 /** Grocery-only display options. Existing saved values remain valid. */
 public final class GroceryOptionCatalog {
+    public static final String ADD_CATEGORY_LABEL = "＋ Add new category";
+    private static final String PREFS = "grocery_custom_categories";
+    private static final String KEY_VALUES = "values";
+
     private GroceryOptionCatalog() { }
 
     @NonNull
@@ -26,7 +30,39 @@ public final class GroceryOptionCatalog {
         Set<String> seen = new LinkedHashSet<>();
         for (String value : base) addUnique(result, seen, value);
         for (String value : extras) addUnique(result, seen, value);
+        Set<String> custom = context.getSharedPreferences(
+                PREFS, Context.MODE_PRIVATE).getStringSet(
+                KEY_VALUES, new LinkedHashSet<>());
+        if (custom != null) {
+            List<String> sorted = new ArrayList<>(custom);
+            sorted.sort(String.CASE_INSENSITIVE_ORDER);
+            for (String value : sorted) addUnique(result, seen, value);
+        }
         return result.toArray(new String[0]);
+    }
+
+    public static boolean addCustomCategory(
+            @NonNull Context context, String value) {
+        String clean = value == null ? "" : value.trim();
+        if (clean.isEmpty() || ADD_CATEGORY_LABEL.equalsIgnoreCase(clean)) return false;
+        Set<String> values = new LinkedHashSet<>(context.getSharedPreferences(
+                PREFS, Context.MODE_PRIVATE).getStringSet(
+                KEY_VALUES, new LinkedHashSet<>()));
+        for (String existing : categoryLabels(context)) {
+            if (existing.equalsIgnoreCase(clean)) return true;
+        }
+        values.add(clean);
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putStringSet(KEY_VALUES, values).apply();
+        return true;
+    }
+
+    @NonNull
+    public static String[] categoryLabelsWithAdd(@NonNull Context context) {
+        String[] categories = categoryLabels(context);
+        String[] result = java.util.Arrays.copyOf(categories, categories.length + 1);
+        result[categories.length] = ADD_CATEGORY_LABEL;
+        return result;
     }
 
     @NonNull
