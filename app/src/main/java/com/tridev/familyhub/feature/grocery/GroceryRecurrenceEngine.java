@@ -30,9 +30,9 @@ public final class GroceryRecurrenceEngine {
         if (!isRecurringType(origin)) {
             return selected.equals(normalizeCycle(item.listType));
         }
-        // Pending ownership must be identical in Grocery and the floating
-        // dashboard. Due timing remains display metadata; it must not make the
-        // same pending master disappear from only one of the two screens.
+        // A fresh recurring item is immediately actionable. After purchase the
+        // pending master stays persisted/synced but is hidden until its interval.
+        if (item.purchasedAt > 0L && now < nextDueAt(item)) return false;
         return selected.equals(origin);
     }
 
