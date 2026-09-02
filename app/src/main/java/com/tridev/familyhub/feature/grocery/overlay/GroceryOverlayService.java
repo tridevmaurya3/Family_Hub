@@ -136,6 +136,9 @@ public class GroceryOverlayService extends Service {
     @Nullable private ValueEventListener overlayConnectionListener;
     private boolean voicePanelDetached;
     private boolean voiceStripWasVisible;
+    @Nullable private android.speech.SpeechRecognizer overlaySpeechRecognizer;
+    @Nullable private EditText overlayVoiceInput;
+    @Nullable private ImageButton overlayVoiceButton;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -873,14 +876,7 @@ public class GroceryOverlayService extends Service {
 
         voice.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-            pendingVoiceText = input.getText().toString();
-            // Temporarily detach the system-overlay window so Google's recognizer
-            // is the top foreground surface. The same form/state is reattached
-            // when recognition finishes.
-            suspendOverlayForVoice();
-            Intent capture = new Intent(this, GroceryVoiceCaptureActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(capture);
+            startVoiceInsideOverlay(input, voice);
         });
 
         add.setOnClickListener(v -> {
@@ -2471,6 +2467,97 @@ public class GroceryOverlayService extends Service {
         canvas.drawLine(width - edge, height - edge, width - edge, height - edge - length, paint);
     }
 
+    private void startVoiceInsideOverlay(
+            @NonNull EditText input,
+            @NonNull ImageButton voice
+    ) {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            android.widget.Toast.makeText(this,
+                    R.string.grocery_overlay_voice_permission,
+                    android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) {
+            android.widget.Toast.makeText(this,
+                    R.string.grocery_overlay_voice_unavailable,
+                    android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        stopOverlayVoiceCapture();
+        overlayVoiceInput = input;
+        overlayVoiceButton = voice;
+        voice.setColorFilter(Color.rgb(198, 55, 55));
+        voice.setContentDescription("Listening");
+
+        overlaySpeechRecognizer = android.speech.SpeechRecognizer
+                .createSpeechRecognizer(getApplicationContext());
+        overlaySpeechRecognizer.setRecognitionListener(
+                new android.speech.RecognitionListener() {
+                    @Override public void onReadyForSpeech(android.os.Bundle params) { }
+                    @Override public void onBeginningOfSpeech() { }
+                    @Override public void onRmsChanged(float rmsdB) { }
+                    @Override public void onBufferReceived(byte[] buffer) { }
+                    @Override public void onEndOfSpeech() { }
+
+                    @Override public void onError(int error) {
+                        stopOverlayVoiceCapture();
+                        if (error != android.speech.SpeechRecognizer.ERROR_NO_MATCH
+                                && error != android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                            android.widget.Toast.makeText(
+                                    GroceryOverlayService.this,
+                                    R.string.grocery_overlay_voice_unavailable,
+                                    android.widget.Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override public void onResults(android.os.Bundle results) {
+                        applyOverlayVoiceResults(results);
+                        stopOverlayVoiceCapture();
+                    }
+
+                    @Override public void onPartialResults(android.os.Bundle partialResults) {
+                        applyOverlayVoiceResults(partialResults);
+                    }
+
+                    @Override public void onEvent(int eventType, android.os.Bundle params) { }
+                });
+
+        Intent recognizerIntent = new Intent(
+                android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+                .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
+        overlaySpeechRecognizer.startListening(recognizerIntent);
+    }
+
+    private void applyOverlayVoiceResults(@Nullable android.os.Bundle results) {
+        if (results == null || overlayVoiceInput == null) return;
+        ArrayList<String> matches = results.getStringArrayList(
+                android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+        if (matches == null || matches.isEmpty()) return;
+        String spoken = matches.get(0) == null ? "" : matches.get(0).trim();
+        if (spoken.isEmpty()) return;
+        overlayVoiceInput.setText(spoken);
+        overlayVoiceInput.setSelection(overlayVoiceInput.length());
+    }
+
+    private void stopOverlayVoiceCapture() {
+        if (overlaySpeechRecognizer != null) {
+            overlaySpeechRecognizer.cancel();
+            overlaySpeechRecognizer.destroy();
+            overlaySpeechRecognizer = null;
+        }
+        if (overlayVoiceButton != null) {
+            overlayVoiceButton.setColorFilter(Color.rgb(15, 108, 189));
+            overlayVoiceButton.setContentDescription(
+                    getString(R.string.grocery_overlay_voice));
+        }
+        overlayVoiceInput = null;
+        overlayVoiceButton = null;
+    }
+
     private void suspendOverlayForVoice() {
         dismissOverlayHeaderPopup();
         if (voicePanelDetached) return;
@@ -2928,6 +3015,7 @@ public class GroceryOverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        stopOverlayVoiceCapture();
         if (repository != null) repository.stopRealtimeSync();
         closePanel();
         if (stripView != null) {
