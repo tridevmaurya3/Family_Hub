@@ -494,9 +494,16 @@ public final class GrocerySmartCategoryPicker {
         row.removeAllViews();
         for (String value : values) {
             MaterialButton chip = smallAction(context, value);
+            // These rows are horizontally scrollable, so each chip can own the
+            // full width of its label instead of shortening it with an ellipsis.
+            chip.setEllipsize(null);
+            chip.setMaxLines(1);
+            chip.setHorizontallyScrolling(false);
+            int textWidth = (int) Math.ceil(chip.getPaint().measureText(value));
+            int chipWidth = Math.max(dp(context, 44), textWidth + dp(context, 20));
             chip.setOnClickListener(v -> listener.onSelected(value));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(context, 26));
+                    chipWidth, dp(context, 26));
             params.setMarginEnd(dp(context, 3));
             row.addView(chip, params);
         }
