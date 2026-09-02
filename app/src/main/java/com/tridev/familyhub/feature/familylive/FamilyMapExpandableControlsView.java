@@ -194,7 +194,8 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         expanded = true;
         setCardBackgroundColor(ContextCompat.getColor(
                 getContext(), R.color.family_map_panel_surface));
-        setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.space_1));
+        setStrokeWidth(Math.max(1, Math.round(
+                getResources().getDisplayMetrics().density)));
         setStrokeColor(ContextCompat.getColor(
                 getContext(), R.color.family_map_panel_stroke));
         updateExpandedWidth();
