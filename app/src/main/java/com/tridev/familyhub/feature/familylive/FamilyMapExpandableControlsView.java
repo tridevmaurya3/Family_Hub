@@ -1,6 +1,7 @@
 package com.tridev.familyhub.feature.familylive;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -9,6 +10,7 @@ import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -74,12 +76,6 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
             );
         }
 
-        bindCollapseAfterAction(R.id.buttonFamilyMapFit);
-        bindCollapseAfterAction(R.id.buttonFamilyMapRecenter);
-        bindCollapseAfterAction(R.id.buttonFamilyMapType);
-        bindCollapseAfterAction(R.id.buttonFamilyMapTraffic);
-        bindCollapseAfterAction(R.id.buttonFamilyMapStreetView);
-
         collapse(false);
     }
 
@@ -97,14 +93,6 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         lastAnchorVisibility = Integer.MIN_VALUE;
         lastLegendVisibility = Integer.MIN_VALUE;
         super.onDetachedFromWindow();
-    }
-
-    @Override
-    public void onVisibilityAggregated(boolean isVisible) {
-        super.onVisibilityAggregated(isVisible);
-        if (isVisible && lastAnchorVisibility == VISIBLE) {
-            post(() -> collapse(false));
-        }
     }
 
     private void installVisibilitySync() {
@@ -168,9 +156,6 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
 
         lastAnchorVisibility = desiredVisibility;
-        if (becameVisible) {
-            collapse(false);
-        }
     }
 
     private void syncLegendVisibility() {
@@ -183,22 +168,14 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
                 && currentVisibility == VISIBLE;
         lastLegendVisibility = currentVisibility;
 
-        if (expanded && becameVisible) {
-            collapse(true);
-        }
+        // Live-map redraws may restore the legend. They must not reset a
+        // menu that the user deliberately left open.
     }
 
-    private void bindCollapseAfterAction(int viewId) {
-        View action = findViewById(viewId);
-        if (action == null) {
-            return;
+    public void collapseFromMapTap() {
+        if (expanded) {
+            collapse(true);
         }
-        action.setOnTouchListener((view, event) -> {
-            if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-                post(() -> collapse(true));
-            }
-            return false;
-        });
     }
 
     private void toggleExpandedMenu() {
@@ -215,6 +192,11 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
 
         expanded = true;
+        setCardBackgroundColor(ContextCompat.getColor(
+                getContext(), R.color.family_map_panel_surface));
+        setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.space_1));
+        setStrokeColor(ContextCompat.getColor(
+                getContext(), R.color.family_map_panel_stroke));
         updateExpandedWidth();
 
         actionsContainer.setVisibility(VISIBLE);
@@ -241,6 +223,8 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
 
     private void collapse(boolean animate) {
         expanded = false;
+        setCardBackgroundColor(Color.TRANSPARENT);
+        setStrokeWidth(0);
 
         if (actionsContainer != null) {
             actionsContainer.animate().cancel();
