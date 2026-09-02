@@ -139,6 +139,10 @@ public class GroceryOverlayService extends Service {
     @Nullable private android.speech.SpeechRecognizer overlaySpeechRecognizer;
     @Nullable private EditText overlayVoiceInput;
     @Nullable private ImageButton overlayVoiceButton;
+    @Nullable private TextView overlayVoiceStatus;
+    private final android.os.Handler overlayVoiceHandler =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    @Nullable private Runnable overlayVoiceTimeout;
     private final Set<String> collapsedCategories = new HashSet<>();
 
     private boolean cornerResizeActive;
@@ -581,6 +585,13 @@ public class GroceryOverlayService extends Service {
         LinearLayout.LayoutParams quickLabelParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(18));
         root.addView(quickLabel, quickLabelParams);
+
+        overlayVoiceStatus = text("", 10, true);
+        overlayVoiceStatus.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        overlayVoiceStatus.setPadding(dp(10), 0, dp(10), 0);
+        overlayVoiceStatus.setVisibility(View.GONE);
+        root.addView(overlayVoiceStatus, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(24)));
 
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
@@ -2475,83 +2486,162 @@ public class GroceryOverlayService extends Service {
             @NonNull EditText input,
             @NonNull ImageButton voice
     ) {
+        if (overlaySpeechRecognizer != null) {
+            stopOverlayVoiceCapture();
+            showOverlayVoiceStatus("Voice stopped", Color.rgb(84, 93, 105), 1200L);
+            return;
+        }
         if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
                 != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            android.widget.Toast.makeText(this,
-                    R.string.grocery_overlay_voice_permission,
-                    android.widget.Toast.LENGTH_LONG).show();
+            showOverlayVoiceStatus(
+                    getString(R.string.grocery_overlay_voice_permission),
+                    Color.rgb(176, 74, 63), 3500L);
             return;
         }
         if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) {
-            android.widget.Toast.makeText(this,
-                    R.string.grocery_overlay_voice_unavailable,
-                    android.widget.Toast.LENGTH_LONG).show();
+            showOverlayVoiceStatus(
+                    getString(R.string.grocery_overlay_voice_unavailable),
+                    Color.rgb(176, 74, 63), 3500L);
             return;
         }
-        stopOverlayVoiceCapture();
+
         overlayVoiceInput = input;
         overlayVoiceButton = voice;
-        voice.setColorFilter(Color.rgb(198, 55, 55));
+        voice.setColorFilter(Color.rgb(220, 45, 82));
         voice.setContentDescription("Listening");
+        showOverlayVoiceStatus("Listening…  ••▮••▮••",
+                Color.rgb(220, 45, 82), 0L);
 
-        overlaySpeechRecognizer = android.speech.SpeechRecognizer
-                .createSpeechRecognizer(getApplicationContext());
-        overlaySpeechRecognizer.setRecognitionListener(
-                new android.speech.RecognitionListener() {
-                    @Override public void onReadyForSpeech(android.os.Bundle params) { }
-                    @Override public void onBeginningOfSpeech() { }
-                    @Override public void onRmsChanged(float rmsdB) { }
-                    @Override public void onBufferReceived(byte[] buffer) { }
-                    @Override public void onEndOfSpeech() { }
-
-                    @Override public void onError(int error) {
-                        stopOverlayVoiceCapture();
-                        if (error != android.speech.SpeechRecognizer.ERROR_NO_MATCH
-                                && error != android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
-                            android.widget.Toast.makeText(
-                                    GroceryOverlayService.this,
-                                    R.string.grocery_overlay_voice_unavailable,
-                                    android.widget.Toast.LENGTH_SHORT).show();
+        try {
+            // Use the foreground overlay service itself. On Android 14+ its
+            // manifest microphone FGS type keeps RECORD_AUDIO available while
+            // Family Hub remains behind the floating panel.
+            overlaySpeechRecognizer = android.speech.SpeechRecognizer
+                    .createSpeechRecognizer(this);
+            overlaySpeechRecognizer.setRecognitionListener(
+                    new android.speech.RecognitionListener() {
+                        @Override public void onReadyForSpeech(
+                                android.os.Bundle params) {
+                            showOverlayVoiceStatus("Listening…  ••▮••▮••",
+                                    Color.rgb(220, 45, 82), 0L);
                         }
-                    }
 
-                    @Override public void onResults(android.os.Bundle results) {
-                        applyOverlayVoiceResults(results);
-                        stopOverlayVoiceCapture();
-                    }
+                        @Override public void onBeginningOfSpeech() {
+                            showOverlayVoiceStatus("Listening…  ▮•▮▮•▮",
+                                    Color.rgb(220, 45, 82), 0L);
+                        }
 
-                    @Override public void onPartialResults(android.os.Bundle partialResults) {
-                        applyOverlayVoiceResults(partialResults);
-                    }
+                        @Override public void onRmsChanged(float rmsdB) { }
+                        @Override public void onBufferReceived(byte[] buffer) { }
 
-                    @Override public void onEvent(int eventType, android.os.Bundle params) { }
-                });
+                        @Override public void onEndOfSpeech() {
+                            showOverlayVoiceStatus("Processing voice…",
+                                    Color.rgb(168, 93, 0), 0L);
+                        }
 
-        Intent recognizerIntent = new Intent(
-                android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-                .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        overlaySpeechRecognizer.startListening(recognizerIntent);
+                        @Override public void onError(int error) {
+                            stopOverlayVoiceCapture();
+                            String message = (error
+                                    == android.speech.SpeechRecognizer.ERROR_NO_MATCH
+                                    || error
+                                    == android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+                                    ? "No speech detected • Tap mic to retry"
+                                    : "Voice input failed • Tap mic to retry";
+                            showOverlayVoiceStatus(message,
+                                    Color.rgb(176, 74, 63), 3000L);
+                        }
+
+                        @Override public void onResults(android.os.Bundle results) {
+                            boolean added = applyOverlayVoiceResults(results);
+                            stopOverlayVoiceCapture();
+                            showOverlayVoiceStatus(
+                                    added ? "✓ Voice text added"
+                                            : "No speech detected • Tap mic to retry",
+                                    added ? Color.rgb(15, 108, 89)
+                                            : Color.rgb(176, 74, 63),
+                                    2600L);
+                        }
+
+                        @Override public void onPartialResults(
+                                android.os.Bundle partialResults) {
+                            if (applyOverlayVoiceResults(partialResults)) {
+                                showOverlayVoiceStatus("Listening…  ▮•▮▮•▮",
+                                        Color.rgb(220, 45, 82), 0L);
+                            }
+                        }
+
+                        @Override public void onEvent(
+                                int eventType, android.os.Bundle params) { }
+                    });
+
+            Intent recognizerIntent = new Intent(
+                    android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                            android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_CALLING_PACKAGE,
+                            getPackageName());
+            overlaySpeechRecognizer.startListening(recognizerIntent);
+
+            overlayVoiceTimeout = () -> {
+                if (overlaySpeechRecognizer == null) return;
+                stopOverlayVoiceCapture();
+                showOverlayVoiceStatus("No speech detected • Tap mic to retry",
+                        Color.rgb(176, 74, 63), 3000L);
+            };
+            overlayVoiceHandler.postDelayed(overlayVoiceTimeout, 15000L);
+        } catch (RuntimeException error) {
+            stopOverlayVoiceCapture();
+            showOverlayVoiceStatus("Voice input failed • Tap mic to retry",
+                    Color.rgb(176, 74, 63), 3000L);
+        }
     }
 
-    private void applyOverlayVoiceResults(@Nullable android.os.Bundle results) {
-        if (results == null || overlayVoiceInput == null) return;
+    private boolean applyOverlayVoiceResults(
+            @Nullable android.os.Bundle results
+    ) {
+        if (results == null || overlayVoiceInput == null) return false;
         ArrayList<String> matches = results.getStringArrayList(
                 android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
-        if (matches == null || matches.isEmpty()) return;
+        if (matches == null || matches.isEmpty()) return false;
         String spoken = matches.get(0) == null ? "" : matches.get(0).trim();
-        if (spoken.isEmpty()) return;
+        if (spoken.isEmpty()) return false;
         overlayVoiceInput.setText(spoken);
         overlayVoiceInput.setSelection(overlayVoiceInput.length());
+        return true;
+    }
+
+    private void showOverlayVoiceStatus(
+            @NonNull String message,
+            int color,
+            long hideAfterMs
+    ) {
+        if (overlayVoiceStatus == null) return;
+        overlayVoiceStatus.setText(message);
+        overlayVoiceStatus.setTextColor(color);
+        overlayVoiceStatus.setVisibility(View.VISIBLE);
+        if (hideAfterMs > 0L) {
+            TextView status = overlayVoiceStatus;
+            overlayVoiceHandler.postDelayed(() -> {
+                if (overlayVoiceStatus == status
+                        && message.contentEquals(status.getText())) {
+                    status.setVisibility(View.GONE);
+                }
+            }, hideAfterMs);
+        }
     }
 
     private void stopOverlayVoiceCapture() {
+        if (overlayVoiceTimeout != null) {
+            overlayVoiceHandler.removeCallbacks(overlayVoiceTimeout);
+            overlayVoiceTimeout = null;
+        }
         if (overlaySpeechRecognizer != null) {
-            overlaySpeechRecognizer.cancel();
-            overlaySpeechRecognizer.destroy();
+            android.speech.SpeechRecognizer recognizer = overlaySpeechRecognizer;
             overlaySpeechRecognizer = null;
+            recognizer.destroy();
         }
         if (overlayVoiceButton != null) {
             overlayVoiceButton.setColorFilter(Color.rgb(15, 108, 189));
@@ -2616,6 +2706,7 @@ public class GroceryOverlayService extends Service {
             overlayShoppingSelection = SHOPPING_ALL;
             overlayInlinePurchaseEditorOpen = false;
             cornerResizeActive = false;
+            overlayVoiceStatus = null;
             voicePanelDetached = false;
         }
     }
