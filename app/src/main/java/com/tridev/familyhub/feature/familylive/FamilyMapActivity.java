@@ -127,6 +127,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private MaterialButton typeButton;
     private MaterialButton trafficButton;
     private FamilyMapComparePanelView comparePanel;
+    private FamilyMapExpandableControlsView expandableControls;
 
     private boolean mapReady;
     private boolean dataReady;
@@ -154,6 +155,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         comparePanel = findViewById(R.id.familyMapComparePanel);
         controlRail = findViewById(R.id.familyMapControlRail);
         bottomPanel = findViewById(R.id.familyMapBottomPanel);
+        expandableControls = findViewById(R.id.familyMapExpandableControls);
 
         comparePanel.setListener(new FamilyMapComparePanelView.Listener() {
             @Override
@@ -347,7 +349,12 @@ public final class FamilyMapActivity extends AppCompatActivity {
             }
         });
 
-        googleMap.setOnMapClickListener(ignored -> clearMemberSelection());
+        googleMap.setOnMapClickListener(ignored -> {
+            clearMemberSelection();
+            if (expandableControls != null) {
+                expandableControls.collapseFromMapTap();
+            }
+        });
         googleMap.setOnInfoWindowCloseListener(
                 ignored -> setSelectionChromeVisible(true)
         );
