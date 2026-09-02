@@ -1353,17 +1353,21 @@ public class GroceryOverlayService extends Service {
         for (GroceryItem item : items) {
             if (item == null || item.isPurchased || item.recurrenceShadowed
                     || !matchesOverlayFilters(item)) continue;
-            String cycle = GroceryRecurrenceEngine.effectiveCycle(item, now);
             if (!overlayShoppingMode) {
-                if (visibleListType.equals(cycle)) count++;
+                if (GroceryRecurrenceEngine.matchesCycle(
+                        item, visibleListType, now)) count++;
                 continue;
             }
             if (SHOPPING_ALL.equals(overlayShoppingSelection)) {
-                if (GroceryItem.LIST_DAILY.equals(cycle)
-                        || GroceryItem.LIST_TWO_MONTH.equals(cycle)
-                        || GroceryItem.LIST_THREE_MONTH.equals(cycle)
-                        || GroceryItem.LIST_MONTHLY.equals(cycle)) count++;
-            } else if (overlayShoppingSelection.equals(cycle)) {
+                if (GroceryRecurrenceEngine.matchesCycle(item, GroceryItem.LIST_DAILY, now)
+                        || GroceryRecurrenceEngine.matchesCycle(
+                                item, GroceryItem.LIST_TWO_MONTH, now)
+                        || GroceryRecurrenceEngine.matchesCycle(
+                                item, GroceryItem.LIST_THREE_MONTH, now)
+                        || GroceryRecurrenceEngine.matchesCycle(
+                                item, GroceryItem.LIST_MONTHLY, now)) count++;
+            } else if (GroceryRecurrenceEngine.matchesCycle(
+                    item, overlayShoppingSelection, now)) {
                 count++;
             }
         }
