@@ -1607,11 +1607,16 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         int pending = 0;
         int purchased = 0;
         double total = 0;
+        long now = System.currentTimeMillis();
         for (GroceryItem item : items) {
             if (item.isPurchased) {
                 purchased++;
             } else {
-                pending++;
+                String cycle = GroceryRecurrenceEngine.effectiveCycle(item, now);
+                if (!item.recurrenceShadowed
+                        && GroceryRecurrenceEngine.matchesCycle(item, cycle, now)) {
+                    pending++;
+                }
                 total += item.estimatedCost;
             }
         }

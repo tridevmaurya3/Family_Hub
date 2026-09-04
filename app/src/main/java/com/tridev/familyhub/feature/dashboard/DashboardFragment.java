@@ -6,6 +6,8 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -74,6 +76,15 @@ public class DashboardFragment extends Fragment {
     private StatusCardView familyStatusCard;
     private StatusCardView documentStatusCard;
     @Nullable private ImageView profileAvatar;
+
+    private final Handler headerClockHandler = new Handler(Looper.getMainLooper());
+    private final Runnable headerClockTick = new Runnable() {
+        @Override
+        public void run() {
+            updateHeaderDateTime();
+            headerClockHandler.postDelayed(this, 1000L);
+        }
+    };
 
     private final NumberFormat currencyFormatter =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -245,13 +256,30 @@ public class DashboardFragment extends Fragment {
             greeting = greeting + ", " + firstName;
         }
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat(
-                getString(R.string.dashboard_date_format),
-                Locale.getDefault()
-        );
         binding.dashboardGreeting.setText(greeting);
-        binding.dashboardCurrentDate.setText(dateFormat.format(new Date()));
+        updateHeaderDateTime();
         renderProfileAvatar();
+    }
+
+    private void updateHeaderDateTime() {
+        if (binding == null) return;
+        SimpleDateFormat dateTimeFormat = new SimpleDateFormat(
+                getString(R.string.dashboard_date_format) + " • hh:mm:ss a",
+                Locale.getDefault());
+        binding.dashboardCurrentDate.setText(dateTimeFormat.format(new Date()));
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        headerClockHandler.removeCallbacks(headerClockTick);
+        headerClockHandler.post(headerClockTick);
+    }
+
+    @Override
+    public void onStop() {
+        headerClockHandler.removeCallbacks(headerClockTick);
+        super.onStop();
     }
 
     private void bindStatusCards() {
@@ -1020,6 +1048,7 @@ public class DashboardFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
+        headerClockHandler.removeCallbacks(headerClockTick);
         if (dashboardRepository != null) {
             dashboardRepository.close();
             dashboardRepository = null;
