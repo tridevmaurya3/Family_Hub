@@ -234,8 +234,26 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
+        save(item, callback, null);
+    }
+
+    /** Saves an explicit edit without waiting behind realtime sync work. */
+    public void saveEdit(
+            @NonNull GroceryItem item,
+            @NonNull ActionCallback callback
+    ) {
+        save(item, callback, USER_ACTION_EXECUTOR);
+    }
+
+    private void save(
+            @NonNull GroceryItem item,
+            @NonNull ActionCallback callback,
+            @Nullable ExecutorService requestedExecutor
+    ) {
         if (item.historyOnly) {
-            saveRecoveredPurchase(item, callback);
+            saveRecoveredPurchase(item, callback,
+                    requestedExecutor == null
+                            ? DATABASE_EXECUTOR : requestedExecutor);
             return;
         }
         long now = System.currentTimeMillis();
@@ -254,8 +272,9 @@ public class GroceryRepository {
             item.cloudId = UUID.randomUUID().toString();
         }
 
-        ExecutorService writeExecutor = item.isPurchased
-                ? PURCHASE_ACTION_EXECUTOR : DATABASE_EXECUTOR;
+        ExecutorService writeExecutor = requestedExecutor != null
+                ? requestedExecutor
+                : item.isPurchased ? PURCHASE_ACTION_EXECUTOR : DATABASE_EXECUTOR;
         writeExecutor.execute(() -> {
             if (item.id == 0L) {
                 GroceryItem duplicate = groceryItemDao.findDuplicate(item.name);
@@ -295,7 +314,7 @@ public class GroceryRepository {
     ) {
         long normalizedPurchasedAt = normalizePurchaseTimestamp(selectedPurchasedAt);
         item.purchasedAt = normalizedPurchasedAt;
-        save(item, () -> DATABASE_EXECUTOR.execute(() -> {
+        saveEdit(item, () -> USER_ACTION_EXECUTOR.execute(() -> {
             FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
                     .updateMatchingPurchaseDate(item.name, originalPurchasedAt,
                             normalizedPurchasedAt);
@@ -1194,12 +1213,19 @@ public class GroceryRepository {
 
     private void saveRecoveredPurchase(
             @NonNull GroceryItem item, @NonNull ActionCallback callback) {
+        saveRecoveredPurchase(item, callback, DATABASE_EXECUTOR);
+    }
+
+    private void saveRecoveredPurchase(
+            @NonNull GroceryItem item,
+            @NonNull ActionCallback callback,
+            @NonNull ExecutorService writeExecutor) {
         long historyId = recoveredHistoryId(item);
         if (historyId <= 0L) {
             mainHandler.post(callback::onComplete);
             return;
         }
-        DATABASE_EXECUTOR.execute(() -> {
+        writeExecutor.execute(() -> {
             item.purchasedAt = normalizePurchaseTimestamp(item.purchasedAt);
             FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
                     .updateRecovered(historyId, item.name, item.category,

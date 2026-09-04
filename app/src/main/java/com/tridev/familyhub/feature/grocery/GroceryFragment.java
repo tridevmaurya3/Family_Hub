@@ -1049,7 +1049,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 repository.savePurchasedEdit(item, originalPurchaseAt,
                         selectedPurchaseAt[0], saveComplete::run);
             } else {
-                estimateAndSave(item, saveComplete);
+                estimateAndSave(item, existing != null, saveComplete);
             }
         });
         dialog.show();
@@ -1754,7 +1754,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 "(?i)fortnight(?:ly)?|15\\s*day(?:s)?|weekly|week|monthly|daily|list|add|item|15\\s*दिन|साप्ताहिक|हफ्ते|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
                 " ").replaceAll("\\s+", " ").trim();
         item.name = normalized.isEmpty() ? spoken.trim() : normalized;
-        estimateAndSave(item, () -> {
+        estimateAndSave(item, false, () -> {
             if (binding != null) {
                 loadItems(currentQuery());
                 Snackbar.make(binding.getRoot(),
@@ -1797,6 +1797,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     private void estimateAndSave(
             @NonNull GroceryItem item,
+            boolean editingExisting,
             @NonNull Runnable complete
     ) {
         if (item.autoPriceEnabled && item.actualCost > 0D
@@ -1813,21 +1814,21 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                                     location.getLongitude());
                             item.priceConfidence = 100;
                         }
-                        repository.save(item, complete::run);
+                        saveEditorItem(item, editingExisting, complete);
                     })
                     .addOnFailureListener(error ->
-                            repository.save(item, complete::run));
+                            saveEditorItem(item, editingExisting, complete));
             return;
         }
         if (!item.autoPriceEnabled || item.estimatedCost > 0D
                 || item.name.trim().isEmpty()) {
-            repository.save(item, complete::run);
+            saveEditorItem(item, editingExisting, complete);
             return;
         }
         if (ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            estimateWithKey(item, "", complete);
+            estimateWithKey(item, "", editingExisting, complete);
             return;
         }
         LocationServices.getFusedLocationProviderClient(requireContext())
@@ -1836,15 +1837,26 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     String key = location == null ? "" : String.format(
                             Locale.US, "%.2f,%.2f",
                             location.getLatitude(), location.getLongitude());
-                    estimateWithKey(item, key, complete);
+                    estimateWithKey(item, key, editingExisting, complete);
                 })
                 .addOnFailureListener(error ->
-                        estimateWithKey(item, "", complete));
+                        estimateWithKey(item, "", editingExisting, complete));
+    }
+
+    private void saveEditorItem(@NonNull GroceryItem item,
+                                boolean editingExisting,
+                                @NonNull Runnable complete) {
+        if (editingExisting) {
+            repository.saveEdit(item, complete::run);
+        } else {
+            repository.save(item, complete::run);
+        }
     }
 
     private void estimateWithKey(
             @NonNull GroceryItem item,
             @NonNull String key,
+            boolean editingExisting,
             @NonNull Runnable complete
     ) {
         repository.estimatePrice(item.name, key, (amount, confidence) -> {
@@ -1853,7 +1865,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 item.priceLocationKey = key;
                 item.priceConfidence = confidence;
             }
-            repository.save(item, complete::run);
+            saveEditorItem(item, editingExisting, complete);
         });
     }
 
