@@ -1422,10 +1422,10 @@ public class GroceryOverlayService extends Service {
 
     private int renderSection(List<GroceryItem> items, String listType, String heading, int alreadyShown) {
         int count = 0;
+        long now = System.currentTimeMillis();
         for (GroceryItem item : items) {
             if (!item.isPurchased && !item.recurrenceShadowed
-                    && listType.equals(GroceryRecurrenceEngine.effectiveCycle(
-                            item, System.currentTimeMillis()))
+                    && GroceryRecurrenceEngine.matchesCycle(item, listType, now)
                     && matchesOverlayFilters(item)) count++;
         }
         TextView sectionTitle = text(heading + "  (" + count + ")", 12, true);
@@ -1441,8 +1441,7 @@ public class GroceryOverlayService extends Service {
         Map<String, List<GroceryItem>> grouped = new LinkedHashMap<>();
         for (GroceryItem item : ordered) {
             if (item.isPurchased || item.recurrenceShadowed
-                    || !listType.equals(GroceryRecurrenceEngine.effectiveCycle(
-                            item, System.currentTimeMillis()))
+                    || !GroceryRecurrenceEngine.matchesCycle(item, listType, now)
                     || !matchesOverlayFilters(item)) continue;
             String categoryName = item.category.isEmpty()
                     ? getString(R.string.grocery_uncategorized) : item.category;
