@@ -789,9 +789,10 @@ public class GroceryRepository {
                 if (!item.familyId.isEmpty() && !familyId.equals(item.familyId)) {
                     continue;
                 }
-                // Retry every family-owned row with its stable cloud id. This is
-                // idempotent and repairs records whose earlier Firebase write was
-                // rejected or interrupted; previously such rows were skipped forever.
+                boolean localOnly = item.familyId.isEmpty();
+                // New local rows may be published after family setup. Existing
+                // family rows are compared with Firebase before any retry so an
+                // older device cannot restore stale or deleted data.
                 if (item.cloudId.isEmpty()) {
                     item.cloudId = UUID.randomUUID().toString();
                 }
@@ -806,23 +807,64 @@ public class GroceryRepository {
                     item.updatedByName = displayName(user);
                 }
                 upsertLocal(item);
-                firebaseRoot.child("sharedShopping").child(familyId)
-                        .child("items").child(item.cloudId)
-                        .updateChildren(toCloudValues(item));
+                uploadIfNotStale(item, familyId, localOnly);
+            }
+        });
+    }
+
+    /** Prevents an older device cache from replacing a newer family update. */
+    private void uploadIfNotStale(@NonNull GroceryItem item,
+                                  @NonNull String familyId,
+                                  boolean localOnly) {
+        DatabaseReference itemReference = firebaseRoot.child("sharedShopping")
+                .child(familyId).child("items").child(item.cloudId);
+        itemReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                long remoteUpdatedAt = longValue(snapshot.child("updatedAt"));
+                if ((!snapshot.exists() && localOnly)
+                        || (snapshot.exists() && item.updatedAt > remoteUpdatedAt)) {
+                    itemReference.updateChildren(toCloudValues(item));
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // The active Firebase listener/client retry queue remains in charge.
             }
         });
     }
 
     private void syncItem(@NonNull GroceryItem item) {
         if (!activeFamilyId.isEmpty()) {
-            item.familyId = activeFamilyId;
-            DATABASE_EXECUTOR.execute(() -> upsertLocal(item));
-            firebaseRoot.child("sharedShopping").child(activeFamilyId)
-                    .child("items").child(item.cloudId)
-                    .updateChildren(toCloudValues(item));
+            publishItem(item, activeFamilyId);
             return;
         }
-        startRealtimeSync(() -> { });
+        accountRepository.loadSession(
+                new FamilyAccountRepository.ResultCallback<
+                        FamilyAccountRepository.SessionState>() {
+                    @Override
+                    public void onSuccess(
+                            @Nullable FamilyAccountRepository.SessionState state) {
+                        if (state == null || !state.isActive()
+                                || state.familyId == null) return;
+                        publishItem(item, state.familyId);
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception error) {
+                        // Room remains authoritative until Firebase reconnects.
+                    }
+                });
+    }
+
+    private void publishItem(@NonNull GroceryItem item,
+                             @NonNull String familyId) {
+        item.familyId = familyId;
+        DATABASE_EXECUTOR.execute(() -> upsertLocal(item));
+        firebaseRoot.child("sharedShopping").child(familyId)
+                .child("items").child(item.cloudId)
+                .updateChildren(toCloudValues(item));
     }
 
     private void upsertLocal(@NonNull GroceryItem item) {
