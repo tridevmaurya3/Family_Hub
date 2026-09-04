@@ -10,9 +10,11 @@ import androidx.annotation.Nullable;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.FinanceSummary;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
+import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 
 import java.util.Calendar;
 import java.time.DateTimeException;
@@ -176,9 +178,18 @@ public class DashboardRepository {
                 stats.setPlannerCompleted(
                         database.plannerItemDao().countCompleted()
                 );
-                stats.setGroceryPending(
-                        database.groceryItemDao().countPending()
-                );
+                int activeGroceryPending = 0;
+                long groceryNow = System.currentTimeMillis();
+                for (GroceryItem item : database.groceryItemDao().getAll()) {
+                    if (item.isPurchased) continue;
+                    String cycle = GroceryRecurrenceEngine.effectiveCycle(
+                            item, groceryNow);
+                    if (GroceryRecurrenceEngine.matchesCycle(
+                            item, cycle, groceryNow)) {
+                        activeGroceryPending++;
+                    }
+                }
+                stats.setGroceryPending(activeGroceryPending);
                 stats.setGroceryPurchased(
                         database.groceryItemDao().countPurchased()
                 );
