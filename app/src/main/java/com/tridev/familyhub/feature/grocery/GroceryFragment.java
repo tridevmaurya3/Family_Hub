@@ -1144,7 +1144,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         originalPurchaseAt, selectedPurchaseAt[0],
                         saveComplete::run);
             } else {
-                estimateAndSave(item, existing != null, saveComplete);
+                estimateAndSave(item, existing != null, originalItemName,
+                        saveComplete);
             }
         });
         dialog.show();
@@ -1917,7 +1918,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 "(?i)fortnight(?:ly)?|15\\s*day(?:s)?|weekly|week|monthly|daily|list|add|item|15\\s*दिन|साप्ताहिक|हफ्ते|मंथली|मासिक|डेली|लिस्ट|जोड़ो|ऐड",
                 " ").replaceAll("\\s+", " ").trim();
         item.name = normalized.isEmpty() ? spoken.trim() : normalized;
-        estimateAndSave(item, false, () -> {
+        estimateAndSave(item, false, item.name, () -> {
             if (binding != null) {
                 loadItems(currentQuery());
                 Snackbar.make(binding.getRoot(),
@@ -1961,6 +1962,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private void estimateAndSave(
             @NonNull GroceryItem item,
             boolean editingExisting,
+            @NonNull String originalItemName,
             @NonNull Runnable complete
     ) {
         if (item.autoPriceEnabled && item.actualCost > 0D
@@ -1977,21 +1979,23 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                                     location.getLongitude());
                             item.priceConfidence = 100;
                         }
-                        saveEditorItem(item, editingExisting, complete);
+                        saveEditorItem(item, editingExisting,
+                                originalItemName, complete);
                     })
                     .addOnFailureListener(error ->
-                            saveEditorItem(item, editingExisting, complete));
+                            saveEditorItem(item, editingExisting,
+                                    originalItemName, complete));
             return;
         }
         if (!item.autoPriceEnabled || item.estimatedCost > 0D
                 || item.name.trim().isEmpty()) {
-            saveEditorItem(item, editingExisting, complete);
+            saveEditorItem(item, editingExisting, originalItemName, complete);
             return;
         }
         if (ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
-            estimateWithKey(item, "", editingExisting, complete);
+            estimateWithKey(item, "", editingExisting, originalItemName, complete);
             return;
         }
         LocationServices.getFusedLocationProviderClient(requireContext())
@@ -2000,17 +2004,20 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     String key = location == null ? "" : String.format(
                             Locale.US, "%.2f,%.2f",
                             location.getLatitude(), location.getLongitude());
-                    estimateWithKey(item, key, editingExisting, complete);
+                    estimateWithKey(item, key, editingExisting,
+                            originalItemName, complete);
                 })
                 .addOnFailureListener(error ->
-                        estimateWithKey(item, "", editingExisting, complete));
+                        estimateWithKey(item, "", editingExisting,
+                                originalItemName, complete));
     }
 
     private void saveEditorItem(@NonNull GroceryItem item,
                                 boolean editingExisting,
+                                @NonNull String originalItemName,
                                 @NonNull Runnable complete) {
         if (editingExisting) {
-            repository.saveEdit(item, complete::run);
+            repository.saveEdit(item, originalItemName, complete::run);
         } else {
             repository.save(item, complete::run);
         }
@@ -2020,6 +2027,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             @NonNull GroceryItem item,
             @NonNull String key,
             boolean editingExisting,
+            @NonNull String originalItemName,
             @NonNull Runnable complete
     ) {
         repository.estimatePrice(item.name, key, (amount, confidence) -> {
@@ -2028,7 +2036,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 item.priceLocationKey = key;
                 item.priceConfidence = confidence;
             }
-            saveEditorItem(item, editingExisting, complete);
+            saveEditorItem(item, editingExisting, originalItemName, complete);
         });
     }
 
