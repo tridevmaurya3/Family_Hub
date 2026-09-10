@@ -84,6 +84,8 @@ public final class FamilyTaskRepository {
             if (task.createdAt == 0L) task.createdAt = now;
             if (task.cloudId.isEmpty()) task.cloudId = UUID.randomUUID().toString();
             if (task.createdByUid.isEmpty() && user != null) task.createdByUid = user.getUid();
+            if (task.createdByName.isEmpty()) task.createdByName = displayName();
+            task.updatedByName = displayName();
             task.updatedAt = now;
             if (task.id == 0L) task.id = dao.insert(task); else dao.update(task);
             if (task.shared) publish(task);
@@ -102,6 +104,8 @@ public final class FamilyTaskRepository {
             if (task.createdByUid.isEmpty() && user != null) {
                 task.createdByUid = user.getUid();
             }
+            if (task.createdByName.isEmpty()) task.createdByName = displayName();
+            task.updatedByName = displayName();
             task.status = completed
                     ? FamilyTask.STATUS_COMPLETED
                     : FamilyTask.STATUS_PENDING;
@@ -159,6 +163,8 @@ public final class FamilyTaskRepository {
         next.createdAt = createdAt;
         next.updatedAt = createdAt;
         next.createdByUid = completed.createdByUid;
+        next.createdByName = completed.createdByName;
+        next.updatedByName = completed.updatedByName;
         next.sourceType = "RECURRING_TASK";
         next.sourceRecordId = seriesId;
         next.shared = completed.shared;
@@ -215,6 +221,8 @@ public final class FamilyTaskRepository {
         values.put("createdAt", task.createdAt);
         values.put("completedAt", task.completedAt);
         values.put("createdByUid", task.createdByUid);
+        values.put("createdByName", task.createdByName);
+        values.put("updatedByName", task.updatedByName);
         values.put("completedByName", task.completedByName);
         values.put("sourceType", task.sourceType);
         values.put("sourceRecordId", task.sourceRecordId);
@@ -254,7 +262,9 @@ public final class FamilyTaskRepository {
             task.updatedAt = remoteUpdatedAt;
             task.completedAt = number(s, "completedAt");
             task.createdByUid = text(s, "createdByUid");
+            task.createdByName = text(s, "createdByName");
             task.updatedByUid = text(s, "updatedByUid");
+            task.updatedByName = text(s, "updatedByName");
             task.completedByName = text(s, "completedByName");
             task.sourceType = fallback(text(s, "sourceType"), "FAMILY_TASK");
             task.sourceRecordId = text(s, "sourceRecordId");

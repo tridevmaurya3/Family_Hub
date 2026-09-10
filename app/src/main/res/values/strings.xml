@@ -1584,4 +1584,10 @@ Sharing: %12$s</string>
     <string name="task_status_pending">Pending</string>
     <string name="task_status_completed">Completed</string>
     <string name="task_status_all">All</string>
+    <string name="task_assignment_everyone">Everyone</string>
+    <string name="task_assignment_mine">My tasks</string>
+    <string name="task_assignment_family">Whole family</string>
+    <string name="family_tasks_assigned_to">Assigned to %1$s</string>
+    <string name="family_tasks_created_by">Created by %1$s</string>
+    <string name="family_tasks_updated_by">Updated by %1$s</string>
 </resources>

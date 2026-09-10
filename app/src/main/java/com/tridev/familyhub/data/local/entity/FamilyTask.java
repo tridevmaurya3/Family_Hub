@@ -39,7 +39,9 @@ public class FamilyTask {
     public long updatedAt;
     public long completedAt;
     @NonNull public String createdByUid = "";
+    @NonNull public String createdByName = "";
     @NonNull public String updatedByUid = "";
+    @NonNull public String updatedByName = "";
     @NonNull public String completedByName = "";
     @NonNull public String sourceType = "FAMILY_TASK";
     @NonNull public String sourceRecordId = "";

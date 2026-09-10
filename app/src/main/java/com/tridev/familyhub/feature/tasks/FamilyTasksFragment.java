@@ -20,6 +20,8 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
@@ -46,6 +48,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private FamilyTaskAdapter adapter;
     private int activeFilter = R.id.task_filter_today;
     private int activeStatus = R.id.task_status_pending;
+    private int activeAssignment = R.id.task_assignment_everyone;
     private boolean overdueOnly;
 
     @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater,
@@ -87,6 +90,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskStatusGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (!checkedIds.isEmpty()) activeStatus = checkedIds.get(0);
             overdueOnly = false;
+            reload();
+        });
+        binding.taskAssignmentGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (!checkedIds.isEmpty()) activeAssignment = checkedIds.get(0);
             reload();
         });
         binding.taskPendingCard.setOnClickListener(v -> selectSummary(false,
@@ -195,15 +202,30 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                         || (activeStatus == R.id.task_status_pending && !completed);
                 boolean dateMatches = activeFilter == R.id.task_filter_all
                         || (task.dueAt >= range[0] && task.dueAt < range[1]);
+                boolean assignmentMatches = matchesAssignment(task);
                 if (overdueOnly) dateMatches = !completed
                         && task.dueAt < startOfToday();
-                if (statusMatches && dateMatches) visible.add(task);
+                if (statusMatches && dateMatches && assignmentMatches) visible.add(task);
             }
             adapter.submitList(visible);
             binding.taskResultSummary.setText(getString(R.string.family_tasks_result_count, visible.size(), pending));
             binding.taskEmptyState.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE);
             binding.taskRecyclerView.setVisibility(visible.isEmpty() ? View.GONE : View.VISIBLE);
         });
+    }
+
+    private boolean matchesAssignment(@NonNull FamilyTask task) {
+        if (activeAssignment == R.id.task_assignment_everyone) return true;
+        if (activeAssignment == R.id.task_assignment_family) {
+            return task.assignedMemberId.isEmpty()
+                    && task.assignedMemberName.isEmpty();
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return false;
+        if (user.getUid().equals(task.assignedMemberId)) return true;
+        String displayName = user.getDisplayName();
+        return displayName != null && !displayName.trim().isEmpty()
+                && displayName.trim().equalsIgnoreCase(task.assignedMemberName);
     }
 
     private void scheduleAllPendingTasks() {
@@ -294,8 +316,15 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             String memberName = text(form.taskMemberInput);
             task.assignedMemberName = memberName.equals(memberNames.get(0)) ? "" : memberName;
             task.assignedMemberId = "";
+            boolean validMember = task.assignedMemberName.isEmpty();
             for (FamilyMember member : members) if (member.name.equals(task.assignedMemberName)) {
-                task.assignedMemberId = member.cloudUid.isEmpty() ? member.cloudProfileId : member.cloudUid; break;
+                task.assignedMemberId = member.cloudUid.isEmpty() ? member.cloudProfileId : member.cloudUid;
+                validMember = true;
+                break;
+            }
+            if (!validMember) {
+                task.assignedMemberName = "";
+                task.assignedMemberId = "";
             }
             task.reminderEnabled = form.taskReminderSwitch.isChecked();
             repository.save(task, () -> {

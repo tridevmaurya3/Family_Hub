@@ -132,6 +132,31 @@
             android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/task_status_all" />
     </com.google.android.material.chip.ChipGroup>
 
+    <HorizontalScrollView
+        android:id="@+id/task_assignment_scroll"
+        android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4" android:scrollbars="none"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_status_group">
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/task_assignment_group"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            app:singleSelection="true" app:selectionRequired="true"
+            app:chipSpacingHorizontal="@dimen/space_6">
+            <com.google.android.material.chip.Chip android:id="@+id/task_assignment_everyone"
+                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:checked="true"
+                android:text="@string/task_assignment_everyone" />
+            <com.google.android.material.chip.Chip android:id="@+id/task_assignment_mine"
+                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/task_assignment_mine" />
+            <com.google.android.material.chip.Chip android:id="@+id/task_assignment_family"
+                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/task_assignment_family" />
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/task_search_layout" style="@style/Widget.FamilyHub.TextInputLayout"
         android:layout_width="0dp" android:layout_height="wrap_content"
@@ -139,7 +164,7 @@
         app:endIconMode="clear_text" app:startIconDrawable="@drawable/ic_search"
         app:startIconTint="@color/fh_module_grocery"
         app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_status_group">
+        app:layout_constraintTop_toBottomOf="@id/task_assignment_scroll">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/task_search_input" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:maxLines="1" />

@@ -72,7 +72,7 @@ import com.tridev.familyhub.data.local.entity.FamilyTask;
                 SafePlaceAlert.class,
                 FamilyTask.class
         },
-        version = 36,
+        version = 37,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -111,6 +111,14 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_status` ON `family_tasks` (`status`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_assignedMemberId` ON `family_tasks` (`assignedMemberId`)");
             database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_updatedAt` ON `family_tasks` (`updatedAt`)");
+        }
+    };
+
+    /** Adds human-readable task audit names without changing existing task identity. */
+    private static final Migration MIGRATION_36_37 = new Migration(36, 37) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `family_tasks` ADD COLUMN `createdByName` TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE `family_tasks` ADD COLUMN `updatedByName` TEXT NOT NULL DEFAULT ''");
         }
     };
 
@@ -929,7 +937,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_32_33,
                                     MIGRATION_33_34,
                                     MIGRATION_34_35,
-                                    MIGRATION_35_36
+                                    MIGRATION_35_36,
+                                    MIGRATION_36_37
                             )
                             .build();
                 }
