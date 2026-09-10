@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_tasks_sms_share_target">Add to Family To-Do</string>
+    <string name="family_tasks_sms_title">SMS task suggestion</string>
+    <string name="family_tasks_sms_privacy">Shared text is analysed only on this device. The full message is not saved or uploaded.</string>
+    <string name="family_tasks_sms_review_hint">Review the suggested task before creating it</string>
+    <string name="family_tasks_sms_task_title">Task title</string>
+    <string name="family_tasks_sms_due">Due: %1$s</string>
+    <string name="family_tasks_sms_priority">Priority</string>
+    <string name="family_tasks_sms_create">Create task</string>
+    <string name="family_tasks_sms_create_again">Create anyway</string>
+    <string name="family_tasks_sms_invalid">No usable text was shared.</string>
+    <string name="family_tasks_sms_sign_in_first">Open and sign in to Family Hub before creating a task from a shared message.</string>
+    <string name="family_tasks_sms_saved">Task created. The original message was not stored.</string>
+    <string name="family_tasks_sms_unclear">No clear action phrase was detected. Review the suggested title carefully before creating the task.</string>
+    <string name="family_tasks_sms_privacy_detail">Only the reviewed task title, due time and priority are saved. OTPs, account/card numbers, long IDs, UPI/email-like identifiers, links and payment amounts are removed from the suggested title.</string>
+    <string name="family_tasks_sms_duplicate_title">Possible duplicate</string>
+    <string name="family_tasks_sms_duplicate_message">This same shared message was already used to create a task on this device. Create another task anyway?</string>
+</resources>
