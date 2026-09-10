@@ -64,6 +64,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 repository.setCompleted(task, completed, () -> {
                     if (completed) FamilyTaskScheduler.cancel(requireContext(), task.id);
                     else FamilyTaskScheduler.schedule(requireContext(), task);
+                    scheduleAllPendingTasks();
                     reload();
                 });
             }
@@ -202,6 +203,18 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             binding.taskResultSummary.setText(getString(R.string.family_tasks_result_count, visible.size(), pending));
             binding.taskEmptyState.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE);
             binding.taskRecyclerView.setVisibility(visible.isEmpty() ? View.GONE : View.VISIBLE);
+        });
+    }
+
+    private void scheduleAllPendingTasks() {
+        repository.loadAll("", tasks -> {
+            if (!isAdded()) return;
+            for (FamilyTask pending : tasks) {
+                if (FamilyTask.STATUS_PENDING.equals(pending.status)
+                        && pending.reminderEnabled) {
+                    FamilyTaskScheduler.schedule(requireContext(), pending);
+                }
+            }
         });
     }
 

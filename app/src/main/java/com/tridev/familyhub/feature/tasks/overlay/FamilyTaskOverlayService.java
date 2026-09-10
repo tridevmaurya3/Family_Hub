@@ -31,6 +31,7 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.repository.FamilyTaskRepository;
 import com.tridev.familyhub.feature.main.MainActivity;
@@ -187,7 +188,16 @@ public final class FamilyTaskOverlayService extends Service {
         TextView title=text(task.title,16,true); title.setTextColor(Color.rgb(32,43,40)); copy.addView(title);
         TextView detail=text(DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(task.dueAt))+(task.assignedMemberName.isEmpty()?" • Whole family":" • "+task.assignedMemberName),12,false);
         detail.setTextColor(Color.rgb(69,112,99)); copy.addView(detail); card.addView(copy,new LinearLayout.LayoutParams(0,-2,1));
-        check.setOnCheckedChangeListener((button,checked)->{if(checked)repository.setCompleted(task,true,this::refresh);});
+        check.setOnCheckedChangeListener((button,checked)->{if(checked)repository.setCompleted(task,true,()->{
+            FamilyTaskScheduler.cancel(this, task.id);
+            repository.loadAll("", all -> {
+                for (FamilyTask pending : all) if (pending.reminderEnabled
+                        && FamilyTask.STATUS_PENDING.equals(pending.status)) {
+                    FamilyTaskScheduler.schedule(this, pending);
+                }
+                refresh();
+            });
+        });});
         taskRows.addView(card,cp);
     }
 

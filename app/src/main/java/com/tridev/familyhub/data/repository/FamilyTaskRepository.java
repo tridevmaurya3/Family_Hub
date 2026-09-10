@@ -15,6 +15,8 @@ import com.tridev.familyhub.data.local.dao.FamilyTaskDao;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 
 import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -91,10 +93,96 @@ public final class FamilyTaskRepository {
 
     public void setCompleted(@NonNull FamilyTask task, boolean completed,
                              @NonNull ActionCallback callback) {
-        task.status = completed ? FamilyTask.STATUS_COMPLETED : FamilyTask.STATUS_PENDING;
-        task.completedAt = completed ? System.currentTimeMillis() : 0L;
-        task.completedByName = completed ? displayName() : "";
-        save(task, callback);
+        DATABASE_EXECUTOR.execute(() -> {
+            long now = System.currentTimeMillis();
+            long previousCompletedAt = task.completedAt;
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (task.cloudId.isEmpty()) task.cloudId = UUID.randomUUID().toString();
+            if (task.createdAt == 0L) task.createdAt = now;
+            if (task.createdByUid.isEmpty() && user != null) {
+                task.createdByUid = user.getUid();
+            }
+            task.status = completed
+                    ? FamilyTask.STATUS_COMPLETED
+                    : FamilyTask.STATUS_PENDING;
+            task.completedAt = completed ? now : 0L;
+            task.completedByName = completed ? displayName() : "";
+            task.updatedAt = now;
+            if (task.id == 0L) task.id = dao.insert(task); else dao.update(task);
+            if (task.shared) publish(task);
+
+            if (!FamilyTask.REPEAT_NONE.equals(task.repeatType)) {
+                long nextDueAt = nextDueAt(task.dueAt, task.repeatType);
+                String seriesId = task.sourceRecordId.isEmpty()
+                        ? task.cloudId : task.sourceRecordId;
+                String nextCloudId = occurrenceId(seriesId, nextDueAt);
+                FamilyTask next = dao.getByCloudId(nextCloudId);
+                if (completed) {
+                    if (next == null) {
+                        next = nextOccurrence(task, seriesId, nextCloudId,
+                                nextDueAt, now);
+                        next.id = dao.insert(next);
+                    }
+                    if (next.shared) publish(next);
+                } else if (next != null
+                        && FamilyTask.STATUS_PENDING.equals(next.status)
+                        && next.createdAt == previousCompletedAt) {
+                    FamilyCollaborationPublisher.remove(
+                            "tasks", next.familyId, next.cloudId);
+                    dao.delete(next);
+                }
+            }
+            mainHandler.post(callback::onComplete);
+        });
+    }
+
+    @NonNull
+    private static FamilyTask nextOccurrence(
+            @NonNull FamilyTask completed,
+            @NonNull String seriesId,
+            @NonNull String cloudId,
+            long dueAt,
+            long createdAt
+    ) {
+        FamilyTask next = new FamilyTask();
+        next.cloudId = cloudId;
+        next.familyId = completed.familyId;
+        next.title = completed.title;
+        next.notes = completed.notes;
+        next.priority = completed.priority;
+        next.repeatType = completed.repeatType;
+        next.assignedMemberId = completed.assignedMemberId;
+        next.assignedMemberName = completed.assignedMemberName;
+        next.dueAt = dueAt;
+        next.reminderEnabled = completed.reminderEnabled;
+        next.reminderMinutesBefore = completed.reminderMinutesBefore;
+        next.createdAt = createdAt;
+        next.updatedAt = createdAt;
+        next.createdByUid = completed.createdByUid;
+        next.sourceType = "RECURRING_TASK";
+        next.sourceRecordId = seriesId;
+        next.shared = completed.shared;
+        return next;
+    }
+
+    private static long nextDueAt(long dueAt, @NonNull String repeatType) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(dueAt);
+        if (FamilyTask.REPEAT_DAILY.equals(repeatType)) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        } else if (FamilyTask.REPEAT_WEEKLY.equals(repeatType)) {
+            calendar.add(Calendar.WEEK_OF_YEAR, 1);
+        } else if (FamilyTask.REPEAT_MONTHLY.equals(repeatType)) {
+            calendar.add(Calendar.MONTH, 1);
+        }
+        return calendar.getTimeInMillis();
+    }
+
+    @NonNull
+    private static String occurrenceId(@NonNull String seriesId, long dueAt) {
+        String key = "family-task:" + seriesId + ":" + dueAt;
+        return UUID.nameUUIDFromBytes(
+                key.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     public void delete(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
