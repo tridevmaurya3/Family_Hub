@@ -234,7 +234,7 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
-        save(item, callback, null);
+        save(item, callback, null, null);
     }
 
     /** Saves an explicit edit without waiting behind realtime sync work. */
@@ -242,13 +242,26 @@ public class GroceryRepository {
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback
     ) {
-        save(item, callback, USER_ACTION_EXECUTOR);
+        save(item, callback, USER_ACTION_EXECUTOR, null);
+    }
+
+    /**
+     * Keeps the previous user-visible name available while an existing recurring
+     * item is edited, so its purchase history cannot recover a second master.
+     */
+    public void saveEdit(
+            @NonNull GroceryItem item,
+            @NonNull String originalItemName,
+            @NonNull ActionCallback callback
+    ) {
+        save(item, callback, USER_ACTION_EXECUTOR, originalItemName);
     }
 
     private void save(
             @NonNull GroceryItem item,
             @NonNull ActionCallback callback,
-            @Nullable ExecutorService requestedExecutor
+            @Nullable ExecutorService requestedExecutor,
+            @Nullable String originalItemName
     ) {
         if (item.historyOnly) {
             saveRecoveredPurchase(item, callback,
@@ -294,6 +307,13 @@ public class GroceryRepository {
             }
             linkFinance(item);
             upsertLocal(item);
+            if (originalItemName != null && !item.isPurchased
+                    && GroceryRecurrenceEngine.isRecurringType(
+                    GroceryRecurrenceEngine.originalCycle(item))) {
+                FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                        .renameForSourceItem(item.id, originalItemName, item.name);
+                removeRecoveredRecurringDuplicates(item, originalItemName);
+            }
             GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
                 callback.onComplete();
@@ -820,6 +840,34 @@ public class GroceryRepository {
                 uploadIfNotStale(item, familyId, localOnly);
             }
         });
+    }
+
+    /**
+     * Removes only active recurring masters that match the edited occurrence's
+     * old/new name, cycle and purchase anchor. These are recovery artifacts, not
+     * purchase-history rows, so finance history remains untouched.
+     */
+    private void removeRecoveredRecurringDuplicates(
+            @NonNull GroceryItem edited,
+            @NonNull String originalItemName
+    ) {
+        String editedCycle = GroceryRecurrenceEngine.normalizeCycle(
+                GroceryRecurrenceEngine.originalCycle(edited));
+        for (GroceryItem candidate : groceryItemDao.getAll()) {
+            if (candidate.id == edited.id || candidate.isPurchased) continue;
+            String candidateCycle = GroceryRecurrenceEngine.normalizeCycle(
+                    GroceryRecurrenceEngine.originalCycle(candidate));
+            if (!editedCycle.equals(candidateCycle)
+                    || candidate.purchasedAt != edited.purchasedAt) {
+                continue;
+            }
+            boolean sameOldName = candidate.name.equalsIgnoreCase(originalItemName);
+            boolean sameNewName = candidate.name.equalsIgnoreCase(edited.name);
+            if (!sameOldName && !sameNewName) continue;
+            markDeletedCloudId(candidate.cloudId);
+            groceryItemDao.delete(candidate);
+            removeRemoteItem(candidate);
+        }
     }
 
     /** Prevents an older device cache from replacing a newer family update. */
