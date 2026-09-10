@@ -29,6 +29,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.ScrollView;
@@ -38,11 +39,13 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.repository.FamilyTaskRepository;
+import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
 import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.text.DateFormat;
@@ -55,18 +58,25 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Grocery-visual-language Family To-Do overlay.
- * This service remains Task-only: it never reads Grocery, Finance or Loan data.
- * It deliberately does not use a microphone foreground-service type; voice capture
- * remains an optional in-panel action after RECORD_AUDIO has already been granted.
+ * One app-level floating entry point for Grocery and Family To-Do.
+ *
+ * The service only owns the shared launcher and the already-existing To-Do panel.
+ * Grocery data and behavior remain owned by GroceryOverlayService; choosing Grocery
+ * simply asks that existing service to open its panel without creating another strip.
  */
 public final class FamilyTaskOverlayService extends Service {
     public static final String ACTION_SHOW = "com.tridev.familyhub.action.SHOW_TASK_OVERLAY";
     public static final String ACTION_HIDE = "com.tridev.familyhub.action.HIDE_TASK_OVERLAY";
     public static final String ACTION_STOP = "com.tridev.familyhub.action.STOP_TASK_OVERLAY";
+    public static final String ACTION_SUSPEND_HUB =
+            "com.tridev.familyhub.action.SUSPEND_FAMILY_FLOATING_HUB";
+    public static final String ACTION_RESUME_HUB =
+            "com.tridev.familyhub.action.RESUME_FAMILY_FLOATING_HUB";
     public static final String PREFS = "family_task_overlay";
     public static final String KEY_ENABLED = "enabled";
     public static final String KEY_REQUESTED = "permission_requested";
+    public static final String HUB_PREFS = "family_floating_hub";
+    public static final String HUB_KEY_ENABLED = "enabled";
 
     private static final String CHANNEL = "family_task_overlay";
     private static final int NOTIFICATION_ID = 4217;
@@ -76,8 +86,10 @@ public final class FamilyTaskOverlayService extends Service {
     private WindowManager windowManager;
     private WindowManager.LayoutParams stripParams;
     @Nullable private WindowManager.LayoutParams panelParams;
+    @Nullable private WindowManager.LayoutParams hubMenuParams;
     @Nullable private View stripView;
     @Nullable private View panelView;
+    @Nullable private View hubMenuView;
     @Nullable private LinearLayout taskRows;
     @Nullable private TextView countText;
     @Nullable private TextView liveStatus;
@@ -94,50 +106,76 @@ public final class FamilyTaskOverlayService extends Service {
         super.onCreate();
         createChannel();
         startForeground(NOTIFICATION_ID, notification());
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, true).apply();
+        mirrorHubEnabled(true);
         repository = new FamilyTaskRepository(this);
         repository.startRealtimeSync(new FamilyTaskRepository.RealtimeCallback() {
             @Override public void onChanged(@NonNull FamilyTask task) { refresh(); }
             @Override public void onRemoved(long localId) { refresh(); }
         });
         windowManager = getSystemService(WindowManager.class);
-        if (Settings.canDrawOverlays(this)) showStrip();
+        // Intentionally do not create the icon here. ACTION_SHOW controls visibility,
+        // so Grocery's existing "start hidden while on Grocery page" behavior stays intact.
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent == null ? ACTION_SHOW : intent.getAction();
+        String action = intent == null || intent.getAction() == null
+                ? ACTION_SHOW : intent.getAction();
         if (ACTION_STOP.equals(action)) {
+            closeHubMenu();
+            closePanel();
+            stopGroceryPanel();
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (ACTION_HIDE.equals(action)) {
+        if (ACTION_HIDE.equals(action) || ACTION_SUSPEND_HUB.equals(action)) {
+            closeHubMenu();
             closePanel();
             if (stripView != null) stripView.setVisibility(View.GONE);
             return START_STICKY;
         }
-        if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
-        if (stripView != null) stripView.setVisibility(View.VISIBLE);
+        if (ACTION_RESUME_HUB.equals(action) || ACTION_SHOW.equals(action)) {
+            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
+            if (stripView != null) stripView.setVisibility(View.VISIBLE);
+            mirrorHubEnabled(true);
+            return START_STICKY;
+        }
         return START_STICKY;
+    }
+
+    private void mirrorHubEnabled(boolean enabled) {
+        getSharedPreferences(HUB_PREFS, MODE_PRIVATE).edit()
+                .putBoolean(HUB_KEY_ENABLED, enabled).apply();
+        // Keep both existing page buttons as compatibility entry points to one state.
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                .putBoolean(KEY_ENABLED, enabled).apply();
+        getSharedPreferences(GroceryOverlayService.PREFS, MODE_PRIVATE).edit()
+                .putBoolean(GroceryOverlayService.KEY_ENABLED, enabled).apply();
     }
 
     private void showStrip() {
         if (stripView != null || windowManager == null) return;
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        TextView strip = text("✓", 20f, true);
-        strip.setTextColor(Color.rgb(15, 104, 80));
-        strip.setGravity(Gravity.CENTER);
-        strip.setPadding(0, 0, 0, dp(1));
-        strip.setContentDescription(getString(R.string.family_tasks_title));
-        strip.setBackground(round(Color.argb(238, 231, 246, 240),
-                22, Color.argb(210, 15, 122, 90)));
-        strip.setElevation(dp(10));
-        strip.setAlpha(prefs.getFloat("alpha", 0.88f));
+        SharedPreferences prefs = getSharedPreferences(HUB_PREFS, MODE_PRIVATE);
+        ImageView strip = new ImageView(this);
+        strip.setImageResource(R.mipmap.ic_family_hub_launcher_round);
+        strip.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        strip.setPadding(dp(2), dp(2), dp(2), dp(2));
+        strip.setContentDescription("Family Quick Hub — Grocery and To-Do");
+        strip.setBackground(round(Color.argb(242, 248, 253, 251),
+                24, Color.argb(215, 74, 143, 183)));
+        strip.setElevation(dp(12));
+        strip.setAlpha(prefs.getFloat("alpha", 0.92f));
 
-        stripParams = params(dp(44), dp(44));
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int defaultX = Math.max(0, screenWidth - dp(64));
+        int defaultY = Math.max(dp(96), Math.round(screenHeight * 0.62f));
+        stripParams = iconParams(dp(48), dp(48));
         stripParams.gravity = Gravity.TOP | Gravity.START;
-        stripParams.x = prefs.getInt("x", dp(12));
-        stripParams.y = prefs.getInt("y", dp(160));
+        stripParams.x = clamp(prefs.getInt("x", defaultX), 0,
+                Math.max(0, screenWidth - dp(48)));
+        stripParams.y = clamp(prefs.getInt("y", defaultY), 0,
+                Math.max(0, screenHeight - dp(48)));
         stripView = strip;
         strip.setOnTouchListener(new View.OnTouchListener() {
             int startX, startY;
@@ -157,16 +195,16 @@ public final class FamilyTaskOverlayService extends Service {
                     int dx = Math.round(event.getRawX() - downX);
                     int dy = Math.round(event.getRawY() - downY);
                     moved |= Math.abs(dx) > dp(4) || Math.abs(dy) > dp(4);
-                    int screenWidth = getResources().getDisplayMetrics().widthPixels;
-                    int screenHeight = getResources().getDisplayMetrics().heightPixels;
-                    stripParams.x = clamp(startX + dx, 0, Math.max(0, screenWidth - dp(44)));
-                    stripParams.y = clamp(startY + dy, 0, Math.max(0, screenHeight - dp(44)));
+                    int width = getResources().getDisplayMetrics().widthPixels;
+                    int height = getResources().getDisplayMetrics().heightPixels;
+                    stripParams.x = clamp(startX + dx, 0, Math.max(0, width - dp(48)));
+                    stripParams.y = clamp(startY + dy, 0, Math.max(0, height - dp(48)));
                     safeUpdate(stripView, stripParams);
                     return true;
                 }
                 if (event.getAction() == MotionEvent.ACTION_UP) {
                     prefs.edit().putInt("x", stripParams.x).putInt("y", stripParams.y).apply();
-                    if (!moved) togglePanel();
+                    if (!moved) toggleHubMenu();
                     return true;
                 }
                 return false;
@@ -175,14 +213,129 @@ public final class FamilyTaskOverlayService extends Service {
         windowManager.addView(stripView, stripParams);
     }
 
-    private void togglePanel() {
-        if (panelView == null) showPanel();
-        else closePanel();
+    /** Tapping the one icon always opens the neutral chooser, never a hard-coded module. */
+    private void toggleHubMenu() {
+        if (hubMenuView != null) {
+            closeHubMenu();
+            return;
+        }
+        // A second tap on the single entry point acts like Home for floating content.
+        closePanel();
+        stopGroceryPanel();
+        mirrorHubEnabled(true);
+        showHubMenu();
+    }
+
+    private void showHubMenu() {
+        if (windowManager == null || stripParams == null || hubMenuView != null) return;
+        FrameLayout shell = new FrameLayout(this);
+        shell.setBackground(panelGradient());
+        shell.setElevation(dp(16));
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(12), dp(10), dp(12), dp(10));
+        shell.addView(root, new FrameLayout.LayoutParams(-1, -1));
+
+        LinearLayout header = row();
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        TextView title = text("Family Quick Hub", 14.5f, true);
+        title.setTextColor(Color.rgb(31, 52, 46));
+        copy.addView(title, new LinearLayout.LayoutParams(-1, dp(23)));
+        TextView subtitle = text("One icon • choose what you need", 9.5f, false);
+        subtitle.setTextColor(Color.rgb(84, 93, 105));
+        copy.addView(subtitle, new LinearLayout.LayoutParams(-1, dp(18)));
+        header.addView(copy, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        Button close = compactAction("×", Color.rgb(73, 86, 98), Color.TRANSPARENT);
+        close.setTextSize(18f);
+        close.setOnClickListener(v -> closeHubMenu());
+        header.addView(close, new LinearLayout.LayoutParams(dp(34), dp(38)));
+        root.addView(header, new LinearLayout.LayoutParams(-1, dp(44)));
+
+        Button grocery = hubChoice("Grocery", "Shopping list • quick add • purchase");
+        grocery.setOnClickListener(v -> openGroceryFromHub());
+        root.addView(grocery, new LinearLayout.LayoutParams(-1, dp(50)));
+
+        Button tasks = hubChoice("To-Do", "Family tasks • due list • quick complete");
+        LinearLayout.LayoutParams taskParams = new LinearLayout.LayoutParams(-1, dp(50));
+        taskParams.topMargin = dp(5);
+        tasks.setOnClickListener(v -> {
+            closeHubMenu();
+            stopGroceryPanel();
+            mirrorHubEnabled(true);
+            showPanel();
+        });
+        root.addView(tasks, taskParams);
+
+        Button turnOff = compactAction("Turn off floating hub",
+                Color.rgb(154, 63, 63), Color.argb(225, 255, 242, 244));
+        turnOff.setOnClickListener(v -> stopSelf());
+        LinearLayout.LayoutParams offParams = new LinearLayout.LayoutParams(-1, dp(34));
+        offParams.topMargin = dp(7);
+        root.addView(turnOff, offParams);
+
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        int menuWidth = Math.min(dp(246), screenWidth - dp(24));
+        int menuHeight = dp(204);
+        int x = stripParams.x + dp(54);
+        if (x + menuWidth > screenWidth - dp(8)) x = stripParams.x - menuWidth - dp(8);
+        x = clamp(x, dp(8), Math.max(dp(8), screenWidth - menuWidth - dp(8)));
+        int y = stripParams.y - dp(16);
+        if (y + menuHeight > screenHeight - dp(8)) y = screenHeight - menuHeight - dp(8);
+        y = clamp(y, dp(8), Math.max(dp(8), screenHeight - menuHeight - dp(8)));
+
+        hubMenuView = shell;
+        hubMenuParams = params(menuWidth, menuHeight);
+        hubMenuParams.gravity = Gravity.TOP | Gravity.START;
+        hubMenuParams.x = x;
+        hubMenuParams.y = y;
+        windowManager.addView(hubMenuView, hubMenuParams);
+    }
+
+    @NonNull
+    private Button hubChoice(@NonNull String title, @NonNull String subtitle) {
+        Button button = new Button(this);
+        button.setText(title + "\n" + subtitle);
+        button.setAllCaps(false);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        button.setTextSize(11f);
+        button.setTextColor(Color.rgb(22, 78, 65));
+        button.setPadding(dp(12), 0, dp(10), 0);
+        button.setMinHeight(0);
+        button.setMinimumHeight(0);
+        button.setBackground(round(Color.argb(232, 235, 248, 242),
+                14, Color.argb(175, 151, 204, 183)));
+        return button;
+    }
+
+    private void closeHubMenu() {
+        if (hubMenuView != null && windowManager != null) {
+            try { windowManager.removeView(hubMenuView); } catch (RuntimeException ignored) { }
+        }
+        hubMenuView = null;
+        hubMenuParams = null;
+    }
+
+    private void openGroceryFromHub() {
+        closeHubMenu();
+        closePanel();
+        Intent grocery = new Intent(this, GroceryOverlayService.class)
+                .setAction(GroceryOverlayService.ACTION_OPEN_FROM_HUB);
+        ContextCompat.startForegroundService(this, grocery);
+        mirrorHubEnabled(true);
+    }
+
+    private void stopGroceryPanel() {
+        try { stopService(new Intent(this, GroceryOverlayService.class)); }
+        catch (RuntimeException ignored) { }
     }
 
     private void showPanel() {
         if (windowManager == null || panelView != null) return;
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        SharedPreferences hubPrefs = getSharedPreferences(HUB_PREFS, MODE_PRIVATE);
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
         int maxWidth = Math.max(dp(280), screenWidth - dp(24));
@@ -195,7 +348,7 @@ public final class FamilyTaskOverlayService extends Service {
         FrameLayout shell = new FrameLayout(this);
         shell.setBackground(panelGradient());
         shell.setElevation(dp(16));
-        shell.setAlpha(prefs.getFloat("alpha", 0.88f));
+        shell.setAlpha(hubPrefs.getFloat("alpha", 0.92f));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -525,8 +678,8 @@ public final class FamilyTaskOverlayService extends Service {
 
     private void showOpacityPopup(@NonNull Button anchor) {
         dismissPopup();
-        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        float saved = prefs.getFloat("alpha", 0.88f);
+        SharedPreferences hubPrefs = getSharedPreferences(HUB_PREFS, MODE_PRIVATE);
+        float saved = hubPrefs.getFloat("alpha", 0.92f);
         LinearLayout root = popupSurface();
         root.setPadding(dp(10), dp(8), dp(10), dp(8));
         LinearLayout titleRow = row();
@@ -556,7 +709,7 @@ public final class FamilyTaskOverlayService extends Service {
                 value.setText(Math.round(alpha * 100f) + "%");
                 if (stripView != null) stripView.setAlpha(alpha);
                 if (panelView != null) panelView.setAlpha(alpha);
-                prefs.edit().putFloat("alpha", alpha).apply();
+                hubPrefs.edit().putFloat("alpha", alpha).apply();
             }
         });
         activePopup = popup;
@@ -964,6 +1117,17 @@ public final class FamilyTaskOverlayService extends Service {
         return params;
     }
 
+    @NonNull
+    private WindowManager.LayoutParams iconParams(int width, int height) {
+        return new WindowManager.LayoutParams(width, height,
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                        ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                        : WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+    }
+
     private void safeUpdate(@Nullable View view, @Nullable WindowManager.LayoutParams params) {
         if (view == null || params == null || windowManager == null) return;
         try { windowManager.updateViewLayout(view, params); } catch (RuntimeException ignored) { }
@@ -1016,8 +1180,7 @@ public final class FamilyTaskOverlayService extends Service {
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(new NotificationChannel(CHANNEL,
-                        getString(R.string.family_tasks_overlay_channel),
-                        NotificationManager.IMPORTANCE_LOW));
+                        "Family Quick Hub", NotificationManager.IMPORTANCE_LOW));
             }
         }
     }
@@ -1025,13 +1188,12 @@ public final class FamilyTaskOverlayService extends Service {
     @NonNull
     private Notification notification() {
         PendingIntent pending = PendingIntent.getActivity(this, NOTIFICATION_ID,
-                new Intent(this, MainActivity.class)
-                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE, MainActivity.ROUTE_TASKS),
+                new Intent(this, MainActivity.class),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_family_task)
-                .setContentTitle(getString(R.string.family_tasks_title))
-                .setContentText(getString(R.string.family_tasks_overlay_notification))
+                .setContentTitle("Family Quick Hub")
+                .setContentText("One floating icon for Grocery and Family To-Do")
                 .setOngoing(true)
                 .setContentIntent(pending)
                 .build();
@@ -1041,13 +1203,15 @@ public final class FamilyTaskOverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        closeHubMenu();
         closePanel();
+        stopGroceryPanel();
         if (stripView != null && windowManager != null) {
             try { windowManager.removeView(stripView); } catch (RuntimeException ignored) { }
             stripView = null;
         }
         if (repository != null) repository.stopRealtimeSync();
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, false).apply();
+        mirrorHubEnabled(false);
         super.onDestroy();
     }
 }
