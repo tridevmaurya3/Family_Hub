@@ -905,6 +905,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         // Keep the exact persisted identity throughout asynchronous form work.
         // An edit must never fall back to the new-item insert path.
         final long originalItemId = item.id;
+        final String originalItemName = item.name;
         final String originalCloudId = item.cloudId;
         final String originalFamilyId = item.familyId;
         final boolean originalHistoryOnly = item.historyOnly;
@@ -1005,6 +1006,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             form.groceryQuantityUnitInput.setText(quantityUnits[0], false);
         } else {
             form.groceryDialogTitle.setText(R.string.grocery_edit_item);
+            form.saveGroceryButton.setText(R.string.grocery_update_item);
             form.groceryNameInput.setText(item.name);
             form.groceryCategoryInput.setText(item.category, false);
             String[] parsedQuantity = splitQuantity(item.quantity, quantityUnits);
@@ -1138,8 +1140,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 }
             };
             if (editingPurchasedOccurrence) {
-                repository.savePurchasedEdit(item, originalPurchaseAt,
-                        selectedPurchaseAt[0], saveComplete::run);
+                repository.savePurchasedEdit(item, originalItemName,
+                        originalPurchaseAt, selectedPurchaseAt[0],
+                        saveComplete::run);
             } else {
                 estimateAndSave(item, existing != null, saveComplete);
             }
