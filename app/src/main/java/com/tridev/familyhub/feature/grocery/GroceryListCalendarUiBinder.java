@@ -395,6 +395,7 @@ public final class GroceryListCalendarUiBinder
 
         private void updateToggleLabel() {
             toggle.setText((calendarMode ? "Calendar view" : "List view") + "  ▾");
+            resizeToggleToText(toggle);
             toggle.setContentDescription(calendarMode
                     ? "Calendar view selected. Switch to Grocery list view"
                     : "List view selected. Switch to Grocery calendar view");
@@ -630,6 +631,21 @@ public final class GroceryListCalendarUiBinder
                 context, R.color.fh_module_grocery));
         button.setElevation(dp(context, 1));
         return button;
+    }
+
+    private static void resizeToggleToText(@NonNull MaterialButton button) {
+        CharSequence value = button.getText();
+        int desired = Math.round(button.getPaint().measureText(
+                value == null ? "" : value.toString()))
+                + button.getPaddingLeft() + button.getPaddingRight()
+                + dp(button.getContext(), 12);
+        int width = Math.max(dp(button.getContext(), 72),
+                Math.min(dp(button.getContext(), 124), desired));
+        ViewGroup.LayoutParams params = button.getLayoutParams();
+        if (params == null) return;
+        params.width = width;
+        params.height = dp(button.getContext(), 38);
+        button.setLayoutParams(params);
     }
 
     @NonNull

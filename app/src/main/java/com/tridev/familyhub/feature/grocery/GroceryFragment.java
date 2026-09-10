@@ -631,28 +631,28 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     || groceryStatusDropdown == null || groceryCategoryToggleChip == null) {
                 return;
             }
-            int available = binding.groceryFilterScroll.getWidth();
-            if (available <= 0) return;
-            int usable = Math.max(0, available - dp(16));
-            int cycleWidth = Math.round(usable * 0.30f);
-            int statusWidth = Math.round(usable * 0.29f);
-            int categoryWidth = usable - cycleWidth - statusWidth;
-            if (cycleWidth < dp(82) || statusWidth < dp(82) || categoryWidth < dp(108)) {
-                cycleWidth = dp(82);
-                statusWidth = dp(82);
-                categoryWidth = Math.max(dp(108), usable - cycleWidth - statusWidth);
+            resizeFilterControlToText(groceryCycleDropdown, 58, 112);
+            resizeFilterControlToText(groceryStatusDropdown, 68, 112);
+            if (groceryPurchaseDateDropdown != null) {
+                resizeFilterControlToText(groceryPurchaseDateDropdown, 82, 176);
             }
-            setFilterControlWidth(groceryCycleDropdown, cycleWidth);
-            setFilterControlWidth(groceryStatusDropdown, statusWidth);
-            setFilterControlWidth(groceryCategoryToggleChip, categoryWidth);
+            resizeFilterControlToText(groceryCategoryToggleChip, 78, 112);
         });
     }
 
-    private void setFilterControlWidth(@NonNull View view, int width) {
-        ViewGroup.LayoutParams params = view.getLayoutParams();
+    private void resizeFilterControlToText(@NonNull MaterialButton button,
+                                           int minimumDp,
+                                           int maximumDp) {
+        CharSequence value = button.getText();
+        float textWidth = button.getPaint().measureText(
+                value == null ? "" : value.toString());
+        int desired = Math.round(textWidth) + button.getPaddingLeft()
+                + button.getPaddingRight() + dp(12);
+        int width = Math.max(dp(minimumDp), Math.min(dp(maximumDp), desired));
+        ViewGroup.LayoutParams params = button.getLayoutParams();
         params.width = width;
         params.height = dp(38);
-        view.setLayoutParams(params);
+        button.setLayoutParams(params);
     }
 
     private void updateGroceryGroupingChip(boolean allCollapsed) {
@@ -661,6 +661,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         groceryCategoryToggleChip.setContentDescription(getString(allCollapsed
                 ? R.string.grocery_expand_categories
                 : R.string.grocery_collapse_categories));
+        resizeFilterControlToText(groceryCategoryToggleChip, 78, 112);
     }
 
     private void syncPrimaryFilterChips() {
@@ -673,6 +674,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             String label = cycleLabel(activeCycleFilter);
             groceryCycleDropdown.setText(label + "  ▾");
             groceryCycleDropdown.setContentDescription(label);
+            resizeFilterControlToText(groceryCycleDropdown, 58, 112);
         }
         if (groceryStatusDropdown != null) {
             String label = getString(activeStatusFilterId == R.id.filter_purchased
@@ -680,6 +682,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     : R.string.grocery_filter_pending);
             groceryStatusDropdown.setText(label + "  ▾");
             groceryStatusDropdown.setContentDescription(label);
+            resizeFilterControlToText(groceryStatusDropdown, 68, 112);
         }
         if (groceryPurchaseDateDropdown != null) {
             boolean purchased = activeStatusFilterId == R.id.filter_purchased;
@@ -687,6 +690,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             String label = purchaseRangeLabel();
             groceryPurchaseDateDropdown.setText("Date: " + label + "  ▾");
             groceryPurchaseDateDropdown.setContentDescription("Purchase date: " + label);
+            resizeFilterControlToText(groceryPurchaseDateDropdown, 82, 176);
         }
     }
 
