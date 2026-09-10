@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_tasks_history">History</string>
+    <string name="family_tasks_activity_title">Family Task Activity</string>
+    <string name="family_tasks_activity_privacy">Task activity only. Notes, SMS text, Grocery details, Finance data and Loan data are not copied into this history.</string>
+    <string name="family_tasks_activity_filter_task">Task</string>
+    <string name="family_tasks_activity_filter_member">Family member</string>
+    <string name="family_tasks_activity_filter_type">Activity type</string>
+    <string name="family_tasks_activity_all_tasks">All tasks</string>
+    <string name="family_tasks_activity_all_members">All members</string>
+    <string name="family_tasks_activity_all_types">All activity</string>
+    <string name="family_tasks_activity_created">Created</string>
+    <string name="family_tasks_activity_edited">Edited</string>
+    <string name="family_tasks_activity_assigned">Assignment changed</string>
+    <string name="family_tasks_activity_completed">Completed</string>
+    <string name="family_tasks_activity_reopened">Reopened</string>
+    <string name="family_tasks_activity_deleted">Deleted</string>
+    <string name="family_tasks_activity_assigned_to">Assigned to %1$s</string>
+    <string name="family_tasks_activity_result_count">%1$d activities</string>
+    <string name="family_tasks_activity_meta">%1$s • %2$s</string>
+    <string name="family_tasks_activity_empty">No activity recorded for this filter yet. Detailed history starts with this update.</string>
+    <string name="family_tasks_activity_task_fallback">Family task</string>
+    <string name="family_tasks_activity_close">Close</string>
+</resources>

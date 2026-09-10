@@ -47,20 +47,28 @@
             android:layout_marginTop="@dimen/space_6" android:maxLines="3" />
         <View android:layout_width="match_parent" android:layout_height="@dimen/border_width"
             android:layout_marginTop="@dimen/space_10" android:background="@color/fh_divider" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:gravity="end" android:orientation="horizontal">
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/task_link_button" style="@style/Widget.FamilyHub.Button.Action"
-                android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
-                android:text="@string/family_tasks_manage_links" android:textColor="@color/fh_module_grocery" />
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/edit_task_button" style="@style/Widget.FamilyHub.Button.Action"
-                android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
-                android:text="@string/edit" android:textColor="@color/fh_primary" />
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/delete_task_button" style="@style/Widget.FamilyHub.Button.Danger"
-                android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
-                android:text="@string/remove" android:textColor="@color/fh_error" />
-        </LinearLayout>
+        <HorizontalScrollView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:fillViewport="true" android:scrollbars="none">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:gravity="end" android:orientation="horizontal">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/task_history_button" style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
+                    android:text="@string/family_tasks_history" android:textColor="@color/fh_module_grocery" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/task_link_button" style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
+                    android:text="@string/family_tasks_manage_links" android:textColor="@color/fh_module_grocery" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/edit_task_button" style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
+                    android:text="@string/edit" android:textColor="@color/fh_primary" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/delete_task_button" style="@style/Widget.FamilyHub.Button.Danger"
+                    android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
+                    android:text="@string/remove" android:textColor="@color/fh_error" />
+            </LinearLayout>
+        </HorizontalScrollView>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

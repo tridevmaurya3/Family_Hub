@@ -79,6 +79,8 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
             binding.taskNotes.setVisibility(task.notes.isEmpty() ? View.GONE : View.VISIBLE);
             binding.taskCompleted.setOnCheckedChangeListener((button, checked) -> listener.onCompletedChanged(task, checked));
             binding.getRoot().setOnClickListener(v -> listener.onEdit(task));
+            binding.taskHistoryButton.setOnClickListener(v ->
+                    FamilyTaskActivityTimelineDialog.show(binding.getRoot().getContext(), task));
             binding.taskLinkButton.setOnClickListener(v -> FamilyTaskLinkDialog.show(
                     binding.getRoot().getContext(), task, () -> {
                         int position = getBindingAdapterPosition();

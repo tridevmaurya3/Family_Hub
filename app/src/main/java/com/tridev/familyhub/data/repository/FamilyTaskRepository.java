@@ -33,12 +33,16 @@ public final class FamilyTaskRepository {
     }
 
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
+    private final Context appContext;
     private final FamilyTaskDao dao;
+    private final FamilyTaskActivityRepository activityRepository;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public FamilyTaskRepository(@NonNull Context context) {
-        dao = FamilyHubDatabase.getInstance(context).familyTaskDao();
+        appContext = context.getApplicationContext();
+        dao = FamilyHubDatabase.getInstance(appContext).familyTaskDao();
+        activityRepository = new FamilyTaskActivityRepository(appContext);
     }
 
     public void loadAll(@NonNull String query, @NonNull ItemsCallback callback) {
@@ -79,6 +83,11 @@ public final class FamilyTaskRepository {
 
     public void save(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            boolean inserting = task.id == 0L;
+            FamilyTask previous = inserting ? null : dao.getById(task.id);
+            boolean assignmentChanged = previous != null && assignmentChanged(previous, task);
+            boolean detailsChanged = previous != null && detailsChanged(previous, task);
+
             long now = System.currentTimeMillis();
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             if (task.createdAt == 0L) task.createdAt = now;
@@ -87,8 +96,24 @@ public final class FamilyTaskRepository {
             if (task.createdByName.isEmpty()) task.createdByName = displayName();
             task.updatedByName = displayName();
             task.updatedAt = now;
-            if (task.id == 0L) task.id = dao.insert(task); else dao.update(task);
+            if (inserting) task.id = dao.insert(task); else dao.update(task);
             if (task.shared) publish(task);
+
+            if (inserting) {
+                activityRepository.record(task, FamilyTaskActivityRepository.EVENT_CREATE, "");
+                if (!task.assignedMemberId.isEmpty() || !task.assignedMemberName.isEmpty()) {
+                    activityRepository.record(task, FamilyTaskActivityRepository.EVENT_ASSIGN,
+                            assignmentLabel(task));
+                }
+            } else {
+                if (detailsChanged) {
+                    activityRepository.record(task, FamilyTaskActivityRepository.EVENT_EDIT, "");
+                }
+                if (assignmentChanged) {
+                    activityRepository.record(task, FamilyTaskActivityRepository.EVENT_ASSIGN,
+                            assignmentLabel(task));
+                }
+            }
             mainHandler.post(callback::onComplete);
         });
     }
@@ -96,6 +121,7 @@ public final class FamilyTaskRepository {
     public void setCompleted(@NonNull FamilyTask task, boolean completed,
                              @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            boolean wasCompleted = FamilyTask.STATUS_COMPLETED.equals(task.status);
             long now = System.currentTimeMillis();
             long previousCompletedAt = task.completedAt;
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
@@ -114,6 +140,13 @@ public final class FamilyTaskRepository {
             task.updatedAt = now;
             if (task.id == 0L) task.id = dao.insert(task); else dao.update(task);
             if (task.shared) publish(task);
+
+            if (wasCompleted != completed) {
+                activityRepository.record(task,
+                        completed ? FamilyTaskActivityRepository.EVENT_COMPLETE
+                                : FamilyTaskActivityRepository.EVENT_REOPEN,
+                        "");
+            }
 
             if (!FamilyTask.REPEAT_NONE.equals(task.repeatType)) {
                 long nextDueAt = nextDueAt(task.dueAt, task.repeatType);
@@ -195,6 +228,10 @@ public final class FamilyTaskRepository {
 
     public void delete(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_DELETE, "",
+                    user == null ? "" : user.getUid(), displayName(),
+                    System.currentTimeMillis());
             FamilyCollaborationPublisher.remove("tasks", task.familyId, task.cloudId);
             dao.delete(task);
             mainHandler.post(callback::onComplete);
@@ -249,6 +286,7 @@ public final class FamilyTaskRepository {
             FamilyTask task = dao.getByCloudId(cloudId);
             if (task != null && task.updatedAt > remoteUpdatedAt) return;
             boolean insert = task == null;
+            FamilyTask previous = insert ? null : auditCopy(task);
             if (insert) task = new FamilyTask();
             task.cloudId = cloudId;
             task.familyId = familyId;
@@ -276,9 +314,83 @@ public final class FamilyTaskRepository {
             task.linkedGroceryItemId = number(s, "linkedGroceryItemId");
             task.shared = true;
             if (insert) task.id = dao.insert(task); else dao.update(task);
+
+            if (insert) {
+                activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_CREATE, "",
+                        task.createdByUid,
+                        task.createdByName.isEmpty() ? task.updatedByName : task.createdByName,
+                        task.createdAt > 0L ? task.createdAt : remoteUpdatedAt);
+                if (!task.assignedMemberId.isEmpty() || !task.assignedMemberName.isEmpty()) {
+                    activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_ASSIGN,
+                            assignmentLabel(task), task.updatedByUid, task.updatedByName,
+                            remoteUpdatedAt);
+                }
+            } else if (previous != null) {
+                if (!previous.status.equals(task.status)) {
+                    activityRepository.recordAt(task,
+                            FamilyTask.STATUS_COMPLETED.equals(task.status)
+                                    ? FamilyTaskActivityRepository.EVENT_COMPLETE
+                                    : FamilyTaskActivityRepository.EVENT_REOPEN,
+                            "", task.updatedByUid, task.updatedByName, remoteUpdatedAt);
+                }
+                if (assignmentChanged(previous, task)) {
+                    activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_ASSIGN,
+                            assignmentLabel(task), task.updatedByUid, task.updatedByName,
+                            remoteUpdatedAt);
+                }
+                if (detailsChanged(previous, task)) {
+                    activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_EDIT, "",
+                            task.updatedByUid, task.updatedByName, remoteUpdatedAt);
+                }
+            }
+
             FamilyTask changed = task;
             mainHandler.post(() -> callback.onChanged(changed));
         });
+    }
+
+    private static boolean assignmentChanged(@NonNull FamilyTask before,
+                                             @NonNull FamilyTask after) {
+        return !same(before.assignedMemberId, after.assignedMemberId)
+                || !same(before.assignedMemberName, after.assignedMemberName);
+    }
+
+    private static boolean detailsChanged(@NonNull FamilyTask before,
+                                          @NonNull FamilyTask after) {
+        return !same(before.title, after.title)
+                || !same(before.notes, after.notes)
+                || !same(before.priority, after.priority)
+                || !same(before.repeatType, after.repeatType)
+                || before.dueAt != after.dueAt
+                || before.reminderEnabled != after.reminderEnabled
+                || before.reminderMinutesBefore != after.reminderMinutesBefore;
+    }
+
+    @NonNull
+    private static FamilyTask auditCopy(@NonNull FamilyTask source) {
+        FamilyTask copy = new FamilyTask();
+        copy.title = source.title;
+        copy.notes = source.notes;
+        copy.status = source.status;
+        copy.priority = source.priority;
+        copy.repeatType = source.repeatType;
+        copy.assignedMemberId = source.assignedMemberId;
+        copy.assignedMemberName = source.assignedMemberName;
+        copy.dueAt = source.dueAt;
+        copy.reminderEnabled = source.reminderEnabled;
+        copy.reminderMinutesBefore = source.reminderMinutesBefore;
+        return copy;
+    }
+
+    @NonNull
+    private static String assignmentLabel(@NonNull FamilyTask task) {
+        return task.assignedMemberName.isEmpty() ? "Whole family" : task.assignedMemberName;
+    }
+
+    private static boolean same(@Nullable String left, @Nullable String right) {
+        String a = left == null ? "" : left;
+        String b = right == null ? "" : right;
+        return a.equals(b);
     }
 
     @NonNull private static String displayName() {
