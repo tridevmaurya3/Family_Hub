@@ -1650,7 +1650,8 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             // Show the local Grocery rows immediately. Category spending is an
             // enhancement and must not hold the RecyclerView behind the database/
             // realtime executor used by purchase aggregation.
-            adapter.submitList(visibleItems, new LinkedHashMap<>(), budgets);
+            submitGroceryListPreservingScroll(
+                    visibleItems, new LinkedHashMap<>(), budgets);
             updateGroceryGroupingChip(
                     adapter.areAllCurrentCategoriesCollapsed());
             renderSummary(items);
@@ -1670,11 +1671,32 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     spent.put(key, spent.getOrDefault(key, 0D)
                             + Math.max(0D, purchase.actualCost));
                 }
-                adapter.submitList(visibleItems, spent, budgets);
+                submitGroceryListPreservingScroll(visibleItems, spent, budgets);
                 updateGroceryGroupingChip(
                         adapter.areAllCurrentCategoriesCollapsed());
             });
         });
+    }
+
+    /**
+     * Realtime/history refreshes must not jump a long list back to the top.
+     * The same RecyclerView state rule is used for every cycle and status filter.
+     */
+    private void submitGroceryListPreservingScroll(
+            @NonNull List<GroceryItem> items,
+            @NonNull Map<String, Double> spent,
+            @NonNull Map<String, Double> budgets
+    ) {
+        if (binding == null) return;
+        RecyclerView.LayoutManager manager =
+                binding.groceryRecyclerView.getLayoutManager();
+        android.os.Parcelable state = manager == null
+                ? null : manager.onSaveInstanceState();
+        adapter.submitList(items, spent, budgets);
+        if (manager != null && state != null) {
+            binding.groceryRecyclerView.post(
+                    () -> manager.onRestoreInstanceState(state));
+        }
     }
 
     @NonNull
