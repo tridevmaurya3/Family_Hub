@@ -140,4 +140,6 @@ public class GroceryItem {
     @Ignore public long previousRecurrenceAnchorAt;
     /** Display-only reconstruction of an immutable GroceryPurchase history row. */
     @Ignore public boolean historyOnly;
+    /** Latest matching purchase used only to render recurring pending history. */
+    @Ignore public long lastPurchasedAtForDisplay;
 }

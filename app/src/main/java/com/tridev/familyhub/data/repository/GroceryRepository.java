@@ -1438,6 +1438,7 @@ public class GroceryRepository {
                                            @NonNull List<GroceryItem> all,
                                            long now) {
         Map<String, GroceryItem> masters = new HashMap<>();
+        Map<String, Long> latestPurchaseByName = new HashMap<>();
         Set<String> activeLegacyOccurrences = new HashSet<>();
         for (GroceryItem candidate : all) {
             // A completed history row can share the same name/listType, but it
@@ -1446,6 +1447,12 @@ public class GroceryRepository {
                     && GroceryRecurrenceEngine.isRecurringType(
                             GroceryRecurrenceEngine.originalCycle(candidate))) {
                 masters.put(candidate.name.trim().toLowerCase(Locale.ENGLISH), candidate);
+            }
+            if (candidate.isPurchased && candidate.purchasedAt > 0L) {
+                String purchaseKey = candidate.name.trim().toLowerCase(Locale.ENGLISH);
+                latestPurchaseByName.put(purchaseKey, Math.max(
+                        latestPurchaseByName.getOrDefault(purchaseKey, 0L),
+                        candidate.purchasedAt));
             }
         }
         for (GroceryItem candidate : all) {
@@ -1461,6 +1468,7 @@ public class GroceryRepository {
             item.originalRecurringType = "";
             item.effectiveListType = "";
             item.recurrenceShadowed = false;
+            item.lastPurchasedAtForDisplay = 0L;
             String key = item.name.trim().toLowerCase(Locale.ENGLISH);
             GroceryItem master = masters.get(key);
             if (master != null && item.id != master.id
@@ -1469,6 +1477,11 @@ public class GroceryRepository {
             }
             if (master != null && item.id == master.id && activeLegacyOccurrences.contains(key)) {
                 item.recurrenceShadowed = true;
+            }
+            if (!item.isPurchased && GroceryRecurrenceEngine.isRecurringType(
+                    GroceryRecurrenceEngine.originalCycle(item))) {
+                item.lastPurchasedAtForDisplay = item.purchasedAt > 0L
+                        ? item.purchasedAt : latestPurchaseByName.getOrDefault(key, 0L);
             }
             item.effectiveListType = GroceryRecurrenceEngine.effectiveCycle(item, now);
         }

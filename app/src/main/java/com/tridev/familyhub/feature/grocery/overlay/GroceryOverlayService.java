@@ -1498,10 +1498,12 @@ public class GroceryOverlayService extends Service {
                 } else if (GroceryItem.PRIORITY_HIGH.equals(item.priority)) {
                     detail += "  •  " + getString(R.string.grocery_priority_high);
                 }
+                long displayPurchaseAt = item.purchasedAt > 0L
+                        ? item.purchasedAt : item.lastPurchasedAtForDisplay;
                 boolean showLastPurchase = !GroceryItem.LIST_DAILY.equals(listType)
-                        && item.purchasedAt > 0L;
+                        && displayPurchaseAt > 0L;
                 if (showLastPurchase) {
-                    detail += "\n" + overlayLastPurchaseLabel(item.purchasedAt);
+                    detail += "\n" + overlayLastPurchaseLabel(displayPurchaseAt);
                     detail += "\n" + overlayNextDueLabel(item);
                 }
                 row.setText(detail);
@@ -1604,7 +1606,7 @@ public class GroceryOverlayService extends Service {
 
     private String overlayNextDueLabel(@NonNull GroceryItem item) {
         long now = System.currentTimeMillis();
-        long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
+        long dueAt = GroceryRecurrenceEngine.displayNextDueAt(item);
         if (dueAt == Long.MAX_VALUE) return "";
         CharSequence date = android.text.format.DateFormat.format("dd MMM yyyy", dueAt);
         if (dueAt <= now) {
@@ -1627,7 +1629,7 @@ public class GroceryOverlayService extends Service {
                     + (pendingDays == 1L ? " day" : " days");
             return elapsed + " • Due: " + date;
         }
-        int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
+        int days = GroceryRecurrenceEngine.daysUntilDisplayDue(item, now);
         return "Advance: " + (days == 1 ? "Tomorrow" : days + " days")
                 + " • Next due: " + date;
     }

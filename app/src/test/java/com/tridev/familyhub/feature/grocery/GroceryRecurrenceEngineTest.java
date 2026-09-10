@@ -60,6 +60,17 @@ public class GroceryRecurrenceEngineTest {
                 GroceryRecurrenceEngine.effectiveCycle(daily, at(2026, 9, 20)));
     }
 
+    @Test public void displayDueUsesRecoveredLatestPurchaseWithoutChangingScheduleAnchor() {
+        GroceryItem pending = recurring(GroceryItem.LIST_FORTNIGHTLY,
+                at(2026, 9, 10));
+        pending.lastPurchasedAtForDisplay = at(2026, 8, 16);
+
+        assertEquals(at(2026, 8, 31),
+                GroceryRecurrenceEngine.displayNextDueAt(pending));
+        assertEquals(at(2026, 9, 25),
+                GroceryRecurrenceEngine.nextDueAt(pending));
+    }
+
     private static GroceryItem recurring(String type, long createdAt) {
         GroceryItem item = new GroceryItem();
         item.listType = type;

@@ -65,8 +65,21 @@ public final class GroceryRecurrenceEngine {
     }
 
     public static long nextDueAt(@NonNull GroceryItem item) {
+        return nextDueAt(item, item.purchasedAt > 0L
+                ? item.purchasedAt : item.createdAt);
+    }
+
+    /** UI-only due date anchored to recovered purchase history when available. */
+    public static long displayNextDueAt(@NonNull GroceryItem item) {
+        long anchor = item.purchasedAt > 0L
+                ? item.purchasedAt
+                : item.lastPurchasedAtForDisplay > 0L
+                ? item.lastPurchasedAtForDisplay : item.createdAt;
+        return nextDueAt(item, anchor);
+    }
+
+    private static long nextDueAt(@NonNull GroceryItem item, long anchor) {
         String origin = originalCycle(item);
-        long anchor = item.purchasedAt > 0L ? item.purchasedAt : item.createdAt;
         if (anchor <= 0L || !isRecurringType(origin)) return Long.MAX_VALUE;
         Calendar due = Calendar.getInstance();
         due.setTimeInMillis(anchor);
@@ -78,6 +91,14 @@ public final class GroceryRecurrenceEngine {
             due.add(Calendar.MONTH, 1);
         }
         return due.getTimeInMillis();
+    }
+
+    public static int daysUntilDisplayDue(@NonNull GroceryItem item, long now) {
+        long due = displayNextDueAt(item);
+        if (due == Long.MAX_VALUE) return Integer.MAX_VALUE;
+        if (due <= now) return 0;
+        return (int) Math.max(1L,
+                TimeUnit.MILLISECONDS.toDays(due - now + TimeUnit.DAYS.toMillis(1) - 1));
     }
 
     public static int daysUntilNextDue(@NonNull GroceryItem item, long now) {

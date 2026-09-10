@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -121,8 +122,8 @@ public final class GroceryListCalendarUiBinder
 
         void checkPage() {
             RecyclerView recycler = root.findViewById(R.id.grocery_recycler_view);
-            View actionScroll = root.findViewById(R.id.grocery_action_scroll);
-            if (recycler == null || actionScroll == null || !recycler.isAttachedToWindow()) {
+            View filterGroup = root.findViewById(R.id.grocery_filter_group);
+            if (recycler == null || filterGroup == null || !recycler.isAttachedToWindow()) {
                 if (controller != null) {
                     controller.dispose();
                     controller = null;
@@ -134,7 +135,7 @@ public final class GroceryListCalendarUiBinder
                 return;
             }
             if (controller != null) controller.dispose();
-            controller = PageController.attach(activity, recycler, actionScroll);
+            controller = PageController.attach(activity, recycler, filterGroup);
         }
 
         void dispose() {
@@ -174,26 +175,24 @@ public final class GroceryListCalendarUiBinder
         @Nullable
         static PageController attach(@NonNull Activity activity,
                                      @NonNull RecyclerView recycler,
-                                     @NonNull View actionScroll) {
+                                     @NonNull View filterGroup) {
             View emptyState = activity.findViewById(R.id.grocery_empty_state);
-            View dueButton = activity.findViewById(R.id.grocery_due_calendar_button);
-            if (emptyState == null || dueButton == null
+            if (emptyState == null
                     || !(recycler.getParent() instanceof ConstraintLayout)
-                    || !(dueButton.getParent() instanceof LinearLayout)) {
+                    || !(filterGroup instanceof ViewGroup)) {
                 return null;
             }
             return new PageController(
                     activity, recycler, emptyState,
                     (ConstraintLayout) recycler.getParent(),
-                    (LinearLayout) dueButton.getParent(), dueButton);
+                    (ViewGroup) filterGroup);
         }
 
         PageController(@NonNull Activity activity,
                        @NonNull RecyclerView recycler,
                        @NonNull View emptyState,
                        @NonNull ConstraintLayout parent,
-                       @NonNull LinearLayout actionRow,
-                       @NonNull View dueButton) {
+                       @NonNull ViewGroup filterGroup) {
             this.activity = activity;
             this.appContext = activity.getApplicationContext();
             this.recycler = recycler;
@@ -202,10 +201,9 @@ public final class GroceryListCalendarUiBinder
             searchInput = activity.findViewById(R.id.grocery_search_input);
 
             toggle = buildToggleButton(activity);
-            int dueIndex = actionRow.indexOfChild(dueButton);
-            LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(activity, 48));
-            actionRow.addView(toggle, Math.max(0, dueIndex + 1), toggleParams);
+            ViewGroup.MarginLayoutParams toggleParams = new ViewGroup.MarginLayoutParams(
+                    dp(activity, 92), dp(activity, 38));
+            filterGroup.addView(toggle, Math.min(2, filterGroup.getChildCount()), toggleParams);
 
             calendarPanel = new LinearLayout(activity);
             calendarPanel.setId(View.generateViewId());
@@ -259,12 +257,20 @@ public final class GroceryListCalendarUiBinder
             panelParams.topMargin = dp(activity, 8);
             parent.addView(calendarPanel, panelParams);
 
-            toggle.setOnClickListener(v -> setCalendarMode(!calendarMode, true));
+            toggle.setOnClickListener(this::showViewModeMenu);
             ensureAdapterObserver();
+            setCalendarMode(false, false);
+        }
 
-            String saved = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                    .getString(KEY_MODE, MODE_LIST);
-            setCalendarMode(MODE_CALENDAR.equals(saved), false);
+        private void showViewModeMenu(@NonNull View anchor) {
+            PopupMenu menu = new PopupMenu(activity, anchor);
+            menu.getMenu().add("List view").setCheckable(true).setChecked(!calendarMode);
+            menu.getMenu().add("Calendar view").setCheckable(true).setChecked(calendarMode);
+            menu.setOnMenuItemClickListener(item -> {
+                setCalendarMode("Calendar view".contentEquals(item.getTitle()), true);
+                return true;
+            });
+            menu.show();
         }
 
         void ensureAdapterObserver() {
@@ -347,7 +353,7 @@ public final class GroceryListCalendarUiBinder
         }
 
         private void updateToggleLabel() {
-            toggle.setText(calendarMode ? "Calendar view" : "List view");
+            toggle.setText((calendarMode ? "Calendar" : "List") + "  ▾");
             toggle.setContentDescription(calendarMode
                     ? "Calendar view selected. Switch to Grocery list view"
                     : "List view selected. Switch to Grocery calendar view");
@@ -565,9 +571,12 @@ public final class GroceryListCalendarUiBinder
     private static MaterialButton buildToggleButton(@NonNull Context context) {
         MaterialButton button = new MaterialButton(context);
         button.setAllCaps(false);
-        button.setTextSize(12f);
-        button.setMinHeight(dp(context, 44));
-        button.setMinimumHeight(dp(context, 44));
+        button.setTextSize(10f);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(dp(context, 7), 0, dp(context, 5), 0);
+        button.setMinHeight(dp(context, 38));
+        button.setMinimumHeight(dp(context, 38));
         button.setMinWidth(0);
         button.setMinimumWidth(0);
         button.setPadding(dp(context, 12), 0, dp(context, 12), 0);

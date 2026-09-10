@@ -385,14 +385,14 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         MaterialButton button = new MaterialButton(requireContext());
         button.setAllCaps(false);
         button.setText(label + "  ▾");
-        button.setTextSize(11f);
+        button.setTextSize(10f);
         button.setSingleLine(true);
         button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
         button.setMinHeight(0);
         button.setMinimumHeight(0);
-        button.setPadding(dp(10), 0, dp(8), 0);
+        button.setPadding(dp(7), 0, dp(6), 0);
         button.setCornerRadius(dp(15));
         button.setStrokeWidth(dp(1));
         button.setStrokeColor(ColorStateList.valueOf(ContextCompat.getColor(

@@ -333,18 +333,20 @@ public class GroceryAdapter
             assignmentLine.append(listLabel)
                     .append(" • ")
                     .append(assignment);
-            if (item.purchasedAt > 0L) {
+            long displayPurchaseAt = item.purchasedAt > 0L
+                    ? item.purchasedAt : item.lastPurchasedAtForDisplay;
+            if (displayPurchaseAt > 0L) {
                 boolean recurring = GroceryRecurrenceEngine.isRecurringType(
                         GroceryRecurrenceEngine.originalCycle(item));
                 assignmentLine.append(recurring ? "\n" : " • ")
-                        .append(lastPurchaseLabel(item.purchasedAt));
+                        .append(lastPurchaseLabel(displayPurchaseAt));
             } else if (GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))) {
                 assignmentLine.append(" • New recurring item");
             }
             if (GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))
-                    && item.purchasedAt > 0L) {
+                    && displayPurchaseAt > 0L) {
                 assignmentLine.append("\n").append(nextDueLabel(item, now));
             }
             binding.groceryAssignment.setText(assignmentLine.toString());
@@ -416,7 +418,7 @@ public class GroceryAdapter
 
         @NonNull
         private String nextDueLabel(@NonNull GroceryItem item, long now) {
-            long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
+            long dueAt = GroceryRecurrenceEngine.displayNextDueAt(item);
             if (dueAt == Long.MAX_VALUE) return "";
             if (dueAt <= now) {
                 long pendingDays = elapsedCalendarDays(dueAt, now);
@@ -427,7 +429,7 @@ public class GroceryAdapter
                 return elapsed + " • Due: "
                         + purchaseDateFormat.format(new java.util.Date(dueAt));
             }
-            int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
+            int days = GroceryRecurrenceEngine.daysUntilDisplayDue(item, now);
             String relative = days == 1 ? "Tomorrow" : days + " days";
             return "Advance: " + relative + " • Next due: "
                     + purchaseDateFormat.format(new java.util.Date(dueAt));
