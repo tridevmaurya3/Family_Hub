@@ -902,6 +902,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         GroceryItem item = existing == null
                 ? new GroceryItem()
                 : existing;
+        // Keep the exact persisted identity throughout asynchronous form work.
+        // An edit must never fall back to the new-item insert path.
+        final long originalItemId = item.id;
+        final String originalCloudId = item.cloudId;
+        final String originalFamilyId = item.familyId;
+        final boolean originalHistoryOnly = item.historyOnly;
         final long originalPurchaseAt = item.purchasedAt;
         final boolean editingPurchasedOccurrence =
                 existing != null && item.isPurchased && !completeAfterSave;
@@ -1104,6 +1110,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             } else {
                 item.assignedMemberId = "";
                 item.assignedMemberName = "";
+            }
+
+            if (existing != null) {
+                item.id = originalItemId;
+                item.cloudId = originalCloudId;
+                item.familyId = originalFamilyId;
+                item.historyOnly = originalHistoryOnly;
             }
 
             Runnable saveComplete = () -> {
