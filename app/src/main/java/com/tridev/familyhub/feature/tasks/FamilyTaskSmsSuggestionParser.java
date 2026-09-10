@@ -17,9 +17,9 @@ import java.util.regex.Pattern;
  */
 final class FamilyTaskSmsSuggestionParser {
     private static final Pattern DATE_PATTERN = Pattern.compile(
-            "\\b([0-3]?\\d)[/-]([01]?\\d)(?:[/-](\\d{2,4}))?\\b");
+            "\\b([0-3]?\\d)[/.-]([01]?\\d)(?:[/.-](\\d{2,4}))?\\b");
     private static final Pattern TIME_PATTERN = Pattern.compile(
-            "(?i)\\b([01]?\\d|2[0-3])[:.]([0-5]\\d)\\s*(am|pm)?\\b");
+            "(?i)\\b([01]?\\d|2[0-3]):([0-5]\\d)\\s*(am|pm)?\\b");
     private static final Pattern URL_PATTERN = Pattern.compile(
             "(?i)\\b(?:https?://|www\\.)\\S+");
     private static final Pattern EMAIL_UPI_PATTERN = Pattern.compile(
@@ -28,8 +28,11 @@ final class FamilyTaskSmsSuggestionParser {
             "(?<!\\d)(?:\\+?91[-\\s]?)?[6-9]\\d{9}(?!\\d)");
     private static final Pattern SECRET_PATTERN = Pattern.compile(
             "(?i)\\b(?:otp|pin|cvv|password|passcode)\\b\\s*[:=-]?\\s*[a-z0-9]{3,12}");
+    private static final Pattern ACCOUNT_PATTERN = Pattern.compile(
+            "(?i)\\b(?:a/c|acct|account|card)\\s*(?:no\\.?|number)?\\s*[:x*#-]*\\s*(?:\\d[ -]?){6,19}\\b");
     private static final Pattern LONG_NUMBER_PATTERN = Pattern.compile("\\b\\d{6,}\\b");
-    private static final Pattern LONG_ID_PATTERN = Pattern.compile("\\b(?=[A-Z0-9-]{12,}\\b)(?=.*[A-Z])(?=.*\\d)[A-Z0-9-]+\\b");
+    private static final Pattern LONG_ID_PATTERN = Pattern.compile(
+            "(?i)\\b(?=[a-z0-9-]{12,}\\b)(?=[a-z0-9-]*[a-z])(?=[a-z0-9-]*\\d)[a-z0-9-]+\\b");
     private static final Pattern MONEY_PATTERN = Pattern.compile(
             "(?i)(?:₹|rs\\.?|inr)\\s*[0-9][0-9,]*(?:\\.[0-9]{1,2})?");
     private static final Pattern ACTION_WORDS = Pattern.compile(
@@ -79,8 +82,9 @@ final class FamilyTaskSmsSuggestionParser {
         value = EMAIL_UPI_PATTERN.matcher(value).replaceAll(" ");
         value = PHONE_PATTERN.matcher(value).replaceAll(" ");
         value = MONEY_PATTERN.matcher(value).replaceAll(" ");
+        value = ACCOUNT_PATTERN.matcher(value).replaceAll(" ");
         value = LONG_NUMBER_PATTERN.matcher(value).replaceAll(" ");
-        value = LONG_ID_PATTERN.matcher(value.toUpperCase(Locale.ROOT)).replaceAll(" ");
+        value = LONG_ID_PATTERN.matcher(value).replaceAll(" ");
         value = value.replaceAll("(?i)^\\s*(?:dear customer|dear user|hello|hi|प्रिय ग्राहक|प्रिय उपभोक्ता)[, :.-]*", "");
         value = value.replaceAll("\\s+", " ").trim();
         if (value.length() > 110) {
@@ -145,7 +149,8 @@ final class FamilyTaskSmsSuggestionParser {
                     candidate.set(Calendar.MONTH, month - 1);
                     candidate.set(Calendar.DAY_OF_MONTH, day);
                     candidate.getTimeInMillis();
-                    if (yearText == null && candidate.getTimeInMillis() < now - 12L * 60L * 60L * 1000L) {
+                    if (yearText == null
+                            && candidate.getTimeInMillis() < now - 12L * 60L * 60L * 1000L) {
                         candidate.add(Calendar.YEAR, 1);
                     }
                     due = candidate;
