@@ -88,6 +88,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/task_due_calendar_button"
+        style="@style/Widget.FamilyHub.Button.Outlined"
+        android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
+        android:layout_marginTop="@dimen/space_6" android:text="@string/family_tasks_due_calendar"
+        android:textColor="@color/fh_module_grocery" app:icon="@drawable/ic_planner"
+        app:iconTint="@color/fh_module_grocery" app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
+
     <HorizontalScrollView android:id="@+id/task_filter_scroll"
         android:layout_width="0dp" android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_8" android:fillViewport="false"

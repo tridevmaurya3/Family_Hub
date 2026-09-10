@@ -50,6 +50,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private int activeStatus = R.id.task_status_pending;
     private int activeAssignment = R.id.task_assignment_everyone;
     private boolean overdueOnly;
+    private long customDateStart;
+    private long customDateEnd;
 
     @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater,
             @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -78,6 +80,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskRecyclerView.setAdapter(adapter);
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
         binding.taskFloatingToggle.setOnClickListener(v -> toggleFloatingStrip());
+        binding.taskDueCalendarButton.setOnClickListener(v -> pickCalendarDay());
         binding.taskQuickAddInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) { quickAdd(); return true; }
             return false;
@@ -85,6 +88,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (!checkedIds.isEmpty()) activeFilter = checkedIds.get(0);
             overdueOnly = false;
+            customDateStart = 0L;
+            customDateEnd = 0L;
+            binding.taskDueCalendarButton.setText(R.string.family_tasks_due_calendar);
             reload();
         });
         binding.taskStatusGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
@@ -202,6 +208,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                         || (activeStatus == R.id.task_status_pending && !completed);
                 boolean dateMatches = activeFilter == R.id.task_filter_all
                         || (task.dueAt >= range[0] && task.dueAt < range[1]);
+                if (customDateStart > 0L) {
+                    dateMatches = task.dueAt >= customDateStart
+                            && task.dueAt < customDateEnd;
+                }
                 boolean assignmentMatches = matchesAssignment(task);
                 if (overdueOnly) dateMatches = !completed
                         && task.dueAt < startOfToday();
@@ -212,6 +222,28 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             binding.taskEmptyState.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE);
             binding.taskRecyclerView.setVisibility(visible.isEmpty() ? View.GONE : View.VISIBLE);
         });
+    }
+
+    private void pickCalendarDay() {
+        Calendar selected = Calendar.getInstance();
+        new DatePickerDialog(requireContext(), (picker, year, month, day) -> {
+            selected.set(year, month, day, 0, 0, 0);
+            selected.set(Calendar.MILLISECOND, 0);
+            long selectedDateStart = selected.getTimeInMillis();
+            selected.add(Calendar.DAY_OF_YEAR, 1);
+            long selectedDateEnd = selected.getTimeInMillis();
+            overdueOnly = false;
+            activeFilter = R.id.task_filter_all;
+            binding.taskFilterGroup.check(R.id.task_filter_all);
+            customDateStart = selectedDateStart;
+            customDateEnd = selectedDateEnd;
+            binding.taskDueCalendarButton.setText(getString(
+                    R.string.family_tasks_calendar_date,
+                    DateFormat.getDateInstance(DateFormat.MEDIUM)
+                            .format(new Date(customDateStart))));
+            reload();
+        }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH),
+                selected.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private boolean matchesAssignment(@NonNull FamilyTask task) {
@@ -289,12 +321,15 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         String[] priorityValues = {FamilyTask.PRIORITY_NORMAL, FamilyTask.PRIORITY_HIGH, FamilyTask.PRIORITY_URGENT};
         String[] repeats = {getString(R.string.task_repeat_none), getString(R.string.task_repeat_daily), getString(R.string.task_repeat_weekly), getString(R.string.task_repeat_monthly)};
         String[] repeatValues = {FamilyTask.REPEAT_NONE, FamilyTask.REPEAT_DAILY, FamilyTask.REPEAT_WEEKLY, FamilyTask.REPEAT_MONTHLY};
+        String[] reminderLabels = {getString(R.string.task_reminder_at_time), getString(R.string.task_reminder_5_minutes), getString(R.string.task_reminder_15_minutes), getString(R.string.task_reminder_30_minutes), getString(R.string.task_reminder_1_hour), getString(R.string.task_reminder_1_day)};
+        int[] reminderValues = {0, 5, 15, 30, 60, 1440};
         List<String> memberNames = new ArrayList<>();
         memberNames.add(getString(R.string.family_tasks_whole_family));
         for (FamilyMember member : members) memberNames.add(member.name);
         form.taskPriorityInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, priorities));
         form.taskRepeatInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, repeats));
         form.taskMemberInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, memberNames));
+        form.taskReminderLeadInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, reminderLabels));
         form.taskDialogTitle.setText(existing == null ? R.string.family_tasks_add : R.string.family_tasks_edit);
         form.saveTaskButton.setText(existing == null ? R.string.family_tasks_save : R.string.family_tasks_update);
         form.taskTitleInput.setText(task.title);
@@ -303,6 +338,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         form.taskRepeatInput.setText(repeats[indexOf(repeatValues, task.repeatType)], false);
         form.taskMemberInput.setText(task.assignedMemberName.isEmpty() ? memberNames.get(0) : task.assignedMemberName, false);
         form.taskReminderSwitch.setChecked(task.reminderEnabled || existing == null);
+        int reminderIndex = indexOf(reminderValues, task.reminderMinutesBefore);
+        form.taskReminderLeadInput.setText(reminderLabels[reminderIndex], false);
+        form.taskReminderLeadLayout.setVisibility(form.taskReminderSwitch.isChecked() ? View.VISIBLE : View.GONE);
+        form.taskReminderSwitch.setOnCheckedChangeListener((button, checked) ->
+                form.taskReminderLeadLayout.setVisibility(checked ? View.VISIBLE : View.GONE));
         updateDueText(form, dueAt[0]);
         form.taskDueInput.setOnClickListener(v -> pickDateTime(dueAt[0], selected -> { dueAt[0] = selected; updateDueText(form, selected); }));
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext()).setView(form.getRoot()).create();
@@ -327,6 +367,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 task.assignedMemberId = "";
             }
             task.reminderEnabled = form.taskReminderSwitch.isChecked();
+            task.reminderMinutesBefore = reminderValues[indexOf(
+                    reminderLabels, text(form.taskReminderLeadInput))];
             repository.save(task, () -> {
                 FamilyTaskScheduler.schedule(requireContext(), task);
                 dialog.dismiss(); reload();
@@ -371,5 +413,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private void updateDueText(DialogFamilyTaskBinding form, long value) { form.taskDueInput.setText(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(value))); }
     private static String text(android.widget.TextView view) { return view.getText() == null ? "" : view.getText().toString().trim(); }
     private static int indexOf(String[] values, String target) { for (int i=0;i<values.length;i++) if (values[i].equals(target)) return i; return 0; }
+    private static int indexOf(int[] values, int target) { for (int i=0;i<values.length;i++) if (values[i] == target) return i; return 3; }
     @Override public void onDestroyView() { if (repository != null) repository.stopRealtimeSync(); binding = null; super.onDestroyView(); }
 }
