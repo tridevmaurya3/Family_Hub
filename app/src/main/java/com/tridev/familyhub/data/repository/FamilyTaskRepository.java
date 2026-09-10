@@ -167,6 +167,8 @@ public final class FamilyTaskRepository {
         next.updatedByName = completed.updatedByName;
         next.sourceType = "RECURRING_TASK";
         next.sourceRecordId = seriesId;
+        next.linkedGroceryCloudId = completed.linkedGroceryCloudId;
+        next.linkedGroceryItemId = completed.linkedGroceryItemId;
         next.shared = completed.shared;
         return next;
     }
@@ -226,6 +228,8 @@ public final class FamilyTaskRepository {
         values.put("completedByName", task.completedByName);
         values.put("sourceType", task.sourceType);
         values.put("sourceRecordId", task.sourceRecordId);
+        values.put("linkedGroceryCloudId", task.linkedGroceryCloudId);
+        values.put("linkedGroceryItemId", task.linkedGroceryItemId);
         values.put("shared", true);
         FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
@@ -268,6 +272,8 @@ public final class FamilyTaskRepository {
             task.completedByName = text(s, "completedByName");
             task.sourceType = fallback(text(s, "sourceType"), "FAMILY_TASK");
             task.sourceRecordId = text(s, "sourceRecordId");
+            task.linkedGroceryCloudId = text(s, "linkedGroceryCloudId");
+            task.linkedGroceryItemId = number(s, "linkedGroceryItemId");
             task.shared = true;
             if (insert) task.id = dao.insert(task); else dao.update(task);
             FamilyTask changed = task;

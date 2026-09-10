@@ -45,5 +45,7 @@ public class FamilyTask {
     @NonNull public String completedByName = "";
     @NonNull public String sourceType = "FAMILY_TASK";
     @NonNull public String sourceRecordId = "";
+    @NonNull public String linkedGroceryCloudId = "";
+    public long linkedGroceryItemId;
     public boolean shared = true;
 }

@@ -33,12 +33,15 @@ import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
+import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.data.repository.FamilyTaskRepository;
+import com.tridev.familyhub.data.repository.GroceryRepository;
 import com.tridev.familyhub.databinding.DialogFamilyTaskBinding;
 import com.tridev.familyhub.databinding.FragmentFamilyTasksBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
 
 import java.text.DateFormat;
@@ -341,6 +344,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         String[] repeatValues = {FamilyTask.REPEAT_NONE, FamilyTask.REPEAT_DAILY, FamilyTask.REPEAT_WEEKLY, FamilyTask.REPEAT_MONTHLY};
         String[] reminderLabels = {getString(R.string.task_reminder_at_time), getString(R.string.task_reminder_5_minutes), getString(R.string.task_reminder_15_minutes), getString(R.string.task_reminder_30_minutes), getString(R.string.task_reminder_1_hour), getString(R.string.task_reminder_1_day)};
         int[] reminderValues = {0, 5, 15, 30, 60, 1440};
+        String[] groceryCategories = GroceryOptionCatalog.categoryLabels(requireContext());
+        String[] groceryLists = {getString(R.string.grocery_filter_daily), "Weekly", "Fortnightly", getString(R.string.grocery_filter_monthly)};
+        String[] groceryListValues = {GroceryItem.LIST_DAILY, GroceryItem.LIST_WEEKLY, GroceryItem.LIST_FORTNIGHTLY, GroceryItem.LIST_MONTHLY};
         List<String> memberNames = new ArrayList<>();
         memberNames.add(getString(R.string.family_tasks_whole_family));
         for (FamilyMember member : members) memberNames.add(member.name);
@@ -348,6 +354,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         form.taskRepeatInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, repeats));
         form.taskMemberInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, memberNames));
         form.taskReminderLeadInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, reminderLabels));
+        form.taskGroceryCategoryInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, groceryCategories));
+        form.taskGroceryListInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, groceryLists));
         form.taskDialogTitle.setText(existing == null ? R.string.family_tasks_add : R.string.family_tasks_edit);
         form.saveTaskButton.setText(existing == null ? R.string.family_tasks_save : R.string.family_tasks_update);
         form.taskTitleInput.setText(task.title);
@@ -357,6 +365,17 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         form.taskPriorityInput.setText(priorities[indexOf(priorityValues, task.priority)], false);
         form.taskRepeatInput.setText(repeats[indexOf(repeatValues, task.repeatType)], false);
         form.taskMemberInput.setText(task.assignedMemberName.isEmpty() ? memberNames.get(0) : task.assignedMemberName, false);
+        boolean alreadyLinked = !task.linkedGroceryCloudId.isEmpty() || task.linkedGroceryItemId > 0L;
+        form.taskGrocerySwitch.setChecked(alreadyLinked);
+        form.taskGrocerySwitch.setEnabled(!alreadyLinked);
+        if (alreadyLinked) form.taskGrocerySwitch.setText(R.string.family_tasks_linked_to_grocery);
+        form.taskGroceryOptions.setVisibility(View.GONE);
+        form.taskGroceryCategoryInput.setText(groceryCategories.length == 0
+                ? getString(R.string.grocery_uncategorized) : groceryCategories[0], false);
+        form.taskGroceryListInput.setText(groceryLists[0], false);
+        form.taskGrocerySwitch.setOnCheckedChangeListener((button, checked) ->
+                form.taskGroceryOptions.setVisibility(checked && !alreadyLinked
+                        ? View.VISIBLE : View.GONE));
         form.taskReminderSwitch.setChecked(task.reminderEnabled || existing == null);
         int reminderIndex = indexOf(reminderValues, task.reminderMinutesBefore);
         form.taskReminderLeadInput.setText(reminderLabels[reminderIndex], false);
@@ -392,10 +411,30 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             task.reminderEnabled = form.taskReminderSwitch.isChecked();
             task.reminderMinutesBefore = reminderValues[indexOf(
                     reminderLabels, text(form.taskReminderLeadInput))];
-            repository.save(task, () -> {
+            Runnable persistTask = () -> repository.save(task, () -> {
                 FamilyTaskScheduler.schedule(requireContext(), task);
                 dialog.dismiss(); reload();
             });
+            if (form.taskGrocerySwitch.isChecked() && !alreadyLinked) {
+                GroceryItem grocery = new GroceryItem();
+                grocery.name = task.title;
+                grocery.category = text(form.taskGroceryCategoryInput);
+                grocery.quantity = "1 pcs";
+                grocery.priority = task.priority;
+                grocery.listType = groceryListValues[indexOf(groceryLists,
+                        text(form.taskGroceryListInput))];
+                grocery.isMonthlyMaster = !GroceryItem.LIST_DAILY.equals(grocery.listType);
+                grocery.assignedMemberId = task.assignedMemberId;
+                grocery.assignedMemberName = task.assignedMemberName;
+                grocery.notes = task.notes;
+                new GroceryRepository(requireContext()).save(grocery, () -> {
+                    task.linkedGroceryItemId = grocery.id;
+                    task.linkedGroceryCloudId = grocery.cloudId;
+                    persistTask.run();
+                });
+            } else {
+                persistTask.run();
+            }
         });
         dialog.setOnDismissListener(ignored -> stopVoiceCapture());
         dialog.show();

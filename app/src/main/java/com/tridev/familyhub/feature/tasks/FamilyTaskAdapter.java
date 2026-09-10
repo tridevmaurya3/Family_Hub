@@ -56,8 +56,12 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
             String created = task.createdByName.isEmpty() ? ""
                     : " • " + binding.getRoot().getContext().getString(
                     R.string.family_tasks_created_by, task.createdByName);
+            String grocery = task.linkedGroceryCloudId.isEmpty()
+                    && task.linkedGroceryItemId <= 0L ? "" : " • "
+                    + binding.getRoot().getContext().getString(
+                    R.string.family_tasks_linked_to_grocery);
             binding.taskMeta.setText(binding.getRoot().getContext().getString(
-                    R.string.family_tasks_assigned_to, who) + repeat + created);
+                    R.string.family_tasks_assigned_to, who) + repeat + created + grocery);
             binding.taskNotes.setText(task.notes);
             binding.taskNotes.setVisibility(task.notes.isEmpty() ? View.GONE : View.VISIBLE);
             binding.taskCompleted.setOnCheckedChangeListener((button, checked) -> listener.onCompletedChanged(task, checked));

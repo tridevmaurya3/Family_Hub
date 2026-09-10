@@ -1611,4 +1611,8 @@ Sharing: %12$s</string>
     <string name="task_due_today">Today</string>
     <string name="task_due_tomorrow">Tomorrow</string>
     <string name="task_due_next_week">Next week</string>
+    <string name="family_tasks_add_to_grocery">Also add to Grocery list</string>
+    <string name="family_tasks_linked_to_grocery">Linked to Grocery</string>
+    <string name="family_tasks_grocery_category">Grocery category</string>
+    <string name="family_tasks_grocery_list">Grocery list</string>
 </resources>
