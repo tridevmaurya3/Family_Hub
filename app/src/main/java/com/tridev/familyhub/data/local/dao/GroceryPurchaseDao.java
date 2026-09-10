@@ -20,12 +20,16 @@ public interface GroceryPurchaseDao {
                         String quantity, String storeName, double actualCost,
                         long purchasedAt);
 
-    @Query("UPDATE grocery_purchases SET purchasedAt = :newPurchasedAt "
+    @Query("UPDATE grocery_purchases SET itemName = :newItemName, "
+            + "category = :category, quantity = :quantity, storeName = :storeName, "
+            + "actualCost = :actualCost, purchasedAt = :newPurchasedAt "
             + "WHERE id = (SELECT id FROM grocery_purchases "
-            + "WHERE itemName = :itemName COLLATE NOCASE AND purchasedAt = :oldPurchasedAt "
-            + "ORDER BY id DESC LIMIT 1)")
-    int updateMatchingPurchaseDate(String itemName, long oldPurchasedAt,
-                                   long newPurchasedAt);
+            + "WHERE itemName = :originalItemName COLLATE NOCASE "
+            + "AND purchasedAt = :oldPurchasedAt ORDER BY id DESC LIMIT 1)")
+    int updateMatchingPurchase(String originalItemName, long oldPurchasedAt,
+                               String newItemName, String category,
+                               String quantity, String storeName,
+                               double actualCost, long newPurchasedAt);
 
     @Query("DELETE FROM grocery_purchases WHERE id = :purchaseId")
     int deleteById(long purchaseId);
