@@ -53,6 +53,9 @@ public final class GrocerySmartCategoryPicker {
     private static final String PREFS = "grocery_smart_category_picker";
     private static final int MAX_RECENT = 5;
     private static final int MAX_POPULAR = 5;
+    private static final String PREF_DIALOG_WIDTH = "category_dialog_width";
+    private static final String PREF_DIALOG_HEIGHT = "category_dialog_height";
+    private static final String PREF_DIALOG_SCALE = "category_dialog_scale";
 
     private GrocerySmartCategoryPicker() { }
 
@@ -241,11 +244,14 @@ public final class GrocerySmartCategoryPicker {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        java.util.IdentityHashMap<TextView, Float> baseTextSizes =
+                new java.util.IdentityHashMap<>();
+        collectTextSizes(root, baseTextSizes);
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setView(resizableShell)
                 .create();
         installResizeCorners(context, dialog, resizableShell, root,
-                scroll, scrollParams);
+                scroll, scrollParams, baseTextSizes);
         cancel.setOnClickListener(v -> dialog.dismiss());
 
         List<String> allCategories = new ArrayList<>();
@@ -308,6 +314,8 @@ public final class GrocerySmartCategoryPicker {
                     popularTitle.setVisibility(popular.isEmpty() ? View.GONE : View.VISIBLE);
                     popularScroll.setVisibility(popular.isEmpty() ? View.GONE : View.VISIBLE);
                     renderFiltered.run();
+                    collectTextSizes(root, baseTextSizes);
+                    applyTextScale(baseTextSizes, rememberedDialogScale(context));
                 });
             });
         });
@@ -317,8 +325,20 @@ public final class GrocerySmartCategoryPicker {
             dialog.getWindow().setBackgroundDrawable(
                     new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
             dialog.getWindow().getDecorView().setPadding(0, 0, 0, 0);
-            dialog.getWindow().setLayout(adaptiveCategoryDialogWidth(context),
-                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = context.getResources().getDisplayMetrics().heightPixels;
+            android.content.SharedPreferences preferences =
+                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            int savedWidth = preferences.getInt(PREF_DIALOG_WIDTH,
+                    adaptiveCategoryDialogWidth(context));
+            int savedHeight = preferences.getInt(PREF_DIALOG_HEIGHT, 0);
+            dialog.getWindow().setLayout(
+                    clamp(savedWidth, Math.min(dp(context, 240), screenWidth),
+                            screenWidth - dp(context, 8)),
+                    savedHeight > 0
+                            ? clamp(savedHeight, dp(context, 330),
+                                    screenHeight - dp(context, 36))
+                            : ViewGroup.LayoutParams.WRAP_CONTENT);
         }
     }
 
@@ -416,7 +436,8 @@ public final class GrocerySmartCategoryPicker {
         current.add(0, value);
         while (current.size() > MAX_RECENT) current.remove(current.size() - 1);
         android.content.SharedPreferences.Editor editor = context
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear();
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit();
+        for (int i = 0; i < MAX_RECENT; i++) editor.remove("recent_" + i);
         for (int i = 0; i < current.size(); i++) editor.putString("recent_" + i, current.get(i));
         editor.apply();
     }
@@ -612,7 +633,8 @@ public final class GrocerySmartCategoryPicker {
             @NonNull android.widget.FrameLayout shell,
             @NonNull ViewGroup content,
             @NonNull ScrollView categoryScroll,
-            @NonNull LinearLayout.LayoutParams categoryScrollParams
+            @NonNull LinearLayout.LayoutParams categoryScrollParams,
+            @NonNull java.util.IdentityHashMap<TextView, Float> baseTextSizes
     ) {
         final int handleSize = dp(context, 24);
         final int minimumWidth = Math.min(dp(context, 240),
@@ -622,10 +644,6 @@ public final class GrocerySmartCategoryPicker {
                 .getDisplayMetrics().widthPixels - dp(context, 8);
         final int maximumHeight = context.getResources()
                 .getDisplayMetrics().heightPixels - dp(context, 36);
-        final java.util.IdentityHashMap<TextView, Float> baseTextSizes =
-                new java.util.IdentityHashMap<>();
-        collectTextSizes(content, baseTextSizes);
-
         int[] gravities = new int[]{
                 Gravity.TOP | Gravity.START,
                 Gravity.TOP | Gravity.END,
@@ -679,6 +697,7 @@ public final class GrocerySmartCategoryPicker {
                         float heightScale = height / (float) startHeight;
                         float scale = Math.max(0.82f, Math.min(1.35f,
                                 (float) Math.sqrt(widthScale * heightScale)));
+                        collectTextSizes(content, baseTextSizes);
                         applyTextScale(baseTextSizes, scale);
 
                         int listHeight = clamp(startListHeight
@@ -693,6 +712,17 @@ public final class GrocerySmartCategoryPicker {
                             == android.view.MotionEvent.ACTION_UP
                             || event.getActionMasked()
                             == android.view.MotionEvent.ACTION_CANCEL) {
+                        View decor = dialog.getWindow().getDecorView();
+                        float widthScale = decor.getWidth() / (float) startWidth;
+                        float heightScale = decor.getHeight() / (float) startHeight;
+                        float savedScale = Math.max(0.82f, Math.min(1.35f,
+                                (float) Math.sqrt(widthScale * heightScale)));
+                        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                .edit()
+                                .putInt(PREF_DIALOG_WIDTH, decor.getWidth())
+                                .putInt(PREF_DIALOG_HEIGHT, decor.getHeight())
+                                .putFloat(PREF_DIALOG_SCALE, savedScale)
+                                .apply();
                         view.getParent().requestDisallowInterceptTouchEvent(false);
                         return true;
                     }
@@ -708,13 +738,21 @@ public final class GrocerySmartCategoryPicker {
     ) {
         if (view instanceof TextView) {
             TextView text = (TextView) view;
-            sizes.put(text, text.getTextSize());
+            if (!sizes.containsKey(text)) {
+                sizes.put(text, text.getTextSize());
+            }
         }
         if (!(view instanceof ViewGroup)) return;
         ViewGroup group = (ViewGroup) view;
         for (int index = 0; index < group.getChildCount(); index++) {
             collectTextSizes(group.getChildAt(index), sizes);
         }
+    }
+
+    private static float rememberedDialogScale(@NonNull Context context) {
+        return Math.max(0.82f, Math.min(1.35f,
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .getFloat(PREF_DIALOG_SCALE, 1f)));
     }
 
     private static void applyTextScale(
