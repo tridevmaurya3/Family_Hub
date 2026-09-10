@@ -469,8 +469,22 @@ public final class FamilyTaskRepository {
         return value == null ? "" : value;
     }
     private static long number(DataSnapshot s, String key) {
-        Number value = s.child(key).getValue(Number.class);
-        return value == null ? 0L : value.longValue();
+        Object value = s.child(key).getValue();
+        if (value instanceof Number) return ((Number) value).longValue();
+        if (value instanceof String) {
+            String raw = ((String) value).trim();
+            if (raw.isEmpty()) return 0L;
+            try {
+                return Long.parseLong(raw);
+            } catch (NumberFormatException ignored) {
+                try {
+                    return (long) Double.parseDouble(raw);
+                } catch (NumberFormatException ignoredAgain) {
+                    return 0L;
+                }
+            }
+        }
+        return 0L;
     }
     private static boolean bool(DataSnapshot s, String key) {
         Boolean value = s.child(key).getValue(Boolean.class);
