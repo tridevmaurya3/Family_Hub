@@ -664,6 +664,8 @@ public final class GrocerySmartCategoryPicker {
                 int startWidth;
                 int startHeight;
                 int startListHeight;
+                float startScale;
+                float currentScale;
 
                 @Override
                 public boolean onTouch(View view, android.view.MotionEvent event) {
@@ -678,6 +680,8 @@ public final class GrocerySmartCategoryPicker {
                         startListHeight = categoryScroll.getHeight() > 0
                                 ? categoryScroll.getHeight()
                                 : categoryScrollParams.height;
+                        startScale = rememberedDialogScale(context);
+                        currentScale = startScale;
                         view.getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
                     }
@@ -695,10 +699,11 @@ public final class GrocerySmartCategoryPicker {
 
                         float widthScale = width / (float) startWidth;
                         float heightScale = height / (float) startHeight;
-                        float scale = Math.max(0.82f, Math.min(1.35f,
-                                (float) Math.sqrt(widthScale * heightScale)));
+                        currentScale = Math.max(0.82f, Math.min(1.35f,
+                                startScale * (float) Math.sqrt(
+                                        widthScale * heightScale)));
                         collectTextSizes(content, baseTextSizes);
-                        applyTextScale(baseTextSizes, scale);
+                        applyTextScale(baseTextSizes, currentScale);
 
                         int listHeight = clamp(startListHeight
                                         + (height - startHeight),
@@ -713,15 +718,11 @@ public final class GrocerySmartCategoryPicker {
                             || event.getActionMasked()
                             == android.view.MotionEvent.ACTION_CANCEL) {
                         View decor = dialog.getWindow().getDecorView();
-                        float widthScale = decor.getWidth() / (float) startWidth;
-                        float heightScale = decor.getHeight() / (float) startHeight;
-                        float savedScale = Math.max(0.82f, Math.min(1.35f,
-                                (float) Math.sqrt(widthScale * heightScale)));
                         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                                 .edit()
                                 .putInt(PREF_DIALOG_WIDTH, decor.getWidth())
                                 .putInt(PREF_DIALOG_HEIGHT, decor.getHeight())
-                                .putFloat(PREF_DIALOG_SCALE, savedScale)
+                                .putFloat(PREF_DIALOG_SCALE, currentScale)
                                 .apply();
                         view.getParent().requestDisallowInterceptTouchEvent(false);
                         return true;
