@@ -233,9 +233,19 @@ public final class GrocerySmartCategoryPicker {
         root.addView(footer, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 40)));
 
+        android.widget.FrameLayout resizableShell =
+                new android.widget.FrameLayout(context);
+        resizableShell.setClipChildren(false);
+        resizableShell.setClipToPadding(false);
+        resizableShell.addView(root, new android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
-                .setView(root)
+                .setView(resizableShell)
                 .create();
+        installResizeCorners(context, dialog, resizableShell, root,
+                scroll, scrollParams);
         cancel.setOnClickListener(v -> dialog.dismiss());
 
         List<String> allCategories = new ArrayList<>();
@@ -589,6 +599,169 @@ public final class GrocerySmartCategoryPicker {
             current = (View) current.getParent();
         }
         return null;
+    }
+
+    /**
+     * Adds four low-contrast corner grips without buttons or image assets.
+     * Dragging a corner resizes the chooser and scales its typography/list area.
+     * This shared picker is used by both the Grocery screen and floating overlay.
+     */
+    private static void installResizeCorners(
+            @NonNull Context context,
+            @NonNull AlertDialog dialog,
+            @NonNull android.widget.FrameLayout shell,
+            @NonNull ViewGroup content,
+            @NonNull ScrollView categoryScroll,
+            @NonNull LinearLayout.LayoutParams categoryScrollParams
+    ) {
+        final int handleSize = dp(context, 24);
+        final int minimumWidth = Math.min(dp(context, 240),
+                context.getResources().getDisplayMetrics().widthPixels);
+        final int minimumHeight = dp(context, 330);
+        final int maximumWidth = context.getResources()
+                .getDisplayMetrics().widthPixels - dp(context, 8);
+        final int maximumHeight = context.getResources()
+                .getDisplayMetrics().heightPixels - dp(context, 36);
+        final java.util.IdentityHashMap<TextView, Float> baseTextSizes =
+                new java.util.IdentityHashMap<>();
+        collectTextSizes(content, baseTextSizes);
+
+        int[] gravities = new int[]{
+                Gravity.TOP | Gravity.START,
+                Gravity.TOP | Gravity.END,
+                Gravity.BOTTOM | Gravity.START,
+                Gravity.BOTTOM | Gravity.END
+        };
+        for (int gravity : gravities) {
+            ResizeCornerView grip = new ResizeCornerView(context, gravity);
+            android.widget.FrameLayout.LayoutParams params =
+                    new android.widget.FrameLayout.LayoutParams(
+                            handleSize, handleSize, gravity);
+            shell.addView(grip, params);
+            final boolean fromLeft = (gravity & Gravity.START) == Gravity.START;
+            final boolean fromTop = (gravity & Gravity.TOP) == Gravity.TOP;
+            grip.setOnTouchListener(new View.OnTouchListener() {
+                float downX;
+                float downY;
+                int startWidth;
+                int startHeight;
+                int startListHeight;
+
+                @Override
+                public boolean onTouch(View view, android.view.MotionEvent event) {
+                    if (dialog.getWindow() == null) return false;
+                    if (event.getActionMasked()
+                            == android.view.MotionEvent.ACTION_DOWN) {
+                        downX = event.getRawX();
+                        downY = event.getRawY();
+                        View decor = dialog.getWindow().getDecorView();
+                        startWidth = Math.max(minimumWidth, decor.getWidth());
+                        startHeight = Math.max(minimumHeight, decor.getHeight());
+                        startListHeight = categoryScroll.getHeight() > 0
+                                ? categoryScroll.getHeight()
+                                : categoryScrollParams.height;
+                        view.getParent().requestDisallowInterceptTouchEvent(true);
+                        return true;
+                    }
+                    if (event.getActionMasked()
+                            == android.view.MotionEvent.ACTION_MOVE) {
+                        int deltaX = Math.round(event.getRawX() - downX);
+                        int deltaY = Math.round(event.getRawY() - downY);
+                        int width = clamp(startWidth
+                                        + (fromLeft ? -deltaX : deltaX),
+                                minimumWidth, maximumWidth);
+                        int height = clamp(startHeight
+                                        + (fromTop ? -deltaY : deltaY),
+                                minimumHeight, maximumHeight);
+                        dialog.getWindow().setLayout(width, height);
+
+                        float widthScale = width / (float) startWidth;
+                        float heightScale = height / (float) startHeight;
+                        float scale = Math.max(0.82f, Math.min(1.35f,
+                                (float) Math.sqrt(widthScale * heightScale)));
+                        applyTextScale(baseTextSizes, scale);
+
+                        int listHeight = clamp(startListHeight
+                                        + (height - startHeight),
+                                dp(context, 72), Math.max(dp(context, 72),
+                                        height - dp(context, 205)));
+                        categoryScrollParams.height = listHeight;
+                        categoryScroll.setLayoutParams(categoryScrollParams);
+                        return true;
+                    }
+                    if (event.getActionMasked()
+                            == android.view.MotionEvent.ACTION_UP
+                            || event.getActionMasked()
+                            == android.view.MotionEvent.ACTION_CANCEL) {
+                        view.getParent().requestDisallowInterceptTouchEvent(false);
+                        return true;
+                    }
+                    return false;
+                }
+            });
+        }
+    }
+
+    private static void collectTextSizes(
+            @NonNull View view,
+            @NonNull java.util.IdentityHashMap<TextView, Float> sizes
+    ) {
+        if (view instanceof TextView) {
+            TextView text = (TextView) view;
+            sizes.put(text, text.getTextSize());
+        }
+        if (!(view instanceof ViewGroup)) return;
+        ViewGroup group = (ViewGroup) view;
+        for (int index = 0; index < group.getChildCount(); index++) {
+            collectTextSizes(group.getChildAt(index), sizes);
+        }
+    }
+
+    private static void applyTextScale(
+            @NonNull java.util.IdentityHashMap<TextView, Float> sizes,
+            float scale
+    ) {
+        for (Map.Entry<TextView, Float> entry : sizes.entrySet()) {
+            entry.getKey().setTextSize(TypedValue.COMPLEX_UNIT_PX,
+                    entry.getValue() * scale);
+        }
+    }
+
+    private static int clamp(int value, int minimum, int maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
+    }
+
+    /** A faint two-line corner marker; the full view remains the touch target. */
+    private static final class ResizeCornerView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final int gravity;
+
+        ResizeCornerView(@NonNull Context context, int gravity) {
+            super(context);
+            this.gravity = gravity;
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(Math.max(1f,
+                    context.getResources().getDisplayMetrics().density * 0.8f));
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setColor(Color.argb(72, 45, 105, 88));
+            setBackgroundColor(Color.TRANSPARENT);
+            setContentDescription("Resize category chooser");
+        }
+
+        @Override
+        protected void onDraw(@NonNull android.graphics.Canvas canvas) {
+            super.onDraw(canvas);
+            float inset = getWidth() * 0.28f;
+            float length = getWidth() * 0.32f;
+            boolean left = (gravity & Gravity.START) == Gravity.START;
+            boolean top = (gravity & Gravity.TOP) == Gravity.TOP;
+            float cornerX = left ? inset : getWidth() - inset;
+            float cornerY = top ? inset : getHeight() - inset;
+            float endX = cornerX + (left ? length : -length);
+            float endY = cornerY + (top ? length : -length);
+            canvas.drawLine(cornerX, cornerY, endX, cornerY, paint);
+            canvas.drawLine(cornerX, cornerY, cornerX, endY, paint);
+        }
     }
 
     private static void configureOverlayWindow(@NonNull Context context,
