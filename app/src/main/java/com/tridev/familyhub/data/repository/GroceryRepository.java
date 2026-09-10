@@ -308,6 +308,7 @@ public class GroceryRepository {
      */
     public void savePurchasedEdit(
             @NonNull GroceryItem item,
+            @NonNull String originalItemName,
             long originalPurchasedAt,
             long selectedPurchasedAt,
             @NonNull ActionCallback callback
@@ -316,8 +317,17 @@ public class GroceryRepository {
         item.purchasedAt = normalizedPurchasedAt;
         saveEdit(item, () -> USER_ACTION_EXECUTOR.execute(() -> {
             FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
-                    .updateMatchingPurchaseDate(item.name, originalPurchasedAt,
-                            normalizedPurchasedAt);
+                    .updateMatchingPurchase(
+                            originalItemName,
+                            originalPurchasedAt,
+                            item.name,
+                            item.category,
+                            item.quantity,
+                            item.storeName,
+                            item.actualCost > 0D
+                                    ? item.actualCost : item.estimatedCost,
+                            normalizedPurchasedAt
+                    );
             refreshRecurringAnchorFromHistory(item.name);
             mainHandler.post(callback::onComplete);
         }));
