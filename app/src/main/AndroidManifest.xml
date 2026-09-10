@@ -92,7 +92,7 @@
         <service
             android:name=".feature.tasks.overlay.FamilyTaskOverlayService"
             android:exported="false"
-            android:foregroundServiceType="specialUse|microphone"
+            android:foregroundServiceType="specialUse"
             android:stopWithTask="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"

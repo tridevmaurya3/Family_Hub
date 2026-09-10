@@ -228,8 +228,9 @@ public final class FamilyTaskOverlayService extends Service {
         }
         voice.setColorFilter(Color.rgb(220, 45, 82));
         showVoiceStatus(R.string.family_tasks_voice_listening, false);
-        speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
-        speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
+        try {
+            speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
+            speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
             @Override public void onReadyForSpeech(android.os.Bundle params) { }
             @Override public void onBeginningOfSpeech() { }
             @Override public void onRmsChanged(float rmsdB) { }
@@ -247,15 +248,20 @@ public final class FamilyTaskOverlayService extends Service {
             }
             @Override public void onPartialResults(android.os.Bundle results) { applyVoiceResult(results, input); }
             @Override public void onEvent(int eventType, android.os.Bundle params) { }
-        });
-        Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,
-                        java.util.Locale.getDefault().toLanguageTag())
-                .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-        speechRecognizer.startListening(intent);
+            });
+            Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                            android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,
+                            java.util.Locale.getDefault().toLanguageTag())
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+            speechRecognizer.startListening(intent);
+        } catch (RuntimeException error) {
+            stopVoiceCapture();
+            voice.setColorFilter(Color.rgb(15,105,80));
+            showVoiceStatus(R.string.family_tasks_voice_unavailable, true);
+        }
     }
 
     private boolean applyVoiceResult(@Nullable android.os.Bundle results,
