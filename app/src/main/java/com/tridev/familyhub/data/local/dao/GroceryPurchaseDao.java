@@ -31,6 +31,12 @@ public interface GroceryPurchaseDao {
                                String quantity, String storeName,
                                double actualCost, long newPurchasedAt);
 
+    @Query("UPDATE grocery_purchases SET itemName = :newItemName "
+            + "WHERE sourceItemId = :sourceItemId "
+            + "AND itemName = :originalItemName COLLATE NOCASE")
+    int renameForSourceItem(long sourceItemId, String originalItemName,
+                            String newItemName);
+
     @Query("DELETE FROM grocery_purchases WHERE id = :purchaseId")
     int deleteById(long purchaseId);
 
