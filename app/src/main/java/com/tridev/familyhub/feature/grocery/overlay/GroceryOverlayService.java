@@ -1487,7 +1487,8 @@ public class GroceryOverlayService extends Service {
             if (collapsed) continue;
             for (GroceryItem item : group.getValue()) {
                 CheckBox row = new CheckBox(this);
-                String detail = (shownHere + 1) + ".  " + item.name;
+                String prefix = (shownHere + 1) + ".  ";
+                String detail = prefix + item.name;
                 String badge = GroceryRecurrenceEngine.badgeLabel(
                         item, System.currentTimeMillis());
                 if (!badge.isEmpty()) detail += "  ◆ " + badge;
@@ -1506,7 +1507,29 @@ public class GroceryOverlayService extends Service {
                     detail += "\n" + overlayLastPurchaseLabel(displayPurchaseAt);
                     detail += "\n" + overlayNextDueLabel(item);
                 }
-                row.setText(detail);
+                android.text.SpannableString styledDetail =
+                        new android.text.SpannableString(detail);
+                int itemNameStart = prefix.length();
+                int itemNameEnd = Math.min(detail.length(), itemNameStart + item.name.length());
+                styledDetail.setSpan(new android.text.style.StyleSpan(
+                                android.graphics.Typeface.BOLD),
+                        itemNameStart, itemNameEnd,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                styledDetail.setSpan(new android.text.style.ForegroundColorSpan(
+                                Color.rgb(22, 91, 77)),
+                        itemNameStart, itemNameEnd,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                int historyStart = detail.indexOf('\n');
+                if (historyStart >= 0) {
+                    styledDetail.setSpan(new android.text.style.ForegroundColorSpan(
+                                    Color.rgb(73, 113, 135)),
+                            historyStart + 1, detail.length(),
+                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    styledDetail.setSpan(new android.text.style.RelativeSizeSpan(0.94f),
+                            historyStart + 1, detail.length(),
+                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                row.setText(styledDetail);
                 row.setTextSize(showLastPurchase ? 11.5f : 13f);
                 row.setMaxLines(showLastPurchase ? 3 : 1);
                 row.setTextColor(Color.rgb(36, 36, 36));

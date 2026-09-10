@@ -12,7 +12,6 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -203,7 +202,9 @@ public final class GroceryListCalendarUiBinder
             toggle = buildToggleButton(activity);
             ViewGroup.MarginLayoutParams toggleParams = new ViewGroup.MarginLayoutParams(
                     dp(activity, 92), dp(activity, 38));
-            filterGroup.addView(toggle, Math.min(2, filterGroup.getChildCount()), toggleParams);
+            // Fragment owns index 0 Cycle, index 1 Status and index 2 Date.
+            // View mode belongs immediately after Date, never between Status/Date.
+            filterGroup.addView(toggle, Math.min(3, filterGroup.getChildCount()), toggleParams);
 
             calendarPanel = new LinearLayout(activity);
             calendarPanel.setId(View.generateViewId());
@@ -263,14 +264,54 @@ public final class GroceryListCalendarUiBinder
         }
 
         private void showViewModeMenu(@NonNull View anchor) {
-            PopupMenu menu = new PopupMenu(activity, anchor);
-            menu.getMenu().add("List view").setCheckable(true).setChecked(!calendarMode);
-            menu.getMenu().add("Calendar view").setCheckable(true).setChecked(calendarMode);
-            menu.setOnMenuItemClickListener(item -> {
-                setCalendarMode("Calendar view".contentEquals(item.getTitle()), true);
-                return true;
+            LinearLayout rows = new LinearLayout(activity);
+            rows.setOrientation(LinearLayout.VERTICAL);
+            rows.setPadding(dp(activity, 5), dp(activity, 5),
+                    dp(activity, 5), dp(activity, 5));
+            rows.setBackground(roundedBackground(activity,
+                    Color.rgb(252, 253, 253), Color.rgb(199, 211, 221), 15));
+            rows.setElevation(dp(activity, 10));
+
+            android.widget.PopupWindow popup = new android.widget.PopupWindow(activity);
+            popup.setContentView(rows);
+            popup.setWidth(Math.max(anchor.getWidth(), dp(activity, 132)));
+            popup.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+            popup.setFocusable(true);
+            popup.setOutsideTouchable(true);
+            popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    Color.TRANSPARENT));
+            popup.setElevation(dp(activity, 12));
+
+            addViewModeRow(rows, popup, "List view", !calendarMode, false);
+            addViewModeRow(rows, popup, "Calendar view", calendarMode, true);
+            popup.showAsDropDown(anchor, 0, dp(activity, 4));
+        }
+
+        private void addViewModeRow(@NonNull LinearLayout parent,
+                                    @NonNull android.widget.PopupWindow popup,
+                                    @NonNull String label,
+                                    boolean selected,
+                                    boolean calendar) {
+            TextView row = new TextView(activity);
+            row.setText((selected ? "✓  " : "   ") + label);
+            row.setTextSize(12.5f);
+            row.setSingleLine(true);
+            row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(activity, 11), 0, dp(activity, 10), 0);
+            row.setTextColor(selected ? Color.rgb(15, 108, 89)
+                    : Color.rgb(36, 48, 58));
+            if (selected) row.setTypeface(row.getTypeface(), android.graphics.Typeface.BOLD);
+            row.setBackground(roundedBackground(activity,
+                    selected ? Color.rgb(232, 247, 241) : Color.WHITE,
+                    selected ? Color.rgb(111, 181, 155) : Color.rgb(212, 222, 226), 10));
+            row.setOnClickListener(v -> {
+                setCalendarMode(calendar, true);
+                popup.dismiss();
             });
-            menu.show();
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(activity, 40));
+            if (!calendar) params.bottomMargin = dp(activity, 4);
+            parent.addView(row, params);
         }
 
         void ensureAdapterObserver() {
@@ -353,7 +394,7 @@ public final class GroceryListCalendarUiBinder
         }
 
         private void updateToggleLabel() {
-            toggle.setText((calendarMode ? "Calendar" : "List") + "  ▾");
+            toggle.setText((calendarMode ? "Calendar view" : "List view") + "  ▾");
             toggle.setContentDescription(calendarMode
                     ? "Calendar view selected. Switch to Grocery list view"
                     : "List view selected. Switch to Grocery calendar view");
@@ -572,19 +613,22 @@ public final class GroceryListCalendarUiBinder
         MaterialButton button = new MaterialButton(context);
         button.setAllCaps(false);
         button.setTextSize(10f);
+        button.setSingleLine(true);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
         button.setPadding(dp(context, 7), 0, dp(context, 5), 0);
         button.setMinHeight(dp(context, 38));
         button.setMinimumHeight(dp(context, 38));
-        button.setMinWidth(0);
-        button.setMinimumWidth(0);
-        button.setPadding(dp(context, 12), 0, dp(context, 12), 0);
-        button.setCornerRadius(dp(context, 14));
+        button.setCornerRadius(dp(context, 15));
         button.setStrokeWidth(dp(context, 1));
-        button.setStrokeColor(ColorStateList.valueOf(Color.rgb(183, 207, 198)));
-        button.setBackgroundTintList(ColorStateList.valueOf(Color.rgb(242, 249, 246)));
-        button.setTextColor(Color.rgb(15, 108, 89));
+        button.setStrokeColor(ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.fh_module_grocery)));
+        button.setBackgroundTintList(ColorStateList.valueOf(
+                androidx.core.content.ContextCompat.getColor(context, R.color.fh_info_container)));
+        button.setTextColor(androidx.core.content.ContextCompat.getColor(
+                context, R.color.fh_module_grocery));
+        button.setElevation(dp(context, 1));
         return button;
     }
 
