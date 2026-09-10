@@ -23,11 +23,27 @@
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/task_title_layout" style="@style/Widget.FamilyHub.TextInputLayout"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_16" android:hint="@string/family_tasks_name">
+            android:layout_marginTop="@dimen/space_12" android:hint="@string/family_tasks_name"
+            app:endIconMode="custom" app:endIconDrawable="@drawable/ic_mic"
+            app:endIconContentDescription="@string/family_tasks_voice_add">
             <com.google.android.material.textfield.TextInputEditText android:id="@+id/task_title_input"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:inputType="textCapSentences" android:maxLines="2" />
         </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/task_due_presets" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_4"
+            app:chipSpacingHorizontal="@dimen/space_4" app:singleLine="true">
+            <com.google.android.material.chip.Chip android:id="@+id/task_due_today"
+                style="@style/Widget.Material3.Chip.Assist" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/task_due_today" />
+            <com.google.android.material.chip.Chip android:id="@+id/task_due_tomorrow"
+                style="@style/Widget.Material3.Chip.Assist" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/task_due_tomorrow" />
+            <com.google.android.material.chip.Chip android:id="@+id/task_due_next_week"
+                style="@style/Widget.Material3.Chip.Assist" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="@string/task_due_next_week" />
+        </com.google.android.material.chip.ChipGroup>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing" android:orientation="horizontal">
             <com.google.android.material.textfield.TextInputLayout style="@style/Widget.FamilyHub.Form.Dropdown"

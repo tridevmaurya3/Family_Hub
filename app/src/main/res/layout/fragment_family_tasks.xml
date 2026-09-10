@@ -72,9 +72,19 @@
                 android:inputType="textCapSentences" android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/task_quick_voice_button"
+            style="@style/Widget.FamilyHub.Button.Outlined"
+            android:layout_width="@dimen/touch_target_min"
+            android:layout_height="@dimen/touch_target_min"
+            android:layout_marginStart="@dimen/space_6"
+            android:contentDescription="@string/family_tasks_voice_add"
+            android:insetLeft="0dp" android:insetRight="0dp"
+            android:text="" app:icon="@drawable/ic_mic"
+            app:iconGravity="textStart" app:iconPadding="0dp" />
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/task_quick_add_button" style="@style/Widget.FamilyHub.Button.Primary"
             android:layout_width="wrap_content" android:layout_height="@dimen/button_height"
-            android:layout_marginStart="@dimen/space_8" android:text="@string/family_tasks_add"
+            android:layout_marginStart="@dimen/space_6" android:text="@string/family_tasks_add"
             app:icon="@drawable/ic_add" />
     </LinearLayout>
 

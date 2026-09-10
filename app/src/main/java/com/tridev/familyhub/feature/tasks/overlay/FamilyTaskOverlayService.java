@@ -21,6 +21,7 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -58,6 +59,8 @@ public final class FamilyTaskOverlayService extends Service {
     @Nullable private View panelView;
     @Nullable private LinearLayout taskRows;
     @Nullable private TextView countText;
+    @Nullable private TextView voiceStatus;
+    @Nullable private android.speech.SpeechRecognizer speechRecognizer;
     private FamilyTaskRepository repository;
     private boolean tomorrow;
 
@@ -144,9 +147,21 @@ public final class FamilyTaskOverlayService extends Service {
         EditText input = new EditText(this);
         input.setSingleLine(true); input.setTextSize(15); input.setHint(R.string.family_tasks_overlay_add_hint);
         input.setPadding(dp(14),0,dp(10),0); input.setBackground(round(Color.WHITE, 15, Color.rgb(173,205,195)));
+        ImageButton voice = new ImageButton(this);
+        voice.setImageResource(R.drawable.ic_mic);
+        voice.setContentDescription(getString(R.string.family_tasks_voice_add));
+        voice.setColorFilter(Color.rgb(15, 105, 80));
+        voice.setPadding(dp(11), dp(11), dp(11), dp(11));
+        voice.setBackground(round(Color.rgb(237,248,244),16,Color.rgb(138,194,176)));
         Button add = chip("+ Add");
-        quick.addView(input, new LinearLayout.LayoutParams(0, dp(52), 1)); quick.addView(add);
+        quick.addView(input, new LinearLayout.LayoutParams(0, dp(52), 1));
+        LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(dp(44), dp(44));
+        voiceParams.setMarginStart(dp(5)); quick.addView(voice, voiceParams); quick.addView(add);
         root.addView(quick);
+        voiceStatus = text("", 12, true);
+        voiceStatus.setTextColor(Color.rgb(15, 105, 80));
+        voiceStatus.setVisibility(View.GONE);
+        root.addView(voiceStatus);
 
         ScrollView scroll = new ScrollView(this);
         taskRows = new LinearLayout(this); taskRows.setOrientation(LinearLayout.VERTICAL);
@@ -160,6 +175,7 @@ public final class FamilyTaskOverlayService extends Service {
             repository.save(task, () -> { input.setText(""); refresh(); });
         };
         add.setOnClickListener(save);
+        voice.setOnClickListener(v -> startVoiceCapture(input, voice));
         input.setOnEditorActionListener((v,a,e) -> { if(a==EditorInfo.IME_ACTION_DONE){save.onClick(v);return true;}return false; });
 
         WindowManager.LayoutParams panelParams = params(dp(360), WindowManager.LayoutParams.WRAP_CONTENT);
@@ -201,7 +217,71 @@ public final class FamilyTaskOverlayService extends Service {
         taskRows.addView(card,cp);
     }
 
-    private void closePanel() { if(panelView!=null){windowManager.removeView(panelView);panelView=null;taskRows=null;countText=null;} }
+    private void startVoiceCapture(@NonNull EditText input, @NonNull ImageButton voice) {
+        if (speechRecognizer != null) { stopVoiceCapture(); return; }
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            showVoiceStatus(R.string.family_tasks_voice_permission, true); return;
+        }
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) {
+            showVoiceStatus(R.string.family_tasks_voice_unavailable, true); return;
+        }
+        voice.setColorFilter(Color.rgb(220, 45, 82));
+        showVoiceStatus(R.string.family_tasks_voice_listening, false);
+        speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
+        speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
+            @Override public void onReadyForSpeech(android.os.Bundle params) { }
+            @Override public void onBeginningOfSpeech() { }
+            @Override public void onRmsChanged(float rmsdB) { }
+            @Override public void onBufferReceived(byte[] buffer) { }
+            @Override public void onEndOfSpeech() { showVoiceStatus(R.string.family_tasks_voice_processing, false); }
+            @Override public void onError(int error) {
+                stopVoiceCapture(); voice.setColorFilter(Color.rgb(15,105,80));
+                showVoiceStatus(R.string.family_tasks_voice_no_match, true);
+            }
+            @Override public void onResults(android.os.Bundle results) {
+                boolean added = applyVoiceResult(results, input);
+                stopVoiceCapture(); voice.setColorFilter(Color.rgb(15,105,80));
+                showVoiceStatus(added ? R.string.family_tasks_voice_added
+                        : R.string.family_tasks_voice_no_match, true);
+            }
+            @Override public void onPartialResults(android.os.Bundle results) { applyVoiceResult(results, input); }
+            @Override public void onEvent(int eventType, android.os.Bundle params) { }
+        });
+        Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,
+                        java.util.Locale.getDefault().toLanguageTag())
+                .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+        speechRecognizer.startListening(intent);
+    }
+
+    private boolean applyVoiceResult(@Nullable android.os.Bundle results,
+                                     @NonNull EditText input) {
+        if (results == null) return false;
+        ArrayList<String> matches = results.getStringArrayList(
+                android.speech.SpeechRecognizer.RESULTS_RECOGNITION);
+        if (matches == null || matches.isEmpty() || matches.get(0) == null
+                || matches.get(0).trim().isEmpty()) return false;
+        input.setText(matches.get(0).trim()); input.setSelection(input.length());
+        return true;
+    }
+
+    private void showVoiceStatus(int message, boolean hide) {
+        if (voiceStatus == null) return;
+        voiceStatus.setText(message); voiceStatus.setVisibility(View.VISIBLE);
+        if (hide) voiceStatus.postDelayed(() -> {
+            if (voiceStatus != null) voiceStatus.setVisibility(View.GONE);
+        }, 2600L);
+    }
+
+    private void stopVoiceCapture() {
+        if (speechRecognizer != null) { speechRecognizer.destroy(); speechRecognizer = null; }
+    }
+
+    private void closePanel() { stopVoiceCapture(); if(panelView!=null){windowManager.removeView(panelView);panelView=null;taskRows=null;countText=null;voiceStatus=null;} }
     private LinearLayout row(){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);return row;}
     private Button chip(String value){Button b=new Button(this);b.setText(value);b.setTextSize(12);b.setTextColor(Color.rgb(15,105,80));b.setAllCaps(false);b.setMinWidth(0);b.setMinimumWidth(0);b.setBackground(round(Color.rgb(237,248,244),16,Color.rgb(138,194,176)));return b;}
     private TextView text(String value,float size,boolean bold){TextView v=new TextView(this);v.setText(value);v.setTextSize(size);if(bold)v.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return v;}

@@ -2,10 +2,15 @@ package com.tridev.familyhub.feature.tasks;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +19,8 @@ import android.widget.ArrayAdapter;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.core.content.ContextCompat;
@@ -39,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /** Grocery-inspired, realtime family To-Do surface. */
 public final class FamilyTasksFragment extends Fragment implements AddActionHost {
@@ -52,6 +60,14 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private boolean overdueOnly;
     private long customDateStart;
     private long customDateEnd;
+    @Nullable private android.widget.EditText pendingVoiceTarget;
+    @Nullable private SpeechRecognizer speechRecognizer;
+    private final ActivityResultLauncher<String> audioPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted && pendingVoiceTarget != null) startVoiceCapture(pendingVoiceTarget);
+                else if (isAdded()) android.widget.Toast.makeText(requireContext(),
+                        R.string.family_tasks_voice_permission, android.widget.Toast.LENGTH_LONG).show();
+            });
 
     @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater,
             @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -79,6 +95,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.taskRecyclerView.setAdapter(adapter);
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
+        binding.taskQuickVoiceButton.setOnClickListener(v ->
+                requestVoiceCapture(binding.taskQuickAddInput));
         binding.taskFloatingToggle.setOnClickListener(v -> toggleFloatingStrip());
         binding.taskDueCalendarButton.setOnClickListener(v -> pickCalendarDay());
         binding.taskQuickAddInput.setOnEditorActionListener((v, actionId, event) -> {
@@ -333,6 +351,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         form.taskDialogTitle.setText(existing == null ? R.string.family_tasks_add : R.string.family_tasks_edit);
         form.saveTaskButton.setText(existing == null ? R.string.family_tasks_save : R.string.family_tasks_update);
         form.taskTitleInput.setText(task.title);
+        form.taskTitleLayout.setEndIconOnClickListener(v ->
+                requestVoiceCapture(form.taskTitleInput));
         form.taskNotesInput.setText(task.notes);
         form.taskPriorityInput.setText(priorities[indexOf(priorityValues, task.priority)], false);
         form.taskRepeatInput.setText(repeats[indexOf(repeatValues, task.repeatType)], false);
@@ -345,6 +365,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 form.taskReminderLeadLayout.setVisibility(checked ? View.VISIBLE : View.GONE));
         updateDueText(form, dueAt[0]);
         form.taskDueInput.setOnClickListener(v -> pickDateTime(dueAt[0], selected -> { dueAt[0] = selected; updateDueText(form, selected); }));
+        form.taskDueToday.setOnClickListener(v -> setSmartDue(form, dueAt, 0));
+        form.taskDueTomorrow.setOnClickListener(v -> setSmartDue(form, dueAt, 1));
+        form.taskDueNextWeek.setOnClickListener(v -> setSmartDue(form, dueAt, 7));
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext()).setView(form.getRoot()).create();
         form.cancelTaskButton.setOnClickListener(v -> dialog.dismiss());
         form.saveTaskButton.setOnClickListener(v -> {
@@ -374,6 +397,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 dialog.dismiss(); reload();
             });
         });
+        dialog.setOnDismissListener(ignored -> stopVoiceCapture());
         dialog.show();
     }
 
@@ -391,6 +415,89 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         if (activeFilter == R.id.task_filter_tomorrow) c.add(Calendar.DAY_OF_YEAR, 1);
         c.set(Calendar.HOUR_OF_DAY, 18); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
         return c.getTimeInMillis();
+    }
+    private void setSmartDue(@NonNull DialogFamilyTaskBinding form,
+                             @NonNull long[] dueAt, int daysAhead) {
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.DAY_OF_YEAR, daysAhead);
+        c.set(Calendar.HOUR_OF_DAY, 18); c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
+        dueAt[0] = c.getTimeInMillis();
+        updateDueText(form, dueAt[0]);
+    }
+
+    private void requestVoiceCapture(@NonNull android.widget.EditText target) {
+        pendingVoiceTarget = target;
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        startVoiceCapture(target);
+    }
+
+    private void startVoiceCapture(@NonNull android.widget.EditText target) {
+        if (!SpeechRecognizer.isRecognitionAvailable(requireContext())) {
+            android.widget.Toast.makeText(requireContext(),
+                    R.string.family_tasks_voice_unavailable, android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        stopVoiceCapture();
+        pendingVoiceTarget = target;
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext());
+        speechRecognizer.setRecognitionListener(new RecognitionListener() {
+            @Override public void onReadyForSpeech(Bundle params) { toast(R.string.family_tasks_voice_listening); }
+            @Override public void onBeginningOfSpeech() { }
+            @Override public void onRmsChanged(float rmsdB) { }
+            @Override public void onBufferReceived(byte[] buffer) { }
+            @Override public void onEndOfSpeech() { }
+            @Override public void onError(int error) {
+                stopVoiceCapture();
+                toast(error == SpeechRecognizer.ERROR_NO_MATCH
+                        || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                        ? R.string.family_tasks_voice_no_match
+                        : R.string.family_tasks_voice_unavailable);
+            }
+            @Override public void onResults(Bundle results) {
+                if (applyVoiceResult(results, target)) toast(R.string.family_tasks_voice_added);
+                else toast(R.string.family_tasks_voice_no_match);
+                stopVoiceCapture();
+            }
+            @Override public void onPartialResults(Bundle results) { applyVoiceResult(results, target); }
+            @Override public void onEvent(int eventType, Bundle params) { }
+        });
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+        speechRecognizer.startListening(intent);
+    }
+
+    private boolean applyVoiceResult(@Nullable Bundle results,
+                                     @NonNull android.widget.EditText target) {
+        if (results == null) return false;
+        ArrayList<String> matches = results.getStringArrayList(
+                SpeechRecognizer.RESULTS_RECOGNITION);
+        if (matches == null || matches.isEmpty() || matches.get(0) == null
+                || matches.get(0).trim().isEmpty()) return false;
+        target.setText(matches.get(0).trim());
+        target.setSelection(target.length());
+        return true;
+    }
+
+    private void toast(int message) {
+        if (isAdded()) android.widget.Toast.makeText(requireContext(), message,
+                android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void stopVoiceCapture() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+        pendingVoiceTarget = null;
     }
     private long[] activeRange() {
         Calendar start = Calendar.getInstance(); start.set(Calendar.HOUR_OF_DAY, 0); start.set(Calendar.MINUTE, 0); start.set(Calendar.SECOND, 0); start.set(Calendar.MILLISECOND, 0);
@@ -414,5 +521,5 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private static String text(android.widget.TextView view) { return view.getText() == null ? "" : view.getText().toString().trim(); }
     private static int indexOf(String[] values, String target) { for (int i=0;i<values.length;i++) if (values[i].equals(target)) return i; return 0; }
     private static int indexOf(int[] values, int target) { for (int i=0;i<values.length;i++) if (values[i] == target) return i; return 3; }
-    @Override public void onDestroyView() { if (repository != null) repository.stopRealtimeSync(); binding = null; super.onDestroyView(); }
+    @Override public void onDestroyView() { stopVoiceCapture(); if (repository != null) repository.stopRealtimeSync(); binding = null; super.onDestroyView(); }
 }
