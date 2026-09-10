@@ -1628,8 +1628,8 @@ public class GroceryOverlayService extends Service {
             return elapsed + " • Due: " + date;
         }
         int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
-        return "Next due: " + (days == 1 ? "Tomorrow" : days + " days")
-                + " • " + date;
+        return "Advance: " + (days == 1 ? "Tomorrow" : days + " days")
+                + " • Next due: " + date;
     }
 
     private int priorityRank(GroceryItem item) {

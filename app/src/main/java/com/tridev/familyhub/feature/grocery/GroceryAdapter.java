@@ -334,7 +334,10 @@ public class GroceryAdapter
                     .append(" • ")
                     .append(assignment);
             if (item.purchasedAt > 0L) {
-                assignmentLine.append(" • ").append(lastPurchaseLabel(item.purchasedAt));
+                boolean recurring = GroceryRecurrenceEngine.isRecurringType(
+                        GroceryRecurrenceEngine.originalCycle(item));
+                assignmentLine.append(recurring ? "\n" : " • ")
+                        .append(lastPurchaseLabel(item.purchasedAt));
             } else if (GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))) {
                 assignmentLine.append(" • New recurring item");
@@ -426,7 +429,7 @@ public class GroceryAdapter
             }
             int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
             String relative = days == 1 ? "Tomorrow" : days + " days";
-            return "Next due: " + relative + " • "
+            return "Advance: " + relative + " • Next due: "
                     + purchaseDateFormat.format(new java.util.Date(dueAt));
         }
 

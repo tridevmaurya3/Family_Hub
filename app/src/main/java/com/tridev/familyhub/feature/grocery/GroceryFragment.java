@@ -357,11 +357,11 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         groceryStatusDropdown.setOnClickListener(this::showStatusDropdown);
 
         groceryPurchaseDateDropdown = createFilterDropdown(
-                "Today",
+                "Date: Today",
                 R.color.fh_form_accent_container,
                 R.color.fh_form_accent,
                 R.color.fh_form_accent,
-                112
+                128
         );
         groceryPurchaseDateDropdown.setOnClickListener(this::showPurchaseRangeDropdown);
         groceryPurchaseDateDropdown.setVisibility(View.GONE);
@@ -371,7 +371,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         binding.groceryFilterGroup.addView(groceryStatusDropdown, 1,
                 new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
         binding.groceryFilterGroup.addView(groceryPurchaseDateDropdown, 2,
-                new ViewGroup.MarginLayoutParams(dp(112), dp(38)));
+                new ViewGroup.MarginLayoutParams(dp(128), dp(38)));
     }
 
     @NonNull
@@ -617,7 +617,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         button.setOnClickListener(v ->
                 updateGroceryGroupingChip(adapter.toggleAllCategories()));
         groceryCategoryToggleChip = button;
-        binding.groceryFilterGroup.addView(button, 2,
+        // Keep the purchase-date filter before Collapse so it is immediately
+        // visible when Purchased is selected instead of being pushed off-screen.
+        binding.groceryFilterGroup.addView(button, 3,
                 new ViewGroup.MarginLayoutParams(dp(118), dp(38)));
         fitPrimaryFilterControls();
     }
@@ -683,7 +685,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             boolean purchased = activeStatusFilterId == R.id.filter_purchased;
             groceryPurchaseDateDropdown.setVisibility(purchased ? View.VISIBLE : View.GONE);
             String label = purchaseRangeLabel();
-            groceryPurchaseDateDropdown.setText(label + "  ▾");
+            groceryPurchaseDateDropdown.setText("Date: " + label + "  ▾");
             groceryPurchaseDateDropdown.setContentDescription("Purchase date: " + label);
         }
     }
