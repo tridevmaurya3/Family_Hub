@@ -1607,7 +1607,26 @@ public class GroceryOverlayService extends Service {
         long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
         if (dueAt == Long.MAX_VALUE) return "";
         CharSequence date = android.text.format.DateFormat.format("dd MMM yyyy", dueAt);
-        if (dueAt <= now) return "Due now • " + date;
+        if (dueAt <= now) {
+            java.util.Calendar dueDay = java.util.Calendar.getInstance();
+            dueDay.setTimeInMillis(dueAt);
+            dueDay.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            dueDay.set(java.util.Calendar.MINUTE, 0);
+            dueDay.set(java.util.Calendar.SECOND, 0);
+            dueDay.set(java.util.Calendar.MILLISECOND, 0);
+            java.util.Calendar today = java.util.Calendar.getInstance();
+            today.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            today.set(java.util.Calendar.MINUTE, 0);
+            today.set(java.util.Calendar.SECOND, 0);
+            today.set(java.util.Calendar.MILLISECOND, 0);
+            long pendingDays = Math.max(0L, (today.getTimeInMillis()
+                    - dueDay.getTimeInMillis()) / (24L * 60L * 60L * 1000L));
+            String elapsed = pendingDays == 0L
+                    ? "Due today"
+                    : "Pending for: " + pendingDays
+                    + (pendingDays == 1L ? " day" : " days");
+            return elapsed + " • Due: " + date;
+        }
         int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
         return "Next due: " + (days == 1 ? "Tomorrow" : days + " days")
                 + " • " + date;

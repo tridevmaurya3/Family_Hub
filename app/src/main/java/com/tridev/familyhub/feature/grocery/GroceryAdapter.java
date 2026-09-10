@@ -416,12 +416,35 @@ public class GroceryAdapter
             long dueAt = GroceryRecurrenceEngine.nextDueAt(item);
             if (dueAt == Long.MAX_VALUE) return "";
             if (dueAt <= now) {
-                return "Due now • " + purchaseDateFormat.format(new java.util.Date(dueAt));
+                long pendingDays = elapsedCalendarDays(dueAt, now);
+                String elapsed = pendingDays == 0L
+                        ? "Due today"
+                        : "Pending for: " + pendingDays
+                        + (pendingDays == 1L ? " day" : " days");
+                return elapsed + " • Due: "
+                        + purchaseDateFormat.format(new java.util.Date(dueAt));
             }
             int days = GroceryRecurrenceEngine.daysUntilNextDue(item, now);
             String relative = days == 1 ? "Tomorrow" : days + " days";
             return "Next due: " + relative + " • "
                     + purchaseDateFormat.format(new java.util.Date(dueAt));
+        }
+
+        private long elapsedCalendarDays(long startAt, long endAt) {
+            java.util.Calendar start = java.util.Calendar.getInstance();
+            start.setTimeInMillis(startAt);
+            start.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            start.set(java.util.Calendar.MINUTE, 0);
+            start.set(java.util.Calendar.SECOND, 0);
+            start.set(java.util.Calendar.MILLISECOND, 0);
+            java.util.Calendar end = java.util.Calendar.getInstance();
+            end.setTimeInMillis(endAt);
+            end.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            end.set(java.util.Calendar.MINUTE, 0);
+            end.set(java.util.Calendar.SECOND, 0);
+            end.set(java.util.Calendar.MILLISECOND, 0);
+            return Math.max(0L, (end.getTimeInMillis() - start.getTimeInMillis())
+                    / DAY_MILLIS);
         }
 
         @NonNull

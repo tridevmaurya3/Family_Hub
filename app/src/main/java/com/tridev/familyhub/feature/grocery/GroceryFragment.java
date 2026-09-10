@@ -69,6 +69,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     private static final int MENU_CYCLE_MONTHLY = 21_002;
     private static final int MENU_CYCLE_TWO_MONTH = 21_003;
     private static final int MENU_CYCLE_THREE_MONTH = 21_004;
+    private static final int PURCHASE_RANGE_TODAY = 1;
+    private static final int PURCHASE_RANGE_WEEK = 2;
+    private static final int PURCHASE_RANGE_MONTH = 3;
+    private static final int PURCHASE_RANGE_CUSTOM = 4;
 
     private FragmentGroceryBinding binding;
     private GroceryRepository repository;
@@ -82,6 +86,10 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     @Nullable private MaterialButton groceryCategoryToggleChip;
     @Nullable private MaterialButton groceryCycleDropdown;
     @Nullable private MaterialButton groceryStatusDropdown;
+    @Nullable private MaterialButton groceryPurchaseDateDropdown;
+    private int activePurchaseRange = PURCHASE_RANGE_TODAY;
+    private long customPurchaseStart;
+    private long customPurchaseEnd;
     @Nullable private android.widget.EditText activeDialogVoiceInput;
     private final NumberFormat currencyFormat =
             NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
@@ -348,10 +356,22 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         groceryCycleDropdown.setOnClickListener(this::showCycleDropdown);
         groceryStatusDropdown.setOnClickListener(this::showStatusDropdown);
 
+        groceryPurchaseDateDropdown = createFilterDropdown(
+                "Today",
+                R.color.fh_form_accent_container,
+                R.color.fh_form_accent,
+                R.color.fh_form_accent,
+                112
+        );
+        groceryPurchaseDateDropdown.setOnClickListener(this::showPurchaseRangeDropdown);
+        groceryPurchaseDateDropdown.setVisibility(View.GONE);
+
         binding.groceryFilterGroup.addView(groceryCycleDropdown, 0,
                 new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
         binding.groceryFilterGroup.addView(groceryStatusDropdown, 1,
                 new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
+        binding.groceryFilterGroup.addView(groceryPurchaseDateDropdown, 2,
+                new ViewGroup.MarginLayoutParams(dp(112), dp(38)));
     }
 
     @NonNull
@@ -433,6 +453,52 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     resetGroceryScrollForFilter();
                     loadItems(currentQuery());
                 });
+    }
+
+    private void showPurchaseRangeDropdown(@NonNull View anchor) {
+        String[] labels = new String[]{"Today", "This week", "This month", "Custom date"};
+        int selectedIndex = Math.max(0, Math.min(3, activePurchaseRange - 1));
+        showPremiumFilterPopup(anchor, labels, selectedIndex,
+                ContextCompat.getColor(requireContext(), R.color.fh_form_accent), index -> {
+                    int selectedRange = index + 1;
+                    if (selectedRange == PURCHASE_RANGE_CUSTOM) {
+                        showCustomPurchaseRangePicker();
+                        return;
+                    }
+                    activePurchaseRange = selectedRange;
+                    syncPrimaryFilterChips();
+                    resetGroceryScrollForFilter();
+                    loadItems(currentQuery());
+                });
+    }
+
+    private void showCustomPurchaseRangePicker() {
+        long today = com.google.android.material.datepicker.MaterialDatePicker
+                .todayInUtcMilliseconds();
+        androidx.core.util.Pair<Long, Long> selection = customPurchaseStart > 0L
+                ? new androidx.core.util.Pair<>(toUtcDateSelection(customPurchaseStart),
+                toUtcDateSelection(customPurchaseEnd))
+                : new androidx.core.util.Pair<>(today, today);
+        com.google.android.material.datepicker.CalendarConstraints constraints =
+                new com.google.android.material.datepicker.CalendarConstraints.Builder()
+                        .setEnd(today).build();
+        com.google.android.material.datepicker.MaterialDatePicker<androidx.core.util.Pair<Long, Long>> picker =
+                com.google.android.material.datepicker.MaterialDatePicker.Builder
+                        .dateRangePicker()
+                        .setTitleText("Select purchase dates")
+                        .setSelection(selection)
+                        .setCalendarConstraints(constraints)
+                        .build();
+        picker.addOnPositiveButtonClickListener(range -> {
+            if (range == null || range.first == null || range.second == null) return;
+            customPurchaseStart = startOfDay(fromUtcDateSelection(range.first));
+            customPurchaseEnd = endOfDay(fromUtcDateSelection(range.second));
+            activePurchaseRange = PURCHASE_RANGE_CUSTOM;
+            syncPrimaryFilterChips();
+            resetGroceryScrollForFilter();
+            loadItems(currentQuery());
+        });
+        picker.show(getParentFragmentManager(), "grocery_purchase_range");
     }
 
     private void resetGroceryScrollForFilter() {
@@ -612,6 +678,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     : R.string.grocery_filter_pending);
             groceryStatusDropdown.setText(label + "  ▾");
             groceryStatusDropdown.setContentDescription(label);
+        }
+        if (groceryPurchaseDateDropdown != null) {
+            boolean purchased = activeStatusFilterId == R.id.filter_purchased;
+            groceryPurchaseDateDropdown.setVisibility(purchased ? View.VISIBLE : View.GONE);
+            String label = purchaseRangeLabel();
+            groceryPurchaseDateDropdown.setText(label + "  ▾");
+            groceryPurchaseDateDropdown.setContentDescription("Purchase date: " + label);
         }
     }
 
@@ -1592,6 +1665,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     ? item.isPurchased
                     : !item.isPurchased;
             boolean include = listMatches && statusMatches;
+            if (include && activeStatusFilterId == R.id.filter_purchased) {
+                include = purchaseDateMatches(item.purchasedAt);
+            }
             if (include && !activeCategoryFilter.isEmpty()) {
                 include = activeCategoryFilter.equalsIgnoreCase(
                         item.category == null ? "" : item.category.trim());
@@ -1601,6 +1677,66 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             }
         }
         return filtered;
+    }
+
+    private boolean purchaseDateMatches(long purchasedAt) {
+        if (purchasedAt <= 0L) return false;
+        long now = System.currentTimeMillis();
+        long start;
+        long end = endOfDay(now);
+        if (activePurchaseRange == PURCHASE_RANGE_WEEK) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(now);
+            int day = calendar.get(Calendar.DAY_OF_WEEK);
+            int daysFromMonday = (day + 5) % 7;
+            calendar.add(Calendar.DAY_OF_MONTH, -daysFromMonday);
+            start = startOfDay(calendar.getTimeInMillis());
+        } else if (activePurchaseRange == PURCHASE_RANGE_MONTH) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(now);
+            calendar.set(Calendar.DAY_OF_MONTH, 1);
+            start = startOfDay(calendar.getTimeInMillis());
+        } else if (activePurchaseRange == PURCHASE_RANGE_CUSTOM
+                && customPurchaseStart > 0L && customPurchaseEnd >= customPurchaseStart) {
+            start = customPurchaseStart;
+            end = customPurchaseEnd;
+        } else {
+            start = startOfDay(now);
+        }
+        return purchasedAt >= start && purchasedAt <= end;
+    }
+
+    @NonNull
+    private String purchaseRangeLabel() {
+        if (activePurchaseRange == PURCHASE_RANGE_WEEK) return "This week";
+        if (activePurchaseRange == PURCHASE_RANGE_MONTH) return "This month";
+        if (activePurchaseRange == PURCHASE_RANGE_CUSTOM && customPurchaseStart > 0L) {
+            java.text.SimpleDateFormat format = new java.text.SimpleDateFormat(
+                    "dd MMM", Locale.getDefault());
+            return format.format(new java.util.Date(customPurchaseStart)) + "–"
+                    + format.format(new java.util.Date(customPurchaseEnd));
+        }
+        return "Today";
+    }
+
+    private static long startOfDay(long timestamp) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(timestamp);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTimeInMillis();
+    }
+
+    private static long endOfDay(long timestamp) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(timestamp);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        return calendar.getTimeInMillis();
     }
 
     private void renderSummary(@NonNull List<GroceryItem> items) {
@@ -1897,6 +2033,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         groceryCategoryToggleChip = null;
         groceryCycleDropdown = null;
         groceryStatusDropdown = null;
+        groceryPurchaseDateDropdown = null;
         binding = null;
         super.onDestroyView();
     }
