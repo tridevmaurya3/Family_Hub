@@ -2,225 +2,326 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
     android:background="@drawable/bg_page_three_tone"
     android:paddingStart="@dimen/screen_padding_horizontal"
     android:paddingTop="@dimen/compact_page_top_padding"
     android:paddingEnd="@dimen/screen_padding_horizontal">
 
     <com.tridev.familyhub.core.ui.cards.ModuleOverviewView
-        android:id="@+id/task_overview" android:layout_width="0dp" android:layout_height="wrap_content"
-        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" app:overviewAccentColor="@color/fh_module_grocery"
+        android:id="@+id/task_overview"
+        android:layout_width="0dp"
+        android:layout_height="76dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:overviewAccentColor="@color/fh_module_grocery"
         app:overviewContainerColor="@color/fh_module_grocery_container"
-        app:overviewDetail="@string/family_tasks_subtitle" app:overviewIcon="@drawable/ic_family_task"
+        app:overviewDetail="@string/family_tasks_subtitle"
+        app:overviewIcon="@drawable/ic_family_task"
         app:overviewTitle="@string/family_tasks_title" />
 
     <LinearLayout
         android:id="@+id/task_summary_cards"
-        android:layout_width="0dp" android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_10" android:orientation="horizontal"
-        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+        android:layout_width="0dp"
+        android:layout_height="68dp"
+        android:layout_marginTop="@dimen/space_6"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_overview">
-        <com.google.android.material.card.MaterialCardView android:id="@+id/task_pending_card"
-            style="@style/Widget.FamilyHub.Card.Flat" android:layout_width="0dp" android:layout_height="78dp"
-            android:layout_marginEnd="3dp" android:layout_weight="1" app:cardBackgroundColor="@color/fh_info_container" app:strokeColor="@color/fh_info">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="4dp">
-                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="@string/task_summary_pending" />
-                <TextView android:id="@+id/task_pending_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/fh_info" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/task_pending_card"
+            style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="3dp"
+            android:layout_weight="1"
+            app:cardBackgroundColor="@color/fh_info_container"
+            app:strokeColor="@color/fh_info">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical" android:padding="3dp">
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:gravity="center" android:maxLines="1"
+                    android:text="@string/task_summary_pending" android:textSize="10sp" />
+                <TextView android:id="@+id/task_pending_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/fh_info" android:textSize="18sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView android:id="@+id/task_today_card"
-            style="@style/Widget.FamilyHub.Card.Flat" android:layout_width="0dp" android:layout_height="78dp"
-            android:layout_marginHorizontal="3dp" android:layout_weight="1" app:cardBackgroundColor="@color/fh_warning_container" app:strokeColor="@color/fh_warning">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="4dp">
-                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="@string/task_summary_today" />
-                <TextView android:id="@+id/task_today_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/fh_warning" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/task_today_card" style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginHorizontal="3dp" android:layout_weight="1"
+            app:cardBackgroundColor="@color/fh_warning_container" app:strokeColor="@color/fh_warning">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical" android:padding="3dp">
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:gravity="center" android:maxLines="1"
+                    android:text="@string/task_summary_today" android:textSize="10sp" />
+                <TextView android:id="@+id/task_today_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/fh_warning" android:textSize="18sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView android:id="@+id/task_overdue_card"
-            style="@style/Widget.FamilyHub.Card.Flat" android:layout_width="0dp" android:layout_height="78dp"
-            android:layout_marginHorizontal="3dp" android:layout_weight="1" app:cardBackgroundColor="@color/fh_error_container" app:strokeColor="@color/fh_error">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="4dp">
-                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="@string/task_summary_overdue" />
-                <TextView android:id="@+id/task_overdue_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/fh_error" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/task_overdue_card" style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginHorizontal="3dp" android:layout_weight="1"
+            app:cardBackgroundColor="@color/fh_error_container" app:strokeColor="@color/fh_error">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical" android:padding="3dp">
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:gravity="center" android:maxLines="1"
+                    android:text="@string/task_summary_overdue" android:textSize="10sp" />
+                <TextView android:id="@+id/task_overdue_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/fh_error" android:textSize="18sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-        <com.google.android.material.card.MaterialCardView android:id="@+id/task_completed_card"
-            style="@style/Widget.FamilyHub.Card.Flat" android:layout_width="0dp" android:layout_height="78dp"
-            android:layout_marginStart="3dp" android:layout_weight="1" app:cardBackgroundColor="@color/fh_module_grocery_container" app:strokeColor="@color/fh_module_grocery">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical" android:padding="4dp">
-                <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:text="@string/task_summary_done" />
-                <TextView android:id="@+id/task_completed_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/fh_module_grocery" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/task_completed_card" style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="0dp" android:layout_height="match_parent"
+            android:layout_marginStart="3dp" android:layout_weight="1"
+            app:cardBackgroundColor="@color/fh_module_grocery_container"
+            app:strokeColor="@color/fh_module_grocery">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                android:gravity="center" android:orientation="vertical" android:padding="3dp">
+                <TextView style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:gravity="center" android:maxLines="1"
+                    android:text="@string/task_summary_done" android:textSize="10sp" />
+                <TextView android:id="@+id/task_completed_value"
+                    style="@style/TextAppearance.FamilyHub.SectionTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/fh_module_grocery" android:textSize="18sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 
-    <LinearLayout android:id="@+id/task_quick_add_panel"
+    <FrameLayout
+        android:id="@+id/task_search_frame"
         android:layout_width="0dp" android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_12" android:gravity="center_vertical"
-        android:orientation="horizontal"
-        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="@dimen/space_8"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_summary_cards">
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout" android:layout_width="0dp"
-            android:layout_height="wrap_content" android:layout_weight="1"
-            android:hint="@string/family_tasks_quick_add_hint" app:startIconDrawable="@drawable/ic_family_task">
+            android:id="@+id/task_search_layout"
+            style="@style/Widget.FamilyHub.TextInputLayout"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="@string/family_tasks_search_hint"
+            app:startIconDrawable="@drawable/ic_search"
+            app:startIconTint="@color/fh_module_grocery">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/task_quick_add_input" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:imeOptions="actionDone"
-                android:inputType="textCapSentences" android:maxLines="1" />
+                android:id="@+id/task_search_input"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:imeOptions="actionSearch" android:inputType="text"
+                android:maxLines="1" android:paddingEnd="96dp" />
         </com.google.android.material.textfield.TextInputLayout>
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/task_quick_voice_button"
-            style="@style/Widget.FamilyHub.Button.Outlined"
-            android:layout_width="@dimen/touch_target_min"
-            android:layout_height="@dimen/touch_target_min"
-            android:layout_marginStart="@dimen/space_6"
-            android:contentDescription="@string/family_tasks_voice_add"
-            android:insetLeft="0dp" android:insetRight="0dp"
-            android:text="" app:icon="@drawable/ic_mic"
-            app:iconGravity="textStart" app:iconPadding="0dp" />
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/task_quick_add_button" style="@style/Widget.FamilyHub.Button.Primary"
-            android:layout_width="wrap_content" android:layout_height="@dimen/button_height"
-            android:layout_marginStart="@dimen/space_6" android:text="@string/family_tasks_add"
-            app:icon="@drawable/ic_add" />
-    </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content" android:layout_height="match_parent"
+            android:layout_gravity="end|center_vertical" android:gravity="center_vertical"
+            android:orientation="horizontal" android:paddingEnd="4dp">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/task_filter_button"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="44dp" android:layout_height="44dp"
+                android:contentDescription="@string/family_tasks_filter"
+                android:insetLeft="0dp" android:insetRight="0dp" android:text=""
+                app:icon="@drawable/ic_filter" app:iconGravity="textStart"
+                app:iconPadding="0dp" app:iconTint="@color/fh_module_grocery" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/task_sort_button"
+                style="@style/Widget.FamilyHub.Button.Action"
+                android:layout_width="44dp" android:layout_height="44dp"
+                android:contentDescription="@string/family_tasks_sort"
+                android:insetLeft="0dp" android:insetRight="0dp" android:text=""
+                app:icon="@drawable/ic_sort" app:iconGravity="textStart"
+                app:iconPadding="0dp" app:iconTint="@color/fh_primary" />
+        </LinearLayout>
+    </FrameLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/task_floating_toggle"
-        style="@style/Widget.FamilyHub.Button.Outlined"
-        android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
-        android:layout_marginTop="@dimen/space_6" android:text="@string/family_tasks_floating_show"
-        android:textColor="@color/fh_module_grocery" app:icon="@drawable/ic_family_task"
-        app:iconTint="@color/fh_module_grocery"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/task_due_calendar_button"
-        style="@style/Widget.FamilyHub.Button.Outlined"
-        android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
-        android:layout_marginTop="@dimen/space_6" android:text="@string/family_tasks_due_calendar"
-        android:textColor="@color/fh_module_grocery" app:icon="@drawable/ic_planner"
-        app:iconTint="@color/fh_module_grocery" app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
-
-    <HorizontalScrollView android:id="@+id/task_filter_scroll"
-        android:layout_width="0dp" android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8" android:fillViewport="false"
+    <HorizontalScrollView
+        android:id="@+id/task_filter_scroll"
+        android:layout_width="0dp" android:layout_height="44dp"
+        android:layout_marginTop="@dimen/space_4" android:fillViewport="true"
         android:scrollbars="none" app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_floating_toggle">
-        <com.google.android.material.chip.ChipGroup android:id="@+id/task_filter_group"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            app:chipSpacingHorizontal="@dimen/space_6" app:selectionRequired="true"
-            app:singleSelection="true">
+        app:layout_constraintTop_toBottomOf="@id/task_search_frame">
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/task_filter_group"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:gravity="center_vertical" app:chipSpacingHorizontal="@dimen/space_4"
+            app:selectionRequired="false" app:singleSelection="false">
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_today"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:checked="true" android:text="@string/task_filter_today" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:checked="true" android:text="@string/task_filter_today" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_tomorrow"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_filter_tomorrow" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_filter_tomorrow" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_week"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_filter_week" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_filter_week" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_15_days"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_filter_15_days" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_filter_15_days" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_month"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_filter_month" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_filter_month" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_all"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_filter_all" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_filter_all" android:visibility="gone" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
     <com.google.android.material.chip.ChipGroup
-        android:id="@+id/task_status_group" android:layout_width="0dp" android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_4" app:singleSelection="true" app:selectionRequired="true"
-        app:chipSpacingHorizontal="@dimen/space_6" app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toBottomOf="@id/task_filter_scroll">
-        <com.google.android.material.chip.Chip android:id="@+id/task_status_pending" style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:text="@string/task_status_pending" />
-        <com.google.android.material.chip.Chip android:id="@+id/task_status_completed" style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/task_status_completed" />
-        <com.google.android.material.chip.Chip android:id="@+id/task_status_all" style="@style/Widget.Material3.Chip.Filter"
-            android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/task_status_all" />
+        android:id="@+id/task_status_group" android:layout_width="1dp" android:layout_height="1dp"
+        android:visibility="gone" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_filter_scroll">
+        <com.google.android.material.chip.Chip android:id="@+id/task_status_pending"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:checked="true" android:text="@string/task_status_pending" />
+        <com.google.android.material.chip.Chip android:id="@+id/task_status_completed"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/task_status_completed" />
+        <com.google.android.material.chip.Chip android:id="@+id/task_status_all"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/task_status_all" />
     </com.google.android.material.chip.ChipGroup>
 
     <HorizontalScrollView
-        android:id="@+id/task_assignment_scroll"
-        android:layout_width="0dp" android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_4" android:scrollbars="none"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_status_group">
+        android:id="@+id/task_assignment_scroll" android:layout_width="1dp" android:layout_height="1dp"
+        android:visibility="gone" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_filter_scroll">
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/task_assignment_group"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            app:singleSelection="true" app:selectionRequired="true"
-            app:chipSpacingHorizontal="@dimen/space_6">
+            android:layout_width="wrap_content" android:layout_height="wrap_content">
             <com.google.android.material.chip.Chip android:id="@+id/task_assignment_everyone"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:checked="true"
-                android:text="@string/task_assignment_everyone" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:checked="true" android:text="@string/task_assignment_everyone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_assignment_mine"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_assignment_mine" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_assignment_mine" />
             <com.google.android.material.chip.Chip android:id="@+id/task_assignment_family"
-                style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:text="@string/task_assignment_family" />
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/task_assignment_family" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/task_search_layout" style="@style/Widget.FamilyHub.TextInputLayout"
+    <HorizontalScrollView
+        android:id="@+id/task_action_scroll"
+        android:layout_width="0dp" android:layout_height="48dp"
+        android:layout_marginTop="2dp" android:scrollbars="none"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_filter_scroll">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/task_quick_voice_button"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="44dp" android:layout_height="44dp"
+                android:contentDescription="@string/family_tasks_voice_add"
+                android:insetLeft="0dp" android:insetRight="0dp" android:text=""
+                app:icon="@drawable/ic_mic" app:iconGravity="textStart"
+                app:iconPadding="0dp" app:iconTint="@color/fh_module_grocery" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/task_floating_toggle"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content" android:layout_height="44dp"
+                android:layout_marginStart="@dimen/space_4"
+                android:text="@string/family_tasks_floating_show"
+                android:textColor="@color/fh_module_grocery" android:textSize="11sp"
+                app:icon="@drawable/ic_family_task" app:iconTint="@color/fh_module_grocery" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/task_due_calendar_button"
+                style="@style/Widget.FamilyHub.Button.Outlined"
+                android:layout_width="wrap_content" android:layout_height="44dp"
+                android:layout_marginStart="@dimen/space_4"
+                android:text="@string/family_tasks_due_calendar"
+                android:textColor="@color/fh_primary" android:textSize="11sp"
+                app:icon="@drawable/ic_planner" app:iconTint="@color/fh_primary" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:id="@+id/task_quick_add_panel"
         android:layout_width="0dp" android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/space_8" android:hint="@string/family_tasks_search_hint"
-        app:endIconMode="clear_text" app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="@color/fh_module_grocery"
-        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_assignment_scroll">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/task_search_input" android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:maxLines="1" />
-    </com.google.android.material.textfield.TextInputLayout>
+        android:layout_marginTop="2dp" android:gravity="center_vertical"
+        android:orientation="horizontal" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_action_scroll">
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.FamilyHub.TextInputLayout"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:hint="@string/family_tasks_quick_add_hint"
+            app:startIconDrawable="@drawable/ic_family_task" app:startIconTint="@color/fh_module_grocery">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/task_quick_add_input"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:imeOptions="actionDone" android:inputType="textCapSentences"
+                android:maxLines="1" android:textSize="12.5sp" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/task_quick_add_button"
+            style="@style/Widget.FamilyHub.Button.Primary"
+            android:layout_width="wrap_content" android:layout_height="@dimen/button_height"
+            android:layout_marginStart="@dimen/space_6" android:text="@string/family_tasks_add"
+            android:textSize="11sp" app:icon="@drawable/ic_add" />
+    </LinearLayout>
 
     <TextView android:id="@+id/task_result_summary"
-        style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="0dp"
-        android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_6"
-        android:textColor="@color/fh_module_grocery" android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_search_layout" />
+        style="@style/TextAppearance.FamilyHub.Caption"
+        android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_4" android:textColor="@color/fh_module_grocery"
+        android:textStyle="bold" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
 
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/task_recycler_view"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/task_recycler_view"
         android:layout_width="0dp" android:layout_height="0dp" android:clipToPadding="false"
-        android:paddingTop="@dimen/space_8" android:paddingBottom="88dp"
+        android:paddingTop="@dimen/space_6" android:paddingBottom="88dp"
         app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_result_summary"
         app:layout_constraintBottom_toBottomOf="parent" />
 
-    <com.google.android.material.card.MaterialCardView android:id="@+id/task_empty_state"
-        style="@style/Widget.FamilyHub.Card.Flat" android:layout_width="0dp"
-        android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_16"
-        android:visibility="gone" app:cardBackgroundColor="@color/fh_module_grocery_container"
-        app:strokeColor="@color/fh_module_grocery" app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" app:layout_constraintTop_toBottomOf="@id/task_result_summary">
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/task_empty_state"
+        style="@style/Widget.FamilyHub.Card.Flat"
+        android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_12" android:visibility="gone"
+        app:cardBackgroundColor="@color/fh_module_grocery_container"
+        app:strokeColor="@color/fh_module_grocery"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_result_summary">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:gravity="center" android:orientation="vertical" android:padding="@dimen/compact_empty_state_padding">
+            android:gravity="center" android:orientation="vertical"
+            android:padding="@dimen/compact_empty_state_padding">
             <ImageView android:layout_width="@dimen/compact_empty_state_icon_size"
-                android:layout_height="@dimen/compact_empty_state_icon_size" android:background="@drawable/bg_placeholder_icon"
-                android:contentDescription="@null" android:padding="@dimen/compact_empty_state_icon_padding"
+                android:layout_height="@dimen/compact_empty_state_icon_size"
+                android:background="@drawable/bg_placeholder_icon" android:contentDescription="@null"
+                android:padding="@dimen/compact_empty_state_icon_padding"
                 android:src="@drawable/ic_family_task" />
-            <TextView style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_8"
-                android:text="@string/family_tasks_empty_title" />
-            <TextView style="@style/TextAppearance.FamilyHub.Body" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:layout_marginTop="@dimen/space_6"
-                android:gravity="center" android:text="@string/family_tasks_empty_detail" />
+            <TextView style="@style/TextAppearance.FamilyHub.SectionTitle"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_8" android:text="@string/family_tasks_empty_title" />
+            <TextView style="@style/TextAppearance.FamilyHub.Body"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_6" android:gravity="center"
+                android:text="@string/family_tasks_empty_detail" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 </androidx.constraintlayout.widget.ConstraintLayout>

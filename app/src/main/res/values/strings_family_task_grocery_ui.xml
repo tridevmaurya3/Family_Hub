@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_tasks_filter">Filters</string>
+    <string name="family_tasks_sort">Sort</string>
+    <string name="family_tasks_filter_date">Date</string>
+    <string name="family_tasks_filter_status">Status</string>
+    <string name="family_tasks_filter_assignment">Assigned</string>
+    <string name="family_tasks_sort_due">Due soon</string>
+    <string name="family_tasks_sort_priority">Priority</string>
+    <string name="family_tasks_sort_newest">Newest</string>
+    <string name="family_tasks_sort_title">A–Z</string>
+    <string name="family_tasks_filters_show">Show filters</string>
+    <string name="family_tasks_filters_hide">Hide filters</string>
+    <string name="family_tasks_date_today">Today</string>
+    <string name="family_tasks_date_tomorrow">Tomorrow</string>
+    <string name="family_tasks_date_week">7 days</string>
+    <string name="family_tasks_date_15_days">15 days</string>
+    <string name="family_tasks_date_month">This month</string>
+    <string name="family_tasks_date_all">All dates</string>
+    <string name="family_tasks_status_all_label">All status</string>
+    <string name="family_tasks_assignment_all_label">Everyone</string>
+    <string name="family_tasks_assignment_mine_label">Mine</string>
+    <string name="family_tasks_assignment_family_label">Whole family</string>
+    <string name="family_tasks_overlay_open">Open</string>
+    <string name="family_tasks_overlay_day">Day</string>
+    <string name="family_tasks_overlay_more">More</string>
+    <string name="family_tasks_overlay_search">Search tasks</string>
+    <string name="family_tasks_overlay_clear">Clear task search</string>
+    <string name="family_tasks_overlay_live">● Live</string>
+    <string name="family_tasks_overlay_connecting">● Connecting</string>
+    <string name="family_tasks_overlay_opacity">Opacity</string>
+    <string name="family_tasks_overlay_results">%1$d tasks</string>
+    <string name="family_tasks_overlay_no_results">No matching tasks</string>
+    <string name="family_tasks_overlay_no_results_hint">Try another search, day or sort option.</string>
+    <string name="family_tasks_editor_details">Task details</string>
+    <string name="family_tasks_editor_planning">Planning</string>
+    <string name="family_tasks_editor_grocery">Grocery link</string>
+    <string name="family_tasks_editor_reminder">Reminder</string>
+    <string name="family_tasks_editor_notes">Notes</string>
+</resources>
