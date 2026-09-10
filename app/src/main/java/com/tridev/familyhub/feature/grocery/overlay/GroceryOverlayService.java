@@ -64,6 +64,7 @@ import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.grocery.GrocerySmartCategoryPicker;
 import com.tridev.familyhub.feature.integration.MoneyManagerMasterCatalogBridge;
+import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -72,7 +73,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Draggable, adjustable quick-grocery surface shown over other phone screens. */
+/**
+ * Existing Grocery floating panel.
+ * The panel/business behavior remains here; the visible launcher is now the single
+ * Family Quick Hub owned by FamilyTaskOverlayService.
+ */
 public class GroceryOverlayService extends Service {
 
     public static final String ACTION_STOP =
@@ -81,6 +86,8 @@ public class GroceryOverlayService extends Service {
             "com.tridev.familyhub.action.HIDE_GROCERY_OVERLAY";
     public static final String ACTION_SHOW =
             "com.tridev.familyhub.action.SHOW_GROCERY_OVERLAY";
+    public static final String ACTION_OPEN_FROM_HUB =
+            "com.tridev.familyhub.action.OPEN_GROCERY_FROM_FAMILY_HUB";
     public static final String ACTION_SUSPEND_FOR_VOICE =
             "com.tridev.familyhub.action.SUSPEND_GROCERY_FOR_VOICE";
     public static final String ACTION_RESUME_AFTER_VOICE =
@@ -144,6 +151,8 @@ public class GroceryOverlayService extends Service {
             new android.os.Handler(android.os.Looper.getMainLooper());
     @Nullable private Runnable overlayVoiceTimeout;
     private final Set<String> collapsedCategories = new HashSet<>();
+    private boolean openedFromHub;
+    private boolean destroying;
 
     private boolean cornerResizeActive;
     private int cornerResizeHorizontalDirection;
@@ -184,8 +193,6 @@ public class GroceryOverlayService extends Service {
         super.onCreate();
         createNotificationChannel();
         startForeground(NOTIFICATION_ID, createNotification());
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                .putBoolean(KEY_ENABLED, true).apply();
         String savedOverlayMode = getSharedPreferences(PREFS, MODE_PRIVATE)
                 .getString(KEY_OVERLAY_MODE, MODE_NORMAL);
         overlayShoppingMode = MODE_SHOPPING.equals(savedOverlayMode);
@@ -208,38 +215,56 @@ public class GroceryOverlayService extends Service {
                 screenStateReceiver,
                 new IntentFilter(Intent.ACTION_SCREEN_OFF),
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
-        if (Settings.canDrawOverlays(this)) {
-            showStrip();
-        }
+        // No independent Grocery strip is created here anymore. The one app-level
+        // Family Quick Hub icon is the only launcher shown to the user.
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+        String action = intent == null ? null : intent.getAction();
+        if (ACTION_OPEN_FROM_HUB.equals(action)) {
+            openedFromHub = true;
+            if (stripView != null) stripView.setVisibility(View.GONE);
+            if (panelView == null && Settings.canDrawOverlays(this)) togglePanel();
+            return START_STICKY;
+        }
+        if (ACTION_STOP.equals(action)) {
+            forwardToSharedHub(FamilyTaskOverlayService.ACTION_STOP);
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_HIDE.equals(intent.getAction())) {
+        if (ACTION_HIDE.equals(action)) {
             closePanel();
             if (stripView != null) stripView.setVisibility(View.GONE);
-            return START_STICKY;
+            forwardToSharedHub(FamilyTaskOverlayService.ACTION_HIDE);
+            stopSelf();
+            return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_SHOW.equals(intent.getAction())) {
-            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
-            if (stripView != null) stripView.setVisibility(View.VISIBLE);
-            return START_STICKY;
+        if (ACTION_SHOW.equals(action)) {
+            forwardToSharedHub(FamilyTaskOverlayService.ACTION_SHOW);
+            stopSelf();
+            return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_SUSPEND_FOR_VOICE.equals(intent.getAction())) {
-            suspendOverlayForVoice();
-            return START_STICKY;
+        if (ACTION_SUSPEND_FOR_VOICE.equals(action)) {
+            forwardToSharedHub(FamilyTaskOverlayService.ACTION_SUSPEND_HUB);
+            stopSelf();
+            return START_NOT_STICKY;
         }
-        if (intent != null && ACTION_RESUME_AFTER_VOICE.equals(intent.getAction())) {
-            resumeOverlayAfterVoice();
-            return START_STICKY;
+        if (ACTION_RESUME_AFTER_VOICE.equals(action)) {
+            forwardToSharedHub(FamilyTaskOverlayService.ACTION_RESUME_HUB);
+            stopSelf();
+            return START_NOT_STICKY;
         }
-        return START_STICKY;
+        stopSelf();
+        return START_NOT_STICKY;
     }
 
+    private void forwardToSharedHub(@NonNull String action) {
+        Intent hub = new Intent(this, FamilyTaskOverlayService.class).setAction(action);
+        androidx.core.content.ContextCompat.startForegroundService(this, hub);
+    }
+
+    /** Kept only as legacy source compatibility; normal UI paths no longer call it. */
     private void showStrip() {
         if (stripView != null) return;
         TextView strip = new TextView(this);
@@ -1468,15 +1493,12 @@ public class GroceryOverlayService extends Service {
                 collapseAllCategories = false;
                 collapsedCategories.clear();
                 if (openThisCategory) {
-                    // Accordion behavior: open the tapped category and keep every
-                    // other category closed.
                     for (String categoryName : grouped.keySet()) {
                         String key = listType + "|" + categoryName.toLowerCase(
                                 java.util.Locale.ENGLISH);
                         if (!key.equals(collapseKey)) collapsedCategories.add(key);
                     }
                 } else {
-                    // Tapping the already-open category closes it as well.
                     for (String categoryName : grouped.keySet()) {
                         collapsedCategories.add(listType + "|"
                                 + categoryName.toLowerCase(java.util.Locale.ENGLISH));
@@ -1688,7 +1710,6 @@ public class GroceryOverlayService extends Service {
         ).toLowerCase(java.util.Locale.ENGLISH);
         if (searchable.contains(query)) return true;
 
-        // Let a user type either 1200, 1,200 or ₹1,200 for visible Grocery amounts.
         String amountQuery = query.replace("₹", "").replace(",", "").trim();
         if (amountQuery.isEmpty()) return false;
         return String.valueOf(item.estimatedCost).contains(amountQuery)
@@ -2556,9 +2577,6 @@ public class GroceryOverlayService extends Service {
                 Color.rgb(220, 45, 82), 0L);
 
         try {
-            // Use the foreground overlay service itself. On Android 14+ its
-            // manifest microphone FGS type keeps RECORD_AUDIO available while
-            // Family Hub remains behind the floating panel.
             overlaySpeechRecognizer = android.speech.SpeechRecognizer
                     .createSpeechRecognizer(this);
             overlaySpeechRecognizer.setRecognitionListener(
@@ -2733,6 +2751,7 @@ public class GroceryOverlayService extends Service {
         dismissOverlayHeaderPopup();
         stopOverlayConnectionStatus();
         overlayLiveStatus = null;
+        boolean closed = false;
         if (panelView != null) {
             applyOverlayScreenOn(false);
             if (panelView.isAttachedToWindow()) windowManager.removeView(panelView);
@@ -2751,6 +2770,11 @@ public class GroceryOverlayService extends Service {
             cornerResizeActive = false;
             overlayVoiceStatus = null;
             voicePanelDetached = false;
+            closed = true;
+        }
+        if (closed && openedFromHub && !destroying) {
+            openedFromHub = false;
+            stopSelf();
         }
     }
 
@@ -3153,6 +3177,7 @@ public class GroceryOverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        destroying = true;
         stopOverlayVoiceCapture();
         if (repository != null) repository.stopRealtimeSync();
         closePanel();
@@ -3160,7 +3185,6 @@ public class GroceryOverlayService extends Service {
             windowManager.removeView(stripView);
             stripView = null;
         }
-        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, false).apply();
         unregisterReceiver(voiceResultReceiver);
         unregisterReceiver(screenStateReceiver);
         super.onDestroy();
