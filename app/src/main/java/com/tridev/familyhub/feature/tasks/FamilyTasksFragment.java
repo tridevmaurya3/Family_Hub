@@ -45,6 +45,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private FamilyMemberRepository memberRepository;
     private FamilyTaskAdapter adapter;
     private int activeFilter = R.id.task_filter_today;
+    private int activeStatus = R.id.task_status_pending;
+    private boolean overdueOnly;
 
     @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater,
             @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -78,8 +80,22 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         });
         binding.taskFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (!checkedIds.isEmpty()) activeFilter = checkedIds.get(0);
+            overdueOnly = false;
             reload();
         });
+        binding.taskStatusGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
+            if (!checkedIds.isEmpty()) activeStatus = checkedIds.get(0);
+            overdueOnly = false;
+            reload();
+        });
+        binding.taskPendingCard.setOnClickListener(v -> selectSummary(false,
+                R.id.task_filter_all, R.id.task_status_pending));
+        binding.taskTodayCard.setOnClickListener(v -> selectSummary(false,
+                R.id.task_filter_today, R.id.task_status_pending));
+        binding.taskOverdueCard.setOnClickListener(v -> selectSummary(true,
+                R.id.task_filter_all, R.id.task_status_pending));
+        binding.taskCompletedCard.setOnClickListener(v -> selectSummary(false,
+                R.id.task_filter_all, R.id.task_status_completed));
         binding.taskSearchInput.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             public void onTextChanged(CharSequence s, int start, int before, int count) { reload(); }
@@ -164,6 +180,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     private void reload() {
         if (binding == null) return;
+        repository.loadAll("", this::renderSummary);
         repository.loadAll(text(binding.taskSearchInput), tasks -> {
             if (binding == null) return;
             List<FamilyTask> visible = new ArrayList<>();
@@ -171,13 +188,58 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             long[] range = activeRange();
             for (FamilyTask task : tasks) {
                 if (!FamilyTask.STATUS_COMPLETED.equals(task.status)) pending++;
-                if (activeFilter == R.id.task_filter_all || (task.dueAt >= range[0] && task.dueAt < range[1])) visible.add(task);
+                boolean completed = FamilyTask.STATUS_COMPLETED.equals(task.status);
+                boolean statusMatches = activeStatus == R.id.task_status_all
+                        || (activeStatus == R.id.task_status_completed && completed)
+                        || (activeStatus == R.id.task_status_pending && !completed);
+                boolean dateMatches = activeFilter == R.id.task_filter_all
+                        || (task.dueAt >= range[0] && task.dueAt < range[1]);
+                if (overdueOnly) dateMatches = !completed
+                        && task.dueAt < startOfToday();
+                if (statusMatches && dateMatches) visible.add(task);
             }
             adapter.submitList(visible);
             binding.taskResultSummary.setText(getString(R.string.family_tasks_result_count, visible.size(), pending));
             binding.taskEmptyState.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE);
             binding.taskRecyclerView.setVisibility(visible.isEmpty() ? View.GONE : View.VISIBLE);
         });
+    }
+
+    private void renderSummary(@NonNull List<FamilyTask> tasks) {
+        if (binding == null) return;
+        int pending = 0, today = 0, overdue = 0, completed = 0;
+        long todayStart = startOfToday();
+        long tomorrowStart = todayStart + 24L * 60L * 60L * 1000L;
+        for (FamilyTask task : tasks) {
+            if (FamilyTask.STATUS_COMPLETED.equals(task.status)) {
+                completed++;
+            } else {
+                pending++;
+                if (task.dueAt < todayStart) overdue++;
+                else if (task.dueAt < tomorrowStart) today++;
+            }
+        }
+        binding.taskPendingValue.setText(String.valueOf(pending));
+        binding.taskTodayValue.setText(String.valueOf(today));
+        binding.taskOverdueValue.setText(String.valueOf(overdue));
+        binding.taskCompletedValue.setText(String.valueOf(completed));
+    }
+
+    private void selectSummary(boolean overdue, int dateFilter, int statusFilter) {
+        overdueOnly = false;
+        activeFilter = dateFilter;
+        activeStatus = statusFilter;
+        binding.taskFilterGroup.check(dateFilter);
+        binding.taskStatusGroup.check(statusFilter);
+        overdueOnly = overdue;
+        reload();
+    }
+
+    private long startOfToday() {
+        Calendar c = Calendar.getInstance();
+        c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
     }
 
     private void prepareEditor(@Nullable FamilyTask existing) {
