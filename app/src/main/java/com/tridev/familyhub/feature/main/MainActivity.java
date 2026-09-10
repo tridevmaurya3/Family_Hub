@@ -36,6 +36,7 @@ import com.tridev.familyhub.feature.vehicle.VehicleFragment;
 import com.tridev.familyhub.feature.more.MoreFragment;
 import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
+import com.tridev.familyhub.feature.tasks.FamilyTasksFragment;
 
 /** Hosts the primary bottom navigation and feature screens. */
 public class MainActivity extends AppCompatActivity {
@@ -56,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String ROUTE_NOTES = "notes";
     public static final String ROUTE_PLANNER = "planner";
     public static final String ROUTE_VAULT = "vault";
+    public static final String ROUTE_TASKS = "tasks";
 
     private ActivityMainBinding binding;
     private boolean redirectingToAuth;
@@ -95,15 +97,17 @@ public class MainActivity extends AppCompatActivity {
                                             : View.GONE
                             );
                             boolean grocery = fragment instanceof GroceryFragment;
+                            boolean groceryStyle = grocery
+                                    || fragment instanceof FamilyTasksFragment;
                             binding.fabAdd.setBackgroundTintList(ColorStateList.valueOf(
-                                    getColor(grocery
+                                    getColor(groceryStyle
                                             ? R.color.fh_module_grocery_container
                                             : R.color.fh_primary)));
                             binding.fabAdd.setImageTintList(ColorStateList.valueOf(
-                                    getColor(grocery
+                                    getColor(groceryStyle
                                             ? R.color.fh_module_grocery
                                             : R.color.fh_on_primary)));
-                            binding.fabAdd.setCompatElevation(grocery ? 3f : 6f);
+                            binding.fabAdd.setCompatElevation(groceryStyle ? 3f : 6f);
                         }
                     }
                 },
@@ -144,6 +148,8 @@ public class MainActivity extends AppCompatActivity {
             destinationId = R.id.nav_family;
         } else if (restored instanceof RemindersFragment) {
             destinationId = R.id.nav_reminders;
+        } else if (restored instanceof FamilyTasksFragment) {
+            destinationId = R.id.nav_tasks;
         } else if (restored instanceof FinanceFragment) {
             destinationId = R.id.nav_finance;
         } else if (restored instanceof MoreFragment) {
@@ -244,9 +250,14 @@ public class MainActivity extends AppCompatActivity {
         if (ROUTE_FAMILY.equals(route)) {
             binding.bottomNavigation.setSelectedItemId(R.id.nav_family);
         } else if (ROUTE_REMINDERS.equals(route)) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_reminders);
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.main_content, new RemindersFragment()).commit();
         } else if (ROUTE_FINANCE.equals(route)) {
             binding.bottomNavigation.setSelectedItemId(R.id.nav_finance);
+        } else if (ROUTE_TASKS.equals(route)) {
+            binding.bottomNavigation.setSelectedItemId(R.id.nav_tasks);
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.main_content, new FamilyTasksFragment()).commit();
         } else {
             Fragment fragment;
             if (ROUTE_GROCERY.equals(route)) fragment = new GroceryFragment();
@@ -256,6 +267,7 @@ public class MainActivity extends AppCompatActivity {
             else if (ROUTE_PROPERTY.equals(route)) fragment = new PropertyFragment();
             else if (ROUTE_NOTES.equals(route)) fragment = new NotesFragment();
             else if (ROUTE_PLANNER.equals(route)) fragment = new PlannerFragment();
+            else if (ROUTE_TASKS.equals(route)) fragment = new FamilyTasksFragment();
             else if (ROUTE_VAULT.equals(route)) fragment = new PasswordVaultFragment();
             else fragment = new DashboardFragment();
             getSupportFragmentManager().beginTransaction()
@@ -339,6 +351,8 @@ public class MainActivity extends AppCompatActivity {
             fragment = new FamilyFragment();
         } else if (destinationId == R.id.nav_reminders) {
             fragment = new RemindersFragment();
+        } else if (destinationId == R.id.nav_tasks) {
+            fragment = new FamilyTasksFragment();
         } else if (destinationId == R.id.nav_finance) {
             fragment = new FinanceFragment();
         } else {

@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 
 import com.tridev.familyhub.core.planner.PlannerScheduler;
+import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 
 /** Restores enabled reminders after the device has restarted. */
 public class ReminderBootReceiver extends BroadcastReceiver {
@@ -17,10 +18,8 @@ public class ReminderBootReceiver extends BroadcastReceiver {
         PendingResult pendingResult = goAsync();
         ReminderScheduler.rescheduleAll(
                 context,
-                () -> PlannerScheduler.rescheduleAll(
-                        context,
-                        pendingResult::finish
-                )
+                () -> PlannerScheduler.rescheduleAll(context,
+                        () -> FamilyTaskScheduler.rescheduleAll(context, pendingResult::finish))
         );
     }
 }

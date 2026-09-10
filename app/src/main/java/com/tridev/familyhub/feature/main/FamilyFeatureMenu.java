@@ -45,6 +45,7 @@ import com.tridev.familyhub.feature.safety.FamilySafetyCenterActivity;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
 import com.tridev.familyhub.feature.search.GlobalSearchActivity;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
+import com.tridev.familyhub.feature.tasks.FamilyTasksFragment;
 
 /** A categorized hamburger menu for all Family Hub features. */
 public final class FamilyFeatureMenu {
@@ -146,6 +147,12 @@ public final class FamilyFeatureMenu {
                 R.color.fh_module_reminders,
                 R.color.fh_module_reminders_container,
                 R.id.nav_reminders);
+        addFragmentButton(activity, dialog, content,
+                R.string.feature_menu_family_tasks,
+                R.drawable.ic_family_task,
+                R.color.fh_module_grocery,
+                R.color.fh_module_grocery_container,
+                new FamilyTasksFragment());
         addFragmentButton(activity, dialog, content,
                 R.string.feature_menu_planner,
                 R.drawable.ic_planner,

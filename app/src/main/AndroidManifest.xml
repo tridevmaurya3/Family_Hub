@@ -258,6 +258,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".core.tasks.FamilyTaskReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".core.reminders.ReminderBootReceiver"
             android:directBootAware="false"
             android:exported="false">

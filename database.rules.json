@@ -160,7 +160,7 @@
       "$familyId": {
         ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
         "$module": {
-          ".validate": "$module.matches(/^(planner|reminders|notes|finance)$/)",
+          ".validate": "$module.matches(/^(planner|reminders|notes|finance|tasks)$/)",
           ".indexOn": ["updatedAt", "assignedMemberId", "collaborationStatus"],
           "$itemId": {
             ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",

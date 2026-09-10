@@ -9,9 +9,9 @@
         android:icon="@drawable/ic_nav_family_color"
         android:title="Family" />
     <item
-        android:id="@+id/nav_reminders"
-        android:icon="@drawable/ic_nav_reminder_color"
-        android:title="Reminders" />
+        android:id="@+id/nav_tasks"
+        android:icon="@drawable/ic_family_task"
+        android:title="@string/feature_menu_family_tasks" />
     <item
         android:id="@+id/nav_finance"
         android:icon="@drawable/ic_nav_finance_color"

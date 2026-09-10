@@ -25,6 +25,7 @@ import com.tridev.familyhub.data.local.dao.PlannerItemDao;
 import com.tridev.familyhub.data.local.dao.SafePlaceDao;
 import com.tridev.familyhub.data.local.dao.PendingLocationUploadDao;
 import com.tridev.familyhub.data.local.dao.SafePlaceAlertDao;
+import com.tridev.familyhub.data.local.dao.FamilyTaskDao;
 import com.tridev.familyhub.data.local.entity.FamilyLiveStatus;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FinanceEntry;
@@ -42,6 +43,7 @@ import com.tridev.familyhub.data.local.entity.PlannerItem;
 import com.tridev.familyhub.data.local.entity.SafePlace;
 import com.tridev.familyhub.data.local.entity.PendingLocationUpload;
 import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
+import com.tridev.familyhub.data.local.entity.FamilyTask;
 
 /**
  * The private on-device database.
@@ -67,9 +69,10 @@ import com.tridev.familyhub.data.local.entity.SafePlaceAlert;
                 PlannerItem.class,
                 SafePlace.class,
                 PendingLocationUpload.class,
-                SafePlaceAlert.class
+                SafePlaceAlert.class,
+                FamilyTask.class
         },
-        version = 35,
+        version = 36,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
@@ -96,6 +99,20 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     public abstract SafePlaceDao safePlaceDao();
     public abstract PendingLocationUploadDao pendingLocationUploadDao();
     public abstract SafePlaceAlertDao safePlaceAlertDao();
+    public abstract FamilyTaskDao familyTaskDao();
+
+    /** Adds the isolated Family To-Do domain without changing existing modules. */
+    private static final Migration MIGRATION_35_36 = new Migration(35, 36) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS `family_tasks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `cloudId` TEXT NOT NULL, `familyId` TEXT NOT NULL, `title` TEXT NOT NULL, `notes` TEXT NOT NULL, `status` TEXT NOT NULL, `priority` TEXT NOT NULL, `repeatType` TEXT NOT NULL, `assignedMemberId` TEXT NOT NULL, `assignedMemberName` TEXT NOT NULL, `dueAt` INTEGER NOT NULL, `reminderEnabled` INTEGER NOT NULL, `reminderMinutesBefore` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `completedAt` INTEGER NOT NULL, `createdByUid` TEXT NOT NULL, `updatedByUid` TEXT NOT NULL, `completedByName` TEXT NOT NULL, `sourceType` TEXT NOT NULL, `sourceRecordId` TEXT NOT NULL, `shared` INTEGER NOT NULL)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_family_tasks_cloudId` ON `family_tasks` (`cloudId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_familyId` ON `family_tasks` (`familyId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_dueAt` ON `family_tasks` (`dueAt`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_status` ON `family_tasks` (`status`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_assignedMemberId` ON `family_tasks` (`assignedMemberId`)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_family_tasks_updatedAt` ON `family_tasks` (`updatedAt`)");
+        }
+    };
 
     private static final Migration MIGRATION_15_16 = new Migration(15, 16) {
         @Override
@@ -911,7 +928,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_31_32,
                                     MIGRATION_32_33,
                                     MIGRATION_33_34,
-                                    MIGRATION_34_35
+                                    MIGRATION_34_35,
+                                    MIGRATION_35_36
                             )
                             .build();
                 }
