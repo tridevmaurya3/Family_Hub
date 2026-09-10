@@ -93,8 +93,6 @@ public final class FamilyTaskSmsSuggestionActivity extends AppCompatActivity {
             initialPriority = suggestion.priority;
             fingerprint = suggestion.fingerprint;
             actionable = suggestion.actionable;
-            // Drop the only app-level reference to the raw text immediately after local parsing.
-            shared = "";
         }
 
         setContentView(buildContent(initialTitle, initialPriority));
@@ -168,7 +166,7 @@ public final class FamilyTaskSmsSuggestionActivity extends AppCompatActivity {
         form.addView(review, matchWrap());
 
         TextInputLayout titleLayout = new TextInputLayout(this);
-        titleLayout.setHint(R.string.family_tasks_sms_task_title);
+        titleLayout.setHint(getString(R.string.family_tasks_sms_task_title));
         titleLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         titleInput = new TextInputEditText(this);
         titleInput.setInputType(InputType.TYPE_CLASS_TEXT
@@ -194,7 +192,7 @@ public final class FamilyTaskSmsSuggestionActivity extends AppCompatActivity {
                 getString(R.string.task_priority_urgent)
         };
         TextInputLayout priorityLayout = new TextInputLayout(this);
-        priorityLayout.setHint(R.string.family_tasks_sms_priority);
+        priorityLayout.setHint(getString(R.string.family_tasks_sms_priority));
         priorityLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         priorityLayout.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
         priorityInput = new MaterialAutoCompleteTextView(this);
