@@ -537,7 +537,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     private void quickAdd() {
         String title = text(binding.taskQuickAddInput);
-        if (title.isEmpty()) return;
+        if (title.isEmpty()) {
+            prepareEditor(null);
+            return;
+        }
         FamilyTask task = new FamilyTask();
         task.title = title;
         task.dueAt = defaultDueTime();
