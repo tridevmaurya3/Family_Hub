@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 
 import org.json.JSONObject;
@@ -17,6 +18,7 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,12 +26,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Privacy-safe device activity history for Family To-Do.
+ * Privacy-safe Family To-Do activity history.
  *
- * Stage 11 intentionally keeps this audit stream outside Room/Firebase so it cannot
- * alter existing task, Grocery, Finance or Loan ownership/sync rules. Remote task
- * changes observed by FamilyTaskRepository can still be reconstructed locally.
- * Stage 12 may promote these stable event records to dedicated multi-device sync.
+ * Stage 12 keeps the Stage 11 device cache for offline use and also mirrors each
+ * compact event inside the existing authorised Task cloud record. Only task title,
+ * action, actor and time are mirrored; notes, SMS text, Grocery data and financial
+ * details are never copied into activity history.
  */
 public final class FamilyTaskActivityRepository {
     public static final String EVENT_CREATE = "CREATE";
@@ -60,9 +62,10 @@ public final class FamilyTaskActivityRepository {
 
     private static final String PREFS = "family_task_activity_history_v1";
     private static final String KEY_PREFIX = "event:";
+    private static final String SYNC_PREFIX = "cloudSynced:";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
-    private final SharedPreferences preferences;
+    @NonNull private final SharedPreferences preferences;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private SharedPreferences.OnSharedPreferenceChangeListener preferenceListener;
 
@@ -78,7 +81,7 @@ public final class FamilyTaskActivityRepository {
         });
     }
 
-    /** Keeps an open timeline current when this process records another action. */
+    /** Keeps an open timeline current when local or remote sync stores an event. */
     public void startObserving(@NonNull ChangeCallback callback) {
         stopObserving();
         preferenceListener = (prefs, key) -> {
@@ -106,25 +109,87 @@ public final class FamilyTaskActivityRepository {
         recordAt(task, eventType, detail, uid, actor, when);
     }
 
-    /** Records a task change reconstructed from an already-authorized family sync. */
+    /** Records locally and publishes a compact, idempotent event for family devices. */
     public void recordAt(@NonNull FamilyTask task, @NonNull String eventType,
                          @Nullable String detail, @Nullable String actorUid,
                          @Nullable String actorName, long eventAt) {
-        String taskCloudId = safe(task.cloudId);
-        if (taskCloudId.isEmpty()) return;
+        ActivityEvent event = buildEvent(task, eventType, detail,
+                actorUid, actorName, eventAt);
+        if (event == null) return;
+        saveLocal(event, false);
+        publish(task, event);
+    }
 
+    /** Stores a reconstructed remote action without re-publishing it as this user. */
+    public void recordRemoteAt(@NonNull FamilyTask task, @NonNull String eventType,
+                               @Nullable String detail, @Nullable String actorUid,
+                               @Nullable String actorName, long eventAt) {
+        ActivityEvent event = buildEvent(task, eventType, detail,
+                actorUid, actorName, eventAt);
+        if (event == null) return;
+        saveLocal(event, true);
+    }
+
+    /** Local-only path for a task deleted before it ever acquired a family identity. */
+    public void recordLocalAt(@NonNull FamilyTask task, @NonNull String eventType,
+                              @Nullable String detail, @Nullable String actorUid,
+                              @Nullable String actorName, long eventAt) {
+        ActivityEvent event = buildEvent(task, eventType, detail,
+                actorUid, actorName, eventAt);
+        if (event == null) return;
+        saveLocal(event, false);
+    }
+
+    /** Imports durable activity children from an authorised Task realtime snapshot. */
+    public int mergeRemoteSnapshot(@NonNull DataSnapshot taskSnapshot) {
+        DataSnapshot activity = taskSnapshot.child("activity");
+        if (!activity.exists()) return 0;
+        int count = 0;
+        for (DataSnapshot child : activity.getChildren()) {
+            ActivityEvent event = fromSnapshot(child);
+            if (event == null) continue;
+            saveLocal(event, true);
+            count++;
+        }
+        return count;
+    }
+
+    /**
+     * Promotes Stage 11/offline local events once the task has a confirmed cloud identity.
+     * Event IDs are deterministic, so repeated retries overwrite the same child only.
+     */
+    public void promoteLocalHistoryForTask(@NonNull FamilyTask task) {
+        if (task.cloudId.isEmpty() || task.familyId.isEmpty()) return;
+        EXECUTOR.execute(() -> {
+            List<ActivityEvent> events = loadAllNow();
+            for (ActivityEvent event : events) {
+                if (!task.cloudId.equals(event.taskCloudId) || isSynced(event.eventId)) continue;
+                mainHandler.post(() -> publish(task, event));
+            }
+        });
+    }
+
+    @Nullable
+    private static ActivityEvent buildEvent(@NonNull FamilyTask task,
+                                            @NonNull String eventType,
+                                            @Nullable String detail,
+                                            @Nullable String actorUid,
+                                            @Nullable String actorName,
+                                            long eventAt) {
+        String taskCloudId = safe(task.cloudId);
+        if (taskCloudId.isEmpty()) return null;
         ActivityEvent event = new ActivityEvent();
         event.taskCloudId = taskCloudId;
         event.taskTitle = limit(safe(task.title), 120);
         event.eventType = normalizeType(eventType);
-        if (event.eventType.isEmpty()) return;
+        if (event.eventType.isEmpty()) return null;
         event.actorUid = limit(safe(actorUid), 128);
         event.actorName = limit(safe(actorName), 100);
         if (event.actorName.isEmpty()) event.actorName = "Family member";
         event.detail = limit(safe(detail), 100);
         event.eventAt = eventAt > 0L ? eventAt : System.currentTimeMillis();
         event.eventId = stableEventId(event);
-        save(event);
+        return event;
     }
 
     @NonNull
@@ -132,9 +197,8 @@ public final class FamilyTaskActivityRepository {
         List<ActivityEvent> out = new ArrayList<>();
         Map<String, ?> all = preferences.getAll();
         for (Map.Entry<String, ?> entry : all.entrySet()) {
-            if (!entry.getKey().startsWith(KEY_PREFIX) || !(entry.getValue() instanceof String)) {
-                continue;
-            }
+            if (!entry.getKey().startsWith(KEY_PREFIX)
+                    || !(entry.getValue() instanceof String)) continue;
             ActivityEvent event = fromJson((String) entry.getValue());
             if (event != null) out.add(event);
         }
@@ -142,7 +206,7 @@ public final class FamilyTaskActivityRepository {
         return out;
     }
 
-    private void save(@NonNull ActivityEvent event) {
+    private void saveLocal(@NonNull ActivityEvent event, boolean cloudSynced) {
         try {
             JSONObject json = new JSONObject();
             json.put("eventId", event.eventId);
@@ -153,10 +217,64 @@ public final class FamilyTaskActivityRepository {
             json.put("actorName", event.actorName);
             json.put("detail", event.detail);
             json.put("eventAt", event.eventAt);
-            preferences.edit().putString(KEY_PREFIX + event.eventId, json.toString()).apply();
+            SharedPreferences.Editor editor = preferences.edit()
+                    .putString(KEY_PREFIX + event.eventId, json.toString());
+            if (cloudSynced) editor.putBoolean(SYNC_PREFIX + event.eventId, true);
+            editor.apply();
         } catch (Exception ignored) {
-            // A failed audit write must never block the underlying task action.
+            // Audit storage must never block the underlying task action.
         }
+    }
+
+    /**
+     * Appends only to an already-existing Task cloud record. This intentionally
+     * avoids re-sending the Task body, so activity retry can never resurrect or
+     * overwrite a stale/deleted task.
+     */
+    private void publish(@NonNull FamilyTask task, @NonNull ActivityEvent event) {
+        if (task.familyId.isEmpty() || isSynced(event.eventId)) return;
+
+        Map<String, Object> eventPayload = new HashMap<>();
+        eventPayload.put("eventId", event.eventId);
+        eventPayload.put("taskCloudId", event.taskCloudId);
+        eventPayload.put("taskTitle", event.taskTitle);
+        eventPayload.put("eventType", event.eventType);
+        eventPayload.put("actorUid", event.actorUid);
+        eventPayload.put("actorName", event.actorName);
+        eventPayload.put("detail", event.detail);
+        eventPayload.put("eventAt", event.eventAt);
+
+        Map<String, Object> values = new HashMap<>();
+        values.put("activity/" + event.eventId, eventPayload);
+        values.put("updatedByName", displayName(FirebaseAuth.getInstance().getCurrentUser()));
+        FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
+                (cloudId, familyId, uid) -> preferences.edit()
+                        .putBoolean(SYNC_PREFIX + event.eventId, true).apply());
+    }
+
+    private boolean isSynced(@NonNull String eventId) {
+        return preferences.getBoolean(SYNC_PREFIX + eventId, false);
+    }
+
+    @Nullable
+    private static ActivityEvent fromSnapshot(@NonNull DataSnapshot snapshot) {
+        ActivityEvent event = new ActivityEvent();
+        event.eventId = safe(text(snapshot, "eventId"));
+        if (event.eventId.isEmpty() && snapshot.getKey() != null) {
+            event.eventId = safe(snapshot.getKey());
+        }
+        event.taskCloudId = safe(text(snapshot, "taskCloudId"));
+        event.taskTitle = limit(safe(text(snapshot, "taskTitle")), 120);
+        event.eventType = normalizeType(text(snapshot, "eventType"));
+        event.actorUid = limit(safe(text(snapshot, "actorUid")), 128);
+        event.actorName = limit(safe(text(snapshot, "actorName")), 100);
+        event.detail = limit(safe(text(snapshot, "detail")), 100);
+        Number at = snapshot.child("eventAt").getValue(Number.class);
+        event.eventAt = at == null ? 0L : at.longValue();
+        if (event.eventId.isEmpty() || event.taskCloudId.isEmpty()
+                || event.eventType.isEmpty() || event.eventAt <= 0L) return null;
+        if (event.actorName.isEmpty()) event.actorName = "Family member";
+        return event;
     }
 
     @Nullable
@@ -192,9 +310,7 @@ public final class FamilyTaskActivityRepository {
         String safe = FamilyTaskActivityRepository.safe(value).toUpperCase();
         if (EVENT_CREATE.equals(safe) || EVENT_EDIT.equals(safe)
                 || EVENT_ASSIGN.equals(safe) || EVENT_COMPLETE.equals(safe)
-                || EVENT_REOPEN.equals(safe) || EVENT_DELETE.equals(safe)) {
-            return safe;
-        }
+                || EVENT_REOPEN.equals(safe) || EVENT_DELETE.equals(safe)) return safe;
         return "";
     }
 
@@ -203,6 +319,12 @@ public final class FamilyTaskActivityRepository {
         if (user == null) return "Family member";
         String name = safe(user.getDisplayName());
         return name.isEmpty() ? "Family member" : limit(name, 100);
+    }
+
+    @NonNull
+    private static String text(@NonNull DataSnapshot snapshot, @NonNull String key) {
+        String value = snapshot.child(key).getValue(String.class);
+        return value == null ? "" : value;
     }
 
     @NonNull

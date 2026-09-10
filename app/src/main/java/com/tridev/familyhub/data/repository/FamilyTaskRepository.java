@@ -36,6 +36,7 @@ public final class FamilyTaskRepository {
     private final Context appContext;
     private final FamilyTaskDao dao;
     private final FamilyTaskActivityRepository activityRepository;
+    private final FamilyTaskLinkRepository linkRepository;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
@@ -43,6 +44,7 @@ public final class FamilyTaskRepository {
         appContext = context.getApplicationContext();
         dao = FamilyHubDatabase.getInstance(appContext).familyTaskDao();
         activityRepository = new FamilyTaskActivityRepository(appContext);
+        linkRepository = new FamilyTaskLinkRepository(appContext);
     }
 
     public void loadAll(@NonNull String query, @NonNull ItemsCallback callback) {
@@ -68,6 +70,10 @@ public final class FamilyTaskRepository {
                             FamilyTask local = dao.getByCloudId(cloudId);
                             if (local == null) return;
                             long id = local.id;
+                            activityRepository.recordRemoteAt(local,
+                                    FamilyTaskActivityRepository.EVENT_DELETE, "",
+                                    local.updatedByUid, local.updatedByName,
+                                    System.currentTimeMillis());
                             dao.delete(local);
                             mainHandler.post(() -> callback.onRemoved(id));
                         });
@@ -229,13 +235,40 @@ public final class FamilyTaskRepository {
     public void delete(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_DELETE, "",
-                    user == null ? "" : user.getUid(), displayName(),
-                    System.currentTimeMillis());
-            FamilyCollaborationPublisher.remove("tasks", task.familyId, task.cloudId);
+            String actorUid = user == null ? "" : user.getUid();
+            String actorName = displayName();
+            long deletedAt = System.currentTimeMillis();
+
+            if (task.familyId.isEmpty()) {
+                activityRepository.recordLocalAt(task,
+                        FamilyTaskActivityRepository.EVENT_DELETE, "",
+                        actorUid, actorName, deletedAt);
+            } else {
+                activityRepository.recordAt(task,
+                        FamilyTaskActivityRepository.EVENT_DELETE, "",
+                        actorUid, actorName, deletedAt);
+                activityRepository.promoteLocalHistoryForTask(task);
+                publishTombstone(task, actorUid, actorName, deletedAt);
+            }
             dao.delete(task);
             mainHandler.post(callback::onComplete);
         });
+    }
+
+    private void publishTombstone(@NonNull FamilyTask task,
+                                  @NonNull String actorUid,
+                                  @NonNull String actorName,
+                                  long deletedAt) {
+        if (task.cloudId.isEmpty() || task.familyId.isEmpty()) return;
+        Map<String, Object> values = new HashMap<>();
+        values.put("deleted", true);
+        values.put("deletedAt", deletedAt);
+        values.put("deletedByUid", actorUid);
+        values.put("deletedByName", actorName);
+        values.put("collaborationStatus", "DELETED");
+        values.put("updatedByName", actorName);
+        FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
+                (cloudId, familyId, uid) -> { });
     }
 
     private void retryPending() {
@@ -274,6 +307,10 @@ public final class FamilyTaskRepository {
                     task.familyId = familyId;
                     task.updatedByUid = uid;
                     dao.update(task);
+                    // Link metadata is a separate partial write so ordinary task edits
+                    // can never overwrite a newer Finance/Loan reference from another device.
+                    linkRepository.promoteIfNeeded(task);
+                    activityRepository.promoteLocalHistoryForTask(task);
                 }));
     }
 
@@ -282,6 +319,24 @@ public final class FamilyTaskRepository {
         DATABASE_EXECUTOR.execute(() -> {
             String cloudId = text(s, "cloudId");
             if (cloudId.isEmpty()) return;
+
+            // Activity children are independent of task revision order. Import them
+            // even when this device has a newer local task body.
+            activityRepository.mergeRemoteSnapshot(s);
+
+            if (bool(s, "deleted")) {
+                FamilyTask local = dao.getByCloudId(cloudId);
+                if (local == null) return;
+                long id = local.id;
+                activityRepository.recordRemoteAt(local,
+                        FamilyTaskActivityRepository.EVENT_DELETE, "",
+                        text(s, "deletedByUid"), text(s, "deletedByName"),
+                        number(s, "deletedAt"));
+                dao.delete(local);
+                mainHandler.post(() -> callback.onRemoved(id));
+                return;
+            }
+
             long remoteUpdatedAt = number(s, "updatedAt");
             FamilyTask task = dao.getByCloudId(cloudId);
             if (task != null && task.updatedAt > remoteUpdatedAt) return;
@@ -313,37 +368,46 @@ public final class FamilyTaskRepository {
             task.linkedGroceryCloudId = text(s, "linkedGroceryCloudId");
             task.linkedGroceryItemId = number(s, "linkedGroceryItemId");
             task.shared = true;
+
+            // Stage 12 link metadata lives outside Room but travels with the Task cloud snapshot.
+            linkRepository.mergeRemote(task, s);
+
             if (insert) task.id = dao.insert(task); else dao.update(task);
 
             if (insert) {
-                activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_CREATE, "",
+                activityRepository.recordRemoteAt(task,
+                        FamilyTaskActivityRepository.EVENT_CREATE, "",
                         task.createdByUid,
                         task.createdByName.isEmpty() ? task.updatedByName : task.createdByName,
                         task.createdAt > 0L ? task.createdAt : remoteUpdatedAt);
                 if (!task.assignedMemberId.isEmpty() || !task.assignedMemberName.isEmpty()) {
-                    activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_ASSIGN,
+                    activityRepository.recordRemoteAt(task,
+                            FamilyTaskActivityRepository.EVENT_ASSIGN,
                             assignmentLabel(task), task.updatedByUid, task.updatedByName,
                             remoteUpdatedAt);
                 }
             } else if (previous != null) {
                 if (!previous.status.equals(task.status)) {
-                    activityRepository.recordAt(task,
+                    activityRepository.recordRemoteAt(task,
                             FamilyTask.STATUS_COMPLETED.equals(task.status)
                                     ? FamilyTaskActivityRepository.EVENT_COMPLETE
                                     : FamilyTaskActivityRepository.EVENT_REOPEN,
                             "", task.updatedByUid, task.updatedByName, remoteUpdatedAt);
                 }
                 if (assignmentChanged(previous, task)) {
-                    activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_ASSIGN,
+                    activityRepository.recordRemoteAt(task,
+                            FamilyTaskActivityRepository.EVENT_ASSIGN,
                             assignmentLabel(task), task.updatedByUid, task.updatedByName,
                             remoteUpdatedAt);
                 }
                 if (detailsChanged(previous, task)) {
-                    activityRepository.recordAt(task, FamilyTaskActivityRepository.EVENT_EDIT, "",
+                    activityRepository.recordRemoteAt(task,
+                            FamilyTaskActivityRepository.EVENT_EDIT, "",
                             task.updatedByUid, task.updatedByName, remoteUpdatedAt);
                 }
             }
 
+            activityRepository.promoteLocalHistoryForTask(task);
             FamilyTask changed = task;
             mainHandler.post(() -> callback.onChanged(changed));
         });

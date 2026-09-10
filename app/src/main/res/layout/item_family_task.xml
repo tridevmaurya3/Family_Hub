@@ -23,6 +23,7 @@
                 <TextView android:id="@+id/task_title"
                     style="@style/TextAppearance.FamilyHub.CardTitle"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:breakStrategy="balanced" android:maxLines="3"
                     android:textColor="@color/fh_text_primary" />
                 <TextView android:id="@+id/task_due"
                     style="@style/TextAppearance.FamilyHub.Caption"
@@ -32,7 +33,9 @@
             <TextView android:id="@+id/task_priority"
                 style="@style/TextAppearance.FamilyHub.Caption"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_4"
                 android:background="@drawable/bg_status_pill"
+                android:ellipsize="end" android:maxWidth="96dp" android:singleLine="true"
                 android:paddingStart="@dimen/space_10" android:paddingTop="@dimen/space_6"
                 android:paddingEnd="@dimen/space_10" android:paddingBottom="@dimen/space_6"
                 android:textColor="@color/fh_warning" android:textStyle="bold" />
@@ -49,7 +52,7 @@
             android:layout_marginTop="@dimen/space_10" android:background="@color/fh_divider" />
         <HorizontalScrollView
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fillViewport="true" android:scrollbars="none">
+            android:fillViewport="true" android:overScrollMode="never" android:scrollbars="none">
             <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:gravity="end" android:orientation="horizontal">
                 <com.google.android.material.button.MaterialButton
