@@ -269,8 +269,7 @@ public final class FamilyTaskActivityRepository {
         event.actorUid = limit(safe(text(snapshot, "actorUid")), 128);
         event.actorName = limit(safe(text(snapshot, "actorName")), 100);
         event.detail = limit(safe(text(snapshot, "detail")), 100);
-        Number at = snapshot.child("eventAt").getValue(Number.class);
-        event.eventAt = at == null ? 0L : at.longValue();
+        event.eventAt = number(snapshot, "eventAt");
         if (event.eventId.isEmpty() || event.taskCloudId.isEmpty()
                 || event.eventType.isEmpty() || event.eventAt <= 0L) return null;
         if (event.actorName.isEmpty()) event.actorName = "Family member";
@@ -325,6 +324,25 @@ public final class FamilyTaskActivityRepository {
     private static String text(@NonNull DataSnapshot snapshot, @NonNull String key) {
         String value = snapshot.child(key).getValue(String.class);
         return value == null ? "" : value;
+    }
+
+    private static long number(@NonNull DataSnapshot snapshot, @NonNull String key) {
+        Object value = snapshot.child(key).getValue();
+        if (value instanceof Number) return ((Number) value).longValue();
+        if (value instanceof String) {
+            String raw = ((String) value).trim();
+            if (raw.isEmpty()) return 0L;
+            try {
+                return Long.parseLong(raw);
+            } catch (NumberFormatException ignored) {
+                try {
+                    return (long) Double.parseDouble(raw);
+                } catch (NumberFormatException ignoredAgain) {
+                    return 0L;
+                }
+            }
+        }
+        return 0L;
     }
 
     @NonNull
