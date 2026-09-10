@@ -89,6 +89,16 @@
                 android:value="User-enabled draggable grocery quick-add and shared checklist overlay" />
         </service>
 
+        <service
+            android:name=".feature.tasks.overlay.FamilyTaskOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled draggable family task quick-add and checklist overlay" />
+        </service>
+
         <receiver
             android:name=".feature.grocery.widget.GroceryWidgetProvider"
             android:exported="false">

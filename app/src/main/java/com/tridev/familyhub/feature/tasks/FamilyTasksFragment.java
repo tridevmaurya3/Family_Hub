@@ -2,7 +2,10 @@ package com.tridev.familyhub.feature.tasks;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +16,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -26,6 +30,7 @@ import com.tridev.familyhub.databinding.DialogFamilyTaskBinding;
 import com.tridev.familyhub.databinding.FragmentFamilyTasksBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -66,6 +71,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.taskRecyclerView.setAdapter(adapter);
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
+        binding.taskFloatingToggle.setOnClickListener(v -> toggleFloatingStrip());
         binding.taskQuickAddInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) { quickAdd(); return true; }
             return false;
@@ -89,6 +95,60 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             @Override public void onRemoved(long localId) { if (binding != null) reload(); }
         });
         reload();
+        updateFloatingButton();
+    }
+
+    @Override public void onResume() {
+        super.onResume();
+        if (binding == null) return;
+        boolean requested = requireContext().getSharedPreferences(
+                FamilyTaskOverlayService.PREFS, android.content.Context.MODE_PRIVATE)
+                .getBoolean(FamilyTaskOverlayService.KEY_REQUESTED, false);
+        if (requested && Settings.canDrawOverlays(requireContext())) {
+            requireContext().getSharedPreferences(FamilyTaskOverlayService.PREFS,
+                    android.content.Context.MODE_PRIVATE).edit()
+                    .putBoolean(FamilyTaskOverlayService.KEY_REQUESTED, false).apply();
+            startFloatingStrip();
+        }
+        updateFloatingButton();
+    }
+
+    private void toggleFloatingStrip() {
+        boolean enabled = requireContext().getSharedPreferences(
+                FamilyTaskOverlayService.PREFS, android.content.Context.MODE_PRIVATE)
+                .getBoolean(FamilyTaskOverlayService.KEY_ENABLED, false);
+        if (enabled) {
+            requireContext().startService(new Intent(requireContext(),
+                    FamilyTaskOverlayService.class).setAction(FamilyTaskOverlayService.ACTION_STOP));
+            binding.taskFloatingToggle.postDelayed(this::updateFloatingButton, 180);
+            return;
+        }
+        if (!Settings.canDrawOverlays(requireContext())) {
+            requireContext().getSharedPreferences(FamilyTaskOverlayService.PREFS,
+                    android.content.Context.MODE_PRIVATE).edit()
+                    .putBoolean(FamilyTaskOverlayService.KEY_REQUESTED, true).apply();
+            android.widget.Toast.makeText(requireContext(),
+                    R.string.family_tasks_overlay_permission, android.widget.Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + requireContext().getPackageName())));
+            return;
+        }
+        startFloatingStrip();
+    }
+
+    private void startFloatingStrip() {
+        ContextCompat.startForegroundService(requireContext(), new Intent(requireContext(),
+                FamilyTaskOverlayService.class).setAction(FamilyTaskOverlayService.ACTION_SHOW));
+        binding.taskFloatingToggle.postDelayed(this::updateFloatingButton, 180);
+    }
+
+    private void updateFloatingButton() {
+        if (binding == null) return;
+        boolean enabled = requireContext().getSharedPreferences(
+                FamilyTaskOverlayService.PREFS, android.content.Context.MODE_PRIVATE)
+                .getBoolean(FamilyTaskOverlayService.KEY_ENABLED, false);
+        binding.taskFloatingToggle.setText(enabled
+                ? R.string.family_tasks_floating_hide : R.string.family_tasks_floating_show);
     }
 
     @Override public void onAddRequested() { prepareEditor(null); }

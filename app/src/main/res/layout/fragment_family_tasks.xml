@@ -38,12 +38,22 @@
             app:icon="@drawable/ic_add" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/task_floating_toggle"
+        style="@style/Widget.FamilyHub.Button.Outlined"
+        android:layout_width="wrap_content" android:layout_height="@dimen/touch_target_min"
+        android:layout_marginTop="@dimen/space_6" android:text="@string/family_tasks_floating_show"
+        android:textColor="@color/fh_module_grocery" app:icon="@drawable/ic_family_task"
+        app:iconTint="@color/fh_module_grocery"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
+
     <HorizontalScrollView android:id="@+id/task_filter_scroll"
         android:layout_width="0dp" android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_8" android:fillViewport="false"
         android:scrollbars="none" app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel">
+        app:layout_constraintTop_toBottomOf="@id/task_floating_toggle">
         <com.google.android.material.chip.ChipGroup android:id="@+id/task_filter_group"
             android:layout_width="wrap_content" android:layout_height="wrap_content"
             app:chipSpacingHorizontal="@dimen/space_6" app:selectionRequired="true"

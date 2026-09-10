@@ -1569,4 +1569,12 @@ Sharing: %12$s</string>
     <string name="feature_menu_family_tasks">Family To-Do</string>
     <string name="family_tasks_notification_channel">Family To-Do alerts</string>
     <string name="family_tasks_notification_detail">A family task needs your attention.</string>
+    <string name="family_tasks_floating_show">Show floating To-Do</string>
+    <string name="family_tasks_floating_hide">Hide floating To-Do</string>
+    <string name="family_tasks_overlay_permission">Allow “Display over other apps”, then return to Family To-Do.</string>
+    <string name="family_tasks_overlay_channel">Floating Family To-Do</string>
+    <string name="family_tasks_overlay_notification">Your family task strip is available on every screen</string>
+    <string name="family_tasks_overlay_today">Today</string>
+    <string name="family_tasks_overlay_tomorrow">Tomorrow</string>
+    <string name="family_tasks_overlay_add_hint">Quick add a task</string>
 </resources>
