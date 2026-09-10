@@ -60,12 +60,30 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
                     && task.linkedGroceryItemId <= 0L ? "" : " • "
                     + binding.getRoot().getContext().getString(
                     R.string.family_tasks_linked_to_grocery);
+            FamilyTaskLinkStore.Link links = FamilyTaskLinkStore.load(
+                    binding.getRoot().getContext(), task);
+            String finance = links.hasFinance() ? " • "
+                    + binding.getRoot().getContext().getString(
+                    R.string.family_tasks_linked_to_finance) : "";
+            String loan = links.hasLoan() ? " • "
+                    + binding.getRoot().getContext().getString(
+                    R.string.family_tasks_linked_to_loan,
+                    links.loanName.isEmpty()
+                            ? binding.getRoot().getContext().getString(
+                            R.string.family_tasks_loan_manager)
+                            : links.loanName) : "";
             binding.taskMeta.setText(binding.getRoot().getContext().getString(
-                    R.string.family_tasks_assigned_to, who) + repeat + created + grocery);
+                    R.string.family_tasks_assigned_to, who) + repeat + created
+                    + grocery + finance + loan);
             binding.taskNotes.setText(task.notes);
             binding.taskNotes.setVisibility(task.notes.isEmpty() ? View.GONE : View.VISIBLE);
             binding.taskCompleted.setOnCheckedChangeListener((button, checked) -> listener.onCompletedChanged(task, checked));
             binding.getRoot().setOnClickListener(v -> listener.onEdit(task));
+            binding.taskLinkButton.setOnClickListener(v -> FamilyTaskLinkDialog.show(
+                    binding.getRoot().getContext(), task, () -> {
+                        int position = getBindingAdapterPosition();
+                        if (position != RecyclerView.NO_POSITION) notifyItemChanged(position);
+                    }));
             binding.editTaskButton.setOnClickListener(v -> listener.onEdit(task));
             binding.deleteTaskButton.setOnClickListener(v -> listener.onDelete(task));
         }

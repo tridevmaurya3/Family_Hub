@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_tasks_manage_links">Links</string>
+    <string name="family_tasks_link_dialog_title">Finance &amp; Loan links</string>
+    <string name="family_tasks_link_dialog_message">Optionally connect this task to an existing shared Finance entry or Loan Manager loan. Linking never creates, edits, completes, or deletes a money record.</string>
+    <string name="family_tasks_finance_link">Finance entry</string>
+    <string name="family_tasks_loan_link">Loan Manager loan</string>
+    <string name="family_tasks_no_finance_link">No Finance link</string>
+    <string name="family_tasks_no_loan_link">No Loan link</string>
+    <string name="family_tasks_linked_to_finance">Linked to Finance</string>
+    <string name="family_tasks_linked_to_loan">Loan: %1$s</string>
+    <string name="family_tasks_loan_manager">Loan Manager</string>
+    <string name="family_tasks_finance_entry">Finance</string>
+    <string name="family_tasks_unavailable_finance_link">Linked Finance entry (not available on this device)</string>
+    <string name="family_tasks_unavailable_loan_link">%1$s (not available on this device)</string>
+    <string name="family_tasks_links_saved">Task links saved</string>
+</resources>
