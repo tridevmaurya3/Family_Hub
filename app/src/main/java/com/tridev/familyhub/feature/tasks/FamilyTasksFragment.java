@@ -85,9 +85,12 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private long customDateStart;
     private long customDateEnd;
     private int quickDateMode;
+    private int quickTimeMode = 2;
     private int quickPriorityMode;
     private int quickRepeatMode;
-    private long quickCustomDueAt;
+    private long quickCustomDateAt;
+    private int quickCustomHour = -1;
+    private int quickCustomMinute = -1;
     @Nullable private MaterialButton taskDateDropdown;
     @Nullable private MaterialButton taskStatusDropdown;
     @Nullable private MaterialButton taskAssignmentDropdown;
@@ -295,30 +298,55 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 R.string.task_priority_normal) + "  ▾");
         binding.taskQuickRepeatButton.setText(getString(
                 R.string.task_repeat_none) + "  ▾");
+        updateQuickTimeLabel();
 
         binding.taskQuickDateButton.setOnClickListener(anchor -> showPremiumFilterPopup(
                 anchor, new String[]{getString(R.string.family_tasks_overlay_today),
                         getString(R.string.family_tasks_overlay_tomorrow),
-                        getString(R.string.task_due_next_week)}, quickDateMode,
+                        getString(R.string.family_tasks_custom_date)}, quickDateMode,
                 ContextCompat.getColor(requireContext(), R.color.fh_success), index -> {
-                    quickDateMode = index;
                     if (index == 2) {
-                        long initial = quickCustomDueAt > 0L
-                                ? quickCustomDueAt : quickDueAt(0);
-                        pickDateTime(initial, selected -> {
-                            quickCustomDueAt = selected;
+                        long initial = quickCustomDateAt > 0L
+                                ? quickCustomDateAt : System.currentTimeMillis();
+                        pickQuickDate(initial, selected -> {
+                            quickDateMode = 2;
+                            quickCustomDateAt = selected;
                             binding.taskQuickDateButton.setText(
-                                    getString(R.string.task_due_next_week) + "  ▾");
-                            binding.taskQuickDateButton.setContentDescription(
-                                    DateFormat.getDateTimeInstance(DateFormat.MEDIUM,
-                                            DateFormat.SHORT).format(new Date(selected)));
+                                    DateFormat.getDateInstance(DateFormat.MEDIUM)
+                                            .format(new Date(selected)) + "  ▾");
+                            updateQuickTimeLabel();
                         });
                     } else {
+                        quickDateMode = index;
                         binding.taskQuickDateButton.setText(getString(index == 1
                                 ? R.string.family_tasks_overlay_tomorrow
                                 : R.string.family_tasks_overlay_today) + "  ▾");
+                        updateQuickTimeLabel();
                     }
                 }));
+
+        binding.taskQuickTimeButton.setOnClickListener(anchor -> showPremiumFilterPopup(
+                anchor, new String[]{getString(R.string.family_tasks_time_now),
+                        getString(R.string.family_tasks_time_30_minutes),
+                        getString(R.string.family_tasks_time_1_hour),
+                        getString(R.string.family_tasks_time_custom)}, quickTimeMode,
+                ContextCompat.getColor(requireContext(), R.color.fh_warning), index -> {
+                    if (index == 3) {
+                        Calendar initial = Calendar.getInstance();
+                        initial.setTimeInMillis(resolveQuickDueAt());
+                        new TimePickerDialog(requireContext(), (picker, hour, minute) -> {
+                            quickTimeMode = 3;
+                            quickCustomHour = hour;
+                            quickCustomMinute = minute;
+                            updateQuickTimeLabel();
+                        }, initial.get(Calendar.HOUR_OF_DAY), initial.get(Calendar.MINUTE), false)
+                                .show();
+                    } else {
+                        quickTimeMode = index;
+                        updateQuickTimeLabel();
+                    }
+                }));
+
         binding.taskQuickPriorityButton.setOnClickListener(anchor -> showPremiumFilterPopup(
                 anchor, new String[]{getString(R.string.task_priority_normal),
                         getString(R.string.task_priority_high),
@@ -336,6 +364,56 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                     binding.taskQuickRepeatButton.setText(
                             (index == 1 ? "Repeated" : getString(R.string.task_repeat_none)) + "  ▾");
                 }));
+    }
+
+    private void updateQuickTimeLabel() {
+        if (binding == null) return;
+        String value = DateFormat.getTimeInstance(DateFormat.SHORT)
+                .format(new Date(resolveQuickDueAt()));
+        binding.taskQuickTimeButton.setText(value + "  ▾");
+        binding.taskQuickTimeButton.setContentDescription(
+                getString(R.string.family_tasks_quick_time) + ": " + value);
+    }
+
+    private long resolveQuickDueAt() {
+        Calendar due = Calendar.getInstance();
+        if (quickDateMode == 2 && quickCustomDateAt > 0L) {
+            Calendar selected = Calendar.getInstance();
+            selected.setTimeInMillis(quickCustomDateAt);
+            due.set(Calendar.YEAR, selected.get(Calendar.YEAR));
+            due.set(Calendar.MONTH, selected.get(Calendar.MONTH));
+            due.set(Calendar.DAY_OF_MONTH, selected.get(Calendar.DAY_OF_MONTH));
+        } else if (quickDateMode == 1) {
+            due.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        due.set(Calendar.SECOND, 0);
+        due.set(Calendar.MILLISECOND, 0);
+
+        if (quickTimeMode == 3 && quickCustomHour >= 0 && quickCustomMinute >= 0) {
+            due.set(Calendar.HOUR_OF_DAY, quickCustomHour);
+            due.set(Calendar.MINUTE, quickCustomMinute);
+        } else if (quickTimeMode == 1) {
+            due.add(Calendar.MINUTE, 30);
+        } else if (quickTimeMode == 2) {
+            due.add(Calendar.HOUR_OF_DAY, 1);
+        }
+
+        if (quickDateMode == 0 && due.getTimeInMillis() <= System.currentTimeMillis()) {
+            due.add(Calendar.MINUTE, 1);
+        }
+        return due.getTimeInMillis();
+    }
+
+    private void pickQuickDate(long initial, @NonNull DateCallback callback) {
+        Calendar selected = Calendar.getInstance();
+        selected.setTimeInMillis(initial);
+        new DatePickerDialog(requireContext(), (picker, year, month, day) -> {
+            selected.set(Calendar.YEAR, year);
+            selected.set(Calendar.MONTH, month);
+            selected.set(Calendar.DAY_OF_MONTH, day);
+            callback.onSelected(selected.getTimeInMillis());
+        }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH),
+                selected.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private void showDateDropdown(@NonNull View anchor) {
@@ -660,8 +738,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         }
         FamilyTask task = new FamilyTask();
         task.title = title;
-        task.dueAt = quickDateMode == 2 && quickCustomDueAt > 0L
-                ? quickCustomDueAt : quickDueAt(quickDateMode == 1 ? 1 : 0);
+        task.dueAt = resolveQuickDueAt();
         task.priority = quickPriorityMode == 2 ? FamilyTask.PRIORITY_URGENT
                 : quickPriorityMode == 1 ? FamilyTask.PRIORITY_HIGH
                 : FamilyTask.PRIORITY_NORMAL;
@@ -998,34 +1075,47 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private long defaultDueTime() {
-        Calendar c = Calendar.getInstance();
-        if (activeFilter == R.id.task_filter_tomorrow) c.add(Calendar.DAY_OF_YEAR, 1);
-        c.set(Calendar.HOUR_OF_DAY, 18);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
+        Calendar clock = Calendar.getInstance();
+        clock.add(Calendar.HOUR_OF_DAY, 1);
+        Calendar due = Calendar.getInstance();
+        if (activeFilter == R.id.task_filter_tomorrow) due.add(Calendar.DAY_OF_YEAR, 1);
+        due.set(Calendar.HOUR_OF_DAY, clock.get(Calendar.HOUR_OF_DAY));
+        due.set(Calendar.MINUTE, clock.get(Calendar.MINUTE));
+        due.set(Calendar.SECOND, 0);
+        due.set(Calendar.MILLISECOND, 0);
+        if (activeFilter != R.id.task_filter_tomorrow
+                && due.getTimeInMillis() <= System.currentTimeMillis()) {
+            due.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        return due.getTimeInMillis();
     }
 
     private long quickDueAt(int daysAhead) {
-        Calendar c = Calendar.getInstance();
-        c.add(Calendar.DAY_OF_YEAR, daysAhead);
-        c.set(Calendar.HOUR_OF_DAY, 18);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
+        Calendar clock = Calendar.getInstance();
+        clock.add(Calendar.HOUR_OF_DAY, 1);
+        Calendar due = Calendar.getInstance();
+        due.add(Calendar.DAY_OF_YEAR, daysAhead);
+        due.set(Calendar.HOUR_OF_DAY, clock.get(Calendar.HOUR_OF_DAY));
+        due.set(Calendar.MINUTE, clock.get(Calendar.MINUTE));
+        due.set(Calendar.SECOND, 0);
+        due.set(Calendar.MILLISECOND, 0);
+        if (daysAhead == 0 && due.getTimeInMillis() <= System.currentTimeMillis()) {
+            due.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        return due.getTimeInMillis();
     }
 
     private void setSmartDue(@NonNull DialogFamilyTaskBinding form,
                              @NonNull long[] dueAt, int daysAhead) {
-        Calendar c = Calendar.getInstance();
-        c.add(Calendar.DAY_OF_YEAR, daysAhead);
-        c.set(Calendar.HOUR_OF_DAY, 18);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        dueAt[0] = c.getTimeInMillis();
+        Calendar clock = Calendar.getInstance();
+        clock.setTimeInMillis(dueAt[0] > 0L ? dueAt[0] : defaultDueTime());
+        Calendar due = Calendar.getInstance();
+        due.add(Calendar.DAY_OF_YEAR, daysAhead);
+        due.set(Calendar.HOUR_OF_DAY, clock.get(Calendar.HOUR_OF_DAY));
+        due.set(Calendar.MINUTE, clock.get(Calendar.MINUTE));
+        due.set(Calendar.SECOND, 0);
+        due.set(Calendar.MILLISECOND, 0);
+        dueAt[0] = due.getTimeInMillis();
         updateDueText(form, dueAt[0]);
     }
 

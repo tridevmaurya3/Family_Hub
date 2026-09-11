@@ -386,7 +386,9 @@ public final class FamilyTaskOverlayService extends Service {
         sort.setOnClickListener(v -> showSortPopup(sort));
 
         final int[] quickDateMode = {0};
-        final long[] customQuickDueAt = {0L};
+        final long[] customQuickDateAt = {0L};
+        final int[] quickTimeMode = {2};
+        final int[] customQuickTime = {-1, -1};
         final int[] quickPriority = {0};
 
         voiceWave = new TaskVoiceWaveView(this);
@@ -429,21 +431,29 @@ public final class FamilyTaskOverlayService extends Service {
         final int[] quickRepeat = {0};
         Button quickDate = compactAction(getString(R.string.family_tasks_overlay_today) + "  ▾",
                 Color.rgb(15, 105, 80), Color.argb(220, 226, 244, 238));
+        Button quickTimeButton = compactAction(getString(R.string.family_tasks_quick_time) + "  ▾",
+                Color.rgb(166, 103, 18), Color.argb(220, 255, 246, 224));
         Button quickPriorityButton = compactAction(
                 getString(R.string.task_priority_normal) + "  ▾",
                 Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
         Button quickRepeatButton = compactAction("Once  ▾",
                 Color.rgb(28, 91, 130), Color.argb(220, 232, 243, 250));
         addOptions.addView(quickDate, new LinearLayout.LayoutParams(0, dp(38), 1f));
+        LinearLayout.LayoutParams quickTimeParams =
+                new LinearLayout.LayoutParams(0, dp(38), 1f);
+        quickTimeParams.setMarginStart(dp(4));
+        addOptions.addView(quickTimeButton, quickTimeParams);
         LinearLayout.LayoutParams quickPriorityParams =
                 new LinearLayout.LayoutParams(0, dp(38), 1f);
-        quickPriorityParams.setMarginStart(dp(5));
+        quickPriorityParams.setMarginStart(dp(4));
         addOptions.addView(quickPriorityButton, quickPriorityParams);
         LinearLayout.LayoutParams quickRepeatParams =
                 new LinearLayout.LayoutParams(0, dp(38), 1f);
-        quickRepeatParams.setMarginStart(dp(5));
+        quickRepeatParams.setMarginStart(dp(4));
         addOptions.addView(quickRepeatButton, quickRepeatParams);
         root.addView(addOptions, new LinearLayout.LayoutParams(-1, dp(42)));
+        updateQuickTimeButton(quickTimeButton, quickDateMode[0], customQuickDateAt[0],
+                quickTimeMode[0], customQuickTime);
 
         TextView customDueText = text("", 10.5f, true);
         customDueText.setTextColor(Color.rgb(15, 105, 80));
@@ -458,30 +468,51 @@ public final class FamilyTaskOverlayService extends Service {
 
         quickDate.setOnClickListener(v -> showChoicePopup(quickDate,
                 new String[]{getString(R.string.family_tasks_overlay_today),
-                        getString(R.string.family_tasks_overlay_tomorrow), "Custom"},
+                        getString(R.string.family_tasks_overlay_tomorrow),
+                        getString(R.string.family_tasks_custom_date)},
                 quickDateMode[0], Color.rgb(15, 108, 89), index -> {
-                    quickDateMode[0] = index;
                     if (index == 2) {
-                        quickDate.setText("Custom  ▾");
-                        customDueText.setVisibility(View.VISIBLE);
-                        showQuickDatePicker(quickDate, customDueText, customQuickDueAt);
+                        showQuickDatePicker(quickDate, customDueText, customQuickDateAt, () -> {
+                            quickDateMode[0] = 2;
+                            quickDate.setText(getString(R.string.family_tasks_custom_date) + "  ▾");
+                            customDueText.setVisibility(View.VISIBLE);
+                            updateQuickTimeButton(quickTimeButton, quickDateMode[0],
+                                    customQuickDateAt[0], quickTimeMode[0], customQuickTime);
+                        });
                     } else {
+                        quickDateMode[0] = index;
                         customDueText.setVisibility(View.GONE);
                         quickDate.setText((index == 1
                                 ? getString(R.string.family_tasks_overlay_tomorrow)
                                 : getString(R.string.family_tasks_overlay_today)) + "  ▾");
+                        updateQuickTimeButton(quickTimeButton, quickDateMode[0],
+                                customQuickDateAt[0], quickTimeMode[0], customQuickTime);
+                    }
+                }));
+        quickTimeButton.setOnClickListener(v -> showChoicePopup(quickTimeButton,
+                new String[]{getString(R.string.family_tasks_time_now),
+                        getString(R.string.family_tasks_time_30_minutes),
+                        getString(R.string.family_tasks_time_1_hour),
+                        getString(R.string.family_tasks_time_custom)},
+                quickTimeMode[0], Color.rgb(166, 103, 18), index -> {
+                    if (index == 3) {
+                        showQuickTimePicker(quickTimeButton, quickDateMode[0], customQuickDateAt[0],
+                                quickTimeMode, customQuickTime);
+                    } else {
+                        quickTimeMode[0] = index;
+                        updateQuickTimeButton(quickTimeButton, quickDateMode[0],
+                                customQuickDateAt[0], quickTimeMode[0], customQuickTime);
                     }
                 }));
         quickPriorityButton.setOnClickListener(v -> showChoicePopup(quickPriorityButton,
                 new String[]{getString(R.string.task_priority_normal),
                         getString(R.string.task_priority_high),
-                        getString(R.string.task_priority_urgent)}, quickPriority[0],
-                Color.rgb(106, 75, 150), index -> {
+                        getString(R.string.task_priority_urgent)},
+                quickPriority[0], Color.rgb(106, 75, 150), index -> {
                     quickPriority[0] = index;
-                    String[] labels = {getString(R.string.task_priority_normal),
-                            getString(R.string.task_priority_high),
-                            getString(R.string.task_priority_urgent)};
-                    quickPriorityButton.setText(labels[index] + "  ▾");
+                    int[] labels = {R.string.task_priority_normal, R.string.task_priority_high,
+                            R.string.task_priority_urgent};
+                    quickPriorityButton.setText(getString(labels[index]) + "  ▾");
                 }));
         quickRepeatButton.setOnClickListener(v -> showChoicePopup(quickRepeatButton,
                 new String[]{"Once", "Repeated"}, quickRepeat[0],
@@ -490,7 +521,12 @@ public final class FamilyTaskOverlayService extends Service {
                     quickRepeatButton.setText((index == 1 ? "Repeated" : "Once") + "  ▾");
                 }));
         customDueText.setOnClickListener(v ->
-                showQuickDatePicker(quickDate, customDueText, customQuickDueAt));
+                showQuickDatePicker(quickDate, customDueText, customQuickDateAt, () -> {
+                    quickDateMode[0] = 2;
+                    quickDate.setText(getString(R.string.family_tasks_custom_date) + "  ▾");
+                    updateQuickTimeButton(quickTimeButton, quickDateMode[0], customQuickDateAt[0],
+                            quickTimeMode[0], customQuickTime);
+                }));
 
         countText = text("", 10f, true);
         countText.setTextColor(Color.rgb(84, 93, 105));
@@ -521,8 +557,8 @@ public final class FamilyTaskOverlayService extends Service {
             }
             FamilyTask task = new FamilyTask();
             task.title = value;
-            task.dueAt = quickDateMode[0] == 2 && customQuickDueAt[0] > 0L
-                    ? customQuickDueAt[0] : dueAt(quickDateMode[0] == 1);
+            task.dueAt = resolveQuickDueAt(quickDateMode[0], customQuickDateAt[0],
+                    quickTimeMode[0], customQuickTime);
             task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
                     : quickPriority[0] == 1 ? FamilyTask.PRIORITY_HIGH
                     : FamilyTask.PRIORITY_NORMAL;
@@ -734,49 +770,80 @@ public final class FamilyTaskOverlayService extends Service {
 
     private void showQuickDatePicker(@NonNull Button anchor,
                                      @NonNull TextView dateLabel,
-                                     @NonNull long[] selectedAt) {
+                                     @NonNull long[] selectedAt,
+                                     @NonNull Runnable onSelected) {
         Calendar selected = Calendar.getInstance();
         if (selectedAt[0] > 0L) selected.setTimeInMillis(selectedAt[0]);
         DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
             Calendar value = Calendar.getInstance();
-            value.set(year, month, day, 18, 0, 0);
+            value.set(Calendar.YEAR, year);
+            value.set(Calendar.MONTH, month);
+            value.set(Calendar.DAY_OF_MONTH, day);
+            value.set(Calendar.SECOND, 0);
             value.set(Calendar.MILLISECOND, 0);
             selectedAt[0] = value.getTimeInMillis();
-            dateLabel.setText("Due: " + new java.text.SimpleDateFormat(
-                    "EEE, dd MMM yyyy", Locale.getDefault()).format(new Date(selectedAt[0])));
-            showOptionalTimePopup(anchor, dateLabel, selectedAt);
+            dateLabel.setText("Due date: " + DateFormat.getDateInstance(DateFormat.MEDIUM)
+                    .format(new Date(selectedAt[0])));
+            dateLabel.setVisibility(View.VISIBLE);
+            onSelected.run();
         }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH),
                 selected.get(Calendar.DAY_OF_MONTH));
-        picker.setOnCancelListener(dialog -> {
-            if (selectedAt[0] <= 0L) dateLabel.setVisibility(View.GONE);
-        });
         if (picker.getWindow() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             picker.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         }
         picker.show();
     }
 
-    private void showOptionalTimePopup(@NonNull Button anchor,
-                                       @NonNull TextView dateLabel,
-                                       @NonNull long[] selectedAt) {
-        showChoicePopup(anchor, new String[]{"Date only", "Add time (optional)"}, 0,
-                Color.rgb(15, 108, 89), index -> {
-                    if (index != 1) return;
-                    Calendar value = Calendar.getInstance();
-                    value.setTimeInMillis(selectedAt[0]);
-                    TimePickerDialog time = new TimePickerDialog(this, (view, hour, minute) -> {
-                        value.set(Calendar.HOUR_OF_DAY, hour);
-                        value.set(Calendar.MINUTE, minute);
-                        selectedAt[0] = value.getTimeInMillis();
-                        dateLabel.setText("Due: " + new java.text.SimpleDateFormat(
-                                "EEE, dd MMM yyyy • hh:mm a", Locale.getDefault())
-                                .format(new Date(selectedAt[0])));
-                    }, value.get(Calendar.HOUR_OF_DAY), value.get(Calendar.MINUTE), false);
-                    if (time.getWindow() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        time.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-                    }
-                    time.show();
-                });
+    private void showQuickTimePicker(@NonNull Button anchor, int dateMode, long customDateAt,
+                                     @NonNull int[] timeMode, @NonNull int[] customTime) {
+        Calendar value = Calendar.getInstance();
+        value.setTimeInMillis(resolveQuickDueAt(dateMode, customDateAt, timeMode[0], customTime));
+        TimePickerDialog picker = new TimePickerDialog(this, (view, hour, minute) -> {
+            timeMode[0] = 3;
+            customTime[0] = hour;
+            customTime[1] = minute;
+            updateQuickTimeButton(anchor, dateMode, customDateAt, timeMode[0], customTime);
+        }, value.get(Calendar.HOUR_OF_DAY), value.get(Calendar.MINUTE), false);
+        if (picker.getWindow() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            picker.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        }
+        picker.show();
+    }
+
+    private void updateQuickTimeButton(@NonNull Button button, int dateMode, long customDateAt,
+                                       int timeMode, @NonNull int[] customTime) {
+        String value = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(
+                resolveQuickDueAt(dateMode, customDateAt, timeMode, customTime)));
+        button.setText(value + "  ▾");
+        button.setContentDescription(getString(R.string.family_tasks_quick_time) + ": " + value);
+    }
+
+    private long resolveQuickDueAt(int dateMode, long customDateAt, int timeMode,
+                                   @NonNull int[] customTime) {
+        Calendar due = Calendar.getInstance();
+        if (dateMode == 2 && customDateAt > 0L) {
+            Calendar selected = Calendar.getInstance();
+            selected.setTimeInMillis(customDateAt);
+            due.set(Calendar.YEAR, selected.get(Calendar.YEAR));
+            due.set(Calendar.MONTH, selected.get(Calendar.MONTH));
+            due.set(Calendar.DAY_OF_MONTH, selected.get(Calendar.DAY_OF_MONTH));
+        } else if (dateMode == 1) {
+            due.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        due.set(Calendar.SECOND, 0);
+        due.set(Calendar.MILLISECOND, 0);
+        if (timeMode == 3 && customTime[0] >= 0 && customTime[1] >= 0) {
+            due.set(Calendar.HOUR_OF_DAY, customTime[0]);
+            due.set(Calendar.MINUTE, customTime[1]);
+        } else if (timeMode == 1) {
+            due.add(Calendar.MINUTE, 30);
+        } else if (timeMode == 2) {
+            due.add(Calendar.HOUR_OF_DAY, 1);
+        }
+        if (dateMode == 0 && due.getTimeInMillis() <= System.currentTimeMillis()) {
+            due.add(Calendar.MINUTE, 1);
+        }
+        return due.getTimeInMillis();
     }
 
     private interface ChoiceListener { void onChoice(int index); }
@@ -1407,12 +1474,17 @@ public final class FamilyTaskOverlayService extends Service {
     }
 
     private long dueAt(boolean next) {
+        Calendar clock = Calendar.getInstance();
+        clock.add(Calendar.HOUR_OF_DAY, 1);
         Calendar calendar = Calendar.getInstance();
         if (next) calendar.add(Calendar.DAY_OF_YEAR, 1);
-        calendar.set(Calendar.HOUR_OF_DAY, 18);
-        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.HOUR_OF_DAY, clock.get(Calendar.HOUR_OF_DAY));
+        calendar.set(Calendar.MINUTE, clock.get(Calendar.MINUTE));
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
+        if (!next && calendar.getTimeInMillis() <= System.currentTimeMillis()) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        }
         return calendar.getTimeInMillis();
     }
 

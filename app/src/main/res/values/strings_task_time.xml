@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_tasks_quick_time">Time</string>
+    <string name="family_tasks_custom_date">Custom date</string>
+    <string name="family_tasks_time_now">Now</string>
+    <string name="family_tasks_time_30_minutes">+30 min</string>
+    <string name="family_tasks_time_1_hour">+1 hour</string>
+    <string name="family_tasks_time_custom">Custom time</string>
+</resources>
