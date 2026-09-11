@@ -79,6 +79,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private int activeStatus = R.id.task_status_pending;
     private int activeAssignment = R.id.task_assignment_everyone;
     private int activeSort = SORT_DUE;
+    @NonNull private String activePriorityFilter = "";
     private boolean overdueOnly;
     private long customDateStart;
     private long customDateEnd;
@@ -89,6 +90,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     @Nullable private MaterialButton taskDateDropdown;
     @Nullable private MaterialButton taskStatusDropdown;
     @Nullable private MaterialButton taskAssignmentDropdown;
+    @Nullable private MaterialButton taskPriorityDropdown;
     @Nullable private MaterialButton taskCategoryCollapseButton;
     @Nullable private android.widget.EditText pendingVoiceTarget;
     @Nullable private SpeechRecognizer speechRecognizer;
@@ -210,6 +212,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 getString(R.string.family_tasks_assignment_all_label),
                 R.color.fh_info_container, R.color.fh_module_grocery,
                 R.color.fh_module_grocery, 96);
+        taskPriorityDropdown = createFilterDropdown("All Priority",
+                R.color.fh_info_container, R.color.fh_primary,
+                R.color.fh_primary, 92);
         taskCategoryCollapseButton = createFilterDropdown("Collapse All",
                 R.color.fh_success_container, R.color.fh_success,
                 R.color.fh_on_success_container, 94);
@@ -219,13 +224,16 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         taskDateDropdown.setOnClickListener(this::showDateDropdown);
         taskStatusDropdown.setOnClickListener(this::showStatusDropdown);
         taskAssignmentDropdown.setOnClickListener(this::showAssignmentDropdown);
+        taskPriorityDropdown.setOnClickListener(this::showPriorityDropdown);
         binding.taskFilterGroup.addView(taskStatusDropdown, 0,
                 new ViewGroup.MarginLayoutParams(dp(88), dp(38)));
         binding.taskFilterGroup.addView(taskDateDropdown, 1,
                 new ViewGroup.MarginLayoutParams(dp(86), dp(38)));
         binding.taskFilterGroup.addView(taskAssignmentDropdown, 2,
                 new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
-        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 3,
+        binding.taskFilterGroup.addView(taskPriorityDropdown, 3,
+                new ViewGroup.MarginLayoutParams(dp(92), dp(38)));
+        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 4,
                 new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
         taskCategoryCollapseButton.setOnClickListener(v -> {
             boolean collapsed = adapter.toggleAllCategories();
@@ -378,6 +386,22 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                     customDateEnd = 0L;
                     binding.taskDueCalendarButton.setText(R.string.family_tasks_due_calendar);
                     syncPremiumFilterControls();
+                    resetTaskScroll();
+                    reload();
+                });
+    }
+
+    private void showPriorityDropdown(@NonNull View anchor) {
+        String[] labels = {"All Priority", getString(R.string.task_priority_urgent),
+                getString(R.string.task_priority_high),
+                getString(R.string.task_priority_normal)};
+        String[] values = {"", FamilyTask.PRIORITY_URGENT,
+                FamilyTask.PRIORITY_HIGH, FamilyTask.PRIORITY_NORMAL};
+        int selected = indexOf(values, activePriorityFilter);
+        showPremiumFilterPopup(anchor, labels, selected,
+                ContextCompat.getColor(requireContext(), R.color.fh_primary), index -> {
+                    activePriorityFilter = values[index];
+                    taskPriorityDropdown.setText(labels[index] + "  ▾");
                     resetTaskScroll();
                     reload();
                 });
@@ -669,8 +693,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                     dateMatches = filterDate >= customDateStart && filterDate < customDateEnd;
                 }
                 boolean assignmentMatches = matchesAssignment(task);
+                boolean priorityMatches = activePriorityFilter.isEmpty()
+                        || activePriorityFilter.equals(task.priority);
                 if (overdueOnly) dateMatches = !completed && task.dueAt < startOfToday();
-                if (statusMatches && dateMatches && assignmentMatches) visible.add(task);
+                if (statusMatches && dateMatches && assignmentMatches
+                        && priorityMatches) visible.add(task);
             }
             sortVisibleTasks(visible);
             adapter.submitList(visible);
@@ -1156,6 +1183,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         taskDateDropdown = null;
         taskStatusDropdown = null;
         taskAssignmentDropdown = null;
+        taskPriorityDropdown = null;
         taskCategoryCollapseButton = null;
         binding = null;
         super.onDestroyView();
