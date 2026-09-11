@@ -279,7 +279,7 @@ final class FamilyTaskActivityTimelineDialog {
             input.setPadding(dp(10), 0, dp(8), 0);
             input.setDropDownHeight(dp(240));
             input.setDropDownVerticalOffset(dp(6));
-            input.setPopupBackgroundDrawable(context.getDrawable(R.drawable.bg_premium_dropdown_popup));
+            input.setDropDownBackgroundDrawable(context.getDrawable(R.drawable.bg_premium_dropdown_popup));
             input.setOnClickListener(v -> input.showDropDown());
             layout.addView(input, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
