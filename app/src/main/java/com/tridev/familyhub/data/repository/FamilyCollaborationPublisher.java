@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -13,6 +15,7 @@ import java.util.UUID;
 
 /** Privacy-gated publisher for opt-in family collaboration records. */
 final class FamilyCollaborationPublisher {
+    private static final String TAG = "FamilyCollabPublish";
 
     interface PublishedCallback {
         void onPublished(@NonNull String cloudId, @NonNull String familyId,
@@ -48,7 +51,14 @@ final class FamilyCollaborationPublisher {
                                 .updateChildren(payload)
                                 .addOnSuccessListener(unused -> callback.onPublished(
                                         cloudId, state.familyId, user.getUid()
-                                ));
+                                ))
+                                .addOnFailureListener(error -> Log.e(TAG,
+                                        "write=" + writeKind(module, values)
+                                                + " module=" + module
+                                                + " path=sharedModules/{familyId}/"
+                                                + module + "/{itemId}"
+                                                + " session=ACTIVE failed: "
+                                                + error.getMessage()));
                     }
 
                     @Override public void onError(@NonNull Exception error) {
@@ -66,5 +76,19 @@ final class FamilyCollaborationPublisher {
         FirebaseDatabase.getInstance().getReference()
                 .child("sharedModules").child(familyId)
                 .child(module).child(cloudId).removeValue();
+    }
+
+    @NonNull
+    private static String writeKind(@NonNull String module,
+                                    @NonNull Map<String, Object> values) {
+        if (!"tasks".equals(module)) return "MODULE_RECORD";
+        for (String key : values.keySet()) {
+            if (key.startsWith("activity/")) return "ACTIVITY_TIMELINE";
+        }
+        if (values.containsKey("linkedFinanceCloudId")
+                || values.containsKey("linkedLoanId")) {
+            return "FINANCE_LOAN_LINK";
+        }
+        return "MAIN_TASK";
     }
 }
