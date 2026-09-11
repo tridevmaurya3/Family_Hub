@@ -8,7 +8,10 @@ import android.app.PendingIntent;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
@@ -47,6 +50,8 @@ import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.repository.FamilyTaskRepository;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.tasks.voice.TaskVoiceCaptureActivity;
+import com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -92,8 +97,45 @@ public final class FamilyTaskOverlayService extends Service {
     @Nullable private TextView countText;
     @Nullable private TextView liveStatus;
     @Nullable private TextView voiceStatus;
+    @Nullable private TaskVoiceWaveView voiceWave;
+    @Nullable private EditText voiceInput;
+    @Nullable private ImageButton voiceButton;
+    private boolean voiceCaptureActive;
     @Nullable private Button priorityCollapseButton;
     @Nullable private android.speech.SpeechRecognizer speechRecognizer;
+    private final BroadcastReceiver taskVoiceReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (intent == null || !TaskVoiceCaptureActivity.ACTION_EVENT.equals(intent.getAction())) return;
+            String state = intent.getStringExtra(TaskVoiceCaptureActivity.EXTRA_STATE);
+            if (TaskVoiceCaptureActivity.STATE_LISTENING.equals(state)) {
+                voiceCaptureActive = true;
+                if (voiceWave != null) voiceWave.startListening();
+                if (voiceButton != null) voiceButton.setColorFilter(Color.rgb(220, 45, 82));
+            } else if (TaskVoiceCaptureActivity.STATE_RMS.equals(state)) {
+                if (voiceWave != null) voiceWave.setLevel(
+                        intent.getFloatExtra(TaskVoiceCaptureActivity.EXTRA_RMS, 0f));
+            } else if (TaskVoiceCaptureActivity.STATE_PROCESSING.equals(state)) {
+                if (voiceWave != null) voiceWave.showProcessing();
+            } else if (TaskVoiceCaptureActivity.STATE_PARTIAL.equals(state)) {
+                String spoken = intent.getStringExtra(TaskVoiceCaptureActivity.EXTRA_TEXT);
+                if (voiceInput != null && spoken != null && !spoken.trim().isEmpty()) {
+                    voiceInput.setText(spoken.trim());
+                    voiceInput.setSelection(voiceInput.length());
+                }
+            } else if (TaskVoiceCaptureActivity.STATE_RESULT.equals(state)) {
+                String spoken = intent.getStringExtra(TaskVoiceCaptureActivity.EXTRA_TEXT);
+                if (voiceInput != null && spoken != null && !spoken.trim().isEmpty()) {
+                    voiceInput.setText(spoken.trim());
+                    voiceInput.setSelection(voiceInput.length());
+                }
+                finishVoiceUi();
+            } else if (TaskVoiceCaptureActivity.STATE_ERROR.equals(state)) {
+                finishVoiceUi();
+                android.widget.Toast.makeText(FamilyTaskOverlayService.this,
+                        R.string.family_tasks_voice_no_match, android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
     @Nullable private PopupWindow activePopup;
     private FamilyTaskRepository repository;
     private boolean completedMode;
@@ -110,6 +152,9 @@ public final class FamilyTaskOverlayService extends Service {
         startForeground(NOTIFICATION_ID, notification());
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, true).apply();
         repository = new FamilyTaskRepository(this);
+        androidx.core.content.ContextCompat.registerReceiver(this, taskVoiceReceiver,
+                new IntentFilter(TaskVoiceCaptureActivity.ACTION_EVENT),
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
         repository.startRealtimeSync(new FamilyTaskRepository.RealtimeCallback() {
             @Override public void onChanged(@NonNull FamilyTask task) { refresh(); }
             @Override public void onRemoved(long localId) { refresh(); }
@@ -344,6 +389,14 @@ public final class FamilyTaskOverlayService extends Service {
         final long[] customQuickDueAt = {0L};
         final int[] quickPriority = {0};
 
+        voiceWave = new TaskVoiceWaveView(this);
+        voiceWave.setVisibility(View.GONE);
+        LinearLayout.LayoutParams waveParams = new LinearLayout.LayoutParams(-1, dp(26));
+        waveParams.leftMargin = dp(10);
+        waveParams.rightMargin = dp(10);
+        waveParams.bottomMargin = dp(2);
+        root.addView(voiceWave, waveParams);
+
         LinearLayout quick = row();
         LinearLayout quickField = row();
         quickField.setBackground(glassFieldBackground());
@@ -357,6 +410,8 @@ public final class FamilyTaskOverlayService extends Service {
         voice.setPadding(dp(10), dp(10), dp(10), dp(10));
         voice.setBackgroundColor(Color.TRANSPARENT);
         voice.setElevation(0f);
+        voiceInput = input;
+        voiceButton = voice;
         Button add = compactAction("+ " + getString(R.string.family_tasks_add),
                 Color.WHITE, Color.rgb(15, 108, 89));
         add.setBackground(round(Color.rgb(15, 108, 89), 14, Color.rgb(15, 108, 89)));
@@ -436,13 +491,6 @@ public final class FamilyTaskOverlayService extends Service {
                 }));
         customDueText.setOnClickListener(v ->
                 showQuickDatePicker(quickDate, customDueText, customQuickDueAt));
-
-        voiceStatus = text("", 10f, true);
-        voiceStatus.setTextColor(Color.rgb(15, 105, 80));
-        voiceStatus.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        voiceStatus.setPadding(dp(6), 0, dp(6), 0);
-        voiceStatus.setVisibility(View.GONE);
-        root.addView(voiceStatus, new LinearLayout.LayoutParams(-1, dp(22)));
 
         countText = text("", 10f, true);
         countText.setTextColor(Color.rgb(84, 93, 105));
@@ -1114,70 +1162,28 @@ public final class FamilyTaskOverlayService extends Service {
     }
 
     private void startVoiceCapture(@NonNull EditText input, @NonNull ImageButton voice) {
-        if (speechRecognizer != null) {
-            stopVoiceCapture();
-            voice.setColorFilter(Color.rgb(15, 105, 80));
-            return;
-        }
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            showVoiceStatus(R.string.family_tasks_voice_permission, true);
-            return;
-        }
-        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) {
-            showVoiceStatus(R.string.family_tasks_voice_unavailable, true);
-            return;
-        }
+        if (voiceCaptureActive) return;
+        voiceInput = input;
+        voiceButton = voice;
+        voiceCaptureActive = true;
         voice.setColorFilter(Color.rgb(220, 45, 82));
-        showVoiceStatus("Listening…  ••▮••▮••", false);
+        if (voiceWave != null) voiceWave.startListening();
         try {
-            speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
-            speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
-                @Override public void onReadyForSpeech(android.os.Bundle params) {
-                    showVoiceStatus("Listening…  ••▮••▮••", false);
-                }
-                @Override public void onBeginningOfSpeech() {
-                    showVoiceStatus("Listening…  ▮•▮▮•▮", false);
-                }
-                @Override public void onRmsChanged(float rmsdB) {
-                    showVoiceStatus(rmsdB > 6f ? "Listening…  ▮▮•▮▮•▮"
-                            : rmsdB > 2f ? "Listening…  ▮•▮▮•▮"
-                            : "Listening…  ••▮••▮••", false);
-                }
-                @Override public void onBufferReceived(byte[] buffer) { }
-                @Override public void onEndOfSpeech() {
-                    showVoiceStatus(R.string.family_tasks_voice_processing, false);
-                }
-                @Override public void onError(int error) {
-                    stopVoiceCapture();
-                    voice.setColorFilter(Color.rgb(15, 105, 80));
-                    showVoiceStatus(R.string.family_tasks_voice_no_match, true);
-                }
-                @Override public void onResults(android.os.Bundle results) {
-                    boolean added = applyVoiceResult(results, input);
-                    stopVoiceCapture();
-                    voice.setColorFilter(Color.rgb(15, 105, 80));
-                    showVoiceStatus(added ? R.string.family_tasks_voice_added
-                            : R.string.family_tasks_voice_no_match, true);
-                }
-                @Override public void onPartialResults(android.os.Bundle results) {
-                    applyVoiceResult(results, input);
-                }
-                @Override public void onEvent(int eventType, android.os.Bundle params) { }
-            });
-            Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                            android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,
-                            Locale.getDefault().toLanguageTag())
-                    .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                    .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-            speechRecognizer.startListening(intent);
+            startActivity(new Intent(this, TaskVoiceCaptureActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
         } catch (RuntimeException error) {
-            stopVoiceCapture();
-            voice.setColorFilter(Color.rgb(15, 105, 80));
-            showVoiceStatus(R.string.family_tasks_voice_unavailable, true);
+            finishVoiceUi();
+            android.widget.Toast.makeText(this, R.string.family_tasks_voice_unavailable,
+                    android.widget.Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void finishVoiceUi() {
+        voiceCaptureActive = false;
+        if (voiceWave != null) voiceWave.stopListening();
+        if (voiceButton != null) voiceButton.setColorFilter(Color.rgb(15, 105, 80));
     }
 
     private boolean applyVoiceResult(@Nullable android.os.Bundle results,
@@ -1215,6 +1221,7 @@ public final class FamilyTaskOverlayService extends Service {
             speechRecognizer.destroy();
             speechRecognizer = null;
         }
+        finishVoiceUi();
     }
 
     private void closePanel() {
@@ -1229,6 +1236,9 @@ public final class FamilyTaskOverlayService extends Service {
         countText = null;
         liveStatus = null;
         voiceStatus = null;
+        voiceWave = null;
+        voiceInput = null;
+        voiceButton = null;
         priorityCollapseButton = null;
     }
 
@@ -1467,6 +1477,7 @@ public final class FamilyTaskOverlayService extends Service {
             stripView = null;
         }
         if (repository != null) repository.stopRealtimeSync();
+        try { unregisterReceiver(taskVoiceReceiver); } catch (IllegalArgumentException ignored) { }
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, false).apply();
         super.onDestroy();
     }

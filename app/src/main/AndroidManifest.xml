@@ -233,6 +233,12 @@
             android:name=".feature.grocery.overlay.GroceryVoiceCaptureActivity"
             android:exported="false"
             android:theme="@style/Theme.FamilyHub.VoiceCapture" />
+        <activity
+            android:name=".feature.tasks.voice.TaskVoiceCaptureActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:theme="@style/Theme.FamilyHub.VoiceCapture" />
 
         <activity
             android:name=".feature.tasks.FamilyTaskSmsSuggestionActivity"

@@ -52,6 +52,7 @@ import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
+import com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView;
 import com.tridev.familyhub.feature.quickhub.UniversalQuickHubController;
 
 import java.text.DateFormat;
@@ -93,11 +94,14 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     @Nullable private MaterialButton taskPriorityDropdown;
     @Nullable private MaterialButton taskCategoryCollapseButton;
     @Nullable private android.widget.EditText pendingVoiceTarget;
+    @Nullable private TaskVoiceWaveView pendingVoiceWave;
+    @Nullable private TaskVoiceWaveView activeVoiceWave;
     @Nullable private SpeechRecognizer speechRecognizer;
 
     private final ActivityResultLauncher<String> audioPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
-                if (granted && pendingVoiceTarget != null) startVoiceCapture(pendingVoiceTarget);
+                if (granted && pendingVoiceTarget != null && pendingVoiceWave != null)
+                    startVoiceCapture(pendingVoiceTarget, pendingVoiceWave);
                 else if (isAdded()) android.widget.Toast.makeText(requireContext(),
                         R.string.family_tasks_voice_permission, android.widget.Toast.LENGTH_LONG).show();
             });
@@ -149,7 +153,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
         binding.taskQuickAddLayout.setEndIconOnClickListener(v ->
-                requestVoiceCapture(binding.taskQuickAddInput));
+                requestVoiceCapture(binding.taskQuickAddInput, binding.taskQuickVoiceWave));
         binding.taskFloatingToggle.setOnClickListener(v -> toggleFloatingStrip());
         binding.taskDueCalendarButton.setOnClickListener(v -> pickCalendarDay());
         binding.taskQuickAddInput.setOnEditorActionListener((v, actionId, event) -> {
@@ -875,7 +879,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         form.saveTaskButton.setText(existing == null
                 ? R.string.family_tasks_save : R.string.family_tasks_update);
         form.taskTitleInput.setText(task.title);
-        form.taskTitleLayout.setEndIconOnClickListener(v -> requestVoiceCapture(form.taskTitleInput));
+        form.taskTitleLayout.setEndIconOnClickListener(v ->
+                requestVoiceCapture(form.taskTitleInput, form.taskEditorVoiceWave));
         form.taskNotesInput.setText(task.notes);
         form.taskPriorityInput.setText(priorities[indexOf(priorityValues, task.priority)], false);
         form.taskRepeatInput.setText(repeats[indexOf(repeatValues, task.repeatType)], false);
@@ -1024,31 +1029,38 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         updateDueText(form, dueAt[0]);
     }
 
-    private void requestVoiceCapture(@NonNull android.widget.EditText target) {
+    private void requestVoiceCapture(@NonNull android.widget.EditText target,
+                                     @NonNull TaskVoiceWaveView wave) {
         pendingVoiceTarget = target;
+        pendingVoiceWave = wave;
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
             return;
         }
-        startVoiceCapture(target);
+        startVoiceCapture(target, wave);
     }
 
-    private void startVoiceCapture(@NonNull android.widget.EditText target) {
+    private void startVoiceCapture(@NonNull android.widget.EditText target,
+                                   @NonNull TaskVoiceWaveView wave) {
         if (!SpeechRecognizer.isRecognitionAvailable(requireContext())) {
+            wave.stopListening();
             android.widget.Toast.makeText(requireContext(),
                     R.string.family_tasks_voice_unavailable, android.widget.Toast.LENGTH_LONG).show();
             return;
         }
         stopVoiceCapture();
         pendingVoiceTarget = target;
+        pendingVoiceWave = wave;
+        activeVoiceWave = wave;
+        wave.startListening();
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext());
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) { toast(R.string.family_tasks_voice_listening); }
-            @Override public void onBeginningOfSpeech() { }
-            @Override public void onRmsChanged(float rmsdB) { }
+            @Override public void onReadyForSpeech(Bundle params) { wave.startListening(); }
+            @Override public void onBeginningOfSpeech() { wave.startListening(); }
+            @Override public void onRmsChanged(float rmsdB) { wave.setLevel(rmsdB); }
             @Override public void onBufferReceived(byte[] buffer) { }
-            @Override public void onEndOfSpeech() { }
+            @Override public void onEndOfSpeech() { wave.showProcessing(); }
             @Override public void onError(int error) {
                 stopVoiceCapture();
                 toast(error == SpeechRecognizer.ERROR_NO_MATCH
@@ -1057,11 +1069,14 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                         : R.string.family_tasks_voice_unavailable);
             }
             @Override public void onResults(Bundle results) {
-                if (applyVoiceResult(results, target)) toast(R.string.family_tasks_voice_added);
-                else toast(R.string.family_tasks_voice_no_match);
+                boolean added = applyVoiceResult(results, target);
                 stopVoiceCapture();
+                toast(added ? R.string.family_tasks_voice_added
+                        : R.string.family_tasks_voice_no_match);
             }
-            @Override public void onPartialResults(Bundle results) { applyVoiceResult(results, target); }
+            @Override public void onPartialResults(Bundle results) {
+                applyVoiceResult(results, target);
+            }
             @Override public void onEvent(int eventType, Bundle params) { }
         });
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -1095,6 +1110,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             speechRecognizer.destroy();
             speechRecognizer = null;
         }
+        if (activeVoiceWave != null) activeVoiceWave.stopListening();
+        activeVoiceWave = null;
+        pendingVoiceWave = null;
         pendingVoiceTarget = null;
     }
 
