@@ -39,24 +39,10 @@ jobs:
           JSON
 
       - name: Apply patch
+        shell: bash
         run: |
           python3 tools/apply_dashboard_todo_card_patch.py
-          python3 <<'PY'
-          from pathlib import Path
-          path = Path('app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java')
-          text = path.read_text(encoding='utf-8')
-          old = '            long todayStart = startOfToday();\n'
-          new = '''            Calendar today = Calendar.getInstance();
-            today.set(Calendar.HOUR_OF_DAY, 0);
-            today.set(Calendar.MINUTE, 0);
-            today.set(Calendar.SECOND, 0);
-            today.set(Calendar.MILLISECOND, 0);
-            long todayStart = today.getTimeInMillis();
-'''
-          if old not in text:
-              raise SystemExit('todayStart anchor not found')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
-          PY
+          python3 -c "from pathlib import Path; p=Path('app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java'); t=p.read_text(encoding='utf-8'); old='            long todayStart = startOfToday();\\n'; new='            Calendar today = Calendar.getInstance();\\n            today.set(Calendar.HOUR_OF_DAY, 0);\\n            today.set(Calendar.MINUTE, 0);\\n            today.set(Calendar.SECOND, 0);\\n            today.set(Calendar.MILLISECOND, 0);\\n            long todayStart = today.getTimeInMillis();\\n'; assert old in t; p.write_text(t.replace(old,new,1),encoding='utf-8')"
 
       - name: Verify scope
         shell: bash
