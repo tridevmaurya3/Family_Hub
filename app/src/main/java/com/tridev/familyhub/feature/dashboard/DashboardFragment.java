@@ -66,7 +66,6 @@ import java.util.Locale;
 public class DashboardFragment extends Fragment {
 
     private static final String DASHBOARD_PREFERENCES = "dashboard_preferences";
-    private static final String KEY_BRIEFING_EXPANDED = "briefing_expanded";
     private static final String KEY_PRIORITY_EXPANDED = "priority_expanded";
     private static final String KEY_ACTION_CENTER_EXPANDED =
             "action_center_expanded";
@@ -74,6 +73,8 @@ public class DashboardFragment extends Fragment {
     private FragmentDashboardBinding binding;
     private DashboardRepository dashboardRepository;
     @Nullable private FamilyTaskRepository taskRepository;
+    @Nullable private DashboardData latestDashboardData;
+    private int taskPendingCount;
 
     private StatusCardView financeStatusCard;
     private StatusCardView healthStatusCard;
@@ -133,35 +134,9 @@ public class DashboardFragment extends Fragment {
         startTaskRealtimeSummary();
         setupNotificationAction();
         setupDashboardHighlights();
-        setupDailyBriefingPreference();
         setupDashboardSectionPreferences();
         renderHeader();
         loadDashboardData();
-    }
-
-    private void setupDailyBriefingPreference() {
-        SharedPreferences preferences = requireContext().getSharedPreferences(
-                DASHBOARD_PREFERENCES, android.content.Context.MODE_PRIVATE);
-        boolean expanded = preferences.getBoolean(KEY_BRIEFING_EXPANDED, true);
-        applyDailyBriefingExpanded(expanded);
-        binding.dashboardBriefingToggle.setOnClickListener(v -> {
-            boolean shouldExpand = binding.dashboardBriefingContent
-                    .getVisibility() != View.VISIBLE;
-            applyDailyBriefingExpanded(shouldExpand);
-            preferences.edit().putBoolean(
-                    KEY_BRIEFING_EXPANDED, shouldExpand).apply();
-        });
-    }
-
-    private void applyDailyBriefingExpanded(boolean expanded) {
-        binding.dashboardBriefingContent.setVisibility(
-                expanded ? View.VISIBLE : View.GONE);
-        binding.dashboardBriefingToggle.setText(expanded
-                ? R.string.dashboard_briefing_collapse
-                : R.string.dashboard_briefing_expand);
-        binding.dashboardBriefingToggle.setContentDescription(getString(expanded
-                ? R.string.dashboard_briefing_collapse_description
-                : R.string.dashboard_briefing_expand_description));
     }
 
     private void setupDashboardSectionPreferences() {
@@ -701,6 +676,12 @@ public class DashboardFragment extends Fragment {
                 }
             }
 
+            taskPendingCount = pending;
+            DashboardData priorityData = latestDashboardData;
+            if (priorityData != null) {
+                renderPrioritySummary(priorityData);
+            }
+
             binding.actionTodo.setModel(new ActionCardModel(
                     getString(R.string.family_tasks_title),
                     getString(R.string.dashboard_todo_pending_today, pending, today),
@@ -727,11 +708,11 @@ public class DashboardFragment extends Fragment {
                     }
                     binding.dashboardLoading.setVisibility(View.GONE);
                     binding.dashboardErrorCard.setVisibility(View.GONE);
+                    latestDashboardData = data;
                     renderFinance(data.getStats());
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
                     renderPrioritySummary(data);
-                    renderDailyBriefing(data);
                     renderReminder(data);
                     renderBirthday(data);
                     renderBill(data);
@@ -747,84 +728,9 @@ public class DashboardFragment extends Fragment {
         );
     }
 
-    private void renderDailyBriefing(@NonNull DashboardData data) {
-        DashboardStats stats = data.getStats();
-        int attention = stats.getDocumentsExpiringSoon()
-                + stats.getVehiclesDueSoon();
-        int pending = stats.getPlannerOpen() + stats.getGroceryPending();
-        int upcoming = stats.getUpcomingReminders();
-        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
-        if (hour < 12) {
-            binding.dashboardBriefingEyebrow.setText(
-                    R.string.dashboard_briefing_morning);
-        } else if (hour < 17) {
-            binding.dashboardBriefingEyebrow.setText(
-                    R.string.dashboard_briefing_afternoon);
-        } else {
-            binding.dashboardBriefingEyebrow.setText(
-                    R.string.dashboard_briefing_evening);
-        }
-
-        View.OnClickListener primaryAction;
-
-        if (attention > 0) {
-            binding.dashboardBriefingHeadline.setText(getString(
-                    R.string.dashboard_briefing_attention_headline, attention));
-            binding.dashboardBriefingGuidance.setText(
-                    R.string.dashboard_briefing_guidance_attention);
-            binding.dashboardBriefingAction.setText(
-                    R.string.dashboard_briefing_action_attention);
-            primaryAction = v -> openUrgentPriority(stats);
-        } else if (upcoming > 0) {
-            binding.dashboardBriefingHeadline.setText(getString(
-                    R.string.dashboard_briefing_reminder_headline, upcoming));
-            binding.dashboardBriefingGuidance.setText(
-                    R.string.dashboard_briefing_guidance_reminder);
-            binding.dashboardBriefingAction.setText(
-                    R.string.dashboard_briefing_action_reminder);
-            primaryAction = v -> openTab(R.id.nav_reminders);
-        } else if (pending > 0) {
-            binding.dashboardBriefingHeadline.setText(getString(
-                    R.string.dashboard_briefing_pending_headline, pending));
-            binding.dashboardBriefingGuidance.setText(
-                    R.string.dashboard_briefing_guidance_pending);
-            binding.dashboardBriefingAction.setText(
-                    R.string.dashboard_briefing_action_pending);
-            primaryAction = v -> openPendingPriority(stats);
-        } else {
-            binding.dashboardBriefingHeadline.setText(
-                    R.string.dashboard_briefing_clear_headline);
-            binding.dashboardBriefingGuidance.setText(
-                    R.string.dashboard_briefing_guidance_clear);
-            binding.dashboardBriefingAction.setText(
-                    R.string.dashboard_briefing_action_overview);
-            primaryAction = null;
-        }
-
-        if (data.hasUpcomingReminder() && data.getNextReminder() != null) {
-            Date nextDate = new Date(data.getNextReminderTriggerAt());
-            binding.dashboardBriefingDetail.setText(getString(
-                    R.string.dashboard_briefing_next_reminder,
-                    data.getNextReminder().title,
-                    reminderDateFormat.format(nextDate),
-                    reminderTimeFormat.format(nextDate)));
-        } else {
-            binding.dashboardBriefingDetail.setText(
-                    R.string.dashboard_briefing_no_reminder);
-        }
-
-        binding.dashboardBriefingSnapshot.setText(getString(
-                R.string.dashboard_briefing_snapshot,
-                pending, upcoming, attention,
-                currencyFormatter.format(data.getBalance())));
-        binding.dashboardBriefingAction.setOnClickListener(primaryAction);
-        binding.dashboardBriefingAction.setEnabled(primaryAction != null);
-        binding.dashboardDailyBriefingCard.setOnClickListener(primaryAction);
-    }
-
     private void renderPrioritySummary(@NonNull DashboardData data) {
         DashboardStats stats = data.getStats();
-        int pending = stats.getPlannerOpen() + stats.getGroceryPending();
+        int pending = stats.getPlannerOpen() + stats.getGroceryPending() + taskPendingCount;
         int upcoming = stats.getUpcomingReminders();
         int urgent = stats.getDocumentsExpiringSoon()
                 + stats.getVehiclesDueSoon();
@@ -833,7 +739,7 @@ public class DashboardFragment extends Fragment {
         binding.dashboardUrgentValue.setText(String.valueOf(urgent));
         binding.dashboardPendingSource.setText(getString(
                 R.string.dashboard_pending_breakdown,
-                stats.getPlannerOpen(), stats.getGroceryPending()));
+                stats.getPlannerOpen(), stats.getGroceryPending(), taskPendingCount));
         binding.dashboardUpcomingSource.setText(getString(
                 R.string.dashboard_upcoming_breakdown,
                 stats.getUpcomingReminders()));
@@ -870,23 +776,33 @@ public class DashboardFragment extends Fragment {
     private void openPendingPriority(@NonNull DashboardStats stats) {
         int planner = stats.getPlannerOpen();
         int grocery = stats.getGroceryPending();
-        if (planner <= 0 && grocery <= 0) {
+        int todo = taskPendingCount;
+
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        java.util.List<Runnable> actions = new java.util.ArrayList<>();
+        if (planner > 0) {
+            labels.add(getString(R.string.dashboard_priority_planner, planner));
+            actions.add(() -> openFeature(new PlannerFragment()));
+        }
+        if (grocery > 0) {
+            labels.add(getString(R.string.dashboard_priority_grocery, grocery));
+            actions.add(() -> openFeature(new GroceryFragment()));
+        }
+        if (todo > 0) {
+            labels.add(getString(R.string.dashboard_priority_todo, todo));
+            actions.add(() -> openFeature(new FamilyTasksFragment()));
+        }
+
+        if (labels.isEmpty()) {
             showNoPriorityData();
-        } else if (planner > 0 && grocery <= 0) {
-            openFeature(new PlannerFragment());
-        } else if (grocery > 0 && planner <= 0) {
-            openFeature(new GroceryFragment());
+        } else if (labels.size() == 1) {
+            actions.get(0).run();
         } else {
-            String[] labels = {
-                    getString(R.string.dashboard_priority_planner, planner),
-                    getString(R.string.dashboard_priority_grocery, grocery)
-            };
             new MaterialAlertDialogBuilder(requireContext())
                     .setTitle(R.string.dashboard_priority_choose)
-                    .setItems(labels, (dialog, which) -> {
-                        if (which == 0) openFeature(new PlannerFragment());
-                        else openFeature(new GroceryFragment());
-                    }).show();
+                    .setItems(labels.toArray(new String[0]),
+                            (dialog, which) -> actions.get(which).run())
+                    .show();
         }
     }
 
@@ -1141,6 +1057,8 @@ public class DashboardFragment extends Fragment {
             taskRepository.stopRealtimeSync();
             taskRepository = null;
         }
+        latestDashboardData = null;
+        taskPendingCount = 0;
         financeStatusCard = null;
         healthStatusCard = null;
         familyStatusCard = null;
