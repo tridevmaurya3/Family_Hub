@@ -42,14 +42,15 @@ jobs:
         shell: bash
         run: |
           python3 tools/apply_dashboard_todo_card_patch.py
-          python3 -c "from pathlib import Path; p=Path('app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java'); t=p.read_text(encoding='utf-8'); old='            long todayStart = startOfToday();\\n'; new='            Calendar today = Calendar.getInstance();\\n            today.set(Calendar.HOUR_OF_DAY, 0);\\n            today.set(Calendar.MINUTE, 0);\\n            today.set(Calendar.SECOND, 0);\\n            today.set(Calendar.MILLISECOND, 0);\\n            long todayStart = today.getTimeInMillis();\\n'; assert old in t; p.write_text(t.replace(old,new,1),encoding='utf-8')"
+          python3 -c "from pathlib import Path; p=Path('app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java'); t=p.read_text(encoding='utf-8'); old='            long todayStart = startOfToday();\\n'; new='            Calendar startOfDay = Calendar.getInstance();\\n            startOfDay.set(Calendar.HOUR_OF_DAY, 0);\\n            startOfDay.set(Calendar.MINUTE, 0);\\n            startOfDay.set(Calendar.SECOND, 0);\\n            startOfDay.set(Calendar.MILLISECOND, 0);\\n            long todayStart = startOfDay.getTimeInMillis();\\n'; assert old in t; p.write_text(t.replace(old,new,1),encoding='utf-8')"
 
       - name: Verify scope
         shell: bash
         run: |
           git diff --check
-          git diff --name-only
-          test "$(git diff --name-only | grep -Ev '^(app/src/main/java/com/tridev/familyhub/core/ui/cards/ActionCardView.java|app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java|app/src/main/res/layout/fragment_dashboard.xml|app/src/main/res/values/strings_dashboard_todo.xml)$' | wc -l)" -eq 0
+          git status --short
+          test "$(git diff --name-only | grep -Ev '^(app/src/main/java/com/tridev/familyhub/core/ui/cards/ActionCardView.java|app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java|app/src/main/res/layout/fragment_dashboard.xml)$' | wc -l)" -eq 0
+          test -f app/src/main/res/values/strings_dashboard_todo.xml
 
       - name: Build
         shell: bash
