@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -51,6 +52,7 @@ public final class FamilyTaskRepository {
         DATABASE_EXECUTOR.execute(() -> {
             String clean = query.trim();
             List<FamilyTask> tasks = clean.isEmpty() ? dao.getAll() : dao.search(clean);
+            for (FamilyTask task : tasks) task.priority = normalizePriority(task.priority);
             mainHandler.post(() -> callback.onLoaded(tasks));
         });
     }
@@ -89,15 +91,24 @@ public final class FamilyTaskRepository {
 
     public void save(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
-            boolean inserting = task.id == 0L;
-            FamilyTask previous = inserting ? null : dao.getById(task.id);
+            // Preserve one canonical identity across Add/Edit and across devices.
+            // Existing Room identity wins first; cloudId then makes detached/replayed saves idempotent.
+            FamilyTask byId = task.id == 0L ? null : dao.getById(task.id);
+            if (byId != null && task.cloudId.trim().isEmpty()) task.cloudId = byId.cloudId;
+            if (task.cloudId.trim().isEmpty()) task.cloudId = UUID.randomUUID().toString();
+            FamilyTask byCloudId = dao.getByCloudId(task.cloudId);
+            FamilyTask previous = byCloudId != null ? byCloudId : byId;
+            if (previous != null) task.id = previous.id;
+            boolean inserting = previous == null;
             boolean assignmentChanged = previous != null && assignmentChanged(previous, task);
             boolean detailsChanged = previous != null && detailsChanged(previous, task);
 
             long now = System.currentTimeMillis();
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (task.createdAt == 0L) task.createdAt = now;
-            if (task.cloudId.isEmpty()) task.cloudId = UUID.randomUUID().toString();
+            if (task.createdAt == 0L) task.createdAt = previous == null ? now : previous.createdAt;
+            if (task.createdByUid.isEmpty() && previous != null) task.createdByUid = previous.createdByUid;
+            if (task.createdByName.isEmpty() && previous != null) task.createdByName = previous.createdByName;
+            task.priority = normalizePriority(task.priority);
             if (task.createdByUid.isEmpty() && user != null) task.createdByUid = user.getUid();
             if (task.createdByName.isEmpty()) task.createdByName = displayName();
             task.updatedByName = displayName();
@@ -131,8 +142,11 @@ public final class FamilyTaskRepository {
             long now = System.currentTimeMillis();
             long previousCompletedAt = task.completedAt;
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            if (task.cloudId.isEmpty()) task.cloudId = UUID.randomUUID().toString();
-            if (task.createdAt == 0L) task.createdAt = now;
+            FamilyTask persisted = task.id == 0L ? null : dao.getById(task.id);
+            if (persisted != null && task.cloudId.trim().isEmpty()) task.cloudId = persisted.cloudId;
+            if (task.cloudId.trim().isEmpty()) task.cloudId = UUID.randomUUID().toString();
+            task.priority = normalizePriority(task.priority);
+            if (task.createdAt == 0L) task.createdAt = persisted == null ? now : persisted.createdAt;
             if (task.createdByUid.isEmpty() && user != null) {
                 task.createdByUid = user.getUid();
             }
@@ -278,6 +292,7 @@ public final class FamilyTaskRepository {
     }
 
     private void publish(@NonNull FamilyTask task) {
+        task.priority = normalizePriority(task.priority);
         Map<String, Object> values = new HashMap<>();
         values.put("title", task.title);
         values.put("notes", task.notes);
@@ -348,7 +363,7 @@ public final class FamilyTaskRepository {
             task.title = text(s, "title");
             task.notes = text(s, "notes");
             task.status = fallback(text(s, "status"), FamilyTask.STATUS_PENDING);
-            task.priority = fallback(text(s, "priority"), FamilyTask.PRIORITY_NORMAL);
+            task.priority = normalizePriority(text(s, "priority"));
             task.repeatType = fallback(text(s, "repeatType"), FamilyTask.REPEAT_NONE);
             task.assignedMemberId = text(s, "assignedMemberId");
             task.assignedMemberName = text(s, "assignedMemberName");
@@ -492,5 +507,13 @@ public final class FamilyTaskRepository {
     }
     @NonNull private static String fallback(String value, String fallback) {
         return value.isEmpty() ? fallback : value;
+    }
+
+    @NonNull
+    private static String normalizePriority(@Nullable String value) {
+        String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+        if (FamilyTask.PRIORITY_URGENT.equals(normalized)) return FamilyTask.PRIORITY_URGENT;
+        if (FamilyTask.PRIORITY_HIGH.equals(normalized)) return FamilyTask.PRIORITY_HIGH;
+        return FamilyTask.PRIORITY_NORMAL;
     }
 }
