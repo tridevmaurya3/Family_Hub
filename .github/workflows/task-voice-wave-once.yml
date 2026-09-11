@@ -1,0 +1,717 @@
+name: Apply To-Do Voice Wave Patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/task-voice-wave-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Configure Android CI properties
+        shell: bash
+        run: |
+          printf 'sdk.dir=%s\nMAPS_API_KEY=CI_DUMMY_KEY\n' "$ANDROID_HOME" > local.properties
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "123456789012",
+              "project_id": "family-hub-ci",
+              "storage_bucket": "family-hub-ci.appspot.com"
+            },
+            "client": [{
+              "client_info": {
+                "mobilesdk_app_id": "1:123456789012:android:0000000000000000",
+                "android_client_info": {"package_name": "com.tridev.familyhub"}
+              },
+              "oauth_client": [],
+              "api_key": [{"current_key": "CI_DUMMY_FIREBASE_API_KEY"}],
+              "services": {"appinvite_service": {"other_platform_oauth_client": []}}
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Apply scoped voice-wave patch
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          frag_java = root / 'app/src/main/java/com/tridev/familyhub/feature/tasks/FamilyTasksFragment.java'
+          overlay_java = root / 'app/src/main/java/com/tridev/familyhub/feature/tasks/overlay/FamilyTaskOverlayService.java'
+          frag_xml = root / 'app/src/main/res/layout/fragment_family_tasks.xml'
+          dialog_xml = root / 'app/src/main/res/layout/dialog_family_task.xml'
+          manifest = root / 'app/src/main/AndroidManifest.xml'
+          voice_dir = root / 'app/src/main/java/com/tridev/familyhub/feature/tasks/voice'
+          voice_dir.mkdir(parents=True, exist_ok=True)
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'Anchor not found: {label}')
+              if text.count(old) != 1:
+                  raise SystemExit(f'Anchor count != 1 for {label}: {text.count(old)}')
+              return text.replace(old, new, 1)
+
+          wave_java = r'''package com.tridev.familyhub.feature.tasks.voice;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.os.SystemClock;
+import android.util.AttributeSet;
+import android.view.View;
+
+import androidx.annotation.Nullable;
+
+/** Compact red listening waveform. GONE while idle so it occupies no layout space. */
+public final class TaskVoiceWaveView extends View {
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean listening;
+    private boolean processing;
+    private float level;
+    private long startedAt;
+    private final Runnable frame = new Runnable() {
+        @Override public void run() {
+            if (!listening) return;
+            invalidate();
+            postDelayed(this, 70L);
+        }
+    };
+
+    public TaskVoiceWaveView(Context context) { this(context, null); }
+    public TaskVoiceWaveView(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        paint.setColor(Color.rgb(220, 45, 82));
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        setVisibility(GONE);
+        setContentDescription("Voice listening waveform");
+    }
+
+    public void startListening() {
+        processing = false;
+        level = Math.max(level, 0.18f);
+        if (!listening) {
+            listening = true;
+            startedAt = SystemClock.uptimeMillis();
+            setVisibility(VISIBLE);
+            removeCallbacks(frame);
+            post(frame);
+        }
+    }
+
+    public void setLevel(float rmsDb) {
+        if (!listening) startListening();
+        level = Math.max(0.12f, Math.min(1f, (rmsDb + 2f) / 12f));
+    }
+
+    public void showProcessing() {
+        if (!listening) startListening();
+        processing = true;
+        level = 0.35f;
+    }
+
+    public void stopListening() {
+        listening = false;
+        processing = false;
+        level = 0f;
+        removeCallbacks(frame);
+        setVisibility(GONE);
+        invalidate();
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        removeCallbacks(frame);
+        super.onDetachedFromWindow();
+    }
+
+    @Override protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (!listening) return;
+        float width = getWidth();
+        float height = getHeight();
+        float centerY = height / 2f;
+        int bars = 21;
+        float gap = width / (bars + 1f);
+        float phase = (SystemClock.uptimeMillis() - startedAt) / 155f;
+        paint.setStrokeWidth(Math.max(2f, gap * 0.34f));
+        for (int i = 0; i < bars; i++) {
+            float wave = (float) Math.abs(Math.sin(phase + i * 0.61f));
+            float secondary = (float) Math.abs(Math.cos(phase * 0.72f + i * 0.37f));
+            float energy = processing ? (0.22f + 0.25f * wave)
+                    : (0.18f + (0.48f * wave + 0.24f * secondary) * level);
+            float half = Math.max(2f, height * Math.min(0.46f, energy) / 2f);
+            float x = gap * (i + 1);
+            canvas.drawLine(x, centerY - half, x, centerY + half, paint);
+        }
+    }
+}
+'''
+          (voice_dir / 'TaskVoiceWaveView.java').write_text(wave_java, encoding='utf-8')
+
+          capture_java = r'''package com.tridev.familyhub.feature.tasks.voice;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
+
+import androidx.annotation.Nullable;
+
+import java.util.ArrayList;
+import java.util.Locale;
+
+/**
+ * Transparent foreground bridge for reliable speech capture launched from the To-Do overlay.
+ * The overlay service itself remains a special-use FGS, avoiding microphone-FGS launch crashes.
+ */
+public final class TaskVoiceCaptureActivity extends Activity {
+    public static final String ACTION_EVENT =
+            "com.tridev.familyhub.action.TASK_VOICE_CAPTURE_EVENT";
+    public static final String EXTRA_STATE = "state";
+    public static final String EXTRA_TEXT = "text";
+    public static final String EXTRA_RMS = "rms";
+    public static final String STATE_LISTENING = "LISTENING";
+    public static final String STATE_RMS = "RMS";
+    public static final String STATE_PROCESSING = "PROCESSING";
+    public static final String STATE_PARTIAL = "PARTIAL";
+    public static final String STATE_RESULT = "RESULT";
+    public static final String STATE_ERROR = "ERROR";
+    private static final int REQUEST_AUDIO = 9341;
+
+    @Nullable private SpeechRecognizer recognizer;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean finished;
+    private long lastRmsBroadcast;
+    private final Runnable timeout = () -> finishWithError();
+
+    @Override protected void onCreate(@Nullable Bundle state) {
+        super.onCreate(state);
+        getWindow().setDimAmount(0f);
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_AUDIO);
+        } else {
+            begin();
+        }
+    }
+
+    private void begin() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            finishWithError();
+            return;
+        }
+        sendState(STATE_LISTENING, null, 0f);
+        try {
+            recognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            recognizer.setRecognitionListener(new RecognitionListener() {
+                @Override public void onReadyForSpeech(Bundle params) {
+                    sendState(STATE_LISTENING, null, 0f);
+                }
+                @Override public void onBeginningOfSpeech() {
+                    sendState(STATE_LISTENING, null, 0f);
+                }
+                @Override public void onRmsChanged(float rmsdB) {
+                    long now = android.os.SystemClock.uptimeMillis();
+                    if (now - lastRmsBroadcast >= 90L) {
+                        lastRmsBroadcast = now;
+                        sendState(STATE_RMS, null, rmsdB);
+                    }
+                }
+                @Override public void onBufferReceived(byte[] buffer) { }
+                @Override public void onEndOfSpeech() {
+                    sendState(STATE_PROCESSING, null, 0f);
+                }
+                @Override public void onError(int error) { finishWithError(); }
+                @Override public void onResults(Bundle results) {
+                    String value = firstResult(results);
+                    sendState(value.isEmpty() ? STATE_ERROR : STATE_RESULT, value, 0f);
+                    finishCapture();
+                }
+                @Override public void onPartialResults(Bundle results) {
+                    String value = firstResult(results);
+                    if (!value.isEmpty()) sendState(STATE_PARTIAL, value, 0f);
+                }
+                @Override public void onEvent(int eventType, Bundle params) { }
+            });
+            Intent request = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE,
+                            Locale.getDefault().toLanguageTag())
+                    .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+            recognizer.startListening(request);
+            handler.postDelayed(timeout, 15000L);
+        } catch (RuntimeException error) {
+            finishWithError();
+        }
+    }
+
+    private String firstResult(@Nullable Bundle results) {
+        if (results == null) return "";
+        ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+        if (matches == null || matches.isEmpty() || matches.get(0) == null) return "";
+        return matches.get(0).trim();
+    }
+
+    private void sendState(String state, @Nullable String text, float rms) {
+        Intent event = new Intent(ACTION_EVENT).setPackage(getPackageName())
+                .putExtra(EXTRA_STATE, state).putExtra(EXTRA_RMS, rms);
+        if (text != null) event.putExtra(EXTRA_TEXT, text);
+        sendBroadcast(event);
+    }
+
+    private void finishWithError() {
+        if (!finished) sendState(STATE_ERROR, "", 0f);
+        finishCapture();
+    }
+
+    private void finishCapture() {
+        if (finished) return;
+        finished = true;
+        handler.removeCallbacks(timeout);
+        if (recognizer != null) {
+            try { recognizer.destroy(); } catch (RuntimeException ignored) { }
+            recognizer = null;
+        }
+        finish();
+        overridePendingTransition(0, 0);
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                                                     int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_AUDIO && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) begin();
+        else finishWithError();
+    }
+
+    @Override protected void onDestroy() {
+        handler.removeCallbacks(timeout);
+        if (recognizer != null) {
+            try { recognizer.destroy(); } catch (RuntimeException ignored) { }
+            recognizer = null;
+        }
+        super.onDestroy();
+    }
+}
+'''
+          (voice_dir / 'TaskVoiceCaptureActivity.java').write_text(capture_java, encoding='utf-8')
+
+          # Main To-Do quick-add: wave sits immediately above the textbox and is GONE when idle.
+          text = frag_xml.read_text(encoding='utf-8')
+          old = '''        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/task_quick_add_layout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:hint="@string/family_tasks_quick_add_hint"
+            app:startIconDrawable="@drawable/ic_family_task" app:startIconTint="@color/fh_module_grocery"
+            app:endIconMode="custom" app:endIconDrawable="@drawable/ic_mic"
+            app:endIconContentDescription="@string/family_tasks_voice_add"
+            app:endIconTint="@color/fh_module_grocery">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/task_quick_add_input"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:imeOptions="actionDone" android:inputType="textCapSentences"
+                android:maxLines="1" android:textSize="12.5sp" />
+        </com.google.android.material.textfield.TextInputLayout>'''
+          new = '''        <LinearLayout
+            android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:orientation="vertical">
+            <com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView
+                android:id="@+id/task_quick_voice_wave"
+                android:layout_width="match_parent" android:layout_height="26dp"
+                android:layout_marginStart="10dp" android:layout_marginEnd="10dp"
+                android:layout_marginBottom="2dp" android:visibility="gone" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/task_quick_add_layout"
+                style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:hint="@string/family_tasks_quick_add_hint"
+                app:startIconDrawable="@drawable/ic_family_task" app:startIconTint="@color/fh_module_grocery"
+                app:endIconMode="custom" app:endIconDrawable="@drawable/ic_mic"
+                app:endIconContentDescription="@string/family_tasks_voice_add"
+                app:endIconTint="@color/fh_module_grocery">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/task_quick_add_input"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:imeOptions="actionDone" android:inputType="textCapSentences"
+                    android:maxLines="1" android:textSize="12.5sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>'''
+          text = replace_once(text, old, new, 'main quick-add input block')
+          frag_xml.write_text(text, encoding='utf-8')
+
+          # Add/Edit editor: same red wave directly above Task Name field.
+          text = dialog_xml.read_text(encoding='utf-8')
+          anchor = '''                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/task_title_layout"'''
+          inserted = '''                <com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView
+                    android:id="@+id/task_editor_voice_wave"
+                    android:layout_width="match_parent"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginBottom="2dp"
+                    android:visibility="gone" />
+
+''' + anchor
+          text = replace_once(text, anchor, inserted, 'task editor title input')
+          dialog_xml.write_text(text, encoding='utf-8')
+
+          # Fragment recognizer: preserve existing speech behavior, add transient wave state.
+          text = frag_java.read_text(encoding='utf-8')
+          import_anchor = 'import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;\n'
+          text = replace_once(text, import_anchor,
+              import_anchor + 'import com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView;\n',
+              'fragment wave import')
+          fields = '''    @Nullable private android.widget.EditText pendingVoiceTarget;
+    @Nullable private SpeechRecognizer speechRecognizer;'''
+          fields_new = '''    @Nullable private android.widget.EditText pendingVoiceTarget;
+    @Nullable private TaskVoiceWaveView pendingVoiceWave;
+    @Nullable private TaskVoiceWaveView activeVoiceWave;
+    @Nullable private SpeechRecognizer speechRecognizer;'''
+          text = replace_once(text, fields, fields_new, 'fragment voice fields')
+          text = replace_once(text,
+              'if (granted && pendingVoiceTarget != null) startVoiceCapture(pendingVoiceTarget);',
+              'if (granted && pendingVoiceTarget != null && pendingVoiceWave != null)\n                    startVoiceCapture(pendingVoiceTarget, pendingVoiceWave);',
+              'permission callback')
+          text = replace_once(text,
+              'requestVoiceCapture(binding.taskQuickAddInput));',
+              'requestVoiceCapture(binding.taskQuickAddInput, binding.taskQuickVoiceWave));',
+              'main quick voice listener')
+          text = replace_once(text,
+              'form.taskTitleLayout.setEndIconOnClickListener(v -> requestVoiceCapture(form.taskTitleInput));',
+              'form.taskTitleLayout.setEndIconOnClickListener(v ->\n                requestVoiceCapture(form.taskTitleInput, form.taskEditorVoiceWave));',
+              'editor voice listener')
+
+          pattern = re.compile(r'''    private void requestVoiceCapture\(@NonNull android\.widget\.EditText target\) \{.*?\n    \}\n\n    private boolean applyVoiceResult''', re.S)
+          replacement = '''    private void requestVoiceCapture(@NonNull android.widget.EditText target,
+                                     @NonNull TaskVoiceWaveView wave) {
+        pendingVoiceTarget = target;
+        pendingVoiceWave = wave;
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        startVoiceCapture(target, wave);
+    }
+
+    private void startVoiceCapture(@NonNull android.widget.EditText target,
+                                   @NonNull TaskVoiceWaveView wave) {
+        if (!SpeechRecognizer.isRecognitionAvailable(requireContext())) {
+            wave.stopListening();
+            android.widget.Toast.makeText(requireContext(),
+                    R.string.family_tasks_voice_unavailable, android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        stopVoiceCapture();
+        pendingVoiceTarget = target;
+        pendingVoiceWave = wave;
+        activeVoiceWave = wave;
+        wave.startListening();
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext());
+        speechRecognizer.setRecognitionListener(new RecognitionListener() {
+            @Override public void onReadyForSpeech(Bundle params) {
+                wave.startListening();
+            }
+            @Override public void onBeginningOfSpeech() { wave.startListening(); }
+            @Override public void onRmsChanged(float rmsdB) { wave.setLevel(rmsdB); }
+            @Override public void onBufferReceived(byte[] buffer) { }
+            @Override public void onEndOfSpeech() { wave.showProcessing(); }
+            @Override public void onError(int error) {
+                stopVoiceCapture();
+                toast(error == SpeechRecognizer.ERROR_NO_MATCH
+                        || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                        ? R.string.family_tasks_voice_no_match
+                        : R.string.family_tasks_voice_unavailable);
+            }
+            @Override public void onResults(Bundle results) {
+                boolean added = applyVoiceResult(results, target);
+                stopVoiceCapture();
+                toast(added ? R.string.family_tasks_voice_added
+                        : R.string.family_tasks_voice_no_match);
+            }
+            @Override public void onPartialResults(Bundle results) {
+                applyVoiceResult(results, target);
+            }
+            @Override public void onEvent(int eventType, Bundle params) { }
+        });
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toLanguageTag())
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+        speechRecognizer.startListening(intent);
+    }
+
+    private boolean applyVoiceResult'''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'voice method region patch count={count}')
+          stop_old = '''    private void stopVoiceCapture() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+        pendingVoiceTarget = null;
+    }'''
+          stop_new = '''    private void stopVoiceCapture() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+        if (activeVoiceWave != null) activeVoiceWave.stopListening();
+        activeVoiceWave = null;
+        pendingVoiceWave = null;
+        pendingVoiceTarget = null;
+    }'''
+          text = replace_once(text, stop_old, stop_new, 'fragment stop voice')
+          frag_java.write_text(text, encoding='utf-8')
+
+          # Overlay: voice UI and a transparent foreground Activity bridge for reliable audio.
+          text = overlay_java.read_text(encoding='utf-8')
+          text = replace_once(text, 'import android.content.Intent;\n',
+              'import android.content.BroadcastReceiver;\nimport android.content.Context;\nimport android.content.Intent;\nimport android.content.IntentFilter;\n',
+              'overlay broadcast imports')
+          overlay_import = 'import com.tridev.familyhub.feature.main.MainActivity;\n'
+          text = replace_once(text, overlay_import,
+              overlay_import + 'import com.tridev.familyhub.feature.tasks.voice.TaskVoiceCaptureActivity;\nimport com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView;\n',
+              'overlay voice imports')
+          overlay_fields = '''    @Nullable private TextView voiceStatus;
+    @Nullable private Button priorityCollapseButton;
+    @Nullable private android.speech.SpeechRecognizer speechRecognizer;'''
+          overlay_fields_new = '''    @Nullable private TextView voiceStatus;
+    @Nullable private TaskVoiceWaveView voiceWave;
+    @Nullable private EditText voiceInput;
+    @Nullable private ImageButton voiceButton;
+    private boolean voiceCaptureActive;
+    @Nullable private Button priorityCollapseButton;
+    @Nullable private android.speech.SpeechRecognizer speechRecognizer;
+    private final BroadcastReceiver taskVoiceReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (intent == null || !TaskVoiceCaptureActivity.ACTION_EVENT.equals(intent.getAction())) return;
+            String state = intent.getStringExtra(TaskVoiceCaptureActivity.EXTRA_STATE);
+            if (TaskVoiceCaptureActivity.STATE_LISTENING.equals(state)) {
+                voiceCaptureActive = true;
+                if (voiceWave != null) voiceWave.startListening();
+                if (voiceButton != null) voiceButton.setColorFilter(Color.rgb(220, 45, 82));
+            } else if (TaskVoiceCaptureActivity.STATE_RMS.equals(state)) {
+                if (voiceWave != null) voiceWave.setLevel(
+                        intent.getFloatExtra(TaskVoiceCaptureActivity.EXTRA_RMS, 0f));
+            } else if (TaskVoiceCaptureActivity.STATE_PROCESSING.equals(state)) {
+                if (voiceWave != null) voiceWave.showProcessing();
+            } else if (TaskVoiceCaptureActivity.STATE_PARTIAL.equals(state)) {
+                String spoken = intent.getStringExtra(TaskVoiceCaptureActivity.EXTRA_TEXT);
+                if (voiceInput != null && spoken != null && !spoken.trim().isEmpty()) {
+                    voiceInput.setText(spoken.trim());
+                    voiceInput.setSelection(voiceInput.length());
+                }
+            } else if (TaskVoiceCaptureActivity.STATE_RESULT.equals(state)) {
+                String spoken = intent.getStringExtra(TaskVoiceCaptureActivity.EXTRA_TEXT);
+                if (voiceInput != null && spoken != null && !spoken.trim().isEmpty()) {
+                    voiceInput.setText(spoken.trim());
+                    voiceInput.setSelection(voiceInput.length());
+                }
+                finishVoiceUi();
+            } else if (TaskVoiceCaptureActivity.STATE_ERROR.equals(state)) {
+                finishVoiceUi();
+                android.widget.Toast.makeText(FamilyTaskOverlayService.this,
+                        R.string.family_tasks_voice_no_match, android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }
+    };'''
+          text = replace_once(text, overlay_fields, overlay_fields_new, 'overlay voice fields')
+
+          create_anchor = '''        repository = new FamilyTaskRepository(this);
+        repository.startRealtimeSync(new FamilyTaskRepository.RealtimeCallback() {'''
+          create_new = '''        repository = new FamilyTaskRepository(this);
+        androidx.core.content.ContextCompat.registerReceiver(this, taskVoiceReceiver,
+                new IntentFilter(TaskVoiceCaptureActivity.ACTION_EVENT),
+                androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
+        repository.startRealtimeSync(new FamilyTaskRepository.RealtimeCallback() {'''
+          text = replace_once(text, create_anchor, create_new, 'overlay receiver registration')
+
+          text = replace_once(text, '        LinearLayout quick = row();\n',
+              '''        voiceWave = new TaskVoiceWaveView(this);
+        voiceWave.setVisibility(View.GONE);
+        LinearLayout.LayoutParams waveParams = new LinearLayout.LayoutParams(-1, dp(26));
+        waveParams.leftMargin = dp(10);
+        waveParams.rightMargin = dp(10);
+        waveParams.bottomMargin = dp(2);
+        root.addView(voiceWave, waveParams);
+
+        LinearLayout quick = row();
+''', 'overlay wave placement')
+
+          voice_anchor = '''        voice.setBackgroundColor(Color.TRANSPARENT);
+        voice.setElevation(0f);'''
+          voice_new = '''        voice.setBackgroundColor(Color.TRANSPARENT);
+        voice.setElevation(0f);
+        voiceInput = input;
+        voiceButton = voice;'''
+          text = replace_once(text, voice_anchor, voice_new, 'overlay voice refs')
+
+          old_status = '''        voiceStatus = text("", 10f, true);
+        voiceStatus.setTextColor(Color.rgb(15, 105, 80));
+        voiceStatus.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        voiceStatus.setPadding(dp(6), 0, dp(6), 0);
+        voiceStatus.setVisibility(View.GONE);
+        root.addView(voiceStatus, new LinearLayout.LayoutParams(-1, dp(22)));
+
+'''
+          text = replace_once(text, old_status, '', 'remove old green voice status')
+
+          voice_pattern = re.compile(r'''    private void startVoiceCapture\(@NonNull EditText input, @NonNull ImageButton voice\) \{.*?\n    \}\n\n    private boolean applyVoiceResult''', re.S)
+          voice_replacement = '''    private void startVoiceCapture(@NonNull EditText input, @NonNull ImageButton voice) {
+        if (voiceCaptureActive) return;
+        voiceInput = input;
+        voiceButton = voice;
+        voiceCaptureActive = true;
+        voice.setColorFilter(Color.rgb(220, 45, 82));
+        if (voiceWave != null) voiceWave.startListening();
+        try {
+            startActivity(new Intent(this, TaskVoiceCaptureActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                            | Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS));
+        } catch (RuntimeException error) {
+            finishVoiceUi();
+            android.widget.Toast.makeText(this, R.string.family_tasks_voice_unavailable,
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void finishVoiceUi() {
+        voiceCaptureActive = false;
+        if (voiceWave != null) voiceWave.stopListening();
+        if (voiceButton != null) voiceButton.setColorFilter(Color.rgb(15, 105, 80));
+    }
+
+    private boolean applyVoiceResult'''
+          text, count = voice_pattern.subn(voice_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'overlay startVoiceCapture patch count={count}')
+
+          stop_overlay_old = '''    private void stopVoiceCapture() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+    }'''
+          stop_overlay_new = '''    private void stopVoiceCapture() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null;
+        }
+        finishVoiceUi();
+    }'''
+          text = replace_once(text, stop_overlay_old, stop_overlay_new, 'overlay stop voice')
+
+          clear_anchor = '''        liveStatus = null;
+        voiceStatus = null;
+        priorityCollapseButton = null;'''
+          clear_new = '''        liveStatus = null;
+        voiceStatus = null;
+        voiceWave = null;
+        voiceInput = null;
+        voiceButton = null;
+        priorityCollapseButton = null;'''
+          text = replace_once(text, clear_anchor, clear_new, 'overlay clear refs')
+
+          destroy_anchor = '''        if (repository != null) repository.stopRealtimeSync();
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, false).apply();'''
+          destroy_new = '''        if (repository != null) repository.stopRealtimeSync();
+        try { unregisterReceiver(taskVoiceReceiver); } catch (IllegalArgumentException ignored) { }
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, false).apply();'''
+          text = replace_once(text, destroy_anchor, destroy_new, 'overlay unregister receiver')
+          overlay_java.write_text(text, encoding='utf-8')
+
+          # Register only the transparent bridge Activity. Do not change any FGS type/rules/sync.
+          text = manifest.read_text(encoding='utf-8')
+          activity_anchor = '''        <activity
+            android:name=".feature.grocery.overlay.GroceryVoiceCaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FamilyHub.VoiceCapture" />'''
+          activity_new = activity_anchor + '''
+        <activity
+            android:name=".feature.tasks.voice.TaskVoiceCaptureActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:theme="@style/Theme.FamilyHub.VoiceCapture" />'''
+          text = replace_once(text, activity_anchor, activity_new, 'manifest task voice activity')
+          manifest.write_text(text, encoding='utf-8')
+
+          print('Scoped files changed:')
+          for path in [frag_java, overlay_java, frag_xml, dialog_xml, manifest,
+                       voice_dir/'TaskVoiceWaveView.java', voice_dir/'TaskVoiceCaptureActivity.java']:
+              print(path)
+          PY
+
+      - name: Verify scoped diff
+        shell: bash
+        run: |
+          git diff --check
+          changed="$(git diff --name-only | sort)"
+          printf '%s\n' "$changed"
+          expected="$(printf '%s\n' \
+            app/src/main/AndroidManifest.xml \
+            app/src/main/java/com/tridev/familyhub/feature/tasks/FamilyTasksFragment.java \
+            app/src/main/java/com/tridev/familyhub/feature/tasks/overlay/FamilyTaskOverlayService.java \
+            app/src/main/java/com/tridev/familyhub/feature/tasks/voice/TaskVoiceCaptureActivity.java \
+            app/src/main/java/com/tridev/familyhub/feature/tasks/voice/TaskVoiceWaveView.java \
+            app/src/main/res/layout/dialog_family_task.xml \
+            app/src/main/res/layout/fragment_family_tasks.xml | sort)"
+          test "$changed" = "$expected"
+
+      - name: Build and test
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace --no-daemon
+
+      - name: Commit voice fix
+        shell: bash
+        run: |
+          git config user.name "tridevmaurya3"
+          git config user.email "tridevmaurya3@gmail.com"
+          git add app/src/main/AndroidManifest.xml \
+                  app/src/main/java/com/tridev/familyhub/feature/tasks/FamilyTasksFragment.java \
+                  app/src/main/java/com/tridev/familyhub/feature/tasks/overlay/FamilyTaskOverlayService.java \
+                  app/src/main/java/com/tridev/familyhub/feature/tasks/voice/TaskVoiceCaptureActivity.java \
+                  app/src/main/java/com/tridev/familyhub/feature/tasks/voice/TaskVoiceWaveView.java \
+                  app/src/main/res/layout/dialog_family_task.xml \
+                  app/src/main/res/layout/fragment_family_tasks.xml
+          git commit -m "Fix To-Do voice capture and red waveform"
+          git push origin HEAD:main
