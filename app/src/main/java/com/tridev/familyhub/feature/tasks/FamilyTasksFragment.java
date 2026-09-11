@@ -148,7 +148,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         setupQuickAddOptions();
 
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
-        binding.taskQuickVoiceButton.setOnClickListener(v ->
+        binding.taskQuickAddLayout.setEndIconOnClickListener(v ->
                 requestVoiceCapture(binding.taskQuickAddInput));
         binding.taskFloatingToggle.setOnClickListener(v -> toggleFloatingStrip());
         binding.taskDueCalendarButton.setOnClickListener(v -> pickCalendarDay());
