@@ -234,7 +234,7 @@ public class GroceryOverlayService extends Service {
         if (intent != null && ACTION_OPEN_PANEL.equals(intent.getAction())) {
             if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
             if (stripView != null) stripView.setVisibility(View.GONE);
-            if (panelView == null) showPanel();
+            if (panelView == null) togglePanel();
             return START_STICKY;
         }
         if (intent != null && ACTION_SUSPEND_FOR_VOICE.equals(intent.getAction())) {
