@@ -514,27 +514,24 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="vertical">
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/grocery_monthly_master_switch"
                         style="@style/Widget.FamilyHub.FloatingCompact.Switch"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="44dp"
-                        android:layout_marginEnd="3dp"
-                        android:layout_weight="1"
+                        android:ellipsize="end"
                         android:maxLines="1"
                         android:text="@string/grocery_monthly_master"
                         android:textSize="11sp" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/grocery_priority_layout"
-                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-                        android:layout_width="0dp"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="3dp"
-                        android:layout_weight="1"
+                        android:layout_marginTop="4dp"
                         android:hint="@string/grocery_priority"
                         app:boxCornerRadiusTopStart="12dp"
                         app:boxCornerRadiusTopEnd="12dp"
