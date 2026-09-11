@@ -99,6 +99,7 @@ public final class FamilyTaskOverlayService extends Service {
     private int dateMode = DATE_TODAY;
     private int sortMode = SORT_DUE;
     private int priorityFilterMode;
+    @NonNull private String expandedPriorityGroup = "";
     @NonNull private String searchQuery = "";
 
     @Override
@@ -878,10 +879,11 @@ public final class FamilyTaskOverlayService extends Service {
             for (FamilyTask task : visible) {
                 String priorityKey = normalizedPriority(task);
                 if (!priorityKey.equals(lastPriority)) {
-                    addPrioritySection(task);
+                    addPrioritySection(task, priorityCount(visible, priorityKey));
                     lastPriority = priorityKey;
                 }
-                addTaskRow(task);
+                if (expandedPriorityGroup.isEmpty()
+                        || expandedPriorityGroup.equals(priorityKey)) addTaskRow(task);
             }
         });
     }
@@ -907,16 +909,34 @@ public final class FamilyTaskOverlayService extends Service {
         return FamilyTask.PRIORITY_NORMAL;
     }
 
-    private void addPrioritySection(@NonNull FamilyTask task) {
+    private int priorityCount(@NonNull List<FamilyTask> tasks, @NonNull String priorityKey) {
+        int count = 0;
+        for (FamilyTask candidate : tasks) {
+            if (priorityKey.equals(normalizedPriority(candidate))) count++;
+        }
+        return count;
+    }
+
+    private void addPrioritySection(@NonNull FamilyTask task, int count) {
         if (taskRows == null) return;
-        TextView section = text(priorityLabel(task), 10.5f, true);
-        section.setGravity(Gravity.CENTER);
-        section.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        String priorityKey = normalizedPriority(task);
+        boolean open = expandedPriorityGroup.isEmpty()
+                || expandedPriorityGroup.equals(priorityKey);
+        TextView section = text((open ? "▾  " : "▸  ")
+                + priorityLabel(task) + "  (" + count + ")", 10.5f, true);
+        section.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        section.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        section.setPadding(dp(9), 0, dp(9), 0);
         section.setTextColor(priorityTextColor(task));
         section.setBackground(round(priorityFill(task), 10, priorityStroke(task)));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(28));
         params.setMargins(0, dp(5), 0, dp(1));
         taskRows.addView(section, params);
+        section.setOnClickListener(v -> {
+            expandedPriorityGroup = priorityKey.equals(expandedPriorityGroup)
+                    ? "__NONE__" : priorityKey;
+            refresh();
+        });
     }
 
     @NonNull

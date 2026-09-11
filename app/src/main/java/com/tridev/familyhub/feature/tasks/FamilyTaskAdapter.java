@@ -1,5 +1,9 @@
 package com.tridev.familyhub.feature.tasks;
 
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.view.Gravity;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,23 +22,133 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Holder> {
+final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+    private static final int TYPE_SECTION = 0;
+    private static final int TYPE_TASK = 1;
     interface Listener {
         void onCompletedChanged(@NonNull FamilyTask task, boolean completed);
         void onEdit(@NonNull FamilyTask task);
         void onDelete(@NonNull FamilyTask task);
     }
     private final List<FamilyTask> tasks = new ArrayList<>();
+    private final List<Object> rows = new ArrayList<>();
+    @NonNull private String expandedPriority = "";
     private final Listener listener;
     FamilyTaskAdapter(@NonNull Listener listener) { this.listener = listener; }
     void submitList(@NonNull List<FamilyTask> updated) {
-        tasks.clear(); tasks.addAll(updated); notifyDataSetChanged();
+        tasks.clear(); tasks.addAll(updated); rebuildRows(); notifyDataSetChanged();
     }
-    @NonNull @Override public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new Holder(ItemFamilyTaskBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false));
+    @Override public int getItemViewType(int position) {
+        return rows.get(position) instanceof PrioritySection ? TYPE_SECTION : TYPE_TASK;
     }
-    @Override public void onBindViewHolder(@NonNull Holder holder, int position) { holder.bind(tasks.get(position)); }
-    @Override public int getItemCount() { return tasks.size(); }
+    @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(
+            @NonNull ViewGroup parent, int viewType) {
+        if (viewType == TYPE_SECTION) return new SectionHolder(sectionView(parent));
+        return new Holder(ItemFamilyTaskBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false));
+    }
+    @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        Object row = rows.get(position);
+        if (holder instanceof SectionHolder && row instanceof PrioritySection) {
+            ((SectionHolder) holder).bind((PrioritySection) row);
+        } else if (holder instanceof Holder && row instanceof FamilyTask) {
+            ((Holder) holder).bind((FamilyTask) row);
+        }
+    }
+    @Override public int getItemCount() { return rows.size(); }
+
+    private void rebuildRows() {
+        rows.clear();
+        appendPriority(FamilyTask.PRIORITY_URGENT);
+        appendPriority(FamilyTask.PRIORITY_HIGH);
+        appendPriority(FamilyTask.PRIORITY_NORMAL);
+    }
+
+    private void appendPriority(@NonNull String priority) {
+        List<FamilyTask> grouped = new ArrayList<>();
+        for (FamilyTask task : tasks) {
+            if (priority.equals(normalizedPriority(task))) grouped.add(task);
+        }
+        if (grouped.isEmpty()) return;
+        boolean open = expandedPriority.isEmpty() || expandedPriority.equals(priority);
+        rows.add(new PrioritySection(priority, grouped.size(), open));
+        if (open) rows.addAll(grouped);
+    }
+
+    @NonNull
+    private String normalizedPriority(@NonNull FamilyTask task) {
+        if (FamilyTask.PRIORITY_URGENT.equals(task.priority)) return FamilyTask.PRIORITY_URGENT;
+        if (FamilyTask.PRIORITY_HIGH.equals(task.priority)) return FamilyTask.PRIORITY_HIGH;
+        return FamilyTask.PRIORITY_NORMAL;
+    }
+
+    @NonNull
+    private TextView sectionView(@NonNull ViewGroup parent) {
+        TextView view = new TextView(parent.getContext());
+        view.setTextSize(11f);
+        view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        view.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        int horizontal = dp(parent, 10);
+        view.setPadding(horizontal, 0, horizontal, 0);
+        RecyclerView.LayoutParams params = new RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(parent, 34));
+        params.setMargins(0, dp(parent, 3), 0, dp(parent, 3));
+        view.setLayoutParams(params);
+        return view;
+    }
+
+    private int dp(@NonNull View view, int value) {
+        return Math.round(value * view.getResources().getDisplayMetrics().density);
+    }
+
+    private static final class PrioritySection {
+        @NonNull final String priority;
+        final int count;
+        final boolean open;
+        PrioritySection(@NonNull String priority, int count, boolean open) {
+            this.priority = priority; this.count = count; this.open = open;
+        }
+    }
+
+    final class SectionHolder extends RecyclerView.ViewHolder {
+        private final TextView label;
+        SectionHolder(@NonNull TextView itemView) { super(itemView); label = itemView; }
+        void bind(@NonNull PrioritySection section) {
+            label.setText((section.open ? "▾  " : "▸  ")
+                    + priorityText(label, section.priority) + "  (" + section.count + ")");
+            int textColor;
+            int fill;
+            int stroke;
+            if (FamilyTask.PRIORITY_URGENT.equals(section.priority)) {
+                textColor = Color.rgb(164, 43, 62); fill = Color.rgb(255, 235, 239);
+                stroke = Color.rgb(220, 118, 136);
+            } else if (FamilyTask.PRIORITY_HIGH.equals(section.priority)) {
+                textColor = Color.rgb(147, 91, 13); fill = Color.rgb(255, 246, 224);
+                stroke = Color.rgb(224, 177, 105);
+            } else {
+                textColor = Color.rgb(15, 108, 89); fill = Color.rgb(232, 247, 241);
+                stroke = Color.rgb(166, 207, 191);
+            }
+            label.setTextColor(textColor);
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(fill);
+            background.setCornerRadius(dp(label, 10));
+            background.setStroke(dp(label, 1), stroke);
+            label.setBackground(background);
+            label.setOnClickListener(v -> {
+                expandedPriority = section.priority.equals(expandedPriority)
+                        ? "__NONE__" : section.priority;
+                rebuildRows();
+                notifyDataSetChanged();
+            });
+        }
+    }
+
+    private String priorityText(@NonNull View view, @NonNull String priority) {
+        if (FamilyTask.PRIORITY_URGENT.equals(priority)) return view.getContext().getString(R.string.task_priority_urgent);
+        if (FamilyTask.PRIORITY_HIGH.equals(priority)) return view.getContext().getString(R.string.task_priority_high);
+        return view.getContext().getString(R.string.task_priority_normal);
+    }
 
     final class Holder extends RecyclerView.ViewHolder {
         private final ItemFamilyTaskBinding binding;
@@ -49,6 +163,7 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
             binding.getRoot().setAlpha(completed ? .68f : 1f);
             binding.taskDue.setText(dueText(task));
             binding.taskPriority.setText(priorityText(task.priority));
+            stylePriorityBadge(task);
             String who = task.assignedMemberName.isEmpty()
                     ? binding.getRoot().getContext().getString(R.string.family_tasks_whole_family)
                     : task.assignedMemberName;
@@ -89,6 +204,28 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
             binding.editTaskButton.setOnClickListener(v -> listener.onEdit(task));
             binding.deleteTaskButton.setOnClickListener(v -> listener.onDelete(task));
         }
+        private void stylePriorityBadge(@NonNull FamilyTask task) {
+            int textColor;
+            int fill;
+            int stroke;
+            if (FamilyTask.PRIORITY_URGENT.equals(task.priority)) {
+                textColor = Color.rgb(164, 43, 62); fill = Color.rgb(255, 235, 239);
+                stroke = Color.rgb(220, 118, 136);
+            } else if (FamilyTask.PRIORITY_HIGH.equals(task.priority)) {
+                textColor = Color.rgb(147, 91, 13); fill = Color.rgb(255, 246, 224);
+                stroke = Color.rgb(224, 177, 105);
+            } else {
+                textColor = Color.rgb(15, 108, 89); fill = Color.rgb(232, 247, 241);
+                stroke = Color.rgb(166, 207, 191);
+            }
+            binding.taskPriority.setGravity(Gravity.CENTER);
+            binding.taskPriority.setTextColor(textColor);
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(fill);
+            background.setCornerRadius(dp(binding.taskPriority, 11));
+            background.setStroke(dp(binding.taskPriority, 1), stroke);
+            binding.taskPriority.setBackground(background);
+        }
         private String dueText(FamilyTask task) {
             if (FamilyTask.STATUS_COMPLETED.equals(task.status)) {
                 long completedAt = task.completedAt > 0L ? task.completedAt : task.updatedAt;
@@ -115,3 +252,4 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
         }
     }
 }
+import android.widget.TextView;
