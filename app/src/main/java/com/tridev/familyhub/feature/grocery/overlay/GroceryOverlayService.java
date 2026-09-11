@@ -427,12 +427,6 @@ public class GroceryOverlayService extends Service {
                 overlayHeaderChipParams(78, 4);
         header.addView(overlayFormToggle, formHeaderParams);
 
-        Button headerMenu = overlayHeaderChip("More  ⋮");
-        headerMenu.setContentDescription("Open more Grocery overlay options");
-        LinearLayout.LayoutParams headerMenuParams =
-                overlayHeaderChipParams(48, 3);
-        header.addView(headerMenu, headerMenuParams);
-
         Button close = new Button(this);
         close.setText("×");
         close.setContentDescription("Close Grocery overlay");
@@ -533,11 +527,6 @@ public class GroceryOverlayService extends Service {
 
         root.addView(listTypeGroup, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
-
-        headerMenu.setOnClickListener(v -> {
-            FamilyHubAppLockManager.noteTrustedOverlayInteraction();
-            showOverlayHeaderTransparencyMenu(headerMenu);
-        });
 
         final String[] quantityUnits = getResources().getStringArray(R.array.grocery_quantity_units);
         final String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);

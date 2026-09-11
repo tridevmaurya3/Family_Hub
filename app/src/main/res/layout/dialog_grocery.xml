@@ -313,7 +313,7 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/grocery_purchase_date_input"
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
+                    android:layout_height="52dp"
                     android:clickable="true"
                     android:cursorVisible="false"
                     android:focusable="false"
@@ -321,6 +321,8 @@
                     android:includeFontPadding="false"
                     android:inputType="none"
                     android:maxLines="1"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp"
                     android:textSize="12sp" />
             </com.google.android.material.textfield.TextInputLayout>
         </com.google.android.material.card.MaterialCardView>

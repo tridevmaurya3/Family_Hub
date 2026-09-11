@@ -81,7 +81,8 @@ final class FamilyTaskActivityTimelineDialog {
 
         void show() {
             LinearLayout root = buildContent();
-            dialog = new MaterialAlertDialogBuilder(context)
+            dialog = new MaterialAlertDialogBuilder(context,
+                    R.style.ThemeOverlay_FamilyHub_FormDialog)
                     .setTitle(R.string.family_tasks_activity_title)
                     .setView(root)
                     .setNegativeButton(R.string.family_tasks_activity_close, null)
@@ -104,7 +105,8 @@ final class FamilyTaskActivityTimelineDialog {
         private LinearLayout buildContent() {
             LinearLayout root = new LinearLayout(context);
             root.setOrientation(LinearLayout.VERTICAL);
-            root.setPadding(dp(18), dp(4), dp(18), 0);
+            root.setPadding(dp(12), dp(10), dp(12), dp(8));
+            root.setBackground(context.getDrawable(R.drawable.bg_form_three_tone));
 
             TextView privacy = text(context.getString(R.string.family_tasks_activity_privacy),
                     11f, false);
@@ -116,7 +118,7 @@ final class FamilyTaskActivityTimelineDialog {
             typeInput = addDropdown(root, R.string.family_tasks_activity_filter_type);
 
             summary = text("", 12f, true);
-            summary.setTextColor(context.getColor(R.color.fh_module_grocery));
+            summary.setTextColor(context.getColor(R.color.fh_form_accent));
             LinearLayout.LayoutParams summaryParams = matchWrap();
             summaryParams.topMargin = dp(10);
             root.addView(summary, summaryParams);
@@ -319,10 +321,10 @@ final class FamilyTaskActivityTimelineDialog {
         public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             MaterialCardView card = new MaterialCardView(context);
             card.setCardElevation(0f);
-            card.setRadius(dp(context, 16));
+            card.setRadius(dp(context, 15));
             card.setStrokeWidth(dp(context, 1));
-            card.setStrokeColor(context.getColor(R.color.fh_outline_variant));
-            card.setCardBackgroundColor(context.getColor(R.color.fh_surface));
+            card.setStrokeColor(context.getColor(R.color.fh_form_outline));
+            card.setCardBackgroundColor(context.getColor(R.color.fh_form_surface));
             RecyclerView.LayoutParams cardParams = new RecyclerView.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);

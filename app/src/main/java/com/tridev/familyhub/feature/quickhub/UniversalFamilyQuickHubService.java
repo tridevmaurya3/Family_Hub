@@ -18,6 +18,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -70,10 +71,11 @@ public final class UniversalFamilyQuickHubService extends Service {
         if (icon != null || manager == null) return;
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         TextView hub = new TextView(this);
-        hub.setText("☰"); hub.setTextSize(21); hub.setGravity(Gravity.CENTER);
+        hub.setText("+"); hub.setTextSize(28); hub.setGravity(Gravity.CENTER);
         hub.setTextColor(Color.rgb(15, 104, 80)); hub.setContentDescription("Family Quick Hub");
         hub.setBackground(round(Color.argb(245,231,246,240), Color.rgb(15,122,90), 24));
         hub.setElevation(dp(10));
+        hub.setAlpha(prefs.getFloat("button_alpha", .92f));
         params = overlayParams(dp(48), dp(48));
         params.gravity = Gravity.TOP | Gravity.START;
         int defaultY = Math.round(getResources().getDisplayMetrics().heightPixels * .62f);
@@ -94,12 +96,15 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"); box.addView(grocery,new LinearLayout.LayoutParams(dp(150),dp(42)));box.addView(tasks,new LinearLayout.LayoutParams(dp(150),dp(42)));
-        selector=new PopupWindow(box,dp(162),dp(96),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  Button transparency"); box.addView(grocery,new LinearLayout.LayoutParams(dp(180),dp(42)));box.addView(tasks,new LinearLayout.LayoutParams(dp(180),dp(42)));box.addView(opacity,new LinearLayout.LayoutParams(dp(180),dp(42)));
+        selector=new PopupWindow(box,dp(192),dp(138),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
-        selector.showAsDropDown(anchor,-dp(120),dp(4));
+        opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
+        selector.showAsDropDown(anchor,-dp(150),dp(4));
     }
+
+    private void showOpacity(View anchor){SharedPreferences p=getSharedPreferences(PREFS,MODE_PRIVATE);SeekBar bar=new SeekBar(this);bar.setPadding(dp(12),0,dp(12),0);bar.setProgress(Math.round((p.getFloat("button_alpha",.92f)-.35f)/.65f*100));PopupWindow pop=new PopupWindow(bar,dp(210),dp(52),true);pop.setOutsideTouchable(true);pop.setBackgroundDrawable(round(Color.WHITE,Color.rgb(184,207,199),16));pop.setElevation(dp(12));bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}public void onProgressChanged(SeekBar s,int value,boolean user){float a=.35f+(value/100f)*.65f;if(icon!=null)icon.setAlpha(a);p.edit().putFloat("button_alpha",a).apply();}});pop.showAsDropDown(anchor,-dp(162),dp(4));}
 
     private Button choice(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);b.setBackground(round(Color.argb(245,247,252,249),Color.argb(140,184,207,199),12));return b;}
     private void open(Class<?> selected,String action,Class<?> other){startService(new Intent(this,other).setAction(other==GroceryOverlayService.class?GroceryOverlayService.ACTION_STOP:FamilyTaskOverlayService.ACTION_STOP));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}

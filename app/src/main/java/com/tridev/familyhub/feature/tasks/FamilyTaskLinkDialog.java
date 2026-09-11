@@ -77,8 +77,9 @@ final class FamilyTaskLinkDialog {
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(context, 20);
-        root.setPadding(pad, dp(context, 8), pad, 0);
+        int pad = dp(context, 12);
+        root.setPadding(pad, dp(context, 10), pad, dp(context, 8));
+        root.setBackground(context.getDrawable(R.drawable.bg_form_three_tone));
 
         TextView intro = new TextView(context);
         intro.setText(R.string.family_tasks_link_dialog_message);
@@ -96,7 +97,7 @@ final class FamilyTaskLinkDialog {
         financeInput.setText(financeLabels.get(financeIndex), false);
         loanInput.setText(loanLabels.get(loanIndex), false);
 
-        new MaterialAlertDialogBuilder(context)
+        new MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_FamilyHub_FormDialog)
                 .setTitle(R.string.family_tasks_link_dialog_title)
                 .setView(root)
                 .setNegativeButton(R.string.cancel, null)
@@ -123,6 +124,11 @@ final class FamilyTaskLinkDialog {
             @NonNull List<String> labels) {
         TextInputLayout layout = new TextInputLayout(context);
         layout.setHint(context.getString(hint));
+        layout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        layout.setBoxCornerRadii(dp(context, 15), dp(context, 15),
+                dp(context, 15), dp(context, 15));
+        layout.setBoxBackgroundColor(context.getColor(R.color.fh_form_surface));
+        layout.setBoxStrokeColor(context.getColor(R.color.fh_form_accent));
         layout.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -131,11 +137,14 @@ final class FamilyTaskLinkDialog {
 
         MaterialAutoCompleteTextView input = new MaterialAutoCompleteTextView(context);
         input.setInputType(InputType.TYPE_NULL);
+        input.setTextSize(12f);
+        input.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
+        input.setPadding(dp(context, 10), 0, dp(context, 8), 0);
         input.setAdapter(new ArrayAdapter<>(context,
                 android.R.layout.simple_dropdown_item_1line, labels));
         input.setOnClickListener(v -> input.showDropDown());
         layout.addView(input, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 52)));
         return input;
     }
 

@@ -240,25 +240,9 @@ public final class FamilyTaskOverlayService extends Service {
         titleStack.addView(liveStatus, new LinearLayout.LayoutParams(-1, dp(18)));
         header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(44), 1f));
 
-        Button open = headerChip(getString(R.string.family_tasks_overlay_open));
-        open.setOnClickListener(v -> startActivity(new Intent(this, MainActivity.class)
-                .putExtra(MainActivity.EXTRA_OPEN_ROUTE, MainActivity.ROUTE_TASKS)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)));
-        header.addView(open, headerChipParams(44));
-
         Button day = headerChip(dayLabel() + "  ▾");
         day.setOnClickListener(v -> showDayPopup(day));
-
-        Button status = headerChip(statusLabel() + "  ▾");
-        status.setOnClickListener(v -> showStatusPopup(status, day));
-        header.addView(status, headerChipParams(64));
-        header.addView(day, headerChipParams(68));
-
-        Button more = headerChip("⋮");
-        more.setContentDescription(getString(R.string.family_tasks_overlay_more));
-        more.setTextSize(17f);
-        more.setOnClickListener(v -> showOpacityPopup(more));
-        header.addView(more, headerChipParams(38));
+        header.addView(day, headerChipParams(76));
 
         Button close = new Button(this);
         close.setText("×");
@@ -312,8 +296,10 @@ public final class FamilyTaskOverlayService extends Service {
         sort.setOnClickListener(v -> showSortPopup(sort));
 
         LinearLayout quick = row();
+        LinearLayout quickField = row();
+        quickField.setBackground(glassFieldBackground());
         EditText input = compactInput(getString(R.string.family_tasks_overlay_add_hint));
-        input.setBackground(glassFieldBackground());
+        input.setBackgroundColor(Color.TRANSPARENT);
         input.setPadding(dp(12), 0, dp(8), 0);
         ImageButton voice = new ImageButton(this);
         voice.setImageResource(R.drawable.ic_mic);
@@ -325,11 +311,10 @@ public final class FamilyTaskOverlayService extends Service {
         Button add = compactAction("+ " + getString(R.string.family_tasks_add),
                 Color.WHITE, Color.rgb(15, 108, 89));
         add.setBackground(round(Color.rgb(15, 108, 89), 14, Color.rgb(15, 108, 89)));
-        quick.addView(input, new LinearLayout.LayoutParams(0, dp(46), 1f));
-        LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(dp(42), dp(42));
-        voiceParams.setMarginStart(dp(5));
-        quick.addView(voice, voiceParams);
-        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(72), dp(42));
+        quickField.addView(input, new LinearLayout.LayoutParams(0, dp(46), 1f));
+        quickField.addView(voice, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        quick.addView(quickField, new LinearLayout.LayoutParams(0, dp(46), 1f));
+        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(104), dp(42));
         addParams.setMarginStart(dp(5));
         quick.addView(add, addParams);
         LinearLayout.LayoutParams quickParams = new LinearLayout.LayoutParams(-1, dp(48));
@@ -644,6 +629,7 @@ public final class FamilyTaskOverlayService extends Service {
         repository.loadAll("", tasks -> {
             if (taskRows == null) return;
             taskRows.removeAllViews();
+            completedMode = false;
             long[] range = selectedRange();
             List<FamilyTask> visible = new ArrayList<>();
             String query = searchQuery.toLowerCase(Locale.getDefault());
