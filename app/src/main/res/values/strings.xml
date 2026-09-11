@@ -1576,6 +1576,16 @@ Sharing: %12$s</string>
     <string name="family_tasks_overlay_notification">Your family task strip is available on every screen</string>
     <string name="family_tasks_overlay_today">Today</string>
     <string name="family_tasks_overlay_tomorrow">Tomorrow</string>
+    <string name="family_tasks_overlay_pending">Pending</string>
+    <string name="family_tasks_overlay_completed">Completed</string>
+    <string name="family_tasks_overlay_yesterday">Yesterday</string>
+    <string name="family_tasks_overlay_next_7_days">Next 7 days</string>
+    <string name="family_tasks_overlay_next_15_days">Next 15 days</string>
+    <string name="family_tasks_overlay_next_30_days">Next 30 days</string>
+    <string name="family_tasks_overlay_last_7_days">Last 7 days</string>
+    <string name="family_tasks_overlay_last_15_days">Last 15 days</string>
+    <string name="family_tasks_overlay_last_30_days">Last 30 days</string>
+    <string name="family_tasks_overlay_all">All</string>
     <string name="family_tasks_overlay_add_hint">Quick add a task</string>
     <string name="task_summary_pending">Pending</string>
     <string name="task_summary_today">Due today</string>

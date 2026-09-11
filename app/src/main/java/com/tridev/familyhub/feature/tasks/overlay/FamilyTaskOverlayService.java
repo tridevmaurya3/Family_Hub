@@ -72,6 +72,12 @@ public final class FamilyTaskOverlayService extends Service {
     private static final int NOTIFICATION_ID = 4217;
     private static final int SORT_DUE = 0;
     private static final int SORT_PRIORITY = 1;
+    private static final int DATE_TODAY = 0;
+    private static final int DATE_ADJACENT_DAY = 1;
+    private static final int DATE_SEVEN_DAYS = 2;
+    private static final int DATE_FIFTEEN_DAYS = 3;
+    private static final int DATE_THIRTY_DAYS = 4;
+    private static final int DATE_ALL = 5;
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams stripParams;
@@ -85,7 +91,8 @@ public final class FamilyTaskOverlayService extends Service {
     @Nullable private android.speech.SpeechRecognizer speechRecognizer;
     @Nullable private PopupWindow activePopup;
     private FamilyTaskRepository repository;
-    private boolean tomorrow;
+    private boolean completedMode;
+    private int dateMode = DATE_TODAY;
     private int sortMode = SORT_DUE;
     @NonNull private String searchQuery = "";
 
@@ -234,7 +241,11 @@ public final class FamilyTaskOverlayService extends Service {
 
         Button day = headerChip(dayLabel() + "  ▾");
         day.setOnClickListener(v -> showDayPopup(day));
-        header.addView(day, headerChipParams(60));
+
+        Button status = headerChip(statusLabel() + "  ▾");
+        status.setOnClickListener(v -> showStatusPopup(status, day));
+        header.addView(status, headerChipParams(64));
+        header.addView(day, headerChipParams(68));
 
         Button more = headerChip("⋮");
         more.setContentDescription(getString(R.string.family_tasks_overlay_more));
@@ -347,7 +358,7 @@ public final class FamilyTaskOverlayService extends Service {
             if (value.isEmpty()) return;
             FamilyTask task = new FamilyTask();
             task.title = value;
-            task.dueAt = dueAt(tomorrow);
+            task.dueAt = dueAt(!completedMode && dateMode == DATE_ADJACENT_DAY);
             repository.save(task, () -> {
                 input.setText("");
                 refresh();
@@ -462,13 +473,37 @@ public final class FamilyTaskOverlayService extends Service {
     }
 
     private void showDayPopup(@NonNull Button anchor) {
-        String[] labels = {getString(R.string.family_tasks_overlay_today),
-                getString(R.string.family_tasks_overlay_tomorrow)};
-        showChoicePopup(anchor, labels, tomorrow ? 1 : 0, Color.rgb(15, 108, 89), index -> {
-            tomorrow = index == 1;
+        String[] labels = completedMode
+                ? new String[]{getString(R.string.family_tasks_overlay_today),
+                getString(R.string.family_tasks_overlay_yesterday),
+                getString(R.string.family_tasks_overlay_last_7_days),
+                getString(R.string.family_tasks_overlay_last_15_days),
+                getString(R.string.family_tasks_overlay_last_30_days),
+                getString(R.string.family_tasks_overlay_all)}
+                : new String[]{getString(R.string.family_tasks_overlay_today),
+                getString(R.string.family_tasks_overlay_tomorrow),
+                getString(R.string.family_tasks_overlay_next_7_days),
+                getString(R.string.family_tasks_overlay_next_15_days),
+                getString(R.string.family_tasks_overlay_next_30_days),
+                getString(R.string.family_tasks_overlay_all)};
+        showChoicePopup(anchor, labels, dateMode, Color.rgb(15, 108, 89), index -> {
+            dateMode = index;
             anchor.setText(dayLabel() + "  ▾");
             refresh();
         });
+    }
+
+    private void showStatusPopup(@NonNull Button anchor, @NonNull Button dayAnchor) {
+        String[] labels = {getString(R.string.family_tasks_overlay_pending),
+                getString(R.string.family_tasks_overlay_completed)};
+        showChoicePopup(anchor, labels, completedMode ? 1 : 0,
+                Color.rgb(15, 108, 89), index -> {
+                    completedMode = index == 1;
+                    dateMode = DATE_TODAY;
+                    anchor.setText(statusLabel() + "  ▾");
+                    dayAnchor.setText(dayLabel() + "  ▾");
+                    refresh();
+                });
     }
 
     private void showSortPopup(@NonNull Button anchor) {
@@ -602,12 +637,17 @@ public final class FamilyTaskOverlayService extends Service {
         repository.loadAll("", tasks -> {
             if (taskRows == null) return;
             taskRows.removeAllViews();
-            long[] range = range(tomorrow);
+            long[] range = selectedRange();
             List<FamilyTask> visible = new ArrayList<>();
             String query = searchQuery.toLowerCase(Locale.getDefault());
             for (FamilyTask task : tasks) {
-                if (!FamilyTask.STATUS_PENDING.equals(task.status)
-                        || task.dueAt < range[0] || task.dueAt >= range[1]) continue;
+                boolean isCompleted = FamilyTask.STATUS_COMPLETED.equals(task.status);
+                if (isCompleted != completedMode) continue;
+                long eventAt = completedMode
+                        ? (task.completedAt > 0L ? task.completedAt : task.updatedAt)
+                        : task.dueAt;
+                if (dateMode != DATE_ALL
+                        && (eventAt < range[0] || eventAt >= range[1])) continue;
                 if (!query.isEmpty()) {
                     String haystack = (task.title + " " + task.notes + " "
                             + task.assignedMemberName).toLowerCase(Locale.getDefault());
@@ -618,11 +658,12 @@ public final class FamilyTaskOverlayService extends Service {
             sortTasks(visible);
             if (countText != null) {
                 countText.setText(getString(R.string.family_tasks_overlay_results, visible.size())
-                        + " • " + dayLabel() + " • " + sortLabel());
+                        + " • " + statusLabel() + " • " + dayLabel()
+                        + " • " + sortLabel());
             }
             if (liveStatus != null) {
                 liveStatus.setText(getString(R.string.family_tasks_overlay_live)
-                        + " • " + dayLabel());
+                        + " • " + statusLabel() + " • " + dayLabel());
                 liveStatus.setTextColor(Color.rgb(15, 108, 89));
             }
             if (visible.isEmpty()) {
@@ -681,7 +722,8 @@ public final class FamilyTaskOverlayService extends Service {
         cardParams.setMargins(0, dp(3), 0, dp(4));
 
         CheckBox check = new CheckBox(this);
-        check.setContentDescription("Complete " + task.title);
+        check.setChecked(completedMode);
+        check.setContentDescription((completedMode ? "Reopen " : "Complete ") + task.title);
         card.addView(check, new LinearLayout.LayoutParams(dp(42), dp(42)));
 
         LinearLayout copy = new LinearLayout(this);
@@ -710,9 +752,8 @@ public final class FamilyTaskOverlayService extends Service {
         card.addView(priority, priorityParams);
 
         check.setOnCheckedChangeListener((button, checked) -> {
-            if (!checked) return;
-            repository.setCompleted(task, true, () -> {
-                FamilyTaskScheduler.cancel(this, task.id);
+            repository.setCompleted(task, checked, () -> {
+                if (checked) FamilyTaskScheduler.cancel(this, task.id);
                 repository.loadAll("", all -> {
                     for (FamilyTask pending : all) {
                         if (pending.reminderEnabled
@@ -990,8 +1031,25 @@ public final class FamilyTaskOverlayService extends Service {
 
     @NonNull
     private String dayLabel() {
-        return getString(tomorrow ? R.string.family_tasks_overlay_tomorrow
-                : R.string.family_tasks_overlay_today);
+        if (dateMode == DATE_ALL) return getString(R.string.family_tasks_overlay_all);
+        if (dateMode == DATE_TODAY) return getString(R.string.family_tasks_overlay_today);
+        if (dateMode == DATE_ADJACENT_DAY) return getString(completedMode
+                ? R.string.family_tasks_overlay_yesterday
+                : R.string.family_tasks_overlay_tomorrow);
+        if (dateMode == DATE_SEVEN_DAYS) return getString(completedMode
+                ? R.string.family_tasks_overlay_last_7_days
+                : R.string.family_tasks_overlay_next_7_days);
+        if (dateMode == DATE_FIFTEEN_DAYS) return getString(completedMode
+                ? R.string.family_tasks_overlay_last_15_days
+                : R.string.family_tasks_overlay_next_15_days);
+        return getString(completedMode ? R.string.family_tasks_overlay_last_30_days
+                : R.string.family_tasks_overlay_next_30_days);
+    }
+
+    @NonNull
+    private String statusLabel() {
+        return getString(completedMode ? R.string.family_tasks_overlay_completed
+                : R.string.family_tasks_overlay_pending);
     }
 
     @NonNull
@@ -1010,16 +1068,29 @@ public final class FamilyTaskOverlayService extends Service {
         return calendar.getTimeInMillis();
     }
 
-    private long[] range(boolean next) {
+    private long[] selectedRange() {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
-        if (next) calendar.add(Calendar.DAY_OF_YEAR, 1);
+        if (dateMode == DATE_ALL) return new long[]{Long.MIN_VALUE, Long.MAX_VALUE};
+        if (dateMode == DATE_ADJACENT_DAY) {
+            calendar.add(Calendar.DAY_OF_YEAR, completedMode ? -1 : 1);
+        } else if (completedMode && dateMode >= DATE_SEVEN_DAYS) {
+            calendar.add(Calendar.DAY_OF_YEAR, -(daysInMode() - 1));
+        }
         long start = calendar.getTimeInMillis();
-        calendar.add(Calendar.DAY_OF_YEAR, 1);
+        calendar.add(Calendar.DAY_OF_YEAR,
+                dateMode >= DATE_SEVEN_DAYS ? daysInMode() : 1);
         return new long[]{start, calendar.getTimeInMillis()};
+    }
+
+    private int daysInMode() {
+        if (dateMode == DATE_SEVEN_DAYS) return 7;
+        if (dateMode == DATE_FIFTEEN_DAYS) return 15;
+        if (dateMode == DATE_THIRTY_DAYS) return 30;
+        return 1;
     }
 
     private void createChannel() {
