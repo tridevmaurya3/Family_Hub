@@ -353,16 +353,23 @@ public final class FamilyTaskOverlayService extends Service {
         root.addView(quick, quickParams);
 
         LinearLayout addOptions = row();
+        final int[] quickRepeat = {0};
         Button quickDate = compactAction(getString(R.string.family_tasks_overlay_today) + "  ▾",
                 Color.rgb(15, 105, 80), Color.argb(220, 226, 244, 238));
         Button quickPriorityButton = compactAction(
                 getString(R.string.task_priority_normal) + "  ▾",
                 Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
+        Button quickRepeatButton = compactAction("Once  ▾",
+                Color.rgb(28, 91, 130), Color.argb(220, 232, 243, 250));
         addOptions.addView(quickDate, new LinearLayout.LayoutParams(0, dp(38), 1f));
         LinearLayout.LayoutParams quickPriorityParams =
                 new LinearLayout.LayoutParams(0, dp(38), 1f);
         quickPriorityParams.setMarginStart(dp(5));
         addOptions.addView(quickPriorityButton, quickPriorityParams);
+        LinearLayout.LayoutParams quickRepeatParams =
+                new LinearLayout.LayoutParams(0, dp(38), 1f);
+        quickRepeatParams.setMarginStart(dp(5));
+        addOptions.addView(quickRepeatButton, quickRepeatParams);
         root.addView(addOptions, new LinearLayout.LayoutParams(-1, dp(42)));
 
         TextView customDueText = text("", 10.5f, true);
@@ -402,6 +409,12 @@ public final class FamilyTaskOverlayService extends Service {
                             getString(R.string.task_priority_high),
                             getString(R.string.task_priority_urgent)};
                     quickPriorityButton.setText(labels[index] + "  ▾");
+                }));
+        quickRepeatButton.setOnClickListener(v -> showChoicePopup(quickRepeatButton,
+                new String[]{"Once", "Repeated"}, quickRepeat[0],
+                Color.rgb(28, 91, 130), index -> {
+                    quickRepeat[0] = index;
+                    quickRepeatButton.setText((index == 1 ? "Repeated" : "Once") + "  ▾");
                 }));
         customDueText.setOnClickListener(v ->
                 showQuickDatePicker(quickDate, customDueText, customQuickDueAt));
@@ -447,6 +460,8 @@ public final class FamilyTaskOverlayService extends Service {
             task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
                     : quickPriority[0] == 1 ? FamilyTask.PRIORITY_HIGH
                     : FamilyTask.PRIORITY_NORMAL;
+            task.repeatType = quickRepeat[0] == 1
+                    ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
             repository.save(task, () -> {
                 input.setText("");
                 refresh();
@@ -955,13 +970,12 @@ public final class FamilyTaskOverlayService extends Service {
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         copy.addView(title, new LinearLayout.LayoutParams(-1, -2));
-        String detail = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(task.dueAt));
-        detail += task.assignedMemberName.isEmpty()
-                ? " • " + getString(R.string.family_tasks_whole_family)
-                : " • " + task.assignedMemberName;
+        String detail = dueDetail(task);
         TextView meta = text(detail, 10.5f, false);
-        meta.setTextColor(Color.rgb(69, 112, 99));
-        copy.addView(meta, new LinearLayout.LayoutParams(-1, dp(22)));
+        meta.setTextColor(isCalendarOverdue(task)
+                ? Color.rgb(190, 42, 61) : Color.rgb(69, 112, 99));
+        meta.setMaxLines(3);
+        copy.addView(meta, new LinearLayout.LayoutParams(-1, -2));
         card.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
 
         TextView priority = text(priorityLabel(task), 9f, true);
@@ -991,6 +1005,46 @@ public final class FamilyTaskOverlayService extends Service {
             });
         });
         taskRows.addView(card, cardParams);
+    }
+
+    @NonNull
+    private String dueDetail(@NonNull FamilyTask task) {
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        long todayStart = today.getTimeInMillis();
+        long tomorrowStart = todayStart + 24L * 60L * 60L * 1000L;
+        long dayAfterTomorrow = tomorrowStart + 24L * 60L * 60L * 1000L;
+        String time = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(task.dueAt));
+        String due;
+        if (task.dueAt < todayStart) {
+            long days = Math.max(1L, (todayStart - task.dueAt + 86_399_999L) / 86_400_000L);
+            due = "Overdue by " + days + (days == 1L ? " day" : " days") + " • "
+                    + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                    .format(new Date(task.dueAt));
+        } else if (task.dueAt < tomorrowStart) {
+            due = "Today • " + time;
+        } else if (task.dueAt < dayAfterTomorrow) {
+            due = "Tomorrow • " + time;
+        } else {
+            due = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                    .format(new Date(task.dueAt));
+        }
+        String member = task.assignedMemberName.isEmpty()
+                ? getString(R.string.family_tasks_whole_family) : task.assignedMemberName;
+        String repeat = FamilyTask.REPEAT_NONE.equals(task.repeatType) ? "Once" : "Repeated";
+        return due + " • " + member + " • " + repeat;
+    }
+
+    private boolean isCalendarOverdue(@NonNull FamilyTask task) {
+        Calendar today = Calendar.getInstance();
+        today.set(Calendar.HOUR_OF_DAY, 0);
+        today.set(Calendar.MINUTE, 0);
+        today.set(Calendar.SECOND, 0);
+        today.set(Calendar.MILLISECOND, 0);
+        return task.dueAt < today.getTimeInMillis();
     }
 
     @NonNull

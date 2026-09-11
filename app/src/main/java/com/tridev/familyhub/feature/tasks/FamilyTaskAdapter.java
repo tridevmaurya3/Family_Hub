@@ -90,8 +90,14 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<FamilyTaskAdapter.Hol
             binding.deleteTaskButton.setOnClickListener(v -> listener.onDelete(task));
         }
         private String dueText(FamilyTask task) {
-            if (FamilyTask.STATUS_COMPLETED.equals(task.status) && !task.completedByName.isEmpty()) {
-                return binding.getRoot().getContext().getString(R.string.family_tasks_completed_by, task.completedByName);
+            if (FamilyTask.STATUS_COMPLETED.equals(task.status)) {
+                long completedAt = task.completedAt > 0L ? task.completedAt : task.updatedAt;
+                String completedDate = DateFormat.getDateTimeInstance(
+                        DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(completedAt));
+                String actor = task.completedByName.isEmpty()
+                        ? "Completed" : binding.getRoot().getContext().getString(
+                        R.string.family_tasks_completed_by, task.completedByName);
+                return actor + " • " + completedDate;
             }
             String date = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(task.dueAt));
             if (task.dueAt < System.currentTimeMillis()) return binding.getRoot().getContext().getString(R.string.family_tasks_overdue, date);
