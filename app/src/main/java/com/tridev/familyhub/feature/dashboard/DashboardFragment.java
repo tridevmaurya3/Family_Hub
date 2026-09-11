@@ -30,10 +30,12 @@ import com.tridev.familyhub.core.ui.cards.StatusCardModel;
 import com.tridev.familyhub.core.ui.cards.StatusCardView;
 import com.tridev.familyhub.core.ui.search.SearchBarModel;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
+import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
 import com.tridev.familyhub.data.repository.DashboardRepository;
+import com.tridev.familyhub.data.repository.FamilyTaskRepository;
 import com.tridev.familyhub.databinding.FragmentDashboardBinding;
 import com.tridev.familyhub.feature.automation.FamilyAutomationActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
@@ -49,6 +51,7 @@ import com.tridev.familyhub.feature.planner.PlannerFragment;
 import com.tridev.familyhub.feature.profile.ProfilePhotoStore;
 import com.tridev.familyhub.feature.property.PropertyFragment;
 import com.tridev.familyhub.feature.safety.FamilySafetyCenterActivity;
+import com.tridev.familyhub.feature.tasks.FamilyTasksFragment;
 import com.tridev.familyhub.feature.sos.FamilySosActivity;
 import com.tridev.familyhub.feature.search.GlobalSearchActivity;
 import com.tridev.familyhub.feature.vehicle.VehicleFragment;
@@ -70,6 +73,7 @@ public class DashboardFragment extends Fragment {
 
     private FragmentDashboardBinding binding;
     private DashboardRepository dashboardRepository;
+    @Nullable private FamilyTaskRepository taskRepository;
 
     private StatusCardView financeStatusCard;
     private StatusCardView healthStatusCard;
@@ -118,6 +122,7 @@ public class DashboardFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         dashboardRepository = new DashboardRepository(requireContext());
+        taskRepository = new FamilyTaskRepository(requireContext());
 
         bindStatusCards();
         setupHeaderActions();
@@ -125,6 +130,7 @@ public class DashboardFragment extends Fragment {
         setupHeroCard();
         setupStatusCards();
         setupActionCards();
+        startTaskRealtimeSummary();
         setupNotificationAction();
         setupDashboardHighlights();
         setupDailyBriefingPreference();
@@ -509,6 +515,26 @@ public class DashboardFragment extends Fragment {
                 v -> openActivity(FamilyLocationReportsActivity.class));
         binding.actionFamilyLive.setOnClickListener(
                 v -> openActivity(FamilyAutomationActivity.class));
+        binding.actionTodo.setOnClickListener(
+                v -> openFeature(new FamilyTasksFragment()));
+
+        // Keep titles/icons unchanged; center only value/detail text on dashboard cards.
+        binding.actionPlanner.setValueTextCentered(true);
+        binding.actionGrocery.setValueTextCentered(true);
+        binding.actionDocuments.setValueTextCentered(true);
+        binding.actionVehicles.setValueTextCentered(true);
+        binding.actionNotes.setValueTextCentered(true);
+        binding.actionFamilyLive.setValueTextCentered(true);
+        binding.actionTodo.setValueTextCentered(true);
+
+        binding.actionTodo.setModel(new ActionCardModel(
+                getString(R.string.family_tasks_title),
+                getString(R.string.dashboard_todo_pending_today, 0, 0),
+                getString(R.string.dashboard_todo_completed, 0),
+                R.drawable.ic_family_task,
+                R.color.fh_success,
+                R.color.fh_success_container
+        ));
 
         binding.actionDocuments.setModel(new ActionCardModel(
                 getString(R.string.dashboard_shortcut_safety),
@@ -626,7 +652,65 @@ public class DashboardFragment extends Fragment {
         if (dashboardRepository != null) {
             renderHeader();
             loadDashboardData();
+            loadTaskSummary();
         }
+    }
+
+    private void startTaskRealtimeSummary() {
+        FamilyTaskRepository repository = taskRepository;
+        if (repository == null) return;
+        repository.startRealtimeSync(new FamilyTaskRepository.RealtimeCallback() {
+            @Override public void onChanged(@NonNull FamilyTask task) {
+                loadTaskSummary();
+            }
+
+            @Override public void onRemoved(long localId) {
+                loadTaskSummary();
+            }
+        });
+        loadTaskSummary();
+    }
+
+    private void loadTaskSummary() {
+        FamilyTaskRepository repository = taskRepository;
+        if (repository == null) return;
+        repository.loadAll("", tasks -> {
+            if (binding == null) return;
+            int pending = 0;
+            int today = 0;
+            int completed = 0;
+            Calendar startOfDay = Calendar.getInstance();
+            startOfDay.set(Calendar.HOUR_OF_DAY, 0);
+            startOfDay.set(Calendar.MINUTE, 0);
+            startOfDay.set(Calendar.SECOND, 0);
+            startOfDay.set(Calendar.MILLISECOND, 0);
+            long todayStart = startOfDay.getTimeInMillis();
+            Calendar tomorrow = Calendar.getInstance();
+            tomorrow.setTimeInMillis(todayStart);
+            tomorrow.add(Calendar.DAY_OF_YEAR, 1);
+            long tomorrowStart = tomorrow.getTimeInMillis();
+
+            for (FamilyTask task : tasks) {
+                if (FamilyTask.STATUS_COMPLETED.equals(task.status)) {
+                    completed++;
+                } else {
+                    pending++;
+                    if (task.dueAt >= todayStart && task.dueAt < tomorrowStart) {
+                        today++;
+                    }
+                }
+            }
+
+            binding.actionTodo.setModel(new ActionCardModel(
+                    getString(R.string.family_tasks_title),
+                    getString(R.string.dashboard_todo_pending_today, pending, today),
+                    getString(R.string.dashboard_todo_completed, completed),
+                    R.drawable.ic_family_task,
+                    R.color.fh_success,
+                    R.color.fh_success_container
+            ));
+            binding.actionTodo.setValueTextCentered(true);
+        });
     }
 
     private void loadDashboardData() {
@@ -1052,6 +1136,10 @@ public class DashboardFragment extends Fragment {
         if (dashboardRepository != null) {
             dashboardRepository.close();
             dashboardRepository = null;
+        }
+        if (taskRepository != null) {
+            taskRepository.stopRealtimeSync();
+            taskRepository = null;
         }
         financeStatusCard = null;
         healthStatusCard = null;

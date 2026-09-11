@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dashboard_todo_pending_today">%1$d pending • %2$d today</string>
+    <string name="dashboard_todo_completed">%1$d completed</string>
+</resources>

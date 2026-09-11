@@ -3,6 +3,7 @@ package com.tridev.familyhub.core.ui.cards;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.util.AttributeSet;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -111,5 +112,18 @@ public class ActionCardView extends FrameLayout {
         title.setTextColor(onSurface);
         primaryValue.setTextColor(accent);
         secondaryValue.setTextColor(secondary);
+    }
+
+    /** Centers only the live value/detail lines; title/icon layout stays unchanged. */
+    public void setValueTextCentered(boolean centered) {
+        int gravity = centered
+                ? Gravity.CENTER
+                : (Gravity.START | Gravity.CENTER_VERTICAL);
+        primaryValue.setGravity(gravity);
+        secondaryValue.setGravity(gravity);
+        primaryValue.setTextAlignment(centered
+                ? TEXT_ALIGNMENT_CENTER : TEXT_ALIGNMENT_VIEW_START);
+        secondaryValue.setTextAlignment(centered
+                ? TEXT_ALIGNMENT_CENTER : TEXT_ALIGNMENT_VIEW_START);
     }
 }
