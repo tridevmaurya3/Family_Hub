@@ -96,12 +96,12 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  More"); box.addView(grocery,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(tasks,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(opacity,new LinearLayout.LayoutParams(dp(218),dp(44)));
-        selector=new PopupWindow(box,dp(230),dp(144),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  More"); box.addView(grocery,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(dp(142),dp(36)));
+        selector=new PopupWindow(box,dp(154),dp(120),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
-        selector.showAsDropDown(anchor,-dp(188),dp(4));
+        selector.showAsDropDown(anchor,-dp(112),dp(4));
     }
 
     private void showOpacity(View anchor){SharedPreferences p=getSharedPreferences(PREFS,MODE_PRIVATE);SeekBar bar=new SeekBar(this);bar.setPadding(dp(12),0,dp(12),0);bar.setProgress(Math.round((p.getFloat("button_alpha",.92f)-.35f)/.65f*100));PopupWindow pop=new PopupWindow(bar,dp(210),dp(52),true);pop.setOutsideTouchable(true);pop.setBackgroundDrawable(round(Color.WHITE,Color.rgb(184,207,199),16));pop.setElevation(dp(12));bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}public void onProgressChanged(SeekBar s,int value,boolean user){float a=.35f+(value/100f)*.65f;if(icon!=null)icon.setAlpha(a);p.edit().putFloat("button_alpha",a).apply();}});pop.showAsDropDown(anchor,-dp(162),dp(4));}

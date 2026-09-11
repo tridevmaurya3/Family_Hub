@@ -5,9 +5,12 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
@@ -32,6 +35,8 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -245,6 +250,14 @@ public final class FamilyTaskOverlayService extends Service {
         day.setOnClickListener(v -> showDayPopup(day));
         header.addView(day, headerChipParams(76));
 
+        ImageButton searchToggle = new ImageButton(this);
+        searchToggle.setImageResource(R.drawable.ic_search);
+        searchToggle.setColorFilter(Color.rgb(15, 105, 80));
+        searchToggle.setPadding(dp(10), dp(10), dp(10), dp(10));
+        searchToggle.setBackgroundColor(Color.TRANSPARENT);
+        searchToggle.setContentDescription(getString(R.string.family_tasks_overlay_search));
+        header.addView(searchToggle, new LinearLayout.LayoutParams(dp(38), dp(42)));
+
         Button close = new Button(this);
         close.setText("×");
         close.setTextColor(Color.rgb(36, 63, 56));
@@ -275,14 +288,14 @@ public final class FamilyTaskOverlayService extends Service {
         clear.setContentDescription(getString(R.string.family_tasks_overlay_clear));
         clear.setVisibility(searchQuery.isEmpty() ? View.GONE : View.VISIBLE);
         searchBox.addView(clear, new LinearLayout.LayoutParams(dp(34), dp(34)));
-        searchTools.addView(searchBox, new LinearLayout.LayoutParams(0, dp(42), 1f));
-
-        Button sort = compactAction(sortLabel() + "  ▾", Color.rgb(15, 108, 189),
-                Color.argb(220, 232, 243, 252));
-        LinearLayout.LayoutParams sortParams = new LinearLayout.LayoutParams(dp(88), dp(38));
-        sortParams.setMarginStart(dp(6));
-        searchTools.addView(sort, sortParams);
+        searchTools.addView(searchBox, new LinearLayout.LayoutParams(-1, dp(42)));
+        searchTools.setVisibility(View.GONE);
         root.addView(searchTools, new LinearLayout.LayoutParams(-1, dp(44)));
+        searchToggle.setOnClickListener(v -> {
+            boolean show = searchTools.getVisibility() != View.VISIBLE;
+            searchTools.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show) search.requestFocus();
+        });
 
         search.addTextChangedListener(new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) { }
@@ -294,6 +307,58 @@ public final class FamilyTaskOverlayService extends Service {
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
         clear.setOnClickListener(v -> search.setText(""));
+        final int[] quickDateMode = {0};
+        final long[] customQuickDueAt = {0L};
+        final int[] quickPriority = {0};
+        LinearLayout quickOptions = row();
+        RadioGroup dueChoices = new RadioGroup(this);
+        dueChoices.setOrientation(RadioGroup.HORIZONTAL);
+        dueChoices.setGravity(Gravity.CENTER_VERTICAL);
+        RadioButton dueToday = quickRadio(getString(R.string.family_tasks_overlay_today));
+        RadioButton dueTomorrow = quickRadio(getString(R.string.family_tasks_overlay_tomorrow));
+        RadioButton dueCustom = quickRadio(getString(R.string.family_tasks_overlay_custom));
+        dueChoices.addView(dueToday);
+        dueChoices.addView(dueTomorrow);
+        dueChoices.addView(dueCustom);
+        dueToday.setChecked(true);
+        quickOptions.addView(dueChoices, new LinearLayout.LayoutParams(0, dp(42), 1f));
+
+        Button sort = compactAction(sortLabel() + "  ▾", Color.rgb(15, 108, 189),
+                Color.argb(220, 232, 243, 252));
+        LinearLayout.LayoutParams sortParams = new LinearLayout.LayoutParams(dp(82), dp(38));
+        sortParams.setMarginStart(dp(4));
+        quickOptions.addView(sort, sortParams);
+        root.addView(quickOptions, new LinearLayout.LayoutParams(-1, dp(44)));
+
+        LinearLayout priorityRow = row();
+        TextView priorityLabel = text(getString(R.string.family_tasks_priority), 10.5f, true);
+        priorityLabel.setTextColor(Color.rgb(73, 86, 98));
+        priorityLabel.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        priorityLabel.setPadding(dp(8), 0, 0, 0);
+        priorityRow.addView(priorityLabel, new LinearLayout.LayoutParams(0, dp(36), 1f));
+        Button priority = compactAction(getString(R.string.task_priority_normal) + "  ▾",
+                Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
+        priorityRow.addView(priority, new LinearLayout.LayoutParams(dp(104), dp(36)));
+        root.addView(priorityRow, new LinearLayout.LayoutParams(-1, dp(38)));
+
+        dueChoices.setOnCheckedChangeListener((group, checkedId) -> {
+            if (dueTomorrow.isChecked()) quickDateMode[0] = 1;
+            else if (dueCustom.isChecked()) {
+                quickDateMode[0] = 2;
+                showQuickDatePicker(dueCustom, customQuickDueAt);
+            } else quickDateMode[0] = 0;
+        });
+        priority.setOnClickListener(v -> showChoicePopup(priority,
+                new String[]{getString(R.string.task_priority_normal),
+                        getString(R.string.task_priority_high),
+                        getString(R.string.task_priority_urgent)}, quickPriority[0],
+                Color.rgb(106, 75, 150), index -> {
+                    quickPriority[0] = index;
+                    String[] labels = {getString(R.string.task_priority_normal),
+                            getString(R.string.task_priority_high),
+                            getString(R.string.task_priority_urgent)};
+                    priority.setText(labels[index] + "  ▾");
+                }));
         sort.setOnClickListener(v -> showSortPopup(sort));
 
         LinearLayout quick = row();
@@ -358,7 +423,11 @@ public final class FamilyTaskOverlayService extends Service {
             }
             FamilyTask task = new FamilyTask();
             task.title = value;
-            task.dueAt = dueAt(!completedMode && dateMode == DATE_ADJACENT_DAY);
+            task.dueAt = quickDateMode[0] == 2 && customQuickDueAt[0] > 0L
+                    ? customQuickDueAt[0] : dueAt(quickDateMode[0] == 1);
+            task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
+                    : quickPriority[0] == 1 ? FamilyTask.PRIORITY_HIGH
+                    : FamilyTask.PRIORITY_NORMAL;
             repository.save(task, () -> {
                 input.setText("");
                 refresh();
@@ -550,6 +619,65 @@ public final class FamilyTaskOverlayService extends Service {
             anchor.setText(sortLabel() + "  ▾");
             refresh();
         });
+    }
+
+    @NonNull
+    private RadioButton quickRadio(@NonNull String label) {
+        RadioButton button = new RadioButton(this);
+        button.setId(View.generateViewId());
+        button.setText(label);
+        button.setTextSize(10.5f);
+        button.setSingleLine(true);
+        button.setTextColor(Color.rgb(42, 61, 55));
+        button.setGravity(Gravity.CENTER_VERTICAL);
+        button.setPadding(0, 0, dp(2), 0);
+        button.setButtonTintList(new ColorStateList(
+                new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+                new int[]{Color.rgb(15, 108, 89), Color.rgb(173, 190, 184)}));
+        return button;
+    }
+
+    private void showQuickDatePicker(@NonNull RadioButton anchor, @NonNull long[] selectedAt) {
+        Calendar selected = Calendar.getInstance();
+        if (selectedAt[0] > 0L) selected.setTimeInMillis(selectedAt[0]);
+        DatePickerDialog picker = new DatePickerDialog(this, (view, year, month, day) -> {
+            Calendar value = Calendar.getInstance();
+            value.set(year, month, day, 18, 0, 0);
+            value.set(Calendar.MILLISECOND, 0);
+            selectedAt[0] = value.getTimeInMillis();
+            anchor.setText(new java.text.SimpleDateFormat("dd MMM", Locale.getDefault())
+                    .format(new Date(selectedAt[0])));
+            showOptionalTimePopup(anchor, selectedAt);
+        }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH),
+                selected.get(Calendar.DAY_OF_MONTH));
+        picker.setOnCancelListener(dialog -> {
+            if (selectedAt[0] <= 0L) anchor.setText(R.string.family_tasks_overlay_custom);
+        });
+        if (picker.getWindow() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            picker.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        }
+        picker.show();
+    }
+
+    private void showOptionalTimePopup(@NonNull RadioButton anchor, @NonNull long[] selectedAt) {
+        showChoicePopup(anchor, new String[]{getString(R.string.family_tasks_overlay_date_only),
+                        getString(R.string.family_tasks_overlay_add_time)}, 0,
+                Color.rgb(15, 108, 89), index -> {
+                    if (index != 1) return;
+                    Calendar value = Calendar.getInstance();
+                    value.setTimeInMillis(selectedAt[0]);
+                    TimePickerDialog time = new TimePickerDialog(this, (view, hour, minute) -> {
+                        value.set(Calendar.HOUR_OF_DAY, hour);
+                        value.set(Calendar.MINUTE, minute);
+                        selectedAt[0] = value.getTimeInMillis();
+                        anchor.setText(new java.text.SimpleDateFormat("dd MMM, HH:mm",
+                                Locale.getDefault()).format(new Date(selectedAt[0])));
+                    }, value.get(Calendar.HOUR_OF_DAY), value.get(Calendar.MINUTE), false);
+                    if (time.getWindow() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        time.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+                    }
+                    time.show();
+                });
     }
 
     private interface ChoiceListener { void onChoice(int index); }
