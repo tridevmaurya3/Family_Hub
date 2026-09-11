@@ -46,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String EXTRA_OPEN_HEALTH = "open_health";
     public static final String EXTRA_OPEN_GROCERY = "open_grocery";
     public static final String EXTRA_OPEN_ROUTE = "open_feature_route";
+    public static final String EXTRA_OPEN_TASK_EDITOR = "open_task_editor";
     public static final String ROUTE_FAMILY = "family";
     public static final String ROUTE_REMINDERS = "reminders";
     public static final String ROUTE_FINANCE = "finance";
@@ -215,8 +216,11 @@ public class MainActivity extends AppCompatActivity {
         }
         String route = intent.getStringExtra(EXTRA_OPEN_ROUTE);
         if (route != null && !route.isEmpty()) {
+            boolean openTaskEditor = intent.getBooleanExtra(EXTRA_OPEN_TASK_EDITOR, false);
             intent.removeExtra(EXTRA_OPEN_ROUTE);
-            openRoute(route);
+            intent.removeExtra(EXTRA_OPEN_TASK_EDITOR);
+            if (ROUTE_TASKS.equals(route) && openTaskEditor) openTaskEditor();
+            else openRoute(route);
             return true;
         }
         if (intent.getBooleanExtra(EXTRA_OPEN_GROCERY, false)) {
@@ -273,6 +277,13 @@ public class MainActivity extends AppCompatActivity {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.main_content, fragment).commit();
         }
+    }
+
+    private void openTaskEditor() {
+        clearSecondaryScreens();
+        binding.bottomNavigation.setSelectedItemId(R.id.nav_tasks);
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.main_content, FamilyTasksFragment.forNewTask()).commit();
     }
 
     public void openDocument(long documentId) {

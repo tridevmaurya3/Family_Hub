@@ -96,7 +96,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  Floating Button Appearance"); box.addView(grocery,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(tasks,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(opacity,new LinearLayout.LayoutParams(dp(218),dp(44)));
+        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  More"); box.addView(grocery,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(tasks,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(opacity,new LinearLayout.LayoutParams(dp(218),dp(44)));
         selector=new PopupWindow(box,dp(230),dp(144),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});

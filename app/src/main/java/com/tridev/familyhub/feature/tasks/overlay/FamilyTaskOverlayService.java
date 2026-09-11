@@ -348,7 +348,14 @@ public final class FamilyTaskOverlayService extends Service {
 
         View.OnClickListener save = v -> {
             String value = input.getText().toString().trim();
-            if (value.isEmpty()) return;
+            if (value.isEmpty()) {
+                closePanel();
+                startActivity(new Intent(this, MainActivity.class)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        .putExtra(MainActivity.EXTRA_OPEN_ROUTE, MainActivity.ROUTE_TASKS)
+                        .putExtra(MainActivity.EXTRA_OPEN_TASK_EDITOR, true));
+                return;
+            }
             FamilyTask task = new FamilyTask();
             task.title = value;
             task.dueAt = dueAt(!completedMode && dateMode == DATE_ADJACENT_DAY);

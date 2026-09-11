@@ -65,6 +65,7 @@ import java.util.Locale;
 
 /** Grocery-style, realtime Family To-Do surface without changing task ownership or sync. */
 public final class FamilyTasksFragment extends Fragment implements AddActionHost {
+    private static final String ARG_OPEN_NEW_TASK = "open_new_task";
     private static final int SORT_DUE = 0;
     private static final int SORT_PRIORITY = 1;
     private static final int SORT_NEWEST = 2;
@@ -93,6 +94,15 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 else if (isAdded()) android.widget.Toast.makeText(requireContext(),
                         R.string.family_tasks_voice_permission, android.widget.Toast.LENGTH_LONG).show();
             });
+
+    @NonNull
+    public static FamilyTasksFragment forNewTask() {
+        FamilyTasksFragment fragment = new FamilyTasksFragment();
+        Bundle args = new Bundle();
+        args.putBoolean(ARG_OPEN_NEW_TASK, true);
+        fragment.setArguments(args);
+        return fragment;
+    }
 
     @Nullable
     @Override
@@ -170,6 +180,13 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         });
         reload();
         updateFloatingButton();
+        Bundle args = getArguments();
+        if (args != null && args.getBoolean(ARG_OPEN_NEW_TASK, false)) {
+            args.remove(ARG_OPEN_NEW_TASK);
+            view.post(() -> {
+                if (binding != null) prepareEditor(null);
+            });
+        }
     }
 
     private void setupGroceryStyleControls() {
