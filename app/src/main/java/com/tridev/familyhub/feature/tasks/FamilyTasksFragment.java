@@ -190,10 +190,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         taskDateDropdown.setOnClickListener(this::showDateDropdown);
         taskStatusDropdown.setOnClickListener(this::showStatusDropdown);
         taskAssignmentDropdown.setOnClickListener(this::showAssignmentDropdown);
-        binding.taskFilterGroup.addView(taskDateDropdown, 0,
-                new ViewGroup.MarginLayoutParams(dp(86), dp(38)));
-        binding.taskFilterGroup.addView(taskStatusDropdown, 1,
+        binding.taskFilterGroup.addView(taskStatusDropdown, 0,
                 new ViewGroup.MarginLayoutParams(dp(88), dp(38)));
+        binding.taskFilterGroup.addView(taskDateDropdown, 1,
+                new ViewGroup.MarginLayoutParams(dp(86), dp(38)));
         binding.taskFilterGroup.addView(taskAssignmentDropdown, 2,
                 new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
 
@@ -241,14 +241,20 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private interface FilterChoiceListener { void onChoice(int index); }
 
     private void showDateDropdown(@NonNull View anchor) {
-        String[] labels = {
-                getString(R.string.family_tasks_date_today),
+        boolean completed = activeStatus == R.id.task_status_completed;
+        String[] labels = completed
+                ? new String[]{getString(R.string.family_tasks_date_today),
+                getString(R.string.family_tasks_overlay_yesterday),
+                getString(R.string.family_tasks_overlay_last_7_days),
+                getString(R.string.family_tasks_overlay_last_15_days),
+                getString(R.string.family_tasks_overlay_last_30_days),
+                getString(R.string.family_tasks_date_all)}
+                : new String[]{getString(R.string.family_tasks_date_today),
                 getString(R.string.family_tasks_date_tomorrow),
-                getString(R.string.family_tasks_date_week),
-                getString(R.string.family_tasks_date_15_days),
-                getString(R.string.family_tasks_date_month),
-                getString(R.string.family_tasks_date_all)
-        };
+                getString(R.string.family_tasks_overlay_next_7_days),
+                getString(R.string.family_tasks_overlay_next_15_days),
+                getString(R.string.family_tasks_overlay_next_30_days),
+                getString(R.string.family_tasks_date_all)};
         int[] values = {
                 R.id.task_filter_today, R.id.task_filter_tomorrow,
                 R.id.task_filter_week, R.id.task_filter_15_days,
@@ -280,7 +286,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         showPremiumFilterPopup(anchor, labels, indexOf(values, activeStatus),
                 ContextCompat.getColor(requireContext(), R.color.fh_warning), index -> {
                     activeStatus = values[index];
+                    activeFilter = R.id.task_filter_today;
                     overdueOnly = false;
+                    customDateStart = 0L;
+                    customDateEnd = 0L;
+                    binding.taskDueCalendarButton.setText(R.string.family_tasks_due_calendar);
                     syncPremiumFilterControls();
                     resetTaskScroll();
                     reload();
@@ -422,10 +432,15 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         if (customDateStart > 0L) {
             return DateFormat.getDateInstance(DateFormat.SHORT).format(new Date(customDateStart));
         }
-        if (activeFilter == R.id.task_filter_tomorrow) return getString(R.string.family_tasks_date_tomorrow);
-        if (activeFilter == R.id.task_filter_week) return getString(R.string.family_tasks_date_week);
-        if (activeFilter == R.id.task_filter_15_days) return getString(R.string.family_tasks_date_15_days);
-        if (activeFilter == R.id.task_filter_month) return getString(R.string.family_tasks_date_month);
+        boolean completed = activeStatus == R.id.task_status_completed;
+        if (activeFilter == R.id.task_filter_tomorrow) return getString(completed
+                ? R.string.family_tasks_overlay_yesterday : R.string.family_tasks_date_tomorrow);
+        if (activeFilter == R.id.task_filter_week) return getString(completed
+                ? R.string.family_tasks_overlay_last_7_days : R.string.family_tasks_overlay_next_7_days);
+        if (activeFilter == R.id.task_filter_15_days) return getString(completed
+                ? R.string.family_tasks_overlay_last_15_days : R.string.family_tasks_overlay_next_15_days);
+        if (activeFilter == R.id.task_filter_month) return getString(completed
+                ? R.string.family_tasks_overlay_last_30_days : R.string.family_tasks_overlay_next_30_days);
         if (activeFilter == R.id.task_filter_all) return getString(R.string.family_tasks_date_all);
         return getString(R.string.family_tasks_date_today);
     }
@@ -566,10 +581,12 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 boolean statusMatches = activeStatus == R.id.task_status_all
                         || (activeStatus == R.id.task_status_completed && completed)
                         || (activeStatus == R.id.task_status_pending && !completed);
+                long filterDate = completed && task.completedAt > 0L
+                        ? task.completedAt : (completed ? task.updatedAt : task.dueAt);
                 boolean dateMatches = activeFilter == R.id.task_filter_all
-                        || (task.dueAt >= range[0] && task.dueAt < range[1]);
+                        || (filterDate >= range[0] && filterDate < range[1]);
                 if (customDateStart > 0L) {
-                    dateMatches = task.dueAt >= customDateStart && task.dueAt < customDateEnd;
+                    dateMatches = filterDate >= customDateStart && filterDate < customDateEnd;
                 }
                 boolean assignmentMatches = matchesAssignment(task);
                 if (overdueOnly) dateMatches = !completed && task.dueAt < startOfToday();
@@ -968,15 +985,31 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         start.set(Calendar.SECOND, 0);
         start.set(Calendar.MILLISECOND, 0);
         Calendar end = (Calendar) start.clone();
+        boolean completed = activeStatus == R.id.task_status_completed;
         if (activeFilter == R.id.task_filter_tomorrow) {
-            start.add(Calendar.DAY_OF_YEAR, 1);
-            end.add(Calendar.DAY_OF_YEAR, 2);
+            start.add(Calendar.DAY_OF_YEAR, completed ? -1 : 1);
+            end.add(Calendar.DAY_OF_YEAR, completed ? 0 : 2);
         } else if (activeFilter == R.id.task_filter_week) {
-            end.add(Calendar.DAY_OF_YEAR, 7);
+            if (completed) {
+                start.add(Calendar.DAY_OF_YEAR, -6);
+                end.add(Calendar.DAY_OF_YEAR, 1);
+            } else {
+                end.add(Calendar.DAY_OF_YEAR, 7);
+            }
         } else if (activeFilter == R.id.task_filter_15_days) {
-            end.add(Calendar.DAY_OF_YEAR, 15);
+            if (completed) {
+                start.add(Calendar.DAY_OF_YEAR, -14);
+                end.add(Calendar.DAY_OF_YEAR, 1);
+            } else {
+                end.add(Calendar.DAY_OF_YEAR, 15);
+            }
         } else if (activeFilter == R.id.task_filter_month) {
-            end.add(Calendar.MONTH, 1);
+            if (completed) {
+                start.add(Calendar.DAY_OF_YEAR, -29);
+                end.add(Calendar.DAY_OF_YEAR, 1);
+            } else {
+                end.add(Calendar.DAY_OF_YEAR, 30);
+            }
         } else {
             end.add(Calendar.DAY_OF_YEAR, 1);
         }
