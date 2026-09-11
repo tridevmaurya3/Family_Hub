@@ -92,6 +92,7 @@ public final class FamilyTaskOverlayService extends Service {
     @Nullable private TextView countText;
     @Nullable private TextView liveStatus;
     @Nullable private TextView voiceStatus;
+    @Nullable private Button priorityCollapseButton;
     @Nullable private android.speech.SpeechRecognizer speechRecognizer;
     @Nullable private PopupWindow activePopup;
     private FamilyTaskRepository repository;
@@ -252,6 +253,22 @@ public final class FamilyTaskOverlayService extends Service {
         searchToggle.setBackgroundColor(Color.TRANSPARENT);
         searchToggle.setContentDescription(getString(R.string.family_tasks_overlay_search));
         header.addView(searchToggle, new LinearLayout.LayoutParams(dp(38), dp(42)));
+
+        Button collapse = compactAction("Collapse",
+                Color.rgb(15, 105, 80), Color.argb(220, 232, 247, 241));
+        collapse.setTextSize(8.5f);
+        collapse.setContentDescription("Collapse or expand all priority categories");
+        collapse.setText("__NONE__".equals(expandedPriorityGroup) ? "Expand" : "Collapse");
+        LinearLayout.LayoutParams collapseParams = new LinearLayout.LayoutParams(dp(62), dp(38));
+        collapseParams.setMarginStart(dp(2));
+        header.addView(collapse, collapseParams);
+        priorityCollapseButton = collapse;
+        collapse.setOnClickListener(v -> {
+            boolean allCollapsed = "__NONE__".equals(expandedPriorityGroup);
+            expandedPriorityGroup = allCollapsed ? "" : "__NONE__";
+            collapse.setText(allCollapsed ? "Collapse" : "Expand");
+            refresh();
+        });
 
         Button close = new Button(this);
         close.setText("×");
@@ -935,6 +952,10 @@ public final class FamilyTaskOverlayService extends Service {
         section.setOnClickListener(v -> {
             expandedPriorityGroup = priorityKey.equals(expandedPriorityGroup)
                     ? "__NONE__" : priorityKey;
+            if (priorityCollapseButton != null) {
+                priorityCollapseButton.setText("__NONE__".equals(expandedPriorityGroup)
+                        ? "Expand" : "Collapse");
+            }
             refresh();
         });
     }
@@ -1208,6 +1229,7 @@ public final class FamilyTaskOverlayService extends Service {
         countText = null;
         liveStatus = null;
         voiceStatus = null;
+        priorityCollapseButton = null;
     }
 
     @NonNull
