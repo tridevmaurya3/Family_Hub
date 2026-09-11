@@ -84,7 +84,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/task_title_layout"
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/family_tasks_name"
@@ -188,7 +188,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -213,7 +213,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -245,7 +245,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -271,7 +271,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Date"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Date"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -319,6 +319,7 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/task_grocery_switch"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
                     android:text="@string/family_tasks_add_to_grocery"
@@ -333,7 +334,7 @@
                     android:visibility="gone">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -359,7 +360,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -404,6 +405,7 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/task_reminder_switch"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                     android:layout_width="0dp"
                     android:layout_height="44dp"
                     android:layout_marginEnd="3dp"
@@ -414,7 +416,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/task_reminder_lead_layout"
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="3dp"
@@ -456,7 +458,7 @@
                 android:padding="7dp">
 
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/family_tasks_notes"
@@ -499,7 +501,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_task_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
+                style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_marginStart="3dp"

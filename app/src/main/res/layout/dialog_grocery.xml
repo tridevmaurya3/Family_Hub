@@ -87,7 +87,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/grocery_name_layout"
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/grocery_item_name"
@@ -119,7 +119,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -145,7 +145,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -171,7 +171,7 @@
                 </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
@@ -219,7 +219,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/grocery_money_account_layout"
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -246,7 +246,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/grocery_money_category_layout"
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -299,7 +299,7 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/grocery_purchase_date_layout"
-                style="@style/Widget.FamilyHub.Form.Date"
+                style="@style/Widget.FamilyHub.FloatingCompact.Date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="7dp"
@@ -346,7 +346,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -369,7 +369,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -401,7 +401,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="3dp"
@@ -425,7 +425,7 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -450,7 +450,7 @@
                 </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
@@ -476,6 +476,7 @@
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/grocery_auto_price_switch"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                     android:layout_width="match_parent"
                     android:layout_height="44dp"
                     android:checked="true"
@@ -518,6 +519,7 @@
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/grocery_monthly_master_switch"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                         android:layout_width="0dp"
                         android:layout_height="44dp"
                         android:layout_marginEnd="3dp"
@@ -528,7 +530,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/grocery_priority_layout"
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="3dp"
@@ -554,7 +556,7 @@
                 </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
@@ -597,7 +599,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/cancel_grocery_button"
-                    style="@style/Widget.FamilyHub.Button.FormSecondary"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Action"
                     android:layout_width="0dp"
                     android:layout_height="40dp"
                     android:layout_marginEnd="3dp"
@@ -622,7 +624,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/save_grocery_button"
-                    style="@style/Widget.FamilyHub.Button.FormPrimary"
+                    style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                     android:layout_width="0dp"
                     android:layout_height="40dp"
                     android:layout_marginStart="3dp"

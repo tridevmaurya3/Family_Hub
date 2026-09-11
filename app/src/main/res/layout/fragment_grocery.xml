@@ -166,7 +166,7 @@
         app:layout_constraintTop_toBottomOf="@id/grocery_summary">
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/grocery_search_hint"
@@ -229,11 +229,11 @@
             app:chipSpacingHorizontal="@dimen/space_8"
             app:selectionRequired="true"
             app:singleSelection="true">
-            <com.google.android.material.chip.Chip android:id="@+id/filter_all" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:checked="true" android:text="@string/grocery_filter_all" android:textColor="@color/fh_primary_dark" app:chipBackgroundColor="@color/fh_primary_container" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_daily" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_daily" android:textColor="@color/fh_on_success_container" app:chipBackgroundColor="@color/fh_success_container" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_monthly" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_monthly" android:textColor="@color/fh_form_accent" app:chipBackgroundColor="@color/fh_form_accent_container" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_pending" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_pending" android:textColor="@color/fh_on_warning_container" app:chipBackgroundColor="@color/fh_warning_container" />
-            <com.google.android.material.chip.Chip android:id="@+id/filter_purchased" style="@style/Widget.Material3.Chip.Filter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/grocery_filter_purchased" android:textColor="@color/fh_module_health" app:chipBackgroundColor="@color/fh_module_health_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_all" style="@style/Widget.FamilyHub.FloatingCompact.FilterChip" android:layout_width="wrap_content" android:layout_height="36dp" android:checked="true" android:text="@string/grocery_filter_all" android:textColor="@color/fh_primary_dark" app:chipBackgroundColor="@color/fh_primary_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_daily" style="@style/Widget.FamilyHub.FloatingCompact.FilterChip" android:layout_width="wrap_content" android:layout_height="36dp" android:text="@string/grocery_filter_daily" android:textColor="@color/fh_on_success_container" app:chipBackgroundColor="@color/fh_success_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_monthly" style="@style/Widget.FamilyHub.FloatingCompact.FilterChip" android:layout_width="wrap_content" android:layout_height="36dp" android:text="@string/grocery_filter_monthly" android:textColor="@color/fh_form_accent" app:chipBackgroundColor="@color/fh_form_accent_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_pending" style="@style/Widget.FamilyHub.FloatingCompact.FilterChip" android:layout_width="wrap_content" android:layout_height="36dp" android:text="@string/grocery_filter_pending" android:textColor="@color/fh_on_warning_container" app:chipBackgroundColor="@color/fh_warning_container" />
+            <com.google.android.material.chip.Chip android:id="@+id/filter_purchased" style="@style/Widget.FamilyHub.FloatingCompact.FilterChip" android:layout_width="wrap_content" android:layout_height="36dp" android:text="@string/grocery_filter_purchased" android:textColor="@color/fh_module_health" app:chipBackgroundColor="@color/fh_module_health_container" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
@@ -258,7 +258,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/floating_grocery_button"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/touch_target_min"
         android:text="@string/grocery_floating_enable"
@@ -268,7 +268,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_budget_button"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/touch_target_min"
                 android:text="@string/grocery_set_budget"
@@ -276,14 +276,14 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_suggestions_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:text="@string/grocery_suggestions"
                 android:textColor="@color/fh_module_grocery" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_due_calendar_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:text="Due calendar"
@@ -291,7 +291,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_shopping_mode_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:text="@string/grocery_shopping_mode"
@@ -299,7 +299,7 @@
                 app:icon="@drawable/ic_grocery" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_scan_bill_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:text="@string/grocery_scan_bill"
@@ -308,7 +308,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_store_analytics_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:text="@string/grocery_store_analytics"
@@ -317,7 +317,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_pdf_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:visibility="gone"
@@ -325,7 +325,7 @@
                 app:icon="@drawable/ic_file_pdf" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_excel_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:visibility="gone"
@@ -333,7 +333,7 @@
                 app:icon="@drawable/ic_file_excel" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/grocery_share_button"
-                style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content"
                 android:layout_height="@dimen/touch_target_min"
                 android:visibility="gone"
@@ -342,7 +342,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/clear_purchased_button"
-        style="@style/Widget.Material3.Button.TextButton"
+        style="@style/Widget.FamilyHub.FloatingCompact.Action"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/touch_target_min"
         android:text="@string/grocery_clear_purchased"

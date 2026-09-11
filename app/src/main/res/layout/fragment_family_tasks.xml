@@ -119,7 +119,7 @@
         app:layout_constraintTop_toBottomOf="@id/task_summary_cards">
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/task_search_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:hint="@string/family_tasks_search_hint"
             app:startIconDrawable="@drawable/ic_search"
@@ -166,21 +166,27 @@
             android:gravity="center_vertical" app:chipSpacingHorizontal="@dimen/space_4"
             app:selectionRequired="false" app:singleSelection="false">
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_today"
+                style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:checked="true" android:text="@string/task_filter_today" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_tomorrow"
+                style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="@string/task_filter_tomorrow" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_week"
+                style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="@string/task_filter_week" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_15_days"
+                style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="@string/task_filter_15_days" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_month"
+                style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="@string/task_filter_month" android:visibility="gone" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_all"
+                style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="@string/task_filter_all" android:visibility="gone" />
         </com.google.android.material.chip.ChipGroup>
@@ -231,7 +237,7 @@
             android:gravity="center_vertical" android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/task_quick_voice_button"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="44dp" android:layout_height="44dp"
                 android:contentDescription="@string/family_tasks_voice_add"
                 android:insetLeft="0dp" android:insetRight="0dp" android:text=""
@@ -239,7 +245,7 @@
                 app:iconPadding="0dp" app:iconTint="@color/fh_module_grocery" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/task_floating_toggle"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content" android:layout_height="44dp"
                 android:layout_marginStart="@dimen/space_4"
                 android:text="@string/family_tasks_floating_show"
@@ -247,7 +253,7 @@
                 app:icon="@drawable/ic_family_task" app:iconTint="@color/fh_module_grocery" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/task_due_calendar_button"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.FloatingCompact.Action"
                 android:layout_width="wrap_content" android:layout_height="44dp"
                 android:layout_marginStart="@dimen/space_4"
                 android:text="@string/family_tasks_due_calendar"
@@ -264,7 +270,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_action_scroll">
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:hint="@string/family_tasks_quick_add_hint"
             app:startIconDrawable="@drawable/ic_family_task" app:startIconTint="@color/fh_module_grocery">
@@ -276,7 +282,7 @@
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.button.MaterialButton
             android:id="@+id/task_quick_add_button"
-            style="@style/Widget.FamilyHub.Button.Primary"
+            style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
             android:layout_width="wrap_content" android:layout_height="@dimen/button_height"
             android:layout_marginStart="@dimen/space_6" android:text="@string/family_tasks_add"
             android:textSize="11sp" app:icon="@drawable/ic_add" />

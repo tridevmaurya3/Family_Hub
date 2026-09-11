@@ -867,6 +867,9 @@ public final class FamilyTaskOverlayService extends Service {
         input.setSingleLine(true);
         input.setTextSize(12.5f);
         input.setHint(hint);
+        input.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        input.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        input.setIncludeFontPadding(false);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         input.setPadding(dp(10), 0, dp(8), 0);
         input.setBackgroundColor(Color.TRANSPARENT);
@@ -878,6 +881,8 @@ public final class FamilyTaskOverlayService extends Service {
         Button button = compactAction(value, Color.rgb(15, 105, 80),
                 Color.argb(220, 237, 248, 244));
         button.setTextSize(8.5f);
+        button.setGravity(Gravity.CENTER);
+        button.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         button.setPadding(dp(4), 0, dp(4), 0);
         return button;
     }
@@ -897,6 +902,9 @@ public final class FamilyTaskOverlayService extends Service {
         button.setTextColor(textColor);
         button.setAllCaps(false);
         button.setSingleLine(true);
+        button.setGravity(Gravity.CENTER);
+        button.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        button.setIncludeFontPadding(false);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
         button.setMinHeight(0);
@@ -911,6 +919,9 @@ public final class FamilyTaskOverlayService extends Service {
         TextView view = new TextView(this);
         view.setText(value);
         view.setTextSize(size);
+        view.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        view.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        view.setIncludeFontPadding(false);
         if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         return view;
     }

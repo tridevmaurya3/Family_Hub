@@ -124,6 +124,67 @@
         <item name="endIconTint">@color/fh_primary</item>
     </style>
 
+    <!-- Grocery floating-panel visual language, scoped to Grocery and Family To-Do. -->
+    <style name="Widget.FamilyHub.FloatingCompact.Field" parent="Widget.FamilyHub.TextInputLayout">
+        <item name="android:gravity">center_vertical|start</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="boxBackgroundColor">@color/fh_form_surface</item>
+        <item name="boxCornerRadiusTopStart">15dp</item>
+        <item name="boxCornerRadiusTopEnd">15dp</item>
+        <item name="boxCornerRadiusBottomStart">15dp</item>
+        <item name="boxCornerRadiusBottomEnd">15dp</item>
+        <item name="boxStrokeColor">@color/fh_form_outline</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">1dp</item>
+        <item name="startIconTint">@color/fh_form_accent</item>
+        <item name="endIconTint">@color/fh_form_accent</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FloatingCompact.Dropdown" parent="Widget.FamilyHub.FloatingCompact.Field">
+        <item name="endIconMode">dropdown_menu</item>
+        <item name="android:elevation">1dp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FloatingCompact.Date" parent="Widget.FamilyHub.FloatingCompact.Field">
+        <item name="endIconMode">custom</item>
+        <item name="endIconDrawable">@drawable/ic_reminder</item>
+        <item name="endIconTint">@color/fh_form_accent</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FloatingCompact.FilterChip" parent="Widget.Material3.Chip.Filter">
+        <item name="android:gravity">center</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:minHeight">36dp</item>
+        <item name="android:textSize">10.5sp</item>
+        <item name="chipCornerRadius">14dp</item>
+        <item name="chipStrokeColor">@color/fh_form_outline</item>
+        <item name="chipStrokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FloatingCompact.Action" parent="Widget.FamilyHub.Button.FormSecondary">
+        <item name="android:gravity">center</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:textSize">11sp</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FloatingCompact.PrimaryAction" parent="Widget.FamilyHub.Button.FormPrimary">
+        <item name="android:gravity">center</item>
+        <item name="android:textAlignment">center</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:textSize">11.5sp</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.FloatingCompact.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="android:gravity">center_vertical|start</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:textSize">11.5sp</item>
+        <item name="android:textColor">@color/fh_on_surface</item>
+    </style>
+
     <style name="Widget.FamilyHub.StatusChip" parent="Widget.Material3.Chip.Assist">
         <item name="android:textAppearance">@style/TextAppearance.FamilyHub.Label</item>
         <item name="chipBackgroundColor">@color/fh_primary_container</item>
