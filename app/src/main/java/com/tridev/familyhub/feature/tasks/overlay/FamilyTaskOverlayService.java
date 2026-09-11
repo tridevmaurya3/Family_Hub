@@ -10,7 +10,6 @@ import android.app.TimePickerDialog;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
@@ -35,8 +34,6 @@ import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -101,6 +98,7 @@ public final class FamilyTaskOverlayService extends Service {
     private boolean completedMode;
     private int dateMode = DATE_TODAY;
     private int sortMode = SORT_DUE;
+    private int priorityFilterMode;
     @NonNull private String searchQuery = "";
 
     @Override
@@ -246,10 +244,6 @@ public final class FamilyTaskOverlayService extends Service {
         titleStack.addView(liveStatus, new LinearLayout.LayoutParams(-1, dp(18)));
         header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(44), 1f));
 
-        Button day = headerChip(dayLabel() + "  ▾");
-        day.setOnClickListener(v -> showDayPopup(day));
-        header.addView(day, headerChipParams(76));
-
         ImageButton searchToggle = new ImageButton(this);
         searchToggle.setImageResource(R.drawable.ic_search);
         searchToggle.setColorFilter(Color.rgb(15, 105, 80));
@@ -307,79 +301,30 @@ public final class FamilyTaskOverlayService extends Service {
             @Override public void afterTextChanged(android.text.Editable s) { }
         });
         clear.setOnClickListener(v -> search.setText(""));
+
+        LinearLayout listFilters = row();
+        Button day = compactAction(dayLabel() + "  ▾", Color.rgb(15, 105, 80),
+                Color.argb(220, 226, 244, 238));
+        Button priorityFilter = compactAction(priorityFilterLabel() + "  ▾",
+                Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
+        Button sort = compactAction(sortLabel() + "  ▾", Color.rgb(15, 108, 189),
+                Color.argb(220, 232, 243, 252));
+        listFilters.addView(day, new LinearLayout.LayoutParams(0, dp(38), 1f));
+        LinearLayout.LayoutParams filterPriorityParams =
+                new LinearLayout.LayoutParams(0, dp(38), 1f);
+        filterPriorityParams.setMarginStart(dp(4));
+        listFilters.addView(priorityFilter, filterPriorityParams);
+        LinearLayout.LayoutParams sortParams = new LinearLayout.LayoutParams(0, dp(38), 1f);
+        sortParams.setMarginStart(dp(4));
+        listFilters.addView(sort, sortParams);
+        root.addView(listFilters, new LinearLayout.LayoutParams(-1, dp(42)));
+        day.setOnClickListener(v -> showDayPopup(day));
+        priorityFilter.setOnClickListener(v -> showPriorityFilterPopup(priorityFilter));
+        sort.setOnClickListener(v -> showSortPopup(sort));
+
         final int[] quickDateMode = {0};
         final long[] customQuickDueAt = {0L};
         final int[] quickPriority = {0};
-        LinearLayout quickOptions = row();
-        RadioGroup dueChoices = new RadioGroup(this);
-        dueChoices.setOrientation(RadioGroup.HORIZONTAL);
-        dueChoices.setGravity(Gravity.CENTER_VERTICAL);
-        RadioButton dueToday = quickRadio(getString(R.string.family_tasks_overlay_today));
-        RadioButton dueTomorrow = quickRadio(getString(R.string.family_tasks_overlay_tomorrow));
-        RadioButton dueCustom = quickRadio("Custom");
-        dueChoices.addView(dueToday);
-        dueChoices.addView(dueTomorrow);
-        dueChoices.addView(dueCustom);
-        dueToday.setChecked(true);
-        quickOptions.addView(dueChoices, new LinearLayout.LayoutParams(0, dp(42), 1f));
-
-        Button sort = compactAction(sortLabel() + "  ▾", Color.rgb(15, 108, 189),
-                Color.argb(220, 232, 243, 252));
-        LinearLayout.LayoutParams sortParams = new LinearLayout.LayoutParams(dp(82), dp(38));
-        sortParams.setMarginStart(dp(4));
-        quickOptions.addView(sort, sortParams);
-        root.addView(quickOptions, new LinearLayout.LayoutParams(-1, dp(44)));
-
-        TextView customDueText = text("", 10.5f, true);
-        customDueText.setTextColor(Color.rgb(15, 105, 80));
-        customDueText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        customDueText.setPadding(dp(10), 0, dp(10), 0);
-        customDueText.setSingleLine(true);
-        customDueText.setEllipsize(TextUtils.TruncateAt.END);
-        customDueText.setBackground(round(Color.argb(205, 232, 247, 241), 10,
-                Color.argb(130, 15, 108, 89)));
-        customDueText.setVisibility(View.GONE);
-        root.addView(customDueText, new LinearLayout.LayoutParams(-1, dp(30)));
-
-        LinearLayout priorityRow = row();
-        TextView priorityLabel = text(getString(R.string.family_tasks_priority), 10.5f, true);
-        priorityLabel.setTextColor(Color.rgb(73, 86, 98));
-        priorityLabel.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-        priorityLabel.setPadding(dp(4), 0, dp(4), 0);
-        priorityRow.addView(priorityLabel, new LinearLayout.LayoutParams(dp(52), dp(36)));
-        RadioGroup priorityChoices = new RadioGroup(this);
-        priorityChoices.setOrientation(RadioGroup.HORIZONTAL);
-        priorityChoices.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
-        RadioButton priorityNormal = quickRadio(getString(R.string.task_priority_normal));
-        RadioButton priorityHigh = quickRadio(getString(R.string.task_priority_high));
-        RadioButton priorityUrgent = quickRadio(getString(R.string.task_priority_urgent));
-        priorityChoices.addView(priorityNormal);
-        priorityChoices.addView(priorityHigh);
-        priorityChoices.addView(priorityUrgent);
-        priorityNormal.setChecked(true);
-        priorityRow.addView(priorityChoices, new LinearLayout.LayoutParams(0, dp(36), 1f));
-        root.addView(priorityRow, new LinearLayout.LayoutParams(-1, dp(38)));
-
-        dueChoices.setOnCheckedChangeListener((group, checkedId) -> {
-            if (dueTomorrow.isChecked()) {
-                quickDateMode[0] = 1;
-                customDueText.setVisibility(View.GONE);
-            }
-            else if (dueCustom.isChecked()) {
-                quickDateMode[0] = 2;
-                customDueText.setVisibility(View.VISIBLE);
-                showQuickDatePicker(dueCustom, customDueText, customQuickDueAt);
-            } else {
-                quickDateMode[0] = 0;
-                customDueText.setVisibility(View.GONE);
-            }
-        });
-        customDueText.setOnClickListener(v ->
-                showQuickDatePicker(dueCustom, customDueText, customQuickDueAt));
-        priorityChoices.setOnCheckedChangeListener((group, checkedId) ->
-                quickPriority[0] = priorityUrgent.isChecked() ? 2
-                        : priorityHigh.isChecked() ? 1 : 0);
-        sort.setOnClickListener(v -> showSortPopup(sort));
 
         LinearLayout quick = row();
         LinearLayout quickField = row();
@@ -406,6 +351,60 @@ public final class FamilyTaskOverlayService extends Service {
         LinearLayout.LayoutParams quickParams = new LinearLayout.LayoutParams(-1, dp(48));
         quickParams.topMargin = dp(2);
         root.addView(quick, quickParams);
+
+        LinearLayout addOptions = row();
+        Button quickDate = compactAction(getString(R.string.family_tasks_overlay_today) + "  ▾",
+                Color.rgb(15, 105, 80), Color.argb(220, 226, 244, 238));
+        Button quickPriorityButton = compactAction(
+                getString(R.string.task_priority_normal) + "  ▾",
+                Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
+        addOptions.addView(quickDate, new LinearLayout.LayoutParams(0, dp(38), 1f));
+        LinearLayout.LayoutParams quickPriorityParams =
+                new LinearLayout.LayoutParams(0, dp(38), 1f);
+        quickPriorityParams.setMarginStart(dp(5));
+        addOptions.addView(quickPriorityButton, quickPriorityParams);
+        root.addView(addOptions, new LinearLayout.LayoutParams(-1, dp(42)));
+
+        TextView customDueText = text("", 10.5f, true);
+        customDueText.setTextColor(Color.rgb(15, 105, 80));
+        customDueText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        customDueText.setPadding(dp(10), 0, dp(10), 0);
+        customDueText.setSingleLine(true);
+        customDueText.setEllipsize(TextUtils.TruncateAt.END);
+        customDueText.setBackground(round(Color.argb(205, 232, 247, 241), 10,
+                Color.argb(130, 15, 108, 89)));
+        customDueText.setVisibility(View.GONE);
+        root.addView(customDueText, new LinearLayout.LayoutParams(-1, dp(30)));
+
+        quickDate.setOnClickListener(v -> showChoicePopup(quickDate,
+                new String[]{getString(R.string.family_tasks_overlay_today),
+                        getString(R.string.family_tasks_overlay_tomorrow), "Custom"},
+                quickDateMode[0], Color.rgb(15, 108, 89), index -> {
+                    quickDateMode[0] = index;
+                    if (index == 2) {
+                        quickDate.setText("Custom  ▾");
+                        customDueText.setVisibility(View.VISIBLE);
+                        showQuickDatePicker(quickDate, customDueText, customQuickDueAt);
+                    } else {
+                        customDueText.setVisibility(View.GONE);
+                        quickDate.setText((index == 1
+                                ? getString(R.string.family_tasks_overlay_tomorrow)
+                                : getString(R.string.family_tasks_overlay_today)) + "  ▾");
+                    }
+                }));
+        quickPriorityButton.setOnClickListener(v -> showChoicePopup(quickPriorityButton,
+                new String[]{getString(R.string.task_priority_normal),
+                        getString(R.string.task_priority_high),
+                        getString(R.string.task_priority_urgent)}, quickPriority[0],
+                Color.rgb(106, 75, 150), index -> {
+                    quickPriority[0] = index;
+                    String[] labels = {getString(R.string.task_priority_normal),
+                            getString(R.string.task_priority_high),
+                            getString(R.string.task_priority_urgent)};
+                    quickPriorityButton.setText(labels[index] + "  ▾");
+                }));
+        customDueText.setOnClickListener(v ->
+                showQuickDatePicker(quickDate, customDueText, customQuickDueAt));
 
         voiceStatus = text("", 10f, true);
         voiceStatus.setTextColor(Color.rgb(15, 105, 80));
@@ -641,23 +640,18 @@ public final class FamilyTaskOverlayService extends Service {
         });
     }
 
-    @NonNull
-    private RadioButton quickRadio(@NonNull String label) {
-        RadioButton button = new RadioButton(this);
-        button.setId(View.generateViewId());
-        button.setText(label);
-        button.setTextSize(10.5f);
-        button.setSingleLine(true);
-        button.setTextColor(Color.rgb(42, 61, 55));
-        button.setGravity(Gravity.CENTER_VERTICAL);
-        button.setPadding(0, 0, dp(2), 0);
-        button.setButtonTintList(new ColorStateList(
-                new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
-                new int[]{Color.rgb(15, 108, 89), Color.rgb(173, 190, 184)}));
-        return button;
+    private void showPriorityFilterPopup(@NonNull Button anchor) {
+        String[] labels = {"All priority", getString(R.string.task_priority_normal),
+                getString(R.string.task_priority_high),
+                getString(R.string.task_priority_urgent)};
+        showChoicePopup(anchor, labels, priorityFilterMode, Color.rgb(106, 75, 150), index -> {
+            priorityFilterMode = index;
+            anchor.setText(priorityFilterLabel() + "  ▾");
+            refresh();
+        });
     }
 
-    private void showQuickDatePicker(@NonNull RadioButton anchor,
+    private void showQuickDatePicker(@NonNull Button anchor,
                                      @NonNull TextView dateLabel,
                                      @NonNull long[] selectedAt) {
         Calendar selected = Calendar.getInstance();
@@ -681,7 +675,7 @@ public final class FamilyTaskOverlayService extends Service {
         picker.show();
     }
 
-    private void showOptionalTimePopup(@NonNull RadioButton anchor,
+    private void showOptionalTimePopup(@NonNull Button anchor,
                                        @NonNull TextView dateLabel,
                                        @NonNull long[] selectedAt) {
         showChoicePopup(anchor, new String[]{"Date only", "Add time (optional)"}, 0,
@@ -832,6 +826,12 @@ public final class FamilyTaskOverlayService extends Service {
             for (FamilyTask task : tasks) {
                 boolean isCompleted = FamilyTask.STATUS_COMPLETED.equals(task.status);
                 if (isCompleted != completedMode) continue;
+                if (priorityFilterMode == 1
+                        && !FamilyTask.PRIORITY_NORMAL.equals(task.priority)) continue;
+                if (priorityFilterMode == 2
+                        && !FamilyTask.PRIORITY_HIGH.equals(task.priority)) continue;
+                if (priorityFilterMode == 3
+                        && !FamilyTask.PRIORITY_URGENT.equals(task.priority)) continue;
                 long eventAt = completedMode
                         ? (task.completedAt > 0L ? task.completedAt : task.updatedAt)
                         : task.dueAt;
@@ -877,6 +877,14 @@ public final class FamilyTaskOverlayService extends Service {
         if (FamilyTask.PRIORITY_URGENT.equals(task.priority)) return 0;
         if (FamilyTask.PRIORITY_HIGH.equals(task.priority)) return 1;
         return 2;
+    }
+
+    @NonNull
+    private String priorityFilterLabel() {
+        if (priorityFilterMode == 1) return getString(R.string.task_priority_normal);
+        if (priorityFilterMode == 2) return getString(R.string.task_priority_high);
+        if (priorityFilterMode == 3) return getString(R.string.task_priority_urgent);
+        return "Priority";
     }
 
     private void addEmptyCard() {
@@ -998,13 +1006,21 @@ public final class FamilyTaskOverlayService extends Service {
             return;
         }
         voice.setColorFilter(Color.rgb(220, 45, 82));
-        showVoiceStatus(R.string.family_tasks_voice_listening, false);
+        showVoiceStatus("Listening…  ••▮••▮••", false);
         try {
             speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this);
             speechRecognizer.setRecognitionListener(new android.speech.RecognitionListener() {
-                @Override public void onReadyForSpeech(android.os.Bundle params) { }
-                @Override public void onBeginningOfSpeech() { }
-                @Override public void onRmsChanged(float rmsdB) { }
+                @Override public void onReadyForSpeech(android.os.Bundle params) {
+                    showVoiceStatus("Listening…  ••▮••▮••", false);
+                }
+                @Override public void onBeginningOfSpeech() {
+                    showVoiceStatus("Listening…  ▮•▮▮•▮", false);
+                }
+                @Override public void onRmsChanged(float rmsdB) {
+                    showVoiceStatus(rmsdB > 6f ? "Listening…  ▮▮•▮▮•▮"
+                            : rmsdB > 2f ? "Listening…  ▮•▮▮•▮"
+                            : "Listening…  ••▮••▮••", false);
+                }
                 @Override public void onBufferReceived(byte[] buffer) { }
                 @Override public void onEndOfSpeech() {
                     showVoiceStatus(R.string.family_tasks_voice_processing, false);
@@ -1054,6 +1070,15 @@ public final class FamilyTaskOverlayService extends Service {
     }
 
     private void showVoiceStatus(int message, boolean hide) {
+        if (voiceStatus == null) return;
+        voiceStatus.setText(message);
+        voiceStatus.setVisibility(View.VISIBLE);
+        if (hide) voiceStatus.postDelayed(() -> {
+            if (voiceStatus != null) voiceStatus.setVisibility(View.GONE);
+        }, 2600L);
+    }
+
+    private void showVoiceStatus(@NonNull String message, boolean hide) {
         if (voiceStatus == null) return;
         voiceStatus.setText(message);
         voiceStatus.setVisibility(View.VISIBLE);

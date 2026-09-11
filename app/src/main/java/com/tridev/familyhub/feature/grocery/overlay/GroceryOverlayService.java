@@ -592,6 +592,10 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout quickAdd = new LinearLayout(this);
         quickAdd.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout quickField = new LinearLayout(this);
+        quickField.setGravity(Gravity.CENTER_VERTICAL);
+        quickField.setBackground(glassFieldBackground());
+        quickField.setElevation(dp(1));
         EditText input = new BackAwareEditText();
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -603,8 +607,8 @@ public class GroceryOverlayService extends Service {
         input.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         input.setHint(R.string.grocery_overlay_add_hint);
         input.setPadding(dp(12), 0, dp(8), 0);
-        input.setBackground(glassFieldBackground());
-        input.setElevation(dp(1));
+        input.setBackgroundColor(Color.TRANSPARENT);
+        input.setElevation(0f);
         if (!pendingVoiceText.isEmpty()) {
             input.setText(pendingVoiceText);
             input.setSelection(input.length());
@@ -622,19 +626,18 @@ public class GroceryOverlayService extends Service {
             ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
                     .showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
         });
-        quickAdd.addView(input, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        quickField.addView(input, new LinearLayout.LayoutParams(0, dp(42), 1f));
 
         ImageButton voice = new ImageButton(this);
         voice.setImageResource(R.drawable.ic_mic);
         voice.setContentDescription(getString(R.string.grocery_overlay_voice));
         voice.setColorFilter(Color.rgb(15, 108, 189));
-        voice.setPadding(dp(11), dp(11), dp(11), dp(11));
-        voice.setBackground(rounded(Color.argb(220, 232, 243, 252),
-                Color.argb(190, 190, 216, 236), 22));
-        voice.setElevation(dp(2));
+        voice.setPadding(dp(10), dp(10), dp(10), dp(10));
+        voice.setBackgroundColor(Color.TRANSPARENT);
+        voice.setElevation(0f);
         LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(dp(40), dp(40));
-        voiceParams.setMarginStart(dp(6));
-        quickAdd.addView(voice, voiceParams);
+        quickField.addView(voice, voiceParams);
+        quickAdd.addView(quickField, new LinearLayout.LayoutParams(0, dp(42), 1f));
 
         Button add = new Button(this);
         add.setText("＋ Add");
