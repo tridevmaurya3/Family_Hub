@@ -39,6 +39,13 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     void submitList(@NonNull List<FamilyTask> updated) {
         tasks.clear(); tasks.addAll(updated); rebuildRows(); notifyDataSetChanged();
     }
+    boolean toggleAllCategories() {
+        boolean collapse = !"__NONE__".equals(expandedPriority);
+        expandedPriority = collapse ? "__NONE__" : "";
+        rebuildRows();
+        notifyDataSetChanged();
+        return collapse;
+    }
     @Override public int getItemViewType(int position) {
         return rows.get(position) instanceof PrioritySection ? TYPE_SECTION : TYPE_TASK;
     }

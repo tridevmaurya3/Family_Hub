@@ -85,6 +85,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     @Nullable private MaterialButton taskDateDropdown;
     @Nullable private MaterialButton taskStatusDropdown;
     @Nullable private MaterialButton taskAssignmentDropdown;
+    @Nullable private MaterialButton taskCategoryCollapseButton;
     @Nullable private android.widget.EditText pendingVoiceTarget;
     @Nullable private SpeechRecognizer speechRecognizer;
 
@@ -204,6 +205,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 getString(R.string.family_tasks_assignment_all_label),
                 R.color.fh_info_container, R.color.fh_module_grocery,
                 R.color.fh_module_grocery, 96);
+        taskCategoryCollapseButton = createFilterDropdown("Collapse All",
+                R.color.fh_success_container, R.color.fh_success,
+                R.color.fh_on_success_container, 94);
+        taskCategoryCollapseButton.setText("Collapse All");
+        taskCategoryCollapseButton.setGravity(Gravity.CENTER);
 
         taskDateDropdown.setOnClickListener(this::showDateDropdown);
         taskStatusDropdown.setOnClickListener(this::showStatusDropdown);
@@ -214,6 +220,13 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 new ViewGroup.MarginLayoutParams(dp(86), dp(38)));
         binding.taskFilterGroup.addView(taskAssignmentDropdown, 2,
                 new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
+        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 3,
+                new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
+        taskCategoryCollapseButton.setOnClickListener(v -> {
+            boolean collapsed = adapter.toggleAllCategories();
+            taskCategoryCollapseButton.setText(collapsed ? "Expand All" : "Collapse All");
+            resetTaskScroll();
+        });
 
         binding.taskFilterButton.setOnClickListener(v -> {
             boolean show = binding.taskFilterScroll.getVisibility() != View.VISIBLE;
@@ -1069,6 +1082,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         taskDateDropdown = null;
         taskStatusDropdown = null;
         taskAssignmentDropdown = null;
+        taskCategoryCollapseButton = null;
         binding = null;
         super.onDestroyView();
     }
