@@ -316,7 +316,7 @@ public final class FamilyTaskOverlayService extends Service {
         dueChoices.setGravity(Gravity.CENTER_VERTICAL);
         RadioButton dueToday = quickRadio(getString(R.string.family_tasks_overlay_today));
         RadioButton dueTomorrow = quickRadio(getString(R.string.family_tasks_overlay_tomorrow));
-        RadioButton dueCustom = quickRadio(getString(R.string.family_tasks_overlay_custom));
+        RadioButton dueCustom = quickRadio("Custom");
         dueChoices.addView(dueToday);
         dueChoices.addView(dueTomorrow);
         dueChoices.addView(dueCustom);
@@ -651,7 +651,7 @@ public final class FamilyTaskOverlayService extends Service {
         }, selected.get(Calendar.YEAR), selected.get(Calendar.MONTH),
                 selected.get(Calendar.DAY_OF_MONTH));
         picker.setOnCancelListener(dialog -> {
-            if (selectedAt[0] <= 0L) anchor.setText(R.string.family_tasks_overlay_custom);
+            if (selectedAt[0] <= 0L) anchor.setText("Custom");
         });
         if (picker.getWindow() != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             picker.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
@@ -660,8 +660,7 @@ public final class FamilyTaskOverlayService extends Service {
     }
 
     private void showOptionalTimePopup(@NonNull RadioButton anchor, @NonNull long[] selectedAt) {
-        showChoicePopup(anchor, new String[]{getString(R.string.family_tasks_overlay_date_only),
-                        getString(R.string.family_tasks_overlay_add_time)}, 0,
+        showChoicePopup(anchor, new String[]{"Date only", "Add time (optional)"}, 0,
                 Color.rgb(15, 108, 89), index -> {
                     if (index != 1) return;
                     Calendar value = Calendar.getInstance();
