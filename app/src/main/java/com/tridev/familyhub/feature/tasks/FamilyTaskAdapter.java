@@ -8,6 +8,7 @@ import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -252,4 +253,3 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
         }
     }
 }
-import android.widget.TextView;
