@@ -39,7 +39,24 @@ jobs:
           JSON
 
       - name: Apply patch
-        run: python3 tools/apply_dashboard_todo_card_patch.py
+        run: |
+          python3 tools/apply_dashboard_todo_card_patch.py
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('app/src/main/java/com/tridev/familyhub/feature/dashboard/DashboardFragment.java')
+          text = path.read_text(encoding='utf-8')
+          old = '            long todayStart = startOfToday();\n'
+          new = '''            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+            long todayStart = today.getTimeInMillis();
+'''
+          if old not in text:
+              raise SystemExit('todayStart anchor not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
 
       - name: Verify scope
         shell: bash
