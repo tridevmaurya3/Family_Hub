@@ -52,6 +52,7 @@ import com.tridev.familyhub.feature.grocery.GroceryOptionCatalog;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
+import com.tridev.familyhub.feature.quickhub.UniversalQuickHubController;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -498,32 +499,23 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     public void onResume() {
         super.onResume();
         if (binding == null) return;
-        boolean requested = requireContext().getSharedPreferences(
-                FamilyTaskOverlayService.PREFS, android.content.Context.MODE_PRIVATE)
-                .getBoolean(FamilyTaskOverlayService.KEY_REQUESTED, false);
+        boolean requested = UniversalQuickHubController.wasRequested(requireContext());
         if (requested && Settings.canDrawOverlays(requireContext())) {
-            requireContext().getSharedPreferences(FamilyTaskOverlayService.PREFS,
-                    android.content.Context.MODE_PRIVATE).edit()
-                    .putBoolean(FamilyTaskOverlayService.KEY_REQUESTED, false).apply();
+            UniversalQuickHubController.setRequested(requireContext(), false);
             startFloatingStrip();
         }
         updateFloatingButton();
     }
 
     private void toggleFloatingStrip() {
-        boolean enabled = requireContext().getSharedPreferences(
-                FamilyTaskOverlayService.PREFS, android.content.Context.MODE_PRIVATE)
-                .getBoolean(FamilyTaskOverlayService.KEY_ENABLED, false);
+        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
         if (enabled) {
-            requireContext().startService(new Intent(requireContext(),
-                    FamilyTaskOverlayService.class).setAction(FamilyTaskOverlayService.ACTION_STOP));
+            UniversalQuickHubController.stop(requireContext());
             binding.taskFloatingToggle.postDelayed(this::updateFloatingButton, 180);
             return;
         }
         if (!Settings.canDrawOverlays(requireContext())) {
-            requireContext().getSharedPreferences(FamilyTaskOverlayService.PREFS,
-                    android.content.Context.MODE_PRIVATE).edit()
-                    .putBoolean(FamilyTaskOverlayService.KEY_REQUESTED, true).apply();
+            UniversalQuickHubController.setRequested(requireContext(), true);
             android.widget.Toast.makeText(requireContext(),
                     R.string.family_tasks_overlay_permission, android.widget.Toast.LENGTH_LONG).show();
             startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -534,16 +526,13 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private void startFloatingStrip() {
-        ContextCompat.startForegroundService(requireContext(), new Intent(requireContext(),
-                FamilyTaskOverlayService.class).setAction(FamilyTaskOverlayService.ACTION_SHOW));
+        UniversalQuickHubController.start(requireContext(), true);
         binding.taskFloatingToggle.postDelayed(this::updateFloatingButton, 180);
     }
 
     private void updateFloatingButton() {
         if (binding == null) return;
-        boolean enabled = requireContext().getSharedPreferences(
-                FamilyTaskOverlayService.PREFS, android.content.Context.MODE_PRIVATE)
-                .getBoolean(FamilyTaskOverlayService.KEY_ENABLED, false);
+        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
         binding.taskFloatingToggle.setText(enabled
                 ? R.string.family_tasks_floating_hide : R.string.family_tasks_floating_show);
     }

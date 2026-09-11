@@ -81,6 +81,8 @@ public class GroceryOverlayService extends Service {
             "com.tridev.familyhub.action.HIDE_GROCERY_OVERLAY";
     public static final String ACTION_SHOW =
             "com.tridev.familyhub.action.SHOW_GROCERY_OVERLAY";
+    public static final String ACTION_OPEN_PANEL =
+            "com.tridev.familyhub.action.OPEN_GROCERY_PANEL";
     public static final String ACTION_SUSPEND_FOR_VOICE =
             "com.tridev.familyhub.action.SUSPEND_GROCERY_FOR_VOICE";
     public static final String ACTION_RESUME_AFTER_VOICE =
@@ -227,6 +229,12 @@ public class GroceryOverlayService extends Service {
         if (intent != null && ACTION_SHOW.equals(intent.getAction())) {
             if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
             if (stripView != null) stripView.setVisibility(View.VISIBLE);
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_OPEN_PANEL.equals(intent.getAction())) {
+            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
+            if (stripView != null) stripView.setVisibility(View.GONE);
+            if (panelView == null) showPanel();
             return START_STICKY;
         }
         if (intent != null && ACTION_SUSPEND_FOR_VOICE.equals(intent.getAction())) {

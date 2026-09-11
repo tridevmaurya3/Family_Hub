@@ -44,6 +44,7 @@ import com.tridev.familyhub.databinding.FragmentGroceryBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
+import com.tridev.familyhub.feature.quickhub.UniversalQuickHubController;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -782,14 +783,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         if (binding == null) {
             return;
         }
-        boolean requested = requireContext().getSharedPreferences(
-                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
-        ).getBoolean(GroceryOverlayService.KEY_REQUESTED, false);
+        boolean requested = UniversalQuickHubController.wasRequested(requireContext());
         if (requested && Settings.canDrawOverlays(requireContext())) {
-            requireContext().getSharedPreferences(
-                    GroceryOverlayService.PREFS,
-                    android.content.Context.MODE_PRIVATE
-            ).edit().putBoolean(GroceryOverlayService.KEY_REQUESTED, false).apply();
+            UniversalQuickHubController.setRequested(requireContext(), false);
             startFloatingStrip();
         }
         setFloatingStripVisible(false);
@@ -803,25 +799,13 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void setFloatingStripVisible(boolean visible) {
-        boolean enabled = requireContext().getSharedPreferences(
-                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
-        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
-        if (!enabled) return;
-        Intent intent = new Intent(requireContext(), GroceryOverlayService.class);
-        intent.setAction(visible
-                ? GroceryOverlayService.ACTION_SHOW
-                : GroceryOverlayService.ACTION_HIDE);
-        requireContext().startService(intent);
+        UniversalQuickHubController.setVisible(requireContext(), visible);
     }
 
     private void toggleFloatingStrip() {
-        boolean enabled = requireContext().getSharedPreferences(
-                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
-        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
+        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
         if (enabled) {
-            Intent stop = new Intent(requireContext(), GroceryOverlayService.class);
-            stop.setAction(GroceryOverlayService.ACTION_STOP);
-            requireContext().startService(stop);
+            UniversalQuickHubController.stop(requireContext());
             binding.floatingGroceryButton.postDelayed(
                     this::updateFloatingButton, 250L);
             return;
@@ -849,10 +833,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
 
     private void continueFloatingStripSetup() {
         if (!Settings.canDrawOverlays(requireContext())) {
-            requireContext().getSharedPreferences(
-                    GroceryOverlayService.PREFS,
-                    android.content.Context.MODE_PRIVATE
-            ).edit().putBoolean(GroceryOverlayService.KEY_REQUESTED, true).apply();
+            UniversalQuickHubController.setRequested(requireContext(), true);
             Snackbar.make(binding.getRoot(),
                     R.string.grocery_overlay_permission,
                     Snackbar.LENGTH_LONG).show();
@@ -867,9 +848,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void startFloatingStrip() {
-        Intent intent = new Intent(requireContext(), GroceryOverlayService.class);
-        intent.setAction(GroceryOverlayService.ACTION_HIDE);
-        ContextCompat.startForegroundService(requireContext(), intent);
+        UniversalQuickHubController.start(requireContext(), false);
         binding.floatingGroceryButton.postDelayed(
                 this::updateFloatingButton, 250L);
     }
@@ -878,9 +857,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         if (binding == null) {
             return;
         }
-        boolean enabled = requireContext().getSharedPreferences(
-                GroceryOverlayService.PREFS, android.content.Context.MODE_PRIVATE
-        ).getBoolean(GroceryOverlayService.KEY_ENABLED, false);
+        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
         binding.floatingGroceryButton.setText(enabled
                 ? R.string.grocery_floating_disable
                 : R.string.grocery_floating_enable);

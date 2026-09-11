@@ -63,6 +63,7 @@ import java.util.Locale;
 public final class FamilyTaskOverlayService extends Service {
     public static final String ACTION_SHOW = "com.tridev.familyhub.action.SHOW_TASK_OVERLAY";
     public static final String ACTION_HIDE = "com.tridev.familyhub.action.HIDE_TASK_OVERLAY";
+    public static final String ACTION_OPEN_PANEL = "com.tridev.familyhub.action.OPEN_TASK_PANEL";
     public static final String ACTION_STOP = "com.tridev.familyhub.action.STOP_TASK_OVERLAY";
     public static final String PREFS = "family_task_overlay";
     public static final String KEY_ENABLED = "enabled";
@@ -121,6 +122,12 @@ public final class FamilyTaskOverlayService extends Service {
         if (ACTION_HIDE.equals(action)) {
             closePanel();
             if (stripView != null) stripView.setVisibility(View.GONE);
+            return START_STICKY;
+        }
+        if (ACTION_OPEN_PANEL.equals(action)) {
+            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
+            if (stripView != null) stripView.setVisibility(View.GONE);
+            if (panelView == null) showPanel();
             return START_STICKY;
         }
         if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
