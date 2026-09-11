@@ -859,24 +859,49 @@ public final class FamilyTaskOverlayService extends Service {
                 addEmptyCard();
                 return;
             }
-            for (FamilyTask task : visible) addTaskRow(task);
+            String lastPriority = null;
+            for (FamilyTask task : visible) {
+                String priorityKey = normalizedPriority(task);
+                if (!priorityKey.equals(lastPriority)) {
+                    addPrioritySection(task);
+                    lastPriority = priorityKey;
+                }
+                addTaskRow(task);
+            }
         });
     }
 
     private void sortTasks(@NonNull List<FamilyTask> tasks) {
-        if (sortMode == SORT_PRIORITY) {
-            Collections.sort(tasks, Comparator
-                    .comparingInt(this::priorityRank)
-                    .thenComparingLong(task -> task.dueAt));
-        } else {
-            Collections.sort(tasks, Comparator.comparingLong((FamilyTask task) -> task.dueAt));
-        }
+        // Priority groups always stay together in safety order; due time orders
+        // tasks inside each group.
+        Collections.sort(tasks, Comparator
+                .comparingInt(this::priorityRank)
+                .thenComparingLong(task -> task.dueAt));
     }
 
     private int priorityRank(@NonNull FamilyTask task) {
         if (FamilyTask.PRIORITY_URGENT.equals(task.priority)) return 0;
         if (FamilyTask.PRIORITY_HIGH.equals(task.priority)) return 1;
         return 2;
+    }
+
+    @NonNull
+    private String normalizedPriority(@NonNull FamilyTask task) {
+        if (FamilyTask.PRIORITY_URGENT.equals(task.priority)) return FamilyTask.PRIORITY_URGENT;
+        if (FamilyTask.PRIORITY_HIGH.equals(task.priority)) return FamilyTask.PRIORITY_HIGH;
+        return FamilyTask.PRIORITY_NORMAL;
+    }
+
+    private void addPrioritySection(@NonNull FamilyTask task) {
+        if (taskRows == null) return;
+        TextView section = text(priorityLabel(task), 10.5f, true);
+        section.setGravity(Gravity.CENTER);
+        section.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        section.setTextColor(priorityTextColor(task));
+        section.setBackground(round(priorityFill(task), 10, priorityStroke(task)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(28));
+        params.setMargins(0, dp(5), 0, dp(1));
+        taskRows.addView(section, params);
     }
 
     @NonNull
@@ -941,11 +966,14 @@ public final class FamilyTaskOverlayService extends Service {
 
         TextView priority = text(priorityLabel(task), 9f, true);
         priority.setGravity(Gravity.CENTER);
+        priority.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        priority.setIncludeFontPadding(false);
         priority.setSingleLine(true);
         priority.setTextColor(priorityTextColor(task));
         priority.setBackground(round(priorityFill(task), 11, priorityStroke(task)));
         LinearLayout.LayoutParams priorityParams = new LinearLayout.LayoutParams(dp(58), dp(28));
         priorityParams.setMarginStart(dp(4));
+        priorityParams.gravity = Gravity.CENTER_VERTICAL;
         card.addView(priority, priorityParams);
 
         check.setOnCheckedChangeListener((button, checked) -> {
