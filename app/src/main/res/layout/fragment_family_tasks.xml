@@ -288,13 +288,43 @@
             android:textSize="11sp" app:icon="@drawable/ic_add" />
     </LinearLayout>
 
+    <LinearLayout
+        android:id="@+id/task_quick_options"
+        android:layout_width="0dp" android:layout_height="42dp"
+        android:layout_marginTop="2dp" android:gravity="center_vertical"
+        android:orientation="horizontal"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/task_quick_date_button"
+            style="@style/Widget.FamilyHub.FloatingCompact.Action"
+            android:layout_width="0dp" android:layout_height="38dp"
+            android:layout_weight="1" android:text="@string/family_tasks_overlay_today"
+            android:textSize="10sp" android:textColor="@color/fh_module_grocery" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/task_quick_priority_button"
+            style="@style/Widget.FamilyHub.FloatingCompact.Action"
+            android:layout_width="0dp" android:layout_height="38dp"
+            android:layout_marginStart="4dp" android:layout_weight="1"
+            android:text="@string/task_priority_normal" android:textSize="10sp"
+            android:textColor="@color/fh_primary" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/task_quick_repeat_button"
+            style="@style/Widget.FamilyHub.FloatingCompact.Action"
+            android:layout_width="0dp" android:layout_height="38dp"
+            android:layout_marginStart="4dp" android:layout_weight="1"
+            android:text="@string/task_repeat_none" android:textSize="10sp"
+            android:textColor="@color/fh_info" />
+    </LinearLayout>
+
     <TextView android:id="@+id/task_result_summary"
         style="@style/TextAppearance.FamilyHub.Caption"
         android:layout_width="0dp" android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_4" android:textColor="@color/fh_module_grocery"
         android:textStyle="bold" app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
+        app:layout_constraintTop_toBottomOf="@id/task_quick_options" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/task_recycler_view"

@@ -82,6 +82,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private boolean overdueOnly;
     private long customDateStart;
     private long customDateEnd;
+    private int quickDateMode;
+    private int quickPriorityMode;
+    private int quickRepeatMode;
+    private long quickCustomDueAt;
     @Nullable private MaterialButton taskDateDropdown;
     @Nullable private MaterialButton taskStatusDropdown;
     @Nullable private MaterialButton taskAssignmentDropdown;
@@ -139,6 +143,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskRecyclerView.setAdapter(adapter);
 
         setupGroceryStyleControls();
+        setupQuickAddOptions();
 
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
         binding.taskQuickVoiceButton.setOnClickListener(v ->
@@ -270,6 +275,56 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private interface FilterChoiceListener { void onChoice(int index); }
+
+    private void setupQuickAddOptions() {
+        binding.taskQuickDateButton.setText(getString(
+                R.string.family_tasks_overlay_today) + "  ▾");
+        binding.taskQuickPriorityButton.setText(getString(
+                R.string.task_priority_normal) + "  ▾");
+        binding.taskQuickRepeatButton.setText(getString(
+                R.string.task_repeat_none) + "  ▾");
+
+        binding.taskQuickDateButton.setOnClickListener(anchor -> showPremiumFilterPopup(
+                anchor, new String[]{getString(R.string.family_tasks_overlay_today),
+                        getString(R.string.family_tasks_overlay_tomorrow),
+                        getString(R.string.task_due_next_week)}, quickDateMode,
+                ContextCompat.getColor(requireContext(), R.color.fh_success), index -> {
+                    quickDateMode = index;
+                    if (index == 2) {
+                        long initial = quickCustomDueAt > 0L
+                                ? quickCustomDueAt : quickDueAt(0);
+                        pickDateTime(initial, selected -> {
+                            quickCustomDueAt = selected;
+                            binding.taskQuickDateButton.setText(
+                                    getString(R.string.task_due_next_week) + "  ▾");
+                            binding.taskQuickDateButton.setContentDescription(
+                                    DateFormat.getDateTimeInstance(DateFormat.MEDIUM,
+                                            DateFormat.SHORT).format(new Date(selected)));
+                        });
+                    } else {
+                        binding.taskQuickDateButton.setText(getString(index == 1
+                                ? R.string.family_tasks_overlay_tomorrow
+                                : R.string.family_tasks_overlay_today) + "  ▾");
+                    }
+                }));
+        binding.taskQuickPriorityButton.setOnClickListener(anchor -> showPremiumFilterPopup(
+                anchor, new String[]{getString(R.string.task_priority_normal),
+                        getString(R.string.task_priority_high),
+                        getString(R.string.task_priority_urgent)}, quickPriorityMode,
+                ContextCompat.getColor(requireContext(), R.color.fh_primary), index -> {
+                    quickPriorityMode = index;
+                    int[] labels = {R.string.task_priority_normal,
+                            R.string.task_priority_high, R.string.task_priority_urgent};
+                    binding.taskQuickPriorityButton.setText(getString(labels[index]) + "  ▾");
+                }));
+        binding.taskQuickRepeatButton.setOnClickListener(anchor -> showPremiumFilterPopup(
+                anchor, new String[]{getString(R.string.task_repeat_none), "Repeated"},
+                quickRepeatMode, ContextCompat.getColor(requireContext(), R.color.fh_info), index -> {
+                    quickRepeatMode = index;
+                    binding.taskQuickRepeatButton.setText(
+                            (index == 1 ? "Repeated" : getString(R.string.task_repeat_none)) + "  ▾");
+                }));
+    }
 
     private void showDateDropdown(@NonNull View anchor) {
         boolean completed = activeStatus == R.id.task_status_completed;
@@ -577,7 +632,13 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         }
         FamilyTask task = new FamilyTask();
         task.title = title;
-        task.dueAt = defaultDueTime();
+        task.dueAt = quickDateMode == 2 && quickCustomDueAt > 0L
+                ? quickCustomDueAt : quickDueAt(quickDateMode == 1 ? 1 : 0);
+        task.priority = quickPriorityMode == 2 ? FamilyTask.PRIORITY_URGENT
+                : quickPriorityMode == 1 ? FamilyTask.PRIORITY_HIGH
+                : FamilyTask.PRIORITY_NORMAL;
+        task.repeatType = quickRepeatMode == 1
+                ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
         repository.save(task, () -> {
             if (binding != null) {
                 binding.taskQuickAddInput.setText("");
@@ -822,7 +883,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         }));
         form.taskDueToday.setOnClickListener(v -> setSmartDue(form, dueAt, 0));
         form.taskDueTomorrow.setOnClickListener(v -> setSmartDue(form, dueAt, 1));
-        form.taskDueNextWeek.setOnClickListener(v -> setSmartDue(form, dueAt, 7));
+        form.taskDueNextWeek.setOnClickListener(v -> pickDateTime(dueAt[0], selected -> {
+            dueAt[0] = selected;
+            updateDueText(form, selected);
+        }));
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setView(form.getRoot()).create();
@@ -904,6 +968,16 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private long defaultDueTime() {
         Calendar c = Calendar.getInstance();
         if (activeFilter == R.id.task_filter_tomorrow) c.add(Calendar.DAY_OF_YEAR, 1);
+        c.set(Calendar.HOUR_OF_DAY, 18);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return c.getTimeInMillis();
+    }
+
+    private long quickDueAt(int daysAhead) {
+        Calendar c = Calendar.getInstance();
+        c.add(Calendar.DAY_OF_YEAR, daysAhead);
         c.set(Calendar.HOUR_OF_DAY, 18);
         c.set(Calendar.MINUTE, 0);
         c.set(Calendar.SECOND, 0);

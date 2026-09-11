@@ -1562,10 +1562,10 @@ Sharing: %12$s</string>
     <string name="task_priority_normal">Normal</string>
     <string name="task_priority_high">High</string>
     <string name="task_priority_urgent">Urgent</string>
-    <string name="task_repeat_none">Does not repeat</string>
-    <string name="task_repeat_daily">Daily</string>
-    <string name="task_repeat_weekly">Weekly</string>
-    <string name="task_repeat_monthly">Monthly</string>
+    <string name="task_repeat_none">Once</string>
+    <string name="task_repeat_daily">Repeated • Daily</string>
+    <string name="task_repeat_weekly">Repeated • Weekly</string>
+    <string name="task_repeat_monthly">Repeated • Monthly</string>
     <string name="feature_menu_family_tasks">Family To-Do</string>
     <string name="family_tasks_notification_channel">Family To-Do alerts</string>
     <string name="family_tasks_notification_detail">A family task needs your attention.</string>
@@ -1620,7 +1620,7 @@ Sharing: %12$s</string>
     <string name="family_tasks_voice_permission">Microphone permission is required for task voice input.</string>
     <string name="task_due_today">Today</string>
     <string name="task_due_tomorrow">Tomorrow</string>
-    <string name="task_due_next_week">Next week</string>
+    <string name="task_due_next_week">Custom date</string>
     <string name="family_tasks_add_to_grocery">Also add to Grocery list</string>
     <string name="family_tasks_linked_to_grocery">Linked to Grocery</string>
     <string name="family_tasks_grocery_category">Grocery category</string>
