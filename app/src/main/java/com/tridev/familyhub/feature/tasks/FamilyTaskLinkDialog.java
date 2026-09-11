@@ -140,6 +140,9 @@ final class FamilyTaskLinkDialog {
         input.setTextSize(12f);
         input.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
         input.setPadding(dp(context, 10), 0, dp(context, 8), 0);
+        input.setDropDownHeight(dp(context, 240));
+        input.setDropDownVerticalOffset(dp(context, 6));
+        input.setPopupBackgroundDrawable(context.getDrawable(R.drawable.bg_premium_dropdown_popup));
         input.setAdapter(new ArrayAdapter<>(context,
                 android.R.layout.simple_dropdown_item_1line, labels));
         input.setOnClickListener(v -> input.showDropDown());

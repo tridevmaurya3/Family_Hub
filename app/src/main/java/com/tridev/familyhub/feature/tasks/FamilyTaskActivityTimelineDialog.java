@@ -274,10 +274,16 @@ final class FamilyTaskActivityTimelineDialog {
             MaterialAutoCompleteTextView input = new MaterialAutoCompleteTextView(context);
             input.setInputType(InputType.TYPE_NULL);
             input.setSingleLine(true);
+            input.setTextSize(12f);
+            input.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            input.setPadding(dp(10), 0, dp(8), 0);
+            input.setDropDownHeight(dp(240));
+            input.setDropDownVerticalOffset(dp(6));
+            input.setPopupBackgroundDrawable(context.getDrawable(R.drawable.bg_premium_dropdown_popup));
             input.setOnClickListener(v -> input.showDropDown());
             layout.addView(input, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT));
+                    dp(52)));
             return input;
         }
 

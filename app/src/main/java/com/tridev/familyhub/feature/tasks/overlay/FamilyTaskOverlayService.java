@@ -19,6 +19,7 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -306,8 +307,8 @@ public final class FamilyTaskOverlayService extends Service {
         voice.setContentDescription(getString(R.string.family_tasks_voice_add));
         voice.setColorFilter(Color.rgb(15, 105, 80));
         voice.setPadding(dp(10), dp(10), dp(10), dp(10));
-        voice.setBackground(round(Color.argb(225, 237, 248, 244),
-                14, Color.argb(180, 138, 194, 176)));
+        voice.setBackgroundColor(Color.TRANSPARENT);
+        voice.setElevation(0f);
         Button add = compactAction("+ " + getString(R.string.family_tasks_add),
                 Color.WHITE, Color.rgb(15, 108, 89));
         add.setBackground(round(Color.rgb(15, 108, 89), 14, Color.rgb(15, 108, 89)));
@@ -366,16 +367,10 @@ public final class FamilyTaskOverlayService extends Service {
             return false;
         });
 
-        TextView resize = text("↘", 17f, true);
-        resize.setGravity(Gravity.CENTER);
-        resize.setTextColor(Color.argb(135, 15, 105, 80));
-        resize.setContentDescription("Resize To-Do panel");
-        FrameLayout.LayoutParams resizeParams = new FrameLayout.LayoutParams(
-                dp(34), dp(34), Gravity.END | Gravity.BOTTOM);
-        resizeParams.rightMargin = dp(2);
-        resizeParams.bottomMargin = dp(2);
-        shell.addView(resize, resizeParams);
-        attachPanelResize(resize);
+        addCornerResizeGrip(shell, Gravity.START | Gravity.TOP, true, true);
+        addCornerResizeGrip(shell, Gravity.END | Gravity.TOP, false, true);
+        addCornerResizeGrip(shell, Gravity.START | Gravity.BOTTOM, true, false);
+        addCornerResizeGrip(shell, Gravity.END | Gravity.BOTTOM, false, false);
 
         panelView = shell;
         panelParams = params(panelWidth, panelHeight);
@@ -385,7 +380,41 @@ public final class FamilyTaskOverlayService extends Service {
         panelParams.y = clamp(prefs.getInt("panel_y", dp(74)),
                 0, Math.max(0, screenHeight - panelHeight));
         windowManager.addView(panelView, panelParams);
+        shell.setFocusableInTouchMode(true);
+        shell.requestFocus();
+        shell.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                closePanel();
+                return true;
+            }
+            return false;
+        });
+        shell.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+                closePanel();
+                return true;
+            }
+            return false;
+        });
         refresh();
+    }
+
+    private void addCornerResizeGrip(@NonNull FrameLayout shell, int gravity,
+                                     boolean fromLeft, boolean fromTop) {
+        FrameLayout grip = new FrameLayout(this);
+        int lineColor = Color.argb(105, 15, 105, 80);
+        View horizontal = new View(this);
+        horizontal.setBackgroundColor(lineColor);
+        FrameLayout.LayoutParams hp = new FrameLayout.LayoutParams(dp(16), dp(2), gravity);
+        grip.addView(horizontal, hp);
+        View vertical = new View(this);
+        vertical.setBackgroundColor(lineColor);
+        FrameLayout.LayoutParams vp = new FrameLayout.LayoutParams(dp(2), dp(16), gravity);
+        grip.addView(vertical, vp);
+        FrameLayout.LayoutParams gp = new FrameLayout.LayoutParams(dp(28), dp(28), gravity);
+        gp.setMargins(dp(3), dp(3), dp(3), dp(3));
+        shell.addView(grip, gp);
+        attachPanelResize(grip, fromLeft, fromTop);
     }
 
     private void attachPanelDrag(@NonNull View handle) {
@@ -420,15 +449,17 @@ public final class FamilyTaskOverlayService extends Service {
         });
     }
 
-    private void attachPanelResize(@NonNull View handle) {
+    private void attachPanelResize(@NonNull View handle, boolean fromLeft, boolean fromTop) {
         handle.setOnTouchListener(new View.OnTouchListener() {
-            int startWidth, startHeight;
+            int startWidth, startHeight, startX, startY;
             float downX, downY;
             @Override public boolean onTouch(View v, MotionEvent event) {
                 if (panelParams == null || panelView == null) return false;
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     startWidth = panelParams.width;
                     startHeight = panelParams.height;
+                    startX = panelParams.x;
+                    startY = panelParams.y;
                     downX = event.getRawX();
                     downY = event.getRawY();
                     return true;
@@ -436,12 +467,18 @@ public final class FamilyTaskOverlayService extends Service {
                 if (event.getAction() == MotionEvent.ACTION_MOVE) {
                     int screenWidth = getResources().getDisplayMetrics().widthPixels;
                     int screenHeight = getResources().getDisplayMetrics().heightPixels;
-                    int maxWidth = Math.max(dp(280), screenWidth - panelParams.x - dp(8));
-                    int maxHeight = Math.max(dp(360), screenHeight - panelParams.y - dp(8));
-                    panelParams.width = clamp(startWidth + Math.round(event.getRawX() - downX),
-                            dp(280), maxWidth);
-                    panelParams.height = clamp(startHeight + Math.round(event.getRawY() - downY),
-                            dp(360), maxHeight);
+                    int dx = Math.round(event.getRawX() - downX);
+                    int dy = Math.round(event.getRawY() - downY);
+                    int wantedWidth = startWidth + (fromLeft ? -dx : dx);
+                    int wantedHeight = startHeight + (fromTop ? -dy : dy);
+                    int newWidth = clamp(wantedWidth, dp(280), screenWidth - dp(8));
+                    int newHeight = clamp(wantedHeight, dp(360), screenHeight - dp(8));
+                    if (fromLeft) panelParams.x = clamp(startX + startWidth - newWidth,
+                            0, screenWidth - newWidth);
+                    if (fromTop) panelParams.y = clamp(startY + startHeight - newHeight,
+                            0, screenHeight - newHeight);
+                    panelParams.width = newWidth;
+                    panelParams.height = newHeight;
                     safeUpdate(panelView, panelParams);
                     return true;
                 }

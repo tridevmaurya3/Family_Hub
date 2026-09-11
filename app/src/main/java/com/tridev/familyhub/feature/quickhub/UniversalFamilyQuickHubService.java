@@ -96,17 +96,17 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  Button transparency"); box.addView(grocery,new LinearLayout.LayoutParams(dp(180),dp(42)));box.addView(tasks,new LinearLayout.LayoutParams(dp(180),dp(42)));box.addView(opacity,new LinearLayout.LayoutParams(dp(180),dp(42)));
-        selector=new PopupWindow(box,dp(192),dp(138),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  Floating Button Appearance"); box.addView(grocery,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(tasks,new LinearLayout.LayoutParams(dp(218),dp(44)));box.addView(opacity,new LinearLayout.LayoutParams(dp(218),dp(44)));
+        selector=new PopupWindow(box,dp(230),dp(144),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
-        selector.showAsDropDown(anchor,-dp(150),dp(4));
+        selector.showAsDropDown(anchor,-dp(188),dp(4));
     }
 
     private void showOpacity(View anchor){SharedPreferences p=getSharedPreferences(PREFS,MODE_PRIVATE);SeekBar bar=new SeekBar(this);bar.setPadding(dp(12),0,dp(12),0);bar.setProgress(Math.round((p.getFloat("button_alpha",.92f)-.35f)/.65f*100));PopupWindow pop=new PopupWindow(bar,dp(210),dp(52),true);pop.setOutsideTouchable(true);pop.setBackgroundDrawable(round(Color.WHITE,Color.rgb(184,207,199),16));pop.setElevation(dp(12));bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}public void onProgressChanged(SeekBar s,int value,boolean user){float a=.35f+(value/100f)*.65f;if(icon!=null)icon.setAlpha(a);p.edit().putFloat("button_alpha",a).apply();}});pop.showAsDropDown(anchor,-dp(162),dp(4));}
 
-    private Button choice(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);b.setBackground(round(Color.argb(245,247,252,249),Color.argb(140,184,207,199),12));return b;}
+    private Button choice(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setGravity(Gravity.CENTER);b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);b.setPadding(dp(8),0,dp(8),0);b.setBackground(round(Color.argb(245,247,252,249),Color.argb(140,184,207,199),12));return b;}
     private void open(Class<?> selected,String action,Class<?> other){startService(new Intent(this,other).setAction(other==GroceryOverlayService.class?GroceryOverlayService.ACTION_STOP:FamilyTaskOverlayService.ACTION_STOP));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
