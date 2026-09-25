@@ -192,7 +192,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             }
         });
         reload();
-        updateFloatingButton();
         Bundle args = getArguments();
         if (args != null && args.getBoolean(ARG_OPEN_NEW_TASK, false)) {
             args.remove(ARG_OPEN_NEW_TASK);
