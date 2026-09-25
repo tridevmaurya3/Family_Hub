@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="quick_hub_toggle">Floating</string>
     <string name="content_description_add">Add new item</string>
 
     <string name="app_name">Family Hub</string>

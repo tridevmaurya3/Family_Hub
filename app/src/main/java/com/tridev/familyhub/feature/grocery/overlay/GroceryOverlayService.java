@@ -210,9 +210,8 @@ public class GroceryOverlayService extends Service {
                 screenStateReceiver,
                 new IntentFilter(Intent.ACTION_SCREEN_OFF),
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
-        if (Settings.canDrawOverlays(this)) {
-            showStrip();
-        }
+        // The universal hub owns the launcher; ACTION_SHOW can still display
+        // the legacy strip for callers that explicitly request it.
     }
 
     @Override
@@ -232,9 +231,8 @@ public class GroceryOverlayService extends Service {
             return START_STICKY;
         }
         if (intent != null && ACTION_OPEN_PANEL.equals(intent.getAction())) {
-            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
             if (stripView != null) stripView.setVisibility(View.GONE);
-            if (panelView == null) togglePanel();
+            if (panelView == null && Settings.canDrawOverlays(this)) togglePanel();
             return START_STICKY;
         }
         if (intent != null && ACTION_SUSPEND_FOR_VOICE.equals(intent.getAction())) {
@@ -1032,7 +1030,7 @@ public class GroceryOverlayService extends Service {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(22)));
 
         SeekBar opacity = new SeekBar(this);
-        int savedProgress = Math.round((savedAlpha - 0.35f) / 0.65f * 100f);
+        int savedProgress = Math.round((savedAlpha - 0.10f) / 0.90f * 100f);
         opacity.setProgress(Math.max(0, Math.min(100, savedProgress)));
         opacity.setProgressTintList(android.content.res.ColorStateList.valueOf(
                 Color.rgb(15, 108, 89)));
@@ -1070,7 +1068,7 @@ public class GroceryOverlayService extends Service {
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
             @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                float alpha = 0.35f + (progress / 100f) * 0.65f;
+                float alpha = 0.10f + (progress / 100f) * 0.90f;
                 if (stripView != null) stripView.setAlpha(alpha);
                 String percent = Math.round(alpha * 100f) + "%";
                 valueBadge.setText(percent);

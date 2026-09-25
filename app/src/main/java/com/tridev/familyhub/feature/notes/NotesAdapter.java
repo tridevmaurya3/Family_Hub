@@ -83,14 +83,14 @@ public class NotesAdapter
         void bind(@NonNull NoteEntry note) {
             binding.noteTitle.setText(note.title);
             binding.noteContent.setText(
-                    note.content.isEmpty()
+                    note.content == null || note.content.isEmpty()
                             ? binding.getRoot().getContext().getString(
                                     R.string.notes_no_content
                             )
                             : note.content
             );
             binding.noteCategory.setText(
-                    note.category.isEmpty()
+                    note.category == null || note.category.isEmpty()
                             ? binding.getRoot().getContext().getString(
                                     R.string.notes_uncategorized
                             )
@@ -108,7 +108,8 @@ public class NotesAdapter
             binding.notePinned.setVisibility(
                     note.isPinned ? View.VISIBLE : View.GONE
             );
-            boolean assigned = !note.assignedMemberName.isEmpty();
+            boolean assigned = note.assignedMemberName != null
+                    && !note.assignedMemberName.isEmpty();
             binding.noteAssignment.setVisibility(assigned ? View.VISIBLE : View.GONE);
             if (assigned) binding.noteAssignment.setText(
                     binding.getRoot().getContext().getString(
@@ -155,7 +156,7 @@ public class NotesAdapter
 
         private int accentColor(@NonNull String key) {
             int color;
-            switch (key) {
+            switch (key == null ? "" : key) {
                 case "GREEN":
                     color = R.color.fh_success;
                     break;
@@ -177,7 +178,7 @@ public class NotesAdapter
 
         private int containerColor(@NonNull String key) {
             int color;
-            switch (key) {
+            switch (key == null ? "" : key) {
                 case "GREEN":
                     color = R.color.fh_success_container;
                     break;

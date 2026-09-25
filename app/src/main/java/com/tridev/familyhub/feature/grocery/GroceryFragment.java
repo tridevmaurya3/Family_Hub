@@ -44,7 +44,6 @@ import com.tridev.familyhub.databinding.FragmentGroceryBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
-import com.tridev.familyhub.feature.quickhub.UniversalQuickHubController;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -231,9 +230,6 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         );
         binding.clearPurchasedButton.setOnClickListener(
                 clickedView -> confirmClearPurchased()
-        );
-        binding.floatingGroceryButton.setOnClickListener(
-                clickedView -> toggleFloatingStrip()
         );
         binding.groceryVoiceButton.setOnClickListener(v -> startVoiceAdd());
         binding.groceryVoiceButton.setOnLongClickListener(v -> {
@@ -777,42 +773,6 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         popup.show();
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (binding == null) {
-            return;
-        }
-        boolean requested = UniversalQuickHubController.wasRequested(requireContext());
-        if (requested && Settings.canDrawOverlays(requireContext())) {
-            UniversalQuickHubController.setRequested(requireContext(), false);
-            startFloatingStrip();
-        }
-        setFloatingStripVisible(false);
-        updateFloatingButton();
-    }
-
-    @Override
-    public void onPause() {
-        setFloatingStripVisible(true);
-        super.onPause();
-    }
-
-    private void setFloatingStripVisible(boolean visible) {
-        UniversalQuickHubController.setVisible(requireContext(), visible);
-    }
-
-    private void toggleFloatingStrip() {
-        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
-        if (enabled) {
-            UniversalQuickHubController.stop(requireContext());
-            binding.floatingGroceryButton.postDelayed(
-                    this::updateFloatingButton, 250L);
-            return;
-        }
-        continueFloatingStripSetup();
-    }
-
     private void setGroceryHeaderCollapsed(boolean collapsed) {
         if (binding == null || groceryHeaderCollapsed == collapsed) return;
         groceryHeaderCollapsed = collapsed;
@@ -829,38 +789,6 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 getResources().getDimensionPixelSize(collapsed
                         ? R.dimen.space_4 : R.dimen.space_12));
         constraints.applyTo(binding.getRoot());
-    }
-
-    private void continueFloatingStripSetup() {
-        if (!Settings.canDrawOverlays(requireContext())) {
-            UniversalQuickHubController.setRequested(requireContext(), true);
-            Snackbar.make(binding.getRoot(),
-                    R.string.grocery_overlay_permission,
-                    Snackbar.LENGTH_LONG).show();
-            Intent permission = new Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + requireContext().getPackageName())
-            );
-            startActivity(permission);
-            return;
-        }
-        startFloatingStrip();
-    }
-
-    private void startFloatingStrip() {
-        UniversalQuickHubController.start(requireContext(), false);
-        binding.floatingGroceryButton.postDelayed(
-                this::updateFloatingButton, 250L);
-    }
-
-    private void updateFloatingButton() {
-        if (binding == null) {
-            return;
-        }
-        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
-        binding.floatingGroceryButton.setText(enabled
-                ? R.string.grocery_floating_disable
-                : R.string.grocery_floating_enable);
     }
 
     @Override

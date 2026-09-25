@@ -3,6 +3,7 @@ package com.tridev.familyhub.feature.main;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -37,6 +38,8 @@ import com.tridev.familyhub.feature.more.MoreFragment;
 import com.tridev.familyhub.feature.profile.ProfileSettingsActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
 import com.tridev.familyhub.feature.tasks.FamilyTasksFragment;
+import com.tridev.familyhub.feature.quickhub.QuickHubToggleView;
+import com.tridev.familyhub.feature.quickhub.UniversalQuickHubController;
 
 /** Hosts the primary bottom navigation and feature screens. */
 public class MainActivity extends AppCompatActivity {
@@ -62,6 +65,19 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
     private boolean redirectingToAuth;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (binding == null) return;
+        if (UniversalQuickHubController.wasRequested(this)
+                && Settings.canDrawOverlays(this)) {
+            UniversalQuickHubController.setRequested(this, false);
+            UniversalQuickHubController.start(this, true);
+        }
+        QuickHubToggleView toggle = findViewById(R.id.quick_hub_toggle);
+        if (toggle != null) toggle.refresh();
+    }
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

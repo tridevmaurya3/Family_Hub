@@ -70,6 +70,13 @@
                         android:textSize="12sp" />
                 </LinearLayout>
 
+                <com.tridev.familyhub.feature.quickhub.QuickHubToggleView
+                    android:id="@+id/quick_hub_toggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_marginStart="@dimen/space_4"
+                    android:textSize="11sp" />
+
                 <FrameLayout android:layout_width="@dimen/touch_target_min" android:layout_height="@dimen/touch_target_min">
                     <ImageButton
                         android:id="@+id/notification_button"

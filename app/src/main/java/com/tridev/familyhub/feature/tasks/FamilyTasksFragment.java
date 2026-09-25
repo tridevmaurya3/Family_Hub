@@ -53,7 +53,6 @@ import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
 import com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView;
-import com.tridev.familyhub.feature.quickhub.UniversalQuickHubController;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -157,7 +156,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
         binding.taskQuickAddLayout.setEndIconOnClickListener(v ->
                 requestVoiceCapture(binding.taskQuickAddInput, binding.taskQuickVoiceWave));
-        binding.taskFloatingToggle.setOnClickListener(v -> toggleFloatingStrip());
         binding.taskDueCalendarButton.setOnClickListener(v -> pickCalendarDay());
         binding.taskQuickAddInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -684,48 +682,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskRecyclerView.post(() -> {
             if (binding != null) binding.taskRecyclerView.scrollToPosition(0);
         });
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        if (binding == null) return;
-        boolean requested = UniversalQuickHubController.wasRequested(requireContext());
-        if (requested && Settings.canDrawOverlays(requireContext())) {
-            UniversalQuickHubController.setRequested(requireContext(), false);
-            startFloatingStrip();
-        }
-        updateFloatingButton();
-    }
-
-    private void toggleFloatingStrip() {
-        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
-        if (enabled) {
-            UniversalQuickHubController.stop(requireContext());
-            binding.taskFloatingToggle.postDelayed(this::updateFloatingButton, 180);
-            return;
-        }
-        if (!Settings.canDrawOverlays(requireContext())) {
-            UniversalQuickHubController.setRequested(requireContext(), true);
-            android.widget.Toast.makeText(requireContext(),
-                    R.string.family_tasks_overlay_permission, android.widget.Toast.LENGTH_LONG).show();
-            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + requireContext().getPackageName())));
-            return;
-        }
-        startFloatingStrip();
-    }
-
-    private void startFloatingStrip() {
-        UniversalQuickHubController.start(requireContext(), true);
-        binding.taskFloatingToggle.postDelayed(this::updateFloatingButton, 180);
-    }
-
-    private void updateFloatingButton() {
-        if (binding == null) return;
-        boolean enabled = UniversalQuickHubController.isEnabled(requireContext());
-        binding.taskFloatingToggle.setText(enabled
-                ? R.string.family_tasks_floating_hide : R.string.family_tasks_floating_show);
     }
 
     @Override public void onAddRequested() { prepareEditor(null); }

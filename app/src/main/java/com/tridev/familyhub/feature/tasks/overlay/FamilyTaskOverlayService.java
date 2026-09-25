@@ -160,7 +160,7 @@ public final class FamilyTaskOverlayService extends Service {
             @Override public void onRemoved(long localId) { refresh(); }
         });
         windowManager = getSystemService(WindowManager.class);
-        if (Settings.canDrawOverlays(this)) showStrip();
+        // The universal hub owns the launcher; ACTION_SHOW remains available.
     }
 
     @Override
@@ -176,9 +176,8 @@ public final class FamilyTaskOverlayService extends Service {
             return START_STICKY;
         }
         if (ACTION_OPEN_PANEL.equals(action)) {
-            if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
             if (stripView != null) stripView.setVisibility(View.GONE);
-            if (panelView == null) showPanel();
+            if (panelView == null && Settings.canDrawOverlays(this)) showPanel();
             return START_STICKY;
         }
         if (stripView == null && Settings.canDrawOverlays(this)) showStrip();
@@ -904,7 +903,7 @@ public final class FamilyTaskOverlayService extends Service {
         titleRow.addView(value, new LinearLayout.LayoutParams(dp(52), dp(28)));
         root.addView(titleRow, new LinearLayout.LayoutParams(-1, dp(30)));
         SeekBar opacity = new SeekBar(this);
-        int progress = Math.round((saved - 0.35f) / 0.65f * 100f);
+        int progress = Math.round((saved - 0.10f) / 0.90f * 100f);
         opacity.setProgress(clamp(progress, 0, 100));
         root.addView(opacity, new LinearLayout.LayoutParams(-1, dp(42)));
         PopupWindow popup = new PopupWindow(root, Math.min(dp(224),
@@ -917,7 +916,7 @@ public final class FamilyTaskOverlayService extends Service {
             @Override public void onStartTrackingTouch(SeekBar seekBar) { }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
             @Override public void onProgressChanged(SeekBar seekBar, int p, boolean fromUser) {
-                float alpha = 0.35f + (p / 100f) * 0.65f;
+                float alpha = 0.10f + (p / 100f) * 0.90f;
                 value.setText(Math.round(alpha * 100f) + "%");
                 if (stripView != null) stripView.setAlpha(alpha);
                 if (panelView != null) panelView.setAlpha(alpha);

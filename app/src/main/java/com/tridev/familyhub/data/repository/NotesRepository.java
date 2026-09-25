@@ -212,19 +212,26 @@ public class NotesRepository {
 
     @NonNull private static String stringValue(@NonNull DataSnapshot source,
                                                 @NonNull String key) {
-        String value = source.child(key).getValue(String.class);
-        return value == null ? "" : value;
+        Object value = source.child(key).getValue();
+        return value instanceof String ? (String) value : "";
     }
 
     private static long longValue(@NonNull DataSnapshot source, @NonNull String key) {
-        Number value = source.child(key).getValue(Number.class);
-        return value == null ? 0L : value.longValue();
+        Object value = source.child(key).getValue();
+        if (value instanceof Number) return ((Number) value).longValue();
+        if (value instanceof String) {
+            try {
+                return Long.parseLong(((String) value).trim());
+            } catch (NumberFormatException ignored) {
+                return 0L;
+            }
+        }
+        return 0L;
     }
 
     private static boolean booleanValue(@NonNull DataSnapshot source,
                                         @NonNull String key) {
-        Boolean value = source.child(key).getValue(Boolean.class);
-        return value != null && value;
+        return Boolean.TRUE.equals(source.child(key).getValue());
     }
 
     private static long parseLong(@NonNull String value) {
