@@ -249,25 +249,39 @@ public final class GroceryMoneyManagerBridge {
     @NonNull
     private static String purchaseDetail(@NonNull GroceryItem item) {
         StringBuilder detail = new StringBuilder();
-        appendDetail(detail, metadata(item.name, 48));
-        if (!safe(item.quantity).isEmpty()) {
-            appendDetail(detail, "Qty " + metadata(item.quantity, 32));
-        }
-        if (!safe(item.category).isEmpty()) {
-            appendDetail(detail, metadata(item.category, 40));
-        }
-        if (!safe(item.storeName).isEmpty()) {
-            appendDetail(detail, "Store " + metadata(item.storeName, 40));
-        }
+        // Keep the buyer ahead of optional purchase details. The receiving ledger
+        // has a bounded note field, so the person's name must never be the tail
+        // of a truncated merchant summary.
         String buyer = !safe(item.purchasedByName).isEmpty()
                 ? item.purchasedByName : item.assignedMemberName;
         if (!safe(buyer).isEmpty()) {
-            appendDetail(detail, "By " + metadata(buyer, 40));
+            // Leave room for the stable event marker and source in the 240-char
+            // MoneyManager note; a normal member name then survives both limits.
+            appendDetail(detail, "By " + metadata(buyer, 105));
+        }
+        appendPurchaseDetail(detail, metadata(item.name, 48));
+        if (!safe(item.quantity).isEmpty()) {
+            appendPurchaseDetail(detail, "Qty " + metadata(item.quantity, 32));
+        }
+        if (!safe(item.category).isEmpty()) {
+            appendPurchaseDetail(detail, metadata(item.category, 40));
+        }
+        if (!safe(item.storeName).isEmpty()) {
+            appendPurchaseDetail(detail, "Store " + metadata(item.storeName, 40));
         }
         if (!safe(item.notes).isEmpty()) {
-            appendDetail(detail, metadata(item.notes, 40));
+            appendPurchaseDetail(detail, metadata(item.notes, 40));
         }
-        return metadata(detail.toString(), 120);
+        return detail.toString();
+    }
+
+    private static void appendPurchaseDetail(@NonNull StringBuilder detail, @Nullable String value) {
+        String clean = metadata(value, 120);
+        int separator = detail.length() == 0 ? 0 : 3;
+        // Never leave a partial buyer name or a dangling "By" at the limit.
+        if (detail.length() + separator + clean.length() <= 120) {
+            appendDetail(detail, clean);
+        }
     }
 
     private static void appendDetail(@NonNull StringBuilder output, @Nullable String value) {
