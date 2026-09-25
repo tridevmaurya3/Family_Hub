@@ -233,11 +233,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 new ViewGroup.MarginLayoutParams(dp(88), dp(38)));
         binding.taskFilterGroup.addView(taskDateDropdown, 1,
                 new ViewGroup.MarginLayoutParams(dp(86), dp(38)));
-        binding.taskFilterGroup.addView(taskAssignmentDropdown, 2,
+        binding.taskFilterGroup.addView(taskAssignmentDropdown, 3,
                 new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
-        binding.taskFilterGroup.addView(taskPriorityDropdown, 3,
+        binding.taskFilterGroup.addView(taskPriorityDropdown, 4,
                 new ViewGroup.MarginLayoutParams(dp(92), dp(38)));
-        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 4,
+        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 5,
                 new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
         taskCategoryCollapseButton.setOnClickListener(v -> {
             boolean collapsed = adapter.toggleAllCategories();

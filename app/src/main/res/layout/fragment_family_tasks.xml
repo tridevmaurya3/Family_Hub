@@ -165,6 +165,14 @@
             android:layout_width="match_parent" android:layout_height="match_parent"
             android:gravity="center_vertical" app:chipSpacingHorizontal="@dimen/space_4"
             app:selectionRequired="false" app:singleSelection="false">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/task_due_calendar_button"
+                style="@style/Widget.FamilyHub.FloatingCompact.Action"
+                android:layout_width="wrap_content" android:layout_height="38dp"
+                android:layout_marginStart="@dimen/space_4"
+                android:text="@string/family_tasks_due_calendar"
+                android:textColor="@color/fh_primary" android:textSize="11sp"
+                app:icon="@drawable/ic_planner" app:iconTint="@color/fh_primary" />
             <com.google.android.material.chip.Chip android:id="@+id/task_filter_today"
                 style="@style/Widget.FamilyHub.FloatingCompact.FilterChip"
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -226,34 +234,13 @@
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
-    <HorizontalScrollView
-        android:id="@+id/task_action_scroll"
-        android:layout_width="0dp" android:layout_height="48dp"
-        android:layout_marginTop="2dp" android:scrollbars="none"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_filter_scroll">
-        <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent"
-            android:gravity="center_vertical" android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/task_due_calendar_button"
-                style="@style/Widget.FamilyHub.FloatingCompact.Action"
-                android:layout_width="wrap_content" android:layout_height="44dp"
-                android:layout_marginStart="@dimen/space_4"
-                android:text="@string/family_tasks_due_calendar"
-                android:textColor="@color/fh_primary" android:textSize="11sp"
-                app:icon="@drawable/ic_planner" app:iconTint="@color/fh_primary" />
-        </LinearLayout>
-    </HorizontalScrollView>
-
     <LinearLayout
         android:id="@+id/task_quick_add_panel"
         android:layout_width="0dp" android:layout_height="wrap_content"
         android:layout_marginTop="2dp" android:gravity="center_vertical"
         android:orientation="horizontal" app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_action_scroll">
+        app:layout_constraintTop_toBottomOf="@id/task_filter_scroll">
         <LinearLayout
             android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:orientation="vertical">
