@@ -104,19 +104,7 @@
         <item name="iconTint">@color/fh_error</item>
     </style>
 
-    <style name="Widget.FamilyHub.Form.Dropdown" parent="Widget.FamilyHub.TextInputLayout">
-        <item name="android:elevation">2dp</item>
-        <item name="boxBackgroundColor">@color/fh_surface</item>
-        <item name="boxCornerRadiusTopStart">@dimen/radius_18</item>
-        <item name="boxCornerRadiusTopEnd">@dimen/radius_18</item>
-        <item name="boxCornerRadiusBottomStart">@dimen/radius_18</item>
-        <item name="boxCornerRadiusBottomEnd">@dimen/radius_18</item>
-        <item name="boxStrokeColor">@color/fh_form_outline</item>
-        <item name="boxStrokeWidth">@dimen/border_width</item>
-        <item name="boxStrokeWidthFocused">2dp</item>
-        <item name="endIconMode">dropdown_menu</item>
-        <item name="endIconTint">@color/fh_form_accent</item>
-    </style>
+    <style name="Widget.FamilyHub.Form.Dropdown" parent="Widget.FamilyHub.FloatingCompact.Dropdown" />
 
     <style name="Widget.FamilyHub.Form.Date" parent="Widget.FamilyHub.TextInputLayout">
         <item name="endIconMode">custom</item>
@@ -183,6 +171,14 @@
         <item name="android:minHeight">40dp</item>
         <item name="android:textSize">11.5sp</item>
         <item name="android:textColor">@color/fh_on_surface</item>
+    </style>
+
+    <!-- Shared by add and edit dialogs across the app. -->
+    <style name="Widget.FamilyHub.Form.CompactCancel" parent="Widget.FamilyHub.Button.Outlined">
+        <item name="android:minHeight">40dp</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="strokeColor">@color/fh_form_accent</item>
+        <item name="android:textColor">@color/fh_form_accent</item>
     </style>
 
     <style name="Widget.FamilyHub.StatusChip" parent="Widget.Material3.Chip.Assist">

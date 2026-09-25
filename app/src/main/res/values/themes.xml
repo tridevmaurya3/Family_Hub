@@ -67,10 +67,10 @@
 
     <style name="Widget.FamilyHub.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxBackgroundColor">@color/fh_form_surface</item>
-        <item name="boxCornerRadiusTopStart">@dimen/radius_12</item>
-        <item name="boxCornerRadiusTopEnd">@dimen/radius_12</item>
-        <item name="boxCornerRadiusBottomStart">@dimen/radius_12</item>
-        <item name="boxCornerRadiusBottomEnd">@dimen/radius_12</item>
+        <item name="boxCornerRadiusTopStart">15dp</item>
+        <item name="boxCornerRadiusTopEnd">15dp</item>
+        <item name="boxCornerRadiusBottomStart">15dp</item>
+        <item name="boxCornerRadiusBottomEnd">15dp</item>
         <item name="boxStrokeColor">@color/form_input_stroke</item>
         <item name="boxStrokeWidth">@dimen/border_width</item>
         <item name="boxStrokeWidthFocused">1dp</item>

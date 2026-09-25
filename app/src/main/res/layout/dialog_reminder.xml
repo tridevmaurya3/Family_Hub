@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_form_three_tone"
+    android:background="@drawable/bg_form_floating_shell"
     android:fillViewport="true">
 
     <LinearLayout
@@ -14,7 +14,7 @@
         android:padding="@dimen/space_16">
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Flat"
+            style="@style/Widget.FamilyHub.Form.Header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/fh_module_reminders_container"
@@ -51,7 +51,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/reminder_title_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
@@ -73,7 +73,7 @@
             android:orientation="horizontal">
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.Form.Dropdown"
+                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/space_4"
@@ -88,7 +88,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.Form.Dropdown"
+                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_4"
@@ -104,7 +104,7 @@
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -118,7 +118,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -132,7 +132,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -147,7 +147,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/reminder_date_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -169,7 +169,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/reminder_time_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -257,7 +257,7 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -277,6 +277,7 @@
             android:layout_marginTop="@dimen/form_field_spacing">
 
             <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                 android:id="@+id/reminder_enabled_switch"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/input_min_height"
@@ -290,7 +291,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/reminder_note_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -308,7 +309,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -322,6 +323,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
             android:id="@+id/reminder_shared_switch"
             android:layout_width="match_parent"
             android:layout_height="@dimen/touch_target_min"
@@ -335,7 +337,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_reminder_button"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.Form.CompactCancel"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginEnd="@dimen/space_4"
@@ -344,7 +346,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_reminder_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
+                style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginStart="@dimen/space_4"

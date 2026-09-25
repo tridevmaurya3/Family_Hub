@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_form_three_tone">
+    android:background="@drawable/bg_form_floating_shell">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="@dimen/space_16">
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Flat"
+            style="@style/Widget.FamilyHub.Form.Header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/fh_tertiary_container"
@@ -44,7 +44,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/planner_title_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
@@ -58,7 +58,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -72,6 +72,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
             android:id="@+id/planner_shared_switch"
             android:layout_width="match_parent"
             android:layout_height="@dimen/touch_target_min"
@@ -83,7 +84,7 @@
             android:layout_marginTop="@dimen/form_field_spacing"
             android:orientation="horizontal">
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
+                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/space_4"
@@ -97,7 +98,7 @@
                     android:inputType="none" />
             </com.google.android.material.textfield.TextInputLayout>
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
+                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_4"
@@ -113,7 +114,7 @@
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -127,7 +128,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -143,7 +144,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/planner_end_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -158,6 +159,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
             android:id="@+id/planner_all_day_switch"
             android:layout_width="match_parent"
             android:layout_height="@dimen/touch_target_min"
@@ -165,7 +167,7 @@
             android:text="@string/planner_all_day" />
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -179,7 +181,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -193,6 +195,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
             android:id="@+id/planner_reminder_switch"
             android:layout_width="match_parent"
             android:layout_height="@dimen/touch_target_min"
@@ -200,7 +203,7 @@
             android:text="@string/planner_reminder_enabled" />
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -214,7 +217,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -236,7 +239,7 @@
             android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_planner_button"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.Form.CompactCancel"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginEnd="@dimen/space_4"
@@ -244,7 +247,7 @@
                 android:text="@string/cancel" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_planner_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
+                style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginStart="@dimen/space_4"

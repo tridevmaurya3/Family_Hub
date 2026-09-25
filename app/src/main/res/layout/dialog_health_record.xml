@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_form_three_tone">
+    android:background="@drawable/bg_form_floating_shell">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,7 +13,7 @@
         android:padding="@dimen/space_16">
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Flat"
+            style="@style/Widget.FamilyHub.Form.Header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/fh_module_health_container"
@@ -51,7 +51,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/health_member_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
@@ -68,7 +68,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/health_type_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -90,7 +90,7 @@
             android:orientation="horizontal">
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
+                style="@style/Widget.FamilyHub.FloatingCompact.Field"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="@dimen/space_4"
@@ -107,7 +107,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.TextInputLayout"
+                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_4"
@@ -124,7 +124,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/health_title_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -140,7 +140,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -156,7 +156,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -174,7 +174,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -192,7 +192,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
             android:hint="@string/linked_document"
@@ -202,7 +202,7 @@
                 android:layout_height="wrap_content" android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing" android:hint="@string/timeline_note">
             <com.google.android.material.textfield.TextInputEditText
@@ -211,6 +211,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
             android:id="@+id/health_shared_switch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -227,7 +228,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_health_button"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.Form.CompactCancel"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginEnd="@dimen/space_4"
@@ -236,7 +237,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_health_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
+                style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginStart="@dimen/space_4"

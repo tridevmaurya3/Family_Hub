@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_form_three_tone"
+    android:background="@drawable/bg_form_floating_shell"
     android:orientation="vertical"
     android:padding="@dimen/space_16">
 
@@ -15,7 +15,7 @@
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/household_name_layout"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        style="@style/Widget.FamilyHub.FloatingCompact.Field"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_12"
@@ -31,7 +31,7 @@
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/household_guardian_layout"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_12"
@@ -53,13 +53,14 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_cancel_household"
-            style="@style/Widget.Material3.Button.TextButton"
+            style="@style/Widget.FamilyHub.Form.CompactCancel"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/touch_target_min"
             android:text="@string/action_cancel" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_save_household"
+            style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
             android:layout_width="wrap_content"
             android:layout_height="@dimen/touch_target_min"
             android:layout_marginStart="@dimen/space_8"

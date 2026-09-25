@@ -132,7 +132,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/finance_amount_layout"
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="@dimen/space_4"
@@ -152,7 +152,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/finance_entry_date_layout"
-                        style="@style/Widget.FamilyHub.Form.Date"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Date"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_4"
@@ -192,7 +192,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_account_layout"
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/finance_account">
@@ -213,7 +213,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_category_layout"
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_4"
@@ -235,7 +235,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_payment_method_layout"
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_4"
@@ -272,6 +272,7 @@
                 android:padding="@dimen/space_8">
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                     android:id="@+id/finance_recurring_switch"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/touch_target_min"
@@ -281,6 +282,7 @@
                     android:textSize="12sp" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
                     android:id="@+id/finance_shared_switch"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/touch_target_min"
@@ -291,7 +293,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_paid_by_layout"
-                    style="@style/Widget.FamilyHub.Form.Dropdown"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_4"
@@ -320,7 +322,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/finance_split_type_layout"
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="@dimen/space_4"
@@ -343,7 +345,7 @@
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/finance_settlement_layout"
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_4"
@@ -367,7 +369,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_participants_layout"
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_4"
@@ -385,7 +387,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_split_amounts_layout"
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/space_4"
@@ -419,7 +421,7 @@
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/finance_note_layout"
-                    style="@style/Widget.FamilyHub.TextInputLayout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/finance_note">

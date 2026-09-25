@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_form_three_tone"
+    android:background="@drawable/bg_form_floating_shell"
     android:fillViewport="true">
 
     <LinearLayout
@@ -14,7 +14,7 @@
         android:padding="@dimen/space_16">
 
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Flat"
+            style="@style/Widget.FamilyHub.Form.Header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/fh_module_family_container"
@@ -84,7 +84,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/select_member_photo_button"
-                    style="@style/Widget.FamilyHub.Button.Outlined"
+                    style="@style/Widget.FamilyHub.Form.CompactCancel"
                     android:layout_width="match_parent"
                     android:layout_height="@dimen/button_height"
                     android:text="@string/member_choose_photo" />
@@ -112,7 +112,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_name_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_20"
@@ -128,7 +128,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -143,7 +143,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -158,7 +158,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -171,6 +171,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.materialswitch.MaterialSwitch
+            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
             android:id="@+id/member_guardian_switch"
             android:layout_width="match_parent"
             android:layout_height="@dimen/touch_target_min"
@@ -179,7 +180,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_relation_layout"
-            style="@style/Widget.FamilyHub.Form.Dropdown"
+            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -204,7 +205,7 @@
             android:textColor="@color/fh_module_family" />
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -228,7 +229,7 @@
             android:textColor="@color/fh_error" />
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_8"
@@ -242,7 +243,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -267,7 +268,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_phone_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -284,7 +285,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_email_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -301,7 +302,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_birth_date_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -323,7 +324,7 @@
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/member_note_layout"
-            style="@style/Widget.FamilyHub.TextInputLayout"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
@@ -348,7 +349,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_member_button"
-                style="@style/Widget.FamilyHub.Button.Outlined"
+                style="@style/Widget.FamilyHub.Form.CompactCancel"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginEnd="@dimen/space_4"
@@ -357,7 +358,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_member_button"
-                style="@style/Widget.FamilyHub.Button.Primary"
+                style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginStart="@dimen/space_4"
