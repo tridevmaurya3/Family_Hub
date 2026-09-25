@@ -156,7 +156,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
         binding.taskQuickAddLayout.setEndIconOnClickListener(v ->
                 requestVoiceCapture(binding.taskQuickAddInput, binding.taskQuickVoiceWave));
-        binding.taskDueCalendarButton.setOnClickListener(v -> pickCalendarDay());
         binding.taskQuickAddInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
                 quickAdd();
@@ -233,11 +232,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 new ViewGroup.MarginLayoutParams(dp(88), dp(38)));
         binding.taskFilterGroup.addView(taskDateDropdown, 1,
                 new ViewGroup.MarginLayoutParams(dp(86), dp(38)));
-        binding.taskFilterGroup.addView(taskAssignmentDropdown, 3,
+        binding.taskFilterGroup.addView(taskAssignmentDropdown, 2,
                 new ViewGroup.MarginLayoutParams(dp(96), dp(38)));
-        binding.taskFilterGroup.addView(taskPriorityDropdown, 4,
+        binding.taskFilterGroup.addView(taskPriorityDropdown, 3,
                 new ViewGroup.MarginLayoutParams(dp(92), dp(38)));
-        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 5,
+        binding.taskFilterGroup.addView(taskCategoryCollapseButton, 4,
                 new ViewGroup.MarginLayoutParams(dp(94), dp(38)));
         taskCategoryCollapseButton.setOnClickListener(v -> {
             boolean collapsed = adapter.toggleAllCategories();
@@ -421,26 +420,34 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 getString(R.string.family_tasks_overlay_last_7_days),
                 getString(R.string.family_tasks_overlay_last_15_days),
                 getString(R.string.family_tasks_overlay_last_30_days),
-                getString(R.string.family_tasks_date_all)}
+                getString(R.string.family_tasks_date_all),
+                getString(R.string.family_tasks_due_calendar)}
                 : new String[]{getString(R.string.family_tasks_date_today),
                 getString(R.string.family_tasks_date_tomorrow),
                 getString(R.string.family_tasks_overlay_next_7_days),
                 getString(R.string.family_tasks_overlay_next_15_days),
                 getString(R.string.family_tasks_overlay_next_30_days),
-                getString(R.string.family_tasks_date_all)};
+                getString(R.string.family_tasks_date_all),
+                getString(R.string.family_tasks_due_calendar)};
         int[] values = {
                 R.id.task_filter_today, R.id.task_filter_tomorrow,
                 R.id.task_filter_week, R.id.task_filter_15_days,
                 R.id.task_filter_month, R.id.task_filter_all
         };
-        int selected = customDateStart > 0L || overdueOnly ? -1 : indexOf(values, activeFilter);
+        int selected = overdueOnly ? -1 : customDateStart > 0L
+                ? values.length : indexOf(values, activeFilter);
         showPremiumFilterPopup(anchor, labels, selected,
                 ContextCompat.getColor(requireContext(), R.color.fh_success), index -> {
+                    if (index == values.length) {
+                        anchor.post(() -> {
+                            if (isAdded() && binding != null) pickCalendarDay();
+                        });
+                        return;
+                    }
                     activeFilter = values[index];
                     overdueOnly = false;
                     customDateStart = 0L;
                     customDateEnd = 0L;
-                    binding.taskDueCalendarButton.setText(R.string.family_tasks_due_calendar);
                     syncPremiumFilterControls();
                     resetTaskScroll();
                     reload();
@@ -463,7 +470,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                     overdueOnly = false;
                     customDateStart = 0L;
                     customDateEnd = 0L;
-                    binding.taskDueCalendarButton.setText(R.string.family_tasks_due_calendar);
                     syncPremiumFilterControls();
                     resetTaskScroll();
                     reload();
@@ -770,6 +776,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     private void pickCalendarDay() {
         Calendar selected = Calendar.getInstance();
+        if (customDateStart > 0L) selected.setTimeInMillis(customDateStart);
         new DatePickerDialog(requireContext(), (picker, year, month, day) -> {
             selected.set(year, month, day, 0, 0, 0);
             selected.set(Calendar.MILLISECOND, 0);
@@ -778,10 +785,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             customDateEnd = selected.getTimeInMillis();
             overdueOnly = false;
             activeFilter = R.id.task_filter_all;
-            binding.taskDueCalendarButton.setText(getString(
-                    R.string.family_tasks_calendar_date,
-                    DateFormat.getDateInstance(DateFormat.MEDIUM)
-                            .format(new Date(customDateStart))));
             syncPremiumFilterControls();
             resetTaskScroll();
             reload();
@@ -843,7 +846,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         activeStatus = statusFilter;
         customDateStart = 0L;
         customDateEnd = 0L;
-        binding.taskDueCalendarButton.setText(R.string.family_tasks_due_calendar);
         syncPremiumFilterControls();
         resetTaskScroll();
         reload();
