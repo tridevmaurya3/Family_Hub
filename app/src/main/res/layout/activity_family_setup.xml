@@ -1,11 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_page_three_tone"
     android:fillViewport="true">
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -14,27 +12,23 @@
         android:paddingTop="@dimen/space_32"
         android:paddingEnd="@dimen/screen_padding_horizontal"
         android:paddingBottom="@dimen/space_32">
-
         <ImageView
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:contentDescription="@string/app_name"
-            android:src="@drawable/ic_family_hub_mark" />
-
+            android:src="@drawable/ic_family_hub_mark"/>
         <TextView
             style="@style/TextAppearance.FamilyHub.Heading"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_16"
-            android:text="@string/family_account_title" />
-
+            android:text="@string/family_account_title"/>
         <TextView
             style="@style/TextAppearance.FamilyHub.Body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_4"
-            android:text="@string/family_account_subtitle" />
-
+            android:text="@string/family_account_subtitle"/>
         <ProgressBar
             android:id="@+id/progress_family_setup"
             style="?android:attr/progressBarStyleSmall"
@@ -42,99 +36,85 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="@dimen/space_16"
-            android:visibility="gone" />
-
+            android:visibility="gone"/>
         <LinearLayout
             android:id="@+id/group_family_setup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.FamilyHub.Card.Flat"
+                style="@style/Widget.FamilyHub.Form.Section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_20">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.CardTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/family_account_create_title" />
-
+                        android:text="@string/family_account_create_title"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_4"
-                        android:text="@string/family_account_create_detail" />
-
+                        android:text="@string/family_account_create_detail"/>
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/input_family_name"
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_12"
                         android:hint="@string/family_account_name_hint">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edit_family_name"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textCapWords"
                             android:maxLength="60"
-                            android:minHeight="@dimen/input_min_height" />
+                            android:minHeight="@dimen/input_min_height"/>
                     </com.google.android.material.textfield.TextInputLayout>
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_create_family"
                         android:layout_width="match_parent"
                         android:layout_height="@dimen/button_height"
                         android:layout_marginTop="@dimen/space_12"
                         android:text="@string/family_account_create_action"
-                        app:cornerRadius="@dimen/radius_12" />
+                        app:cornerRadius="@dimen/radius_12"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.FamilyHub.Card.Flat"
+                style="@style/Widget.FamilyHub.Form.Section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/card_spacing">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.CardTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/family_account_join_title" />
-
+                        android:text="@string/family_account_join_title"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_4"
-                        android:text="@string/family_account_join_detail" />
-
+                        android:text="@string/family_account_join_detail"/>
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/input_join_code"
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_12"
                         android:hint="@string/family_account_code_hint">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/edit_join_code"
                             android:layout_width="match_parent"
@@ -142,9 +122,8 @@
                             android:digits="ABCDEFGHJKLMNPQRSTUVWXYZ23456789- "
                             android:inputType="textCapCharacters"
                             android:maxLength="14"
-                            android:minHeight="@dimen/input_min_height" />
+                            android:minHeight="@dimen/input_min_height"/>
                     </com.google.android.material.textfield.TextInputLayout>
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_join_family"
                         style="@style/Widget.Material3.Button.OutlinedButton"
@@ -152,11 +131,10 @@
                         android:layout_height="@dimen/button_height"
                         android:layout_marginTop="@dimen/space_12"
                         android:text="@string/family_account_join_action"
-                        app:cornerRadius="@dimen/radius_12" />
+                        app:cornerRadius="@dimen/radius_12"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-
         <LinearLayout
             android:id="@+id/group_pending"
             android:layout_width="match_parent"
@@ -165,37 +143,32 @@
             android:gravity="center_horizontal"
             android:orientation="vertical"
             android:visibility="gone">
-
             <TextView
                 style="@style/TextAppearance.FamilyHub.Heading"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/family_account_pending_title" />
-
+                android:text="@string/family_account_pending_title"/>
             <TextView
                 style="@style/TextAppearance.FamilyHub.Body"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8"
                 android:gravity="center"
-                android:text="@string/family_account_pending_detail" />
-
+                android:text="@string/family_account_pending_detail"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_pending_refresh"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/button_height"
                 android:layout_marginTop="@dimen/space_16"
                 android:text="@string/family_account_refresh"
-                app:cornerRadius="@dimen/radius_12" />
-
+                app:cornerRadius="@dimen/radius_12"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_cancel_request"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="@dimen/touch_target_min"
-                android:text="@string/family_account_cancel_request" />
+                android:text="@string/family_account_cancel_request"/>
         </LinearLayout>
-
         <TextView
             android:id="@+id/tv_setup_error"
             android:layout_width="match_parent"
@@ -204,6 +177,6 @@
             android:accessibilityLiveRegion="polite"
             android:textColor="@color/fh_error"
             android:textSize="12sp"
-            android:visibility="gone" />
+            android:visibility="gone"/>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

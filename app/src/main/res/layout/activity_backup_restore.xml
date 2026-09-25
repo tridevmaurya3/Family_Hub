@@ -1,19 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/backupRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="true"
     android:background="@drawable/bg_page_three_tone">
-
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:fillViewport="true">
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -22,13 +18,11 @@
             android:paddingTop="@dimen/compact_page_top_padding"
             android:paddingEnd="@dimen/screen_padding_horizontal"
             android:paddingBottom="96dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonBackupBack"
                     style="@style/Widget.FamilyHub.Button.Tonal"
@@ -40,29 +34,25 @@
                     app:icon="@drawable/ic_arrow_back"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    app:iconSize="20dp" />
-
+                    app:iconSize="20dp"/>
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_12"
                     android:layout_weight="1"
                     android:orientation="vertical">
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Heading"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/backup_title" />
-
+                        android:text="@string/backup_title"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_2"
-                        android:text="@string/backup_subtitle" />
+                        android:text="@string/backup_subtitle"/>
                 </LinearLayout>
-
                 <ImageButton
                     android:id="@+id/buttonBackupNotifications"
                     android:layout_width="36dp"
@@ -71,8 +61,7 @@
                     android:contentDescription="@string/reminders_title"
                     android:padding="9dp"
                     android:src="@drawable/ic_bell"
-                    app:tint="@color/fh_primary" />
-
+                    app:tint="@color/fh_primary"/>
                 <ImageButton
                     android:id="@+id/buttonBackupProfile"
                     android:layout_width="36dp"
@@ -82,9 +71,8 @@
                     android:contentDescription="@string/more_profile_title"
                     android:padding="9dp"
                     android:src="@drawable/ic_profile_person"
-                    app:tint="@color/fh_primary" />
+                    app:tint="@color/fh_primary"/>
             </LinearLayout>
-
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.FamilyHub.Card.Flat"
                 android:layout_width="match_parent"
@@ -92,60 +80,52 @@
                 android:layout_marginTop="@dimen/space_16"
                 app:cardBackgroundColor="@color/fh_primary_container"
                 app:strokeColor="@color/fh_primary">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
-
                         <com.google.android.material.card.MaterialCardView
                             android:layout_width="48dp"
                             android:layout_height="48dp"
                             app:cardBackgroundColor="@color/fh_surface"
                             app:cardCornerRadius="@dimen/radius_14"
                             app:cardElevation="0dp">
-
                             <ImageView
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:src="@drawable/ic_backup_secure"
-                                app:tint="@color/fh_primary" />
+                                app:tint="@color/fh_primary"/>
                         </com.google.android.material.card.MaterialCardView>
-
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="@dimen/space_12"
                             android:layout_weight="1"
                             android:orientation="vertical">
-
                             <TextView
                                 android:id="@+id/textBackupReadiness"
                                 style="@style/TextAppearance.FamilyHub.SectionTitle"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text="@string/backup_status_need_both"
-                                android:textColor="@color/fh_primary" />
-
+                                android:textColor="@color/fh_primary"/>
                             <TextView
                                 android:id="@+id/textBackupDestination"
                                 style="@style/TextAppearance.FamilyHub.Caption"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="@dimen/space_4"
-                                android:text="@string/backup_destination_not_selected" />
+                                android:text="@string/backup_destination_not_selected"/>
                         </LinearLayout>
                     </LinearLayout>
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="wrap_content"
@@ -158,8 +138,7 @@
                         android:paddingBottom="@dimen/space_4"
                         android:text="@string/backup_security_badge"
                         android:textColor="@color/fh_primary"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonChooseBackupFolder"
                         style="@style/Widget.FamilyHub.Button.Outlined"
@@ -168,88 +147,77 @@
                         android:layout_marginTop="@dimen/space_12"
                         android:text="@string/backup_choose_folder"
                         app:icon="@drawable/ic_backup_folder"
-                        app:iconGravity="textStart" />
-
+                        app:iconGravity="textStart"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_6"
-                        android:text="@string/backup_folder_hint" />
+                        android:text="@string/backup_folder_hint"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <TextView
                 style="@style/TextAppearance.FamilyHub.Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/compact_section_spacing"
                 android:text="@string/backup_password_section"
-                android:textColor="@color/fh_primary" />
-
+                android:textColor="@color/fh_primary"/>
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.FamilyHub.Card.FormSection"
+                style="@style/Widget.FamilyHub.Form.Section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Body"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/backup_password_explanation" />
-
+                        android:text="@string/backup_password_explanation"/>
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/layoutBackupPassword"
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_12"
                         android:hint="@string/backup_password_hint"
                         app:endIconMode="password_toggle"
                         app:startIconDrawable="@drawable/ic_lock">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/inputBackupPassword"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textPassword"
                             android:maxLength="128"
-                            android:maxLines="1" />
+                            android:maxLines="1"/>
                     </com.google.android.material.textfield.TextInputLayout>
-
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/layoutBackupPasswordConfirm"
-                        style="@style/Widget.FamilyHub.TextInputLayout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
                         android:hint="@string/backup_password_confirm_hint"
                         app:endIconMode="password_toggle"
                         app:startIconDrawable="@drawable/ic_lock">
-
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/inputBackupPasswordConfirm"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textPassword"
                             android:maxLength="128"
-                            android:maxLines="1" />
+                            android:maxLines="1"/>
                     </com.google.android.material.textfield.TextInputLayout>
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_6"
-                        android:text="@string/backup_password_requirements" />
-
+                        android:text="@string/backup_password_requirements"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonSaveBackupPassword"
                         style="@style/Widget.FamilyHub.Button.Tonal"
@@ -258,8 +226,7 @@
                         android:layout_marginTop="@dimen/space_12"
                         android:text="@string/backup_save_password"
                         app:icon="@drawable/ic_backup_secure"
-                        app:iconGravity="textStart" />
-
+                        app:iconGravity="textStart"/>
                     <TextView
                         android:id="@+id/textBackupPasswordSaved"
                         style="@style/TextAppearance.FamilyHub.Caption"
@@ -268,36 +235,31 @@
                         android:layout_marginTop="@dimen/space_8"
                         android:text="@string/backup_password_saved"
                         android:textColor="@color/fh_success"
-                        android:visibility="gone" />
+                        android:visibility="gone"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <TextView
                 style="@style/TextAppearance.FamilyHub.Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/compact_section_spacing"
                 android:text="@string/backup_manual_section"
-                android:textColor="@color/fh_primary" />
-
+                android:textColor="@color/fh_primary"/>
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.FamilyHub.Card.Flat"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Body"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/backup_manual_detail" />
-
+                        android:text="@string/backup_manual_detail"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonBackupNow"
                         style="@style/Widget.FamilyHub.Button.Primary"
@@ -306,8 +268,7 @@
                         android:layout_marginTop="@dimen/space_12"
                         android:text="@string/backup_now"
                         app:icon="@drawable/ic_backup_secure"
-                        app:iconGravity="textStart" />
-
+                        app:iconGravity="textStart"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonRestoreBackup"
                         style="@style/Widget.FamilyHub.Button.Outlined"
@@ -316,83 +277,72 @@
                         android:layout_marginTop="@dimen/space_8"
                         android:text="@string/backup_restore"
                         app:icon="@drawable/ic_backup_restore"
-                        app:iconGravity="textStart" />
+                        app:iconGravity="textStart"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <TextView
                 style="@style/TextAppearance.FamilyHub.Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/compact_section_spacing"
                 android:text="@string/backup_schedule_section"
-                android:textColor="@color/fh_primary" />
-
+                android:textColor="@color/fh_primary"/>
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.FamilyHub.Card.Flat"
+                style="@style/Widget.FamilyHub.Form.Section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchAutomaticBackup"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/backup_schedule_switch"
-                        android:textColor="@color/fh_on_surface" />
-
+                        android:textColor="@color/fh_on_surface"/>
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_12"
                         android:hint="@string/backup_frequency_hint"
                         app:startIconDrawable="@drawable/ic_backup_schedule">
-
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/inputBackupFrequency"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="none"
-                            android:maxLines="1" />
+                            android:maxLines="1"/>
                     </com.google.android.material.textfield.TextInputLayout>
-
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchBackupWifiOnly"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
                         android:text="@string/backup_wifi_only"
-                        android:textColor="@color/fh_on_surface" />
-
+                        android:textColor="@color/fh_on_surface"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_4"
-                        android:text="@string/backup_wifi_only_detail" />
-
+                        android:text="@string/backup_wifi_only_detail"/>
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchBackupChargingOnly"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_8"
                         android:text="@string/backup_charging_only"
-                        android:textColor="@color/fh_on_surface" />
-
+                        android:textColor="@color/fh_on_surface"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/space_4"
-                        android:text="@string/backup_charging_only_detail" />
-
+                        android:text="@string/backup_charging_only_detail"/>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/buttonSaveBackupSchedule"
                         style="@style/Widget.FamilyHub.Button.Tonal"
@@ -401,53 +351,46 @@
                         android:layout_marginTop="@dimen/space_12"
                         android:text="@string/backup_save_schedule"
                         app:icon="@drawable/ic_backup_schedule"
-                        app:iconGravity="textStart" />
+                        app:iconGravity="textStart"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <TextView
                 style="@style/TextAppearance.FamilyHub.Overline"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/compact_section_spacing"
                 android:text="@string/backup_last_section"
-                android:textColor="@color/fh_primary" />
-
+                android:textColor="@color/fh_primary"/>
             <com.google.android.material.card.MaterialCardView
                 style="@style/Widget.FamilyHub.Card.Subtle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/space_8">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="@dimen/card_padding">
-
                     <TextView
                         android:id="@+id/textLastBackupTime"
                         style="@style/TextAppearance.FamilyHub.SectionTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/backup_never" />
-
+                        android:text="@string/backup_never"/>
                     <TextView
                         android:id="@+id/textLastBackupFile"
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_6"
-                        android:visibility="gone" />
-
+                        android:visibility="gone"/>
                     <TextView
                         android:id="@+id/textLastBackupSummary"
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_4"
-                        android:visibility="gone" />
-
+                        android:visibility="gone"/>
                     <TextView
                         android:id="@+id/textLastBackupError"
                         style="@style/TextAppearance.FamilyHub.Caption"
@@ -455,10 +398,9 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/space_6"
                         android:textColor="@color/fh_error"
-                        android:visibility="gone" />
+                        android:visibility="gone"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <TextView
                 style="@style/TextAppearance.FamilyHub.Caption"
                 android:layout_width="match_parent"
@@ -466,10 +408,9 @@
                 android:layout_marginTop="@dimen/space_16"
                 android:gravity="center"
                 android:text="@string/backup_privacy_note"
-                android:textAlignment="center" />
+                android:textAlignment="center"/>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
     <FrameLayout
         android:id="@+id/backupProgressOverlay"
         android:layout_width="match_parent"
@@ -478,29 +419,25 @@
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone">
-
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="300dp"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:layout_margin="@dimen/space_24">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:padding="@dimen/space_24">
-
                 <ProgressBar
                     android:id="@+id/progressBackupOperation"
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:indeterminate="false"
-                    android:max="100" />
-
+                    android:max="100"/>
                 <TextView
                     android:id="@+id/textBackupProgressStage"
                     style="@style/TextAppearance.FamilyHub.SectionTitle"
@@ -509,8 +446,7 @@
                     android:layout_marginTop="@dimen/space_16"
                     android:gravity="center"
                     android:text="@string/backup_progress_preparing"
-                    android:textAlignment="center" />
-
+                    android:textAlignment="center"/>
                 <TextView
                     style="@style/TextAppearance.FamilyHub.Caption"
                     android:layout_width="match_parent"
@@ -518,9 +454,8 @@
                     android:layout_marginTop="@dimen/space_8"
                     android:gravity="center"
                     android:text="@string/backup_operation_running"
-                    android:textAlignment="center" />
+                    android:textAlignment="center"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

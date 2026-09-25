@@ -1,113 +1,135 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_form_floating_shell"
-    android:fillViewport="true">
-
+    android:fillViewport="true"
+    android:overScrollMode="never"
+    android:scrollbars="none">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/space_16">
-
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="10dp">
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="36dp"
+            android:layout_height="3dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="6dp"
+            app:cardBackgroundColor="@color/fh_outline_variant"
+            app:cardCornerRadius="2dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"/>
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Form.Header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/fh_module_documents_container"
-            app:strokeColor="@color/fh_module_documents">
-
+            app:strokeColor="@color/fh_module_documents"
+            app:cardCornerRadius="12dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/card_padding">
-
+                android:padding="8dp">
                 <ImageView
-                    android:layout_width="@dimen/icon_tile_size"
-                    android:layout_height="@dimen/icon_tile_size"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
-                    android:padding="@dimen/space_10"
+                    android:padding="7dp"
                     android:src="@drawable/ic_safe_place_shield"
-                    app:tint="@color/fh_module_documents" />
-
+                    app:tint="@color/fh_module_documents"/>
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/space_12"
                     android:layout_weight="1"
                     android:orientation="vertical">
-
                     <TextView
                         android:id="@+id/document_editor_title"
                         style="@style/TextAppearance.FamilyHub.SectionTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/documents_vault_editor_add_title"
-                        android:textColor="@color/fh_module_documents" />
-
+                        android:textColor="@color/fh_module_documents"
+                        android:textSize="15sp"
+                        android:maxLines="1"
+                        android:ellipsize="end"/>
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="@string/documents_vault_editor_detail" />
-
+                        android:text="@string/documents_vault_editor_detail"/>
                 </LinearLayout>
-
             </LinearLayout>
-
         </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_title_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
-            android:hint="@string/document_title"
-            app:counterEnabled="true"
-            app:counterMaxLength="80">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/document_title_input"
+            android:layout_marginTop="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapSentences"
-                android:maxLength="80"
-                android:maxLines="2" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_category_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/document_category">
-
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/document_category_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none"
-                android:maxLines="1"
-                android:textSize="11sp" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
+                android:orientation="vertical"
+                android:padding="7dp">
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/form_section_details"
+                    android:textColor="@color/fh_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/document_title_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/document_title"
+                    app:counterEnabled="true"
+                    app:counterMaxLength="80">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/document_title_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapSentences"
+                        android:maxLength="80"
+                        android:maxLines="2"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/document_category_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/document_category">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/document_category_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:maxLines="1"
+                        android:textSize="11sp"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/form_field_spacing"
             android:orientation="horizontal">
-
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/document_number_layout"
                 style="@style/Widget.FamilyHub.FloatingCompact.Field"
@@ -121,9 +143,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textCapCharacters"
-                    android:maxLines="1" />
+                    android:maxLines="1"/>
             </com.google.android.material.textfield.TextInputLayout>
-
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/document_issuer_layout"
                 style="@style/Widget.FamilyHub.FloatingCompact.Field"
@@ -137,104 +158,130 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:inputType="textCapWords"
-                    android:maxLines="1" />
+                    android:maxLines="1"/>
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_member_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/documents_vault_family_member">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/document_member_input"
+            android:layout_marginTop="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapWords"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_linked_module_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/documents_vault_linked_module">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/document_linked_module_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none"
-                android:maxLines="1"
-                android:textSize="11sp" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_tags_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/documents_vault_tags"
-            app:helperText="@string/documents_vault_tags_help">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/document_tags_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapWords"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_notes_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/documents_vault_notes">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/document_notes_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="3" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.materialswitch.MaterialSwitch
-            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
-            android:id="@+id/document_emergency_switch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
-            android:text="@string/documents_vault_emergency_access" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/document_expiry_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/documents_vault_expiry_date"
-            app:endIconDrawable="@drawable/ic_reminder"
-            app:endIconMode="custom"
-            app:endIconTint="@color/fh_module_documents"
-            app:helperText="@string/documents_vault_optional">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/document_expiry_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:cursorVisible="false"
-                android:focusable="false"
-                android:inputType="none"
-                android:maxLines="1" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
+                android:orientation="vertical"
+                android:padding="7dp">
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/form_section_options"
+                    android:textColor="@color/fh_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="5dp">
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/document_member_layout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="0dp"
+                        android:hint="@string/documents_vault_family_member"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="3dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/document_member_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapWords"
+                            android:maxLines="1"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/document_linked_module_layout"
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="0dp"
+                        android:hint="@string/documents_vault_linked_module"
+                        android:layout_weight="1"
+                        android:layout_marginStart="3dp">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/document_linked_module_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:maxLines="1"
+                            android:textSize="12sp"
+                            android:ellipsize="end"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/document_tags_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/documents_vault_tags"
+                    app:helperText="@string/documents_vault_tags_help">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/document_tags_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapWords"
+                        android:maxLines="1"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/document_notes_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/documents_vault_notes">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/document_notes_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapSentences|textMultiLine"
+                        android:maxLines="3"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
+                    android:id="@+id/document_emergency_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/documents_vault_emergency_access"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/document_expiry_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/documents_vault_expiry_date"
+                    app:endIconDrawable="@drawable/ic_reminder"
+                    app:endIconMode="custom"
+                    app:endIconTint="@color/fh_module_documents"
+                    app:helperText="@string/documents_vault_optional">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/document_expiry_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:cursorVisible="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:maxLines="1"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
         <com.google.android.material.button.MaterialButton
             android:id="@+id/clear_document_expiry_button"
             style="@style/Widget.FamilyHub.Button.Action"
@@ -243,113 +290,125 @@
             android:layout_gravity="end"
             android:minWidth="0dp"
             android:text="@string/documents_vault_clear_expiry"
-            android:visibility="gone" />
-
+            android:visibility="gone"/>
         <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Subtle"
+            style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12">
-
+            android:layout_marginTop="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="@dimen/space_12">
-
-                <ImageView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/bg_placeholder_icon"
-                    android:contentDescription="@null"
-                    android:padding="8dp"
-                    android:src="@drawable/ic_document"
-                    app:tint="@color/fh_module_documents" />
-
+                android:orientation="vertical"
+                android:padding="7dp">
                 <TextView
-                    android:id="@+id/selected_document_file"
-                    style="@style/TextAppearance.FamilyHub.Body"
-                    android:layout_width="0dp"
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_10"
-                    android:layout_weight="1"
-                    android:ellipsize="middle"
-                    android:maxLines="2"
-                    android:text="@string/documents_vault_file_required" />
-
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/form_section_attachments"
+                    android:textColor="@color/fh_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+                <com.google.android.material.card.MaterialCardView
+                    style="@style/Widget.FamilyHub.Card.Subtle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/space_12">
+                        <ImageView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_placeholder_icon"
+                            android:contentDescription="@null"
+                            android:padding="8dp"
+                            android:src="@drawable/ic_document"
+                            app:tint="@color/fh_module_documents"/>
+                        <TextView
+                            android:id="@+id/selected_document_file"
+                            style="@style/TextAppearance.FamilyHub.Body"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/space_10"
+                            android:layout_weight="1"
+                            android:ellipsize="middle"
+                            android:maxLines="2"
+                            android:text="@string/documents_vault_file_required"/>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/replace_document_button"
+                            style="@style/Widget.FamilyHub.Button.Action"
+                            android:layout_width="wrap_content"
+                            android:layout_height="@dimen/touch_target_min"
+                            android:minWidth="0dp"
+                            android:text="@string/documents_vault_replace_file"
+                            android:visibility="gone"
+                            app:icon="@drawable/ic_document_edit"
+                            app:iconGravity="textStart"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/replace_document_button"
-                    style="@style/Widget.FamilyHub.Button.Action"
-                    android:layout_width="wrap_content"
-                    android:layout_height="@dimen/touch_target_min"
-                    android:minWidth="0dp"
-                    android:text="@string/documents_vault_replace_file"
-                    android:visibility="gone"
-                    app:icon="@drawable/ic_document_edit"
-                    app:iconGravity="textStart" />
-
+                    android:id="@+id/scan_document_button"
+                    style="@style/Widget.FamilyHub.Button.Tonal"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/button_height"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/documents_vault_scan_document"
+                    app:icon="@drawable/ic_document_camera"
+                    app:iconGravity="textStart"/>
             </LinearLayout>
-
         </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/scan_document_button"
-            style="@style/Widget.FamilyHub.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginTop="@dimen/space_10"
-            android:text="@string/documents_vault_scan_document"
-            app:icon="@drawable/ic_document_camera"
-            app:iconGravity="textStart" />
-
         <TextView
             style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_10"
-            android:text="@string/documents_vault_picker_note" />
-
+            android:text="@string/documents_vault_picker_note"/>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
+            android:layout_marginTop="7dp"
             android:orientation="horizontal">
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_document_button"
                 style="@style/Widget.FamilyHub.Form.CompactCancel"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="40dp"
                 android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                android:text="@string/cancel" />
-
+                android:text="@string/cancel"
+                android:minHeight="40dp"
+                android:textSize="11.5sp"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/choose_document_button"
                 style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="40dp"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1.5"
                 android:text="@string/documents_vault_add_file"
                 app:icon="@drawable/ic_document"
-                app:iconGravity="textStart" />
-
+                app:iconGravity="textStart"
+                android:minHeight="40dp"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_document_changes_button"
                 style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="40dp"
                 android:layout_marginStart="4dp"
                 android:layout_weight="1.35"
                 android:text="@string/documents_vault_save_changes"
                 android:visibility="gone"
                 app:icon="@drawable/ic_document_edit"
-                app:iconGravity="textStart" />
-
+                app:iconGravity="textStart"
+                android:minHeight="40dp"/>
         </LinearLayout>
-
     </LinearLayout>
-
 </androidx.core.widget.NestedScrollView>

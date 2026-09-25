@@ -1,35 +1,48 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<?xml version='1.0' encoding='UTF-8'?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_form_floating_shell">
+    android:background="@drawable/bg_form_floating_shell"
+    android:overScrollMode="never"
+    android:scrollbars="none">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/space_16">
+        android:paddingStart="8dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="10dp">
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="36dp"
+            android:layout_height="3dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="6dp"
+            app:cardBackgroundColor="@color/fh_outline_variant"
+            app:cardCornerRadius="2dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"/>
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Form.Header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/fh_tertiary_container"
-            app:strokeColor="@color/fh_tertiary">
+            app:strokeColor="@color/fh_tertiary"
+            app:cardCornerRadius="12dp">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/card_padding">
+                android:padding="8dp">
                 <ImageView
-                    android:layout_width="@dimen/icon_tile_size"
-                    android:layout_height="@dimen/icon_tile_size"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:background="@drawable/bg_placeholder_icon"
                     android:contentDescription="@null"
-                    android:padding="@dimen/space_10"
+                    android:padding="7dp"
                     android:src="@drawable/ic_planner"
-                    app:tint="@color/fh_tertiary" />
+                    app:tint="@color/fh_tertiary"/>
                 <TextView
                     android:id="@+id/planner_dialog_title"
                     style="@style/TextAppearance.FamilyHub.SectionTitle"
@@ -38,222 +51,299 @@
                     android:layout_marginStart="@dimen/space_12"
                     android:layout_weight="1"
                     android:text="@string/planner_add"
-                    android:textColor="@color/fh_tertiary" />
+                    android:textColor="@color/fh_tertiary"
+                    android:textSize="15sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/planner_title_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
-            android:hint="@string/planner_title_label">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/planner_title_input"
+            android:layout_marginTop="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapSentences"
-                android:maxLines="2" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                android:orientation="vertical"
+                android:padding="7dp">
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/form_section_details"
+                    android:textColor="@color/fh_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/planner_title_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/planner_title_label">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/planner_title_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapSentences"
+                        android:maxLines="2"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/collaboration_status"
+                    app:endIconMode="dropdown_menu">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/planner_collaboration_status_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
+                    android:id="@+id/planner_shared_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:text="@string/share_with_family"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/collaboration_status"
-            app:endIconMode="dropdown_menu">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/planner_collaboration_status_input"
+            android:layout_marginTop="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.materialswitch.MaterialSwitch
-            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
-            android:id="@+id/planner_shared_switch"
+                android:orientation="vertical"
+                android:padding="7dp">
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/form_section_options"
+                    android:textColor="@color/fh_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:orientation="horizontal">
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="@dimen/space_4"
+                        android:layout_weight="1"
+                        android:hint="@string/planner_type_label"
+                        app:endIconMode="dropdown_menu">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/planner_type_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/space_4"
+                        android:layout_weight="1"
+                        android:hint="@string/planner_priority_label"
+                        app:endIconMode="dropdown_menu">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/planner_priority_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="5dp">
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="0dp"
+                        android:hint="@string/planner_member_label"
+                        app:endIconMode="dropdown_menu"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="3dp">
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/planner_member_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:textSize="12sp"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="0dp"
+                        android:hint="@string/planner_start_label"
+                        android:layout_weight="1"
+                        android:layout_marginStart="3dp">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/planner_start_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:cursorVisible="false"
+                            android:focusable="false"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/planner_end_layout"
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/planner_end_label">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/planner_end_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:cursorVisible="false"
+                        android:focusable="false"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
+                    android:id="@+id/planner_all_day_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/planner_all_day"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/planner_location_label">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/planner_location_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapWords"
+                        android:maxLines="1"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.FamilyHub.Form.Section"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/touch_target_min"
-            android:text="@string/share_with_family" />
-
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/fh_primary_container"
+            app:strokeColor="@color/fh_primary">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="7dp">
+                <TextView
+                    style="@style/TextAppearance.FamilyHub.Caption"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/form_section_more"
+                    android:textColor="@color/fh_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/planner_repeat_label"
+                    app:endIconMode="dropdown_menu">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/planner_repeat_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    style="@style/Widget.FamilyHub.FloatingCompact.Switch"
+                    android:id="@+id/planner_reminder_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/touch_target_min"
+                    android:layout_marginTop="5dp"
+                    android:text="@string/planner_reminder_enabled"/>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/planner_reminder_minutes">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/planner_reminder_minutes_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLines="1"/>
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.FloatingCompact.Field"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/planner_notes_label">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/planner_notes_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:inputType="textCapSentences|textMultiLine"
+                        android:maxLines="5"
+                        android:minLines="2"/>
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:orientation="horizontal">
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1"
-                android:hint="@string/planner_type_label"
-                app:endIconMode="dropdown_menu">
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/planner_type_input"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1"
-                android:hint="@string/planner_priority_label"
-                app:endIconMode="dropdown_menu">
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/planner_priority_input"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_member_label"
-            app:endIconMode="dropdown_menu">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/planner_member_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_start_label">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/planner_start_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:cursorVisible="false"
-                android:focusable="false" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/planner_end_layout"
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_end_label">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/planner_end_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:clickable="true"
-                android:cursorVisible="false"
-                android:focusable="false" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.materialswitch.MaterialSwitch
-            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
-            android:id="@+id/planner_all_day_switch"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/touch_target_min"
-            android:layout_marginTop="@dimen/space_8"
-            android:text="@string/planner_all_day" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_location_label">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/planner_location_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapWords"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_repeat_label"
-            app:endIconMode="dropdown_menu">
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/planner_repeat_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="none" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.materialswitch.MaterialSwitch
-            style="@style/Widget.FamilyHub.FloatingCompact.Switch"
-            android:id="@+id/planner_reminder_switch"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/touch_target_min"
-            android:layout_marginTop="@dimen/space_8"
-            android:text="@string/planner_reminder_enabled" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_reminder_minutes">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/planner_reminder_minutes_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/form_field_spacing"
-            android:hint="@string/planner_notes_label">
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/planner_notes_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="top"
-                android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="5"
-                android:minLines="2" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
+            android:layout_marginTop="7dp"
             android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/cancel_planner_button"
                 style="@style/Widget.FamilyHub.Form.CompactCancel"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="40dp"
                 android:layout_marginEnd="@dimen/space_4"
                 android:layout_weight="1"
-                android:text="@string/cancel" />
+                android:text="@string/cancel"
+                android:minHeight="40dp"
+                android:textSize="11.5sp"/>
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save_planner_button"
                 style="@style/Widget.FamilyHub.FloatingCompact.PrimaryAction"
                 android:layout_width="0dp"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="40dp"
                 android:layout_marginStart="@dimen/space_4"
                 android:layout_weight="1.25"
                 android:text="@string/planner_save"
-                app:icon="@drawable/ic_planner" />
+                app:icon="@drawable/ic_planner"
+                android:minHeight="40dp"/>
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
