@@ -17,4 +17,12 @@
     <string name="task_reminder_followup_notice">Still pending · due at %1$s</string>
     <string name="task_reminder_subtasks_remaining">%1$d subtasks remaining</string>
     <string name="task_reminder_open">Open tasks</string>
+    <string name="task_reminder_alert_type">Alert type</string>
+    <string name="task_reminder_mode_normal">Normal</string>
+    <string name="task_reminder_mode_important">Important (alarm sound)</string>
+    <string name="task_reminder_test">Test notification</string>
+    <string name="task_reminder_test_message">Task reminders can reach this phone.</string>
+    <string name="task_reminder_test_sent">Test notification sent</string>
+    <string name="task_reminder_permission_required">Enable notifications for Family To-Do reminders.</string>
 </resources>
+

@@ -23,4 +23,13 @@ public final class FamilyTaskReminderTiming {
         if (stage == 0) return occurrence - Math.max(0, minutesBefore) * 60000L;
         return occurrence + (stage == 2 ? 30L * 60000L : 0L);
     }
+    /** One bounded catch-up for a missed due/snooze notice; never replay delivered notices. */
+    public static long deliveryTrigger(long intended, int stage, long now, boolean delivered) {
+        if (intended <= 0 || delivered) return -1;
+        if (intended > now) return intended;
+        if ((stage == 1 || stage == 3) && now - intended <= 24L * 60L * 60000L) return now + 1000L;
+        return -1;
+    }
+
 }
+

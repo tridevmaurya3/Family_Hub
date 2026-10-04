@@ -17,26 +17,40 @@ public final class FamilyTaskScheduler {
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
     private FamilyTaskScheduler() { }
     public static synchronized void schedule(@NonNull Context context, @NonNull FamilyTask task) {
-        clearAlarms(context, task.id);
         if (!task.reminderEnabled || FamilyTask.STATUS_COMPLETED.equals(task.status)) {
             cancel(context, task.id); return;
         }
         long now = System.currentTimeMillis();
         boolean follow = FamilyTaskReminderPreferences.followUp(context, task);
-        long due = FamilyTaskReminderTiming.occurrence(task.dueAt, task.repeatType, now, follow);
+        AlarmManager manager = context.getSystemService(AlarmManager.class);
+        boolean exact = manager != null && (Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms());
+        String signature = task.dueAt + ":" + task.repeatType + ":" + task.reminderMinutesBefore + ":" + follow + ":" + exact;
+        // Preserve already-due alarms while Android is waiting to deliver them.
+        if (FamilyTaskReminderPreferences.updateSchedule(context, task.id, signature)) clearAlarms(context, task.id);
+        boolean notificationsReady = FamilyTaskReceiver.canNotify(context, FamilyTaskReminderPreferences.important(context, task));
+        boolean dueDelivered = FamilyTaskReminderPreferences.delivered(context, task.id, task.dueAt, 1, task.dueAt);
+        long catchUp = FamilyTaskReminderTiming.deliveryTrigger(task.dueAt, 1, now, dueDelivered);
+        long due = task.dueAt <= now && catchUp > 0 && notificationsReady ? task.dueAt
+                : FamilyTaskReminderTiming.occurrence(task.dueAt, task.repeatType, now, follow);
+        long snooze = FamilyTaskReminderPreferences.snooze(context, task.id, task.dueAt);
+        long snoozeTrigger = FamilyTaskReminderTiming.deliveryTrigger(snooze, 3, now,
+                FamilyTaskReminderPreferences.delivered(context, task.id, task.dueAt, 3, snooze));
         if (due > 0) {
             for (int stage = 0; stage <= 2; stage++) {
                 if ((stage == 0 && task.reminderMinutesBefore <= 0) || (stage == 2 && !follow)) continue;
-                long trigger = FamilyTaskReminderTiming.trigger(due, task.reminderMinutesBefore, stage);
-                if (trigger > now) set(context, trigger, pendingIntent(context, task, stage, due));
+                long intended = FamilyTaskReminderTiming.trigger(due, task.reminderMinutesBefore, stage);
+                if (snoozeTrigger > 0 && intended <= snoozeTrigger) continue;
+                boolean delivered = FamilyTaskReminderPreferences.delivered(context, task.id, task.dueAt, stage, due);
+                long trigger = FamilyTaskReminderTiming.deliveryTrigger(intended, stage, now, delivered);
+                if (trigger > 0 && (intended > now || notificationsReady)) set(context, trigger, pendingIntent(context, task, stage, due));
             }
         }
-        long snooze = FamilyTaskReminderPreferences.snooze(context, task.id, task.dueAt);
-        if (snooze > now) set(context, snooze, pendingIntent(context, task, 3, snooze));
+        if (snoozeTrigger > 0 && (snooze > now || notificationsReady)) set(context, snoozeTrigger, pendingIntent(context, task, 3, snooze));
     }
     public static synchronized void cancel(@NonNull Context context, long id) {
         clearAlarms(context, id);
         FamilyTaskReminderPreferences.clearSnooze(context, id);
+        FamilyTaskReminderPreferences.clearDelivery(context, id);
         androidx.core.app.NotificationManagerCompat.from(context).cancel(notificationId(id));
     }
     private static void clearAlarms(Context context, long id) {
@@ -86,3 +100,4 @@ public final class FamilyTaskScheduler {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }
+

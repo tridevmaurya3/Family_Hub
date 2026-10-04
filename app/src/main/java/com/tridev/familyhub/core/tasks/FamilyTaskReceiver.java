@@ -29,6 +29,7 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
     private static final String ACTION_COMPLETE = "com.tridev.familyhub.action.COMPLETE_FAMILY_TASK";
     private static final String ACTION_SNOOZE = "com.tridev.familyhub.action.SNOOZE_FAMILY_TASK";
     static final String EXTRA_ID = "family_task_id";
+    private static final Object DELIVERY_LOCK = new Object();
     private static final String CHANNEL = "family_hub_tasks";
     private static final String IMPORTANT_CHANNEL = "family_hub_tasks_important";
     @Override public void onReceive(Context context, Intent intent) {
@@ -57,38 +58,73 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                     NotificationManagerCompat.from(app).cancel(FamilyTaskScheduler.notificationId(id));
                     FamilyTaskScheduler.snooze(app, task, 10L * 60000L); return;
                 }
-                if (!task.reminderEnabled) { FamilyTaskScheduler.cancel(app, id); return; }
-                if (intent.getLongExtra("due", -1) != task.dueAt) {
-                    FamilyTaskScheduler.schedule(app, task); return;
+                synchronized (DELIVERY_LOCK) {
+                    if (!task.reminderEnabled) { FamilyTaskScheduler.cancel(app, id); return; }
+                    if (intent.getLongExtra("due", -1) != task.dueAt) {
+                        FamilyTaskScheduler.schedule(app, task); return;
+                    }
+                    int stage = intent.getIntExtra("stage", 1);
+                    long occurrence = intent.getLongExtra("occurrence", task.dueAt);
+                    if (FamilyTaskReminderPreferences.delivered(app, id, task.dueAt, stage, occurrence)) return;
+                    if (stage == 2 && !FamilyTaskReminderPreferences.followUp(app, task)) return;
+                    long snooze = FamilyTaskReminderPreferences.snooze(app, id, task.dueAt);
+                    if (stage != 3 && FamilyTaskReminderTiming.deliveryTrigger(snooze, 3, System.currentTimeMillis(),
+                            FamilyTaskReminderPreferences.delivered(app, id, task.dueAt, 3, snooze)) > 0) return;
+                    if (stage == 3 && snooze != occurrence) return;
+                    // A delayed advance reminder must not replace/cancel the due reminder.
+                    if (stage == 0 && occurrence <= System.currentTimeMillis()) {
+                        FamilyTaskScheduler.schedule(app, task); return;
+                    }
+                    if (show(app, task, stage, occurrence)) {
+                        FamilyTaskReminderPreferences.markDelivered(app, id, task.dueAt, stage, occurrence);
+                        if (stage == 3) {
+                            FamilyTaskReminderPreferences.clearSnooze(app, id);
+                            if (task.dueAt <= System.currentTimeMillis())
+                                FamilyTaskReminderPreferences.markDelivered(app, id, task.dueAt, 1, task.dueAt);
+                        }
+                    }
+                    FamilyTaskScheduler.schedule(app, task);
                 }
-                int stage = intent.getIntExtra("stage", 1);
-                if (stage == 2 && !FamilyTaskReminderPreferences.followUp(app, task)) return;
-                long snooze = FamilyTaskReminderPreferences.snooze(app, id, task.dueAt);
-                if (stage != 3 && snooze > System.currentTimeMillis()) return;
-                if (stage == 3) {
-                    if (snooze != intent.getLongExtra("occurrence", -1)) return;
-                    FamilyTaskReminderPreferences.clearSnooze(app, id);
-                }
-                show(app, task, stage, intent.getLongExtra("occurrence", task.dueAt));
-                FamilyTaskScheduler.schedule(app, task);
             } finally { if (!completing) result.finish(); }
         }, "FamilyTaskNotification").start();
     }
-    private void show(Context context, FamilyTask task, int stage, long occurrence) {
-        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context,
-                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
-        boolean important = FamilyTaskReminderPreferences.important(context, task);
-        String channelId = important ? IMPORTANT_CHANNEL : CHANNEL;
+    public static String channelId(boolean important) { return important ? IMPORTANT_CHANNEL : CHANNEL; }
+    public static void ensureChannels(Context context) {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= 26 && manager != null) {
-            NotificationChannel channel = new NotificationChannel(channelId,
-                    context.getString(important ? R.string.task_reminder_important : R.string.family_tasks_notification_channel),
-                    NotificationManager.IMPORTANCE_HIGH);
-            channel.enableVibration(true);
-            if (important) channel.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-                    new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
-            manager.createNotificationChannel(channel);
-        }
+        if (manager == null) return;
+        NotificationChannel normal = new NotificationChannel(CHANNEL,
+                context.getString(R.string.family_tasks_notification_channel), NotificationManager.IMPORTANCE_HIGH);
+        normal.enableVibration(true);
+        manager.createNotificationChannel(normal);
+        NotificationChannel important = new NotificationChannel(IMPORTANT_CHANNEL,
+                context.getString(R.string.task_reminder_important), NotificationManager.IMPORTANCE_HIGH);
+        important.enableVibration(true);
+        important.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
+        manager.createNotificationChannel(important);
+    }
+    public static boolean canNotify(Context context, boolean important) {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context,
+                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return false;
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false;
+        ensureChannels(context);
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        NotificationChannel channel = manager == null ? null : manager.getNotificationChannel(channelId(important));
+        return channel != null && channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
+    }
+    public static boolean testNotification(Context context, boolean important) {
+        if (!canNotify(context, important)) return false;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId(important))
+                .setSmallIcon(R.drawable.ic_family_task).setContentTitle(context.getString(R.string.family_tasks_title))
+                .setContentText(context.getString(R.string.task_reminder_test_message))
+                .setPriority(NotificationCompat.PRIORITY_HIGH).setDefaults(NotificationCompat.DEFAULT_ALL).setAutoCancel(true);
+        try { NotificationManagerCompat.from(context).notify(490001, builder.build()); return true; }
+        catch (SecurityException ignored) { return false; }
+    }
+    private boolean show(Context context, FamilyTask task, int stage, long occurrence) {
+        boolean important = FamilyTaskReminderPreferences.important(context, task);
+        if (!canNotify(context, important)) return false;
+        String channelId = channelId(important);
         long id = task.id;
         PendingIntent open = PendingIntent.getActivity(context, FamilyTaskScheduler.notificationId(id),
                 new Intent(context, MainActivity.class).putExtra(MainActivity.EXTRA_OPEN_ROUTE, MainActivity.ROUTE_TASKS)
@@ -109,8 +145,8 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 .addAction(0, context.getString(R.string.family_tasks_notification_complete), actionIntent(context, id, ACTION_COMPLETE, 610000))
                 .addAction(0, context.getString(R.string.family_tasks_notification_snooze), actionIntent(context, id, ACTION_SNOOZE, 620000))
                 .addAction(0, context.getString(R.string.task_reminder_open), open);
-        try { NotificationManagerCompat.from(context).notify(FamilyTaskScheduler.notificationId(id), builder.build()); }
-        catch (SecurityException ignored) { /* Permission can be revoked between the check and delivery. */ }
+        try { NotificationManagerCompat.from(context).notify(FamilyTaskScheduler.notificationId(id), builder.build()); return true; }
+        catch (SecurityException ignored) { return false; }
     }
     private PendingIntent actionIntent(Context context, long id, String action, int base) {
         return PendingIntent.getBroadcast(context, base + (int)(id & 0x0fffffff),
@@ -118,3 +154,4 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }
+

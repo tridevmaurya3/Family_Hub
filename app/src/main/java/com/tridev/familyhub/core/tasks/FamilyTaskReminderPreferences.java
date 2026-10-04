@@ -27,4 +27,29 @@ public final class FamilyTaskReminderPreferences {
         prefs(c).edit().putLong(id + ":snoozeDue", due).putLong(id + ":snooze", time).apply();
     }
     public static void clearSnooze(Context c, long id) { prefs(c).edit().remove(id + ":snooze").remove(id + ":snoozeDue").apply(); }
+    public static boolean updateSchedule(Context c, long id, String signature) {
+        SharedPreferences p = prefs(c);
+        if (signature.equals(p.getString(id + ":schedule", ""))) return false;
+        p.edit().putString(id + ":schedule", signature).apply();
+        return true;
+    }
+    public static boolean delivered(Context c, long id, long due, int stage, long occurrence) {
+        SharedPreferences p = prefs(c);
+        String key = id + ":delivered:" + stage;
+        return p.getLong(key + ":due", -1) == due && p.getLong(key, -1) == occurrence;
+    }
+    public static void markDelivered(Context c, long id, long due, int stage, long occurrence) {
+        String key = id + ":delivered:" + stage;
+        prefs(c).edit().putLong(key + ":due", due).putLong(key, occurrence).apply();
+    }
+    public static void clearDelivery(Context c, long id) {
+        SharedPreferences.Editor editor = prefs(c).edit().remove(id + ":schedule");
+        for (int stage = 0; stage <= 3; stage++) {
+            String key = id + ":delivered:" + stage;
+            editor.remove(key).remove(key + ":due");
+        }
+        editor.apply();
+    }
+
 }
+

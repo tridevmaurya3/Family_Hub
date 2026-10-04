@@ -46,4 +46,28 @@ public class FamilyTaskReminderTimingTest {
     @Test public void atTimeDoesNotNeedAdvanceSlot() {
         assertEquals(120 * MINUTE, FamilyTaskReminderTiming.trigger(120 * MINUTE, 0, 1));
     }
+    @Test public void taskAddedAtCurrentMinuteStillGetsDueNotice() {
+        assertEquals(121 * MINUTE + 1000, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 121 * MINUTE, false));
+    }
+    @Test public void notificationAccessRestoredRecoversRecentMissedDue() {
+        assertEquals(150 * MINUTE + 1000, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 150 * MINUTE, false));
+    }
+    @Test public void deliveredDueNoticeDoesNotReappearOnFocusOrRestart() {
+        assertEquals(-1, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 121 * MINUTE, true));
+    }
+    @Test public void lateAdvanceNoticeIsSkippedInsteadOfReplacingDueNotice() {
+        assertEquals(-1, FamilyTaskReminderTiming.deliveryTrigger(105 * MINUTE, 0, 121 * MINUTE, false));
+        assertEquals(121 * MINUTE + 1000, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 121 * MINUTE, false));
+    }
+    @Test public void oldMissedTasksDoNotCreateNotificationFlood() {
+        assertEquals(-1, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 1561 * MINUTE, false));
+    }
+    @Test public void snoozeCanRecoverAfterRestart() {
+        assertEquals(131 * MINUTE + 1000, FamilyTaskReminderTiming.deliveryTrigger(130 * MINUTE, 3, 131 * MINUTE, false));
+    }
+    @Test public void futureDueTimingStaysUnchanged() {
+        assertEquals(120 * MINUTE, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 110 * MINUTE, false));
+    }
+
 }
+

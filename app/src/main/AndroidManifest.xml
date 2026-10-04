@@ -297,6 +297,8 @@
             android:name=".core.planner.PlannerReceiver"
             android:exported="false" />
 
+        <activity android:name=".core.tasks.FamilyTaskReminderPermissionActivity"
+            android:exported="false" android:theme="@style/Theme.FamilyHub" />
         <receiver
             android:name=".core.tasks.FamilyTaskReceiver"
             android:exported="false" />
@@ -316,4 +318,5 @@
     </application>
 
 </manifest>
+
 
