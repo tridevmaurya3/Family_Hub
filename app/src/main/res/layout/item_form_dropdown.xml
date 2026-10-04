@@ -10,10 +10,11 @@
     android:gravity="start|center_vertical"
     android:includeFontPadding="false"
     android:textAlignment="viewStart"
-    android:maxLines="1"
+    android:maxLines="3"
     android:paddingStart="14dp"
     android:paddingTop="6dp"
     android:paddingEnd="14dp"
     android:paddingBottom="6dp"
     android:textColor="@color/fh_on_surface"
-    android:textSize="12.5sp" />
+    android:textSize="12sp" />
+

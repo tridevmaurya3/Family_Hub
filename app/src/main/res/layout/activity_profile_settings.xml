@@ -171,13 +171,14 @@
             android:textColor="@color/fh_primary" />
 
         <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            style="@style/Widget.FamilyHub.FloatingCompact.Field"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/space_10"
             android:hint="@string/profile_display_name">
 
             <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                 android:id="@+id/inputProfileName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -371,3 +372,4 @@
             app:strokeColor="@color/fh_error" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
+

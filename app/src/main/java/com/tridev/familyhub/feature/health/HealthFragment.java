@@ -210,6 +210,7 @@ public class HealthFragment extends Fragment implements AddActionHost {
     ) {
         DialogHealthRecordBinding dialogBinding =
                 DialogHealthRecordBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
         HealthRecord record = existing == null
                 ? new HealthRecord()
                 : existing.record;
@@ -609,3 +610,4 @@ public class HealthFragment extends Fragment implements AddActionHost {
         super.onDestroyView();
     }
 }
+

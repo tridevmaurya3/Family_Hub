@@ -251,7 +251,9 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         EditText opening = new EditText(requireContext()); opening.setHint(R.string.finance_opening_balance);
         opening.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
                 | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        form.addView(name); form.addView(type); form.addView(opening);
+        form.addView(com.tridev.familyhub.core.ui.CompactFormStyle.field(name));
+        form.addView(com.tridev.familyhub.core.ui.CompactFormStyle.field(type));
+        form.addView(com.tridev.familyhub.core.ui.CompactFormStyle.field(opening));
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.finance_add_account).setView(form)
                 .setNegativeButton(R.string.cancel, null)
@@ -698,6 +700,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
 
     private void showEntryEditor(@Nullable FinanceEntry existingEntry) {
         DialogFinanceEntryBinding dialogBinding = DialogFinanceEntryBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
         boolean isNewEntry = existingEntry == null;
         dialogBinding.financeEditorTitle.setText(isNewEntry
                 ? R.string.add_finance_entry
@@ -744,14 +747,18 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         dialogBinding.financePaymentMethodInput.setText(
                 isNewEntry ? "Cash" : existingEntry.paymentMethod, false
         );
-        dialogBinding.financeTypeGroup.setOnCheckedChangeListener(
-                (group, checkedId) -> updateCategoryChoices(
-                        dialogBinding,
-                        checkedId == R.id.type_income_button
-                                ? incomeCategories
-                                : expenseCategories
-                )
-        );
+        String[] typeLabels = {getString(R.string.finance_expense), getString(R.string.finance_income)};
+        dialogBinding.financeTypeInput.setAdapter(new ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, typeLabels));
+        dialogBinding.financeTypeInput.setText(typeLabels[0], false);
+        dialogBinding.financeTypeInput.setOnItemClickListener((parent, view, position, id) ->
+                dialogBinding.financeTypeGroup.check(position == 1
+                        ? R.id.type_income_button : R.id.type_expense_button));
+        dialogBinding.financeTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            boolean income = checkedId == R.id.type_income_button;
+            dialogBinding.financeTypeInput.setText(typeLabels[income ? 1 : 0], false);
+            updateCategoryChoices(dialogBinding, income ? incomeCategories : expenseCategories);
+        });
 
         if (!isNewEntry) {
             dialogBinding.financeAmountInput.setText(String.valueOf(existingEntry.amount));
@@ -948,7 +955,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.finance_budget)
                 .setMessage(R.string.finance_budget_prompt)
-                .setView(input)
+                .setView(com.tridev.familyhub.core.ui.CompactFormStyle.field(input))
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.save, null)
                 .create();
@@ -1115,3 +1122,4 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         super.onDestroyView();
     }
 }
+

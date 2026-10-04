@@ -198,7 +198,7 @@ public final class FamilyTaskSmsSuggestionActivity extends AppCompatActivity {
         priorityInput = new MaterialAutoCompleteTextView(this);
         priorityInput.setInputType(InputType.TYPE_NULL);
         priorityInput.setAdapter(new ArrayAdapter<>(this,
-                android.R.layout.simple_dropdown_item_1line, priorityLabels));
+                R.layout.item_form_dropdown, priorityLabels));
         priorityInput.setText(priorityLabel(initialPriority), false);
         priorityInput.setOnClickListener(v -> priorityInput.showDropDown());
         priorityLayout.addView(priorityInput, matchWrap());
@@ -234,6 +234,8 @@ public final class FamilyTaskSmsSuggestionActivity extends AppCompatActivity {
         createParams.setMarginStart(dp(5));
         actions.addView(create, createParams);
 
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form);
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(actions);
         return scroll;
     }
 
@@ -403,3 +405,4 @@ public final class FamilyTaskSmsSuggestionActivity extends AppCompatActivity {
         return value == null ? "" : value.trim();
     }
 }
+

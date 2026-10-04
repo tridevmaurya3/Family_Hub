@@ -171,6 +171,7 @@ public class PasswordVaultFragment extends Fragment implements AddActionHost {
     private void showEditor(@Nullable PasswordEntry existing) {
         DialogPasswordEditorBinding dialogBinding =
                 DialogPasswordEditorBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
 
         if (existing != null) {
             dialogBinding.passwordDialogTitle.setText(
@@ -589,3 +590,4 @@ public class PasswordVaultFragment extends Fragment implements AddActionHost {
         super.onDestroy();
     }
 }
+

@@ -913,6 +913,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     private void showEditor(@Nullable FamilyTask existing, @NonNull List<FamilyMember> members) {
         DialogFamilyTaskBinding form = DialogFamilyTaskBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         FamilyTask task = existing == null ? new FamilyTask() : existing;
         long[] dueAt = {task.dueAt > 0 ? task.dueAt : defaultDueTime()};
         String[] priorities = {getString(R.string.task_priority_normal),
@@ -941,17 +942,17 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         for (FamilyMember member : members) memberNames.add(member.name);
 
         form.taskPriorityInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, priorities));
+                R.layout.item_form_dropdown, priorities));
         form.taskRepeatInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, repeats));
+                R.layout.item_form_dropdown, repeats));
         form.taskMemberInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, memberNames));
+                R.layout.item_form_dropdown, memberNames));
         form.taskReminderLeadInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, reminderLabels));
+                R.layout.item_form_dropdown, reminderLabels));
         form.taskGroceryCategoryInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, groceryCategories));
+                R.layout.item_form_dropdown, groceryCategories));
         form.taskGroceryListInput.setAdapter(new ArrayAdapter<>(requireContext(),
-                android.R.layout.simple_list_item_1, groceryLists));
+                R.layout.item_form_dropdown, groceryLists));
 
         form.taskDialogTitle.setText(existing == null
                 ? R.string.family_tasks_add : R.string.family_tasks_edit);
@@ -966,11 +967,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         subtaskEditor.useExternalModeControl();
         form.taskSubtasksHost.addView(subtaskEditor);
         String[] structures = {getString(R.string.task_quick_single), getString(R.string.task_quick_multiple)};
-        form.taskStructureInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, structures));
+        form.taskStructureInput.setAdapter(new ArrayAdapter<>(requireContext(), R.layout.item_form_dropdown, structures));
         form.taskStructureInput.setText(structures[subtaskEditor.isMultiple() ? 1 : 0], false);
         form.taskStructureInput.setOnItemClickListener((parent, view, position, id) -> subtaskEditor.setMultiple(position == 1));
         String[] dates = {getString(R.string.task_due_today), getString(R.string.task_due_tomorrow), getString(R.string.family_tasks_custom_date)};
-        form.taskDatePresetInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, dates));
+        form.taskDatePresetInput.setAdapter(new ArrayAdapter<>(requireContext(), R.layout.item_form_dropdown, dates));
         form.taskDatePresetInput.setOnItemClickListener((parent, view, position, id) -> {
             if (position < 2) setSmartDue(form, dueAt, position);
             else {
@@ -1329,4 +1330,5 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         super.onDestroyView();
     }
 }
+
 

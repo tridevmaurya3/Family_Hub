@@ -47,6 +47,7 @@ public class SafePlacesActivity extends AppCompatActivity {
         super.onCreate(state);
         binding = ActivitySafePlacesBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        com.tridev.familyhub.core.ui.CompactFormStyle.applyInputs(binding.getRoot());
         repository = new SafePlaceRepository(getApplicationContext());
         mapPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -540,3 +541,4 @@ public class SafePlacesActivity extends AppCompatActivity {
         super.onDestroy();
     }
 }
+

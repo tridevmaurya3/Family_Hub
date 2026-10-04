@@ -47,7 +47,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         String[] labels = {themed.getString(R.string.task_reminder_off), themed.getString(R.string.task_reminder_short_at),
                 themed.getString(R.string.task_reminder_short_5), themed.getString(R.string.task_reminder_short_15),
                 themed.getString(R.string.task_reminder_short_30), themed.getString(R.string.task_reminder_short_hour), themed.getString(R.string.task_reminder_short_day)};
-        lead.setAdapter(new ArrayAdapter<>(themed, android.R.layout.simple_list_item_1, labels));
+        lead.setAdapter(new ArrayAdapter<>(themed, R.layout.item_form_dropdown, labels));
         lead.setText(labels[leadIndex], false);
         lead.setOnItemClickListener((parent, view, position, id) -> {
             leadIndex = position;
@@ -56,7 +56,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         findViewById(R.id.reminder_lead_layout).setVisibility(quick ? VISIBLE : GONE);
         modeIndex = task != null && FamilyTaskReminderPreferences.important(themed, task) ? 1 : 0;
         String[] modes = {themed.getString(R.string.task_reminder_mode_normal), themed.getString(R.string.task_reminder_mode_important)};
-        mode.setAdapter(new ArrayAdapter<>(themed, android.R.layout.simple_list_item_1, modes));
+        mode.setAdapter(new ArrayAdapter<>(themed, R.layout.item_form_dropdown, modes));
         mode.setText(modes[modeIndex], false);
         mode.setOnItemClickListener((parent, view, position, id) -> { modeIndex = position; refreshAccess(); });
         follow.setChecked(task != null && FamilyTaskReminderPreferences.followUp(themed, task));
@@ -110,3 +110,4 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         if (task.reminderEnabled) FamilyTaskReminderPermissionActivity.requestOnce(getContext());
     }
 }
+

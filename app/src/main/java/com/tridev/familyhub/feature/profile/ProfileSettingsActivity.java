@@ -69,6 +69,7 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_profile_settings);
+        com.tridev.familyhub.core.ui.CompactFormStyle.applyInputs(findViewById(android.R.id.content));
         applySystemBarInsets();
 
         profilePhoto = findViewById(R.id.imageProfilePhoto);
@@ -389,3 +390,4 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }
+

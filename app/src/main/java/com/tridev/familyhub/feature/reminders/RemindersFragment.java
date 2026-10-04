@@ -371,6 +371,24 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
 
     private void showReminderEditor(@Nullable Reminder existingReminder) {
         DialogReminderBinding dialogBinding = DialogReminderBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
+        String[] repeatLabels = {getString(R.string.reminder_once),
+                getString(R.string.reminder_daily), "Weekly", "Monthly", "Yearly"};
+        int[] repeatIds = {R.id.repeat_once_button, R.id.repeat_daily_button,
+                R.id.repeat_weekly_button, R.id.repeat_monthly_button, R.id.repeat_yearly_button};
+        dialogBinding.reminderRepeatInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, repeatLabels));
+        dialogBinding.reminderRepeatInput.setText(repeatLabels[0], false);
+        dialogBinding.reminderRepeatInput.setOnItemClickListener((parent, view, position, id) ->
+                dialogBinding.reminderRepeatGroup.check(repeatIds[position]));
+        dialogBinding.reminderRepeatGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            for (int index = 0; index < repeatIds.length; index++) {
+                if (repeatIds[index] == checkedId) {
+                    dialogBinding.reminderRepeatInput.setText(repeatLabels[index], false);
+                    break;
+                }
+            }
+        });
         String[] collaborationLabels =
                 getResources().getStringArray(R.array.collaboration_status_labels);
         dialogBinding.reminderCollaborationStatusInput.setAdapter(new android.widget.ArrayAdapter<>(
@@ -712,3 +730,4 @@ public class RemindersFragment extends Fragment implements com.tridev.familyhub.
         super.onDestroyView();
     }
 }
+

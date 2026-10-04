@@ -87,6 +87,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/reminder_title">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/reminder_title_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -107,6 +108,7 @@
                         android:hint="Priority"
                         app:endIconMode="dropdown_menu">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/reminder_priority_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -121,6 +123,7 @@
                         android:hint="Category"
                         app:endIconMode="dropdown_menu">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/reminder_category_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -135,6 +138,7 @@
                     android:hint="Assign family member"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/reminder_assignee_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -172,6 +176,7 @@
                     android:hint="Connect with module"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/reminder_related_module_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -184,6 +189,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="Related bill, item, appointment or task">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/reminder_related_item_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -208,6 +214,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/reminder_date_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -229,6 +236,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/reminder_time_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -262,23 +270,25 @@
                     android:textColor="@color/fh_primary"
                     android:textSize="11sp"
                     android:textStyle="bold"/>
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.Overline"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="@string/reminder_repeat"
-                    android:textColor="@color/fh_module_reminders"/>
-                <com.google.android.material.card.MaterialCardView
-                    style="@style/Widget.FamilyHub.Card.Subtle"
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp">
-                    <RadioGroup
+                    android:layout_marginTop="5dp"
+                    android:hint="@string/reminder_repeat">
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/reminder_repeat_input"
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <RadioGroup
                         android:id="@+id/reminder_repeat_group"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
+                        android:visibility="gone"
                         android:paddingStart="@dimen/space_10"
                         android:paddingEnd="@dimen/space_10">
                         <com.google.android.material.radiobutton.MaterialRadioButton
@@ -318,7 +328,6 @@
                             android:text="Yearly"
                             android:textColor="@color/fh_on_surface"/>
                     </RadioGroup>
-                </com.google.android.material.card.MaterialCardView>
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.FamilyHub.FloatingCompact.Dropdown"
                     android:layout_width="match_parent"
@@ -327,6 +336,7 @@
                     android:hint="Notify me before"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/reminder_pre_alert_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -356,6 +366,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/reminder_note">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/reminder_note_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -396,6 +407,7 @@
                     android:hint="@string/collaboration_status"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/reminder_collaboration_status_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

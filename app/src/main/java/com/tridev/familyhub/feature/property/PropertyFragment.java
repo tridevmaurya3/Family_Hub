@@ -191,6 +191,7 @@ public class PropertyFragment extends Fragment implements AddActionHost {
     ) {
         DialogPropertyBinding form =
                 DialogPropertyBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         PropertyEntry property = existing == null
                 ? new PropertyEntry()
                 : existing.property;
@@ -582,3 +583,4 @@ public class PropertyFragment extends Fragment implements AddActionHost {
         super.onDestroyView();
     }
 }
+

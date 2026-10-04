@@ -106,6 +106,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/vehicle_owner_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -125,6 +126,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/vehicle_type_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -142,6 +144,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/vehicle_name">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/vehicle_name_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -180,6 +183,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/vehicle_registration">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/vehicle_registration_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -194,6 +198,7 @@
                     android:hint="@string/linked_document"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/vehicle_linked_document_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -206,6 +211,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/timeline_note">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/vehicle_timeline_note_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -232,6 +238,7 @@
                         android:layout_weight="1"
                         android:hint="@string/vehicle_manufacturer">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/vehicle_manufacturer_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -246,6 +253,7 @@
                         android:layout_weight="1"
                         android:hint="@string/vehicle_model">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/vehicle_model_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -266,6 +274,7 @@
                         android:layout_weight="1"
                         android:hint="@string/vehicle_fuel">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/vehicle_fuel_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -279,6 +288,7 @@
                         android:layout_weight="1"
                         android:hint="@string/vehicle_year">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/vehicle_year_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -325,6 +335,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/vehicle_insurance_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -342,6 +353,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/vehicle_pollution_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -358,6 +370,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/vehicle_service_due">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/vehicle_service_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -373,6 +386,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/vehicle_notes">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/vehicle_notes_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

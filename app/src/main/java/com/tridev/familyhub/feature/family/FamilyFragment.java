@@ -271,6 +271,7 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
 
     private void showMemberEditor(@Nullable FamilyMember existingMember) {
         DialogMemberEditorBinding dialogBinding = DialogMemberEditorBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
         activeEditor = dialogBinding;
         boolean isCloudAccount = existingMember != null
                 && existingMember.cloudManaged;
@@ -619,3 +620,4 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
         super.onDestroyView();
     }
 }
+

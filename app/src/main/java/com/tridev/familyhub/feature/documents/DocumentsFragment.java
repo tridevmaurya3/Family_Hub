@@ -668,19 +668,20 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                 getLayoutInflater()
         );
         DialogDocumentEditorBinding dialogBinding = editorBinding;
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
         String[] categories = getResources().getStringArray(
                 R.array.documents_vault_category_labels
         );
         dialogBinding.documentCategoryInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                R.layout.item_compact_dropdown,
+                R.layout.item_form_dropdown,
                 categories
         ));
         String[] moduleLabels = getResources().getStringArray(
                 R.array.documents_vault_module_labels);
         dialogBinding.documentLinkedModuleInput.setAdapter(new ArrayAdapter<>(
                 requireContext(),
-                R.layout.item_compact_dropdown,
+                R.layout.item_form_dropdown,
                 moduleLabels
         ));
 
@@ -1405,3 +1406,4 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         }
     }
 }
+

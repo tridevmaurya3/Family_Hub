@@ -155,6 +155,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
 
     private void showEditor(@Nullable NoteEntry existing) {
         DialogNoteBinding form = DialogNoteBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         NoteEntry note = existing == null ? new NoteEntry() : existing;
         final long[] reminderAt = {note.reminderAt};
         String[] typeLabels =
@@ -368,3 +369,4 @@ public class NotesFragment extends Fragment implements AddActionHost {
         super.onDestroyView();
     }
 }
+

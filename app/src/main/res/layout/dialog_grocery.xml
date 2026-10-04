@@ -100,9 +100,10 @@
                     app:endIconTint="@color/fh_primary">
 
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/grocery_name_input"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:includeFontPadding="false"
                         android:inputType="textCapWords"
@@ -131,9 +132,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/grocery_category_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
@@ -157,9 +159,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/grocery_list_type_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
                             android:inputType="none"
@@ -182,9 +185,10 @@
                     app:boxCornerRadiusBottomEnd="12dp">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/grocery_assignee_input"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:gravity="center_vertical"
                         android:includeFontPadding="false"
@@ -231,9 +235,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/grocery_money_account_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
@@ -241,7 +246,7 @@
                             android:maxLines="1"
                             android:paddingStart="10dp"
                             android:paddingEnd="8dp"
-                            android:textSize="11.5sp" />
+                            android:textSize="12sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -258,9 +263,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/grocery_money_category_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
@@ -268,7 +274,7 @@
                             android:maxLines="1"
                             android:paddingStart="10dp"
                             android:paddingEnd="8dp"
-                            android:textSize="11.5sp" />
+                            android:textSize="12sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
@@ -311,9 +317,10 @@
                 app:helperText="@string/grocery_purchase_date_help">
 
                 <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                     android:id="@+id/grocery_purchase_date_input"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="wrap_content"
                     android:clickable="true"
                     android:cursorVisible="false"
                     android:focusable="false"
@@ -360,9 +367,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/grocery_quantity_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
                             android:inputType="numberDecimal"
@@ -383,9 +391,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/grocery_quantity_unit_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
                             android:inputType="none"
@@ -416,9 +425,10 @@
                         app:prefixText="₹ ">
 
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/grocery_cost_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
                             android:inputType="numberDecimal"
@@ -440,9 +450,10 @@
                         app:prefixText="₹ ">
 
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/grocery_actual_cost_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
                             android:inputType="numberDecimal"
@@ -463,9 +474,10 @@
                     app:boxCornerRadiusBottomEnd="12dp">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/grocery_store_input"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
+                        android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:gravity="center_vertical"
                         android:includeFontPadding="false"
@@ -541,9 +553,10 @@
                         app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/grocery_priority_input"
                             android:layout_width="match_parent"
-                            android:layout_height="44dp"
+                            android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:includeFontPadding="false"
                             android:inputType="none"
@@ -566,9 +579,10 @@
                     app:boxCornerRadiusBottomEnd="12dp">
 
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/grocery_notes_input"
                         android:layout_width="match_parent"
-                        android:layout_height="62dp"
+                        android:layout_height="wrap_content"
                         android:gravity="top|start"
                         android:includeFontPadding="false"
                         android:inputType="textCapSentences|textMultiLine"
@@ -638,3 +652,4 @@
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
+

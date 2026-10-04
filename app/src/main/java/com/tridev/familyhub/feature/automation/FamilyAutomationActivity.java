@@ -494,6 +494,7 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
         enabledSwitch.setChecked(existing == null || existing.enabled);
         content.addView(enabledSwitch);
 
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(content);
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this)
                 .setTitle(scheduleMode
                         ? R.string.family_automation_schedule_editor_title
@@ -1143,3 +1144,4 @@ public final class FamilyAutomationActivity extends AppCompatActivity {
         }
     }
 }
+

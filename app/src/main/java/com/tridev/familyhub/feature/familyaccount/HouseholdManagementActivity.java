@@ -183,6 +183,7 @@ public class HouseholdManagementActivity extends AppCompatActivity {
 
         DialogHouseholdEditorBinding editor =
                 DialogHouseholdEditorBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(editor.getRoot());
         String[] labels = memberLabels(data.members);
         editor.householdGuardianInput.setAdapter(new ArrayAdapter<>(
                 this,
@@ -368,3 +369,4 @@ public class HouseholdManagementActivity extends AppCompatActivity {
         super.onDestroy();
     }
 }
+

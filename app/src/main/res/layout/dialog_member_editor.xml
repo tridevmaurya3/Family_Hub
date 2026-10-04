@@ -164,6 +164,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/member_name">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/member_name_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -184,6 +185,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/member_gender_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -201,6 +203,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/member_blood_group_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -217,6 +220,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/member_family_role">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/member_role_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -237,6 +241,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/member_relation">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/member_relation_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -282,6 +287,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/member_address">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/member_address_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -311,6 +317,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/member_emergency_name_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -326,6 +333,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/member_emergency_phone_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -381,6 +389,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/member_phone_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -397,6 +406,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/member_email_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -415,6 +425,7 @@
                     app:endIconMode="custom"
                     app:endIconTint="@color/fh_primary">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/member_birth_date_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -431,6 +442,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/member_note">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/member_note_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

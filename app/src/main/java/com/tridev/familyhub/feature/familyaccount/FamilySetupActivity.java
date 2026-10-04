@@ -38,6 +38,7 @@ public class FamilySetupActivity extends AppCompatActivity {
 
         binding = ActivityFamilySetupBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        com.tridev.familyhub.core.ui.CompactFormStyle.applyInputs(binding.getRoot());
         repository = new FamilyAccountRepository();
 
         binding.buttonCreateFamily.setOnClickListener(v -> createFamily());
@@ -304,3 +305,4 @@ public class FamilySetupActivity extends AppCompatActivity {
         super.onDestroy();
     }
 }
+

@@ -191,6 +191,7 @@ public class VehicleFragment extends Fragment implements AddActionHost {
     ) {
         DialogVehicleBinding form =
                 DialogVehicleBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         Vehicle vehicle = existing == null
                 ? new Vehicle()
                 : existing.vehicle;
@@ -632,3 +633,4 @@ public class VehicleFragment extends Fragment implements AddActionHost {
         super.onDestroyView();
     }
 }
+

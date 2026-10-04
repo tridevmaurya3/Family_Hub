@@ -804,6 +804,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                             boolean completeAfterSave) {
         DialogGroceryBinding form =
                 DialogGroceryBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         GroceryItem item = existing == null
                 ? new GroceryItem()
                 : existing;
@@ -1737,7 +1738,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle(category == null ? getString(R.string.grocery_budget)
                         : getString(R.string.grocery_category_budget, category))
-                .setView(input)
+                .setView(com.tridev.familyhub.core.ui.CompactFormStyle.field(input))
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.grocery_save_item, (dialog, which) -> {
                     double value = parseAmount(textOf(input));
@@ -1995,3 +1996,4 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         super.onDestroyView();
     }
 }
+

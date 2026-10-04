@@ -49,24 +49,32 @@ public class GroceryWidgetPurchaseActivity extends AppCompatActivity {
         price.setInputType(InputType.TYPE_CLASS_NUMBER
                 | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         if (item.actualCost > 0D) price.setText(String.valueOf(item.actualCost));
-        form.addView(price);
+        form.addView(com.tridev.familyhub.core.ui.CompactFormStyle.field(price));
 
         EditText quantity = new EditText(this);
         quantity.setHint(R.string.grocery_quantity);
         quantity.setSingleLine(true);
         quantity.setInputType(InputType.TYPE_CLASS_TEXT);
         quantity.setText(item.quantity);
-        form.addView(quantity);
+        form.addView(com.tridev.familyhub.core.ui.CompactFormStyle.field(quantity));
 
-        Spinner category = new Spinner(this);
+        com.google.android.material.textfield.MaterialAutoCompleteTextView category =
+                new com.google.android.material.textfield.MaterialAutoCompleteTextView(this);
+        category.setInputType(InputType.TYPE_NULL);
+        category.setHint(R.string.grocery_category);
+        int[] selectedCategory = {0};
         String[] categories = getResources().getStringArray(
                 R.array.grocery_category_labels);
         category.setAdapter(new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_dropdown_item, categories));
+                R.layout.item_form_dropdown, categories));
         for (int i = 1; i < categories.length; i++) {
-            if (categories[i].equalsIgnoreCase(item.category)) category.setSelection(i);
+            if (categories[i].equalsIgnoreCase(item.category)) selectedCategory[0] = i;
         }
-        form.addView(category);
+        category.setText(categories[selectedCategory[0]], false);
+        category.setOnItemClickListener((parent, view, position, id) -> selectedCategory[0] = position);
+        com.google.android.material.textfield.TextInputLayout categoryLayout = com.tridev.familyhub.core.ui.CompactFormStyle.field(category);
+        categoryLayout.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_DROPDOWN_MENU);
+        form.addView(categoryLayout);
 
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.grocery_complete_title)
@@ -83,8 +91,8 @@ public class GroceryWidgetPurchaseActivity extends AppCompatActivity {
                         catch (NumberFormatException ignored) { item.actualCost = 0D; }
                     }
                     item.quantity = quantity.getText().toString().trim();
-                    if (category.getSelectedItemPosition() > 0) {
-                        item.category = String.valueOf(category.getSelectedItem());
+                    if (selectedCategory[0] > 0) {
+                        item.category = categories[selectedCategory[0]];
                     }
                     complete(item);
                 })
@@ -99,3 +107,4 @@ public class GroceryWidgetPurchaseActivity extends AppCompatActivity {
         });
     }
 }
+

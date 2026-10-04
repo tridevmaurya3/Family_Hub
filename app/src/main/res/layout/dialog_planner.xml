@@ -87,6 +87,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/planner_title_label">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/planner_title_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -101,6 +102,7 @@
                     android:hint="@string/collaboration_status"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/planner_collaboration_status_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -150,6 +152,7 @@
                         android:hint="@string/planner_type_label"
                         app:endIconMode="dropdown_menu">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/planner_type_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -164,6 +167,7 @@
                         android:hint="@string/planner_priority_label"
                         app:endIconMode="dropdown_menu">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/planner_priority_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -185,6 +189,7 @@
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp">
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                             android:id="@+id/planner_member_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -202,6 +207,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="3dp">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/planner_start_input"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -218,6 +224,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/planner_end_label">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/planner_end_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -239,6 +246,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/planner_location_label">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/planner_location_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -277,6 +285,7 @@
                     android:hint="@string/planner_repeat_label"
                     app:endIconMode="dropdown_menu">
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        style="@style/Widget.FamilyHub.FloatingCompact.DropdownInput"
                         android:id="@+id/planner_repeat_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -296,6 +305,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/planner_reminder_minutes">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/planner_reminder_minutes_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -309,6 +319,7 @@
                     android:layout_marginTop="5dp"
                     android:hint="@string/planner_notes_label">
                     <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/planner_notes_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

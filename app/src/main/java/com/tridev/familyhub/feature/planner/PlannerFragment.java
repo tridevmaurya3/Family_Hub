@@ -171,6 +171,7 @@ public class PlannerFragment extends Fragment implements AddActionHost {
     ) {
         DialogPlannerBinding form =
                 DialogPlannerBinding.inflate(getLayoutInflater());
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         PlannerItem item = existing == null ? new PlannerItem() : existing;
         String[] typeLabels =
                 getResources().getStringArray(R.array.planner_type_labels);
@@ -463,3 +464,4 @@ public class PlannerFragment extends Fragment implements AddActionHost {
         super.onDestroyView();
     }
 }
+

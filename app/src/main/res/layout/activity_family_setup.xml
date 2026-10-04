@@ -71,12 +71,13 @@
                         android:layout_marginTop="@dimen/space_12"
                         android:hint="@string/family_account_name_hint">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/edit_family_name"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="textCapWords"
                             android:maxLength="60"
-                            android:minHeight="@dimen/input_min_height"/>
+                            android:minHeight="44dp"/>
                     </com.google.android.material.textfield.TextInputLayout>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_create_family"
@@ -116,13 +117,15 @@
                         android:layout_marginTop="@dimen/space_12"
                         android:hint="@string/family_account_code_hint">
                         <com.google.android.material.textfield.TextInputEditText
+                        style="@style/Widget.FamilyHub.FloatingCompact.Input"
                             android:id="@+id/edit_join_code"
+                            android:tag="form_no_voice"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:digits="ABCDEFGHJKLMNPQRSTUVWXYZ23456789- "
                             android:inputType="textCapCharacters"
                             android:maxLength="14"
-                            android:minHeight="@dimen/input_min_height"/>
+                            android:minHeight="44dp"/>
                     </com.google.android.material.textfield.TextInputLayout>
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_join_family"
