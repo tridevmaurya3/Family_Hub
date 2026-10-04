@@ -548,6 +548,10 @@ public final class FamilyTaskOverlayService extends Service {
                 }));
 
         root.addView(subtaskEditor, new LinearLayout.LayoutParams(-1, -2));
+        com.tridev.familyhub.feature.tasks.FamilyTaskReminderOptionsView reminderOptions =
+                new com.tridev.familyhub.feature.tasks.FamilyTaskReminderOptionsView(
+                        new android.view.ContextThemeWrapper(this, R.style.Theme_FamilyHub), null, true);
+        root.addView(reminderOptions, new LinearLayout.LayoutParams(-1, -2));
 
         countText = text("", 10f, true);
         countText.setTextColor(Color.rgb(84, 93, 105));
@@ -587,7 +591,10 @@ public final class FamilyTaskOverlayService extends Service {
                     : FamilyTask.PRIORITY_NORMAL;
             task.repeatType = quickRepeat[0] == 1
                     ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
+            reminderOptions.applyQuick(task);
             repository.save(task, () -> {
+                reminderOptions.saveOptions(task);
+                FamilyTaskScheduler.schedule(this, task);
                 input.setText("");
                 subtaskEditor.reset();
                 taskType.setText("Single ▾");

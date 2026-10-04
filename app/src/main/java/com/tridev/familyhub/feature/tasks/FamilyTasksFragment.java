@@ -157,6 +157,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
         setupGroceryStyleControls();
         setupQuickAddOptions();
+        quickReminderOptions = new FamilyTaskReminderOptionsView(requireContext(), null, true);
+        binding.taskQuickReminderHost.addView(quickReminderOptions);
 
         binding.taskQuickAddButton.setOnClickListener(v -> quickAdd());
         binding.taskQuickAddLayout.setEndIconOnClickListener(v ->
@@ -696,6 +698,13 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     @Override public void onAddRequested() { prepareEditor(null); }
 
+    private FamilyTaskReminderOptionsView quickReminderOptions;
+
+    @Override public void onResume() {
+        super.onResume();
+        FamilyTaskScheduler.rescheduleAll(requireContext(), () -> { });
+    }
+
     private void quickAdd() {
         String title = text(binding.taskQuickAddInput);
         if (title.isEmpty()) {
@@ -710,7 +719,12 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 : FamilyTask.PRIORITY_NORMAL;
         task.repeatType = quickRepeatMode == 1
                 ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
+        android.content.Context reminderContext = requireContext().getApplicationContext();
+        FamilyTaskReminderOptionsView options = quickReminderOptions;
+        options.applyQuick(task);
         repository.save(task, () -> {
+            options.saveOptions(task);
+            FamilyTaskScheduler.schedule(reminderContext, task);
             if (binding != null) {
                 binding.taskQuickAddInput.setText("");
                 reload();
@@ -943,6 +957,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 form.taskGroceryOptions.setVisibility(checked && !alreadyLinked
                         ? View.VISIBLE : View.GONE));
 
+        android.content.Context reminderContext = requireContext().getApplicationContext();
+        FamilyTaskReminderOptionsView reminderOptions = new FamilyTaskReminderOptionsView(requireContext(), task, false);
+        form.taskReminderOptionsHost.addView(reminderOptions);
         form.taskReminderSwitch.setChecked(task.reminderEnabled || existing == null);
         int reminderIndex = indexOf(reminderValues, task.reminderMinutesBefore);
         form.taskReminderLeadInput.setText(reminderLabels[reminderIndex], false);
@@ -1001,7 +1018,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                     reminderLabels, text(form.taskReminderLeadInput))];
 
             Runnable persistTask = () -> repository.save(task, () -> {
-                FamilyTaskScheduler.schedule(requireContext(), task);
+                reminderOptions.saveOptions(task);
+                FamilyTaskScheduler.schedule(reminderContext, task);
                 dialog.dismiss();
                 reload();
             });

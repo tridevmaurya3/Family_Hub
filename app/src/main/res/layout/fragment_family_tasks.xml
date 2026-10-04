@@ -302,13 +302,18 @@
             android:textColor="@color/fh_info" />
     </LinearLayout>
 
+    <FrameLayout android:id="@+id/task_quick_reminder_host"
+        android:layout_width="0dp" android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/task_quick_options" />
+
     <TextView android:id="@+id/task_result_summary"
         style="@style/TextAppearance.FamilyHub.Caption"
         android:layout_width="0dp" android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/space_4" android:textColor="@color/fh_module_grocery"
         android:textStyle="bold" app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/task_quick_options" />
+        app:layout_constraintTop_toBottomOf="@id/task_quick_reminder_host" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/task_recycler_view"
@@ -345,3 +350,4 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 </androidx.constraintlayout.widget.ConstraintLayout>
+

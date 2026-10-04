@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="task_reminder_quick_default">Reminder: 15 minutes before + at time ▾</string>
+    <string name="task_reminder_quick_selection">Reminder: %1$s ▾</string>
+    <string name="task_reminder_options">Reminder options ▾</string>
+    <string name="task_reminder_off">Off</string>
+    <string name="task_reminder_normal">Normal notification</string>
+    <string name="task_reminder_important">Important reminder (alarm sound)</string>
+    <string name="task_reminder_followup">Remind again after 30 minutes if pending</string>
+    <string name="task_reminder_device_options">Sound and follow-up apply on this phone.</string>
+    <string name="task_reminder_permissions">Reminder permissions</string>
+    <string name="task_reminder_notification_access">Enable notifications</string>
+    <string name="task_reminder_exact_access">Allow precise reminder timing</string>
+    <string name="task_reminder_exact_detail">Without precise alarm access, Android may delay reminders. Sound follows your phone and notification settings.</string>
+    <string name="task_reminder_upcoming">Upcoming task at %1$s</string>
+    <string name="task_reminder_due_notice">Task due at %1$s</string>
+    <string name="task_reminder_followup_notice">Still pending · due at %1$s</string>
+    <string name="task_reminder_subtasks_remaining">%1$d subtasks remaining</string>
+    <string name="task_reminder_open">Open tasks</string>
+</resources>

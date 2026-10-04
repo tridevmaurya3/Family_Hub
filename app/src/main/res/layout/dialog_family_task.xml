@@ -457,6 +457,8 @@
                         android:textAlignment="viewStart"
                         android:textSize="11.5sp" />
                 </com.google.android.material.textfield.TextInputLayout>
+                <FrameLayout android:id="@+id/task_reminder_options_host"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
