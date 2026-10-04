@@ -4,6 +4,7 @@ import android.content.Context;
 import android.text.InputType;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -22,6 +23,7 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
     private final LinearLayout rows;
     private final ScrollView scroll;
     private final List<EditText> inputs = new ArrayList<>();
+    private final List<CheckBox> checks = new ArrayList<>();
 
     public FamilyTaskSubtaskEditor(Context context) {
         super(context);
@@ -70,6 +72,7 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
     public void setItems(List<String> items) {
         rows.removeAllViews();
         inputs.clear();
+        checks.clear();
         for (String item : items) addRow(item);
         if (items.isEmpty()) single.setChecked(true); else multiple.setChecked(true);
         updateHeight();
@@ -84,7 +87,12 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
         input.setSingleLine(true);
         input.setHint(R.string.task_subtask_hint);
         input.setText(value);
+        CheckBox check = new CheckBox(getContext());
+        check.setContentDescription("Complete subtask");
+        row.addView(check, new LayoutParams(dp(42), dp(48)));
         row.addView(input, new LayoutParams(0, dp(48), 1f));
+        checks.add(check);
+        check.setOnCheckedChangeListener((button, checked) -> FamilyTaskSubtaskList.strike(input, checked));
         Button remove = new Button(getContext());
         remove.setText("×");
         remove.setContentDescription(getContext().getString(R.string.task_subtask_remove));
@@ -94,6 +102,7 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
         rows.addView(row, new LayoutParams(-1, -2));
         inputs.add(input);
         remove.setOnClickListener(v -> {
+            checks.remove(check);
             inputs.remove(input);
             rows.removeView(row);
             updateHeight();
@@ -127,6 +136,25 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
         }
         return items;
     }
+
+    public void setContent(FamilyTaskSubtasks.Content content) {
+        setItems(content.items);
+        for (int i = 0; i < checks.size(); i++) checks.get(i).setChecked(content.completed.get(i));
+    }
+
+    public List<Boolean> getCompleted() {
+        List<Boolean> completed = new ArrayList<>();
+        if (multiple.isChecked()) for (CheckBox check : checks) completed.add(check.isChecked());
+        return completed;
+    }
+
+    public void useExternalModeControl() { modes.setVisibility(GONE); }
+
+    public void setMultiple(boolean value) {
+        if (value) multiple.setChecked(true); else single.setChecked(true);
+    }
+
+    public boolean isMultiple() { return multiple.isChecked(); }
 
     public void reset() { setItems(new ArrayList<>()); }
 

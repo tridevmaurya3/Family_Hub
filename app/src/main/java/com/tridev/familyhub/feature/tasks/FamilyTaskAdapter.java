@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -28,6 +29,7 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
     private static final int TYPE_TASK = 1;
     interface Listener {
         void onCompletedChanged(@NonNull FamilyTask task, boolean completed);
+        void onSubtaskChanged(@NonNull FamilyTask task, int index, boolean checked);
         void onEdit(@NonNull FamilyTask task);
         void onDelete(@NonNull FamilyTask task);
     }
@@ -160,7 +162,16 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
 
     final class Holder extends RecyclerView.ViewHolder {
         private final ItemFamilyTaskBinding binding;
-        Holder(ItemFamilyTaskBinding binding) { super(binding.getRoot()); this.binding = binding; }
+        private final LinearLayout subtaskRows;
+        Holder(ItemFamilyTaskBinding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+            subtaskRows = new LinearLayout(binding.getRoot().getContext());
+            subtaskRows.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout parent = (LinearLayout) binding.taskNotes.getParent();
+            parent.addView(subtaskRows, parent.indexOfChild(binding.taskNotes) + 1,
+                    new LinearLayout.LayoutParams(-1, -2));
+        }
         void bind(FamilyTask task) {
             boolean completed = FamilyTask.STATUS_COMPLETED.equals(task.status);
             binding.taskCompleted.setOnCheckedChangeListener(null);
@@ -198,10 +209,12 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             binding.taskMeta.setText(binding.getRoot().getContext().getString(
                     R.string.family_tasks_assigned_to, who) + repeat + created
                     + grocery + finance + loan);
-            binding.taskNotes.setMaxLines(FamilyTaskSubtasks.decode(task.notes).items.isEmpty()
-                    ? 2 : Integer.MAX_VALUE);
-            binding.taskNotes.setText(task.notes);
-            binding.taskNotes.setVisibility(task.notes.isEmpty() ? View.GONE : View.VISIBLE);
+            FamilyTaskSubtasks.Content content = FamilyTaskSubtasks.decode(task.notes);
+            binding.taskNotes.setMaxLines(2);
+            binding.taskNotes.setText(content.notes);
+            binding.taskNotes.setVisibility(content.notes.isEmpty() ? View.GONE : View.VISIBLE);
+            FamilyTaskSubtaskList.bind(subtaskRows, content,
+                    (index, checked) -> listener.onSubtaskChanged(task, index, checked));
             binding.taskCompleted.setOnCheckedChangeListener((button, checked) -> listener.onCompletedChanged(task, checked));
             binding.getRoot().setOnClickListener(v -> listener.onEdit(task));
             binding.taskHistoryButton.setOnClickListener(v ->

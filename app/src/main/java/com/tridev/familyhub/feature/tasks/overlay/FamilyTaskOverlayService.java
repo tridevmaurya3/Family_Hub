@@ -48,6 +48,7 @@ import androidx.core.app.NotificationCompat;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.tasks.FamilyTaskSubtaskEditor;
 import com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks;
+import com.tridev.familyhub.feature.tasks.FamilyTaskSubtaskList;
 import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.repository.FamilyTaskRepository;
@@ -400,6 +401,8 @@ public final class FamilyTaskOverlayService extends Service {
         waveParams.bottomMargin = dp(2);
         root.addView(voiceWave, waveParams);
 
+        FamilyTaskSubtaskEditor subtaskEditor = new FamilyTaskSubtaskEditor(this);
+        subtaskEditor.useExternalModeControl();
         LinearLayout quick = row();
         LinearLayout quickField = row();
         quickField.setBackground(glassFieldBackground());
@@ -415,15 +418,30 @@ public final class FamilyTaskOverlayService extends Service {
         voice.setElevation(0f);
         voiceInput = input;
         voiceButton = voice;
-        Button add = compactAction("+ " + getString(R.string.family_tasks_add),
+        Button add = compactAction("+",
                 Color.WHITE, Color.rgb(15, 108, 89));
+        add.setTextSize(24f);
+        add.setContentDescription(getString(R.string.family_tasks_add));
         add.setBackground(round(Color.rgb(15, 108, 89), 14, Color.rgb(15, 108, 89)));
-        quickField.addView(input, new LinearLayout.LayoutParams(0, dp(46), 1f));
-        quickField.addView(voice, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        quick.addView(quickField, new LinearLayout.LayoutParams(0, dp(46), 1f));
-        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(104), dp(42));
+        quickField.addView(input, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        quickField.addView(voice, new LinearLayout.LayoutParams(dp(36), dp(42)));
+        quick.addView(quickField, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(42), dp(42));
         addParams.setMarginStart(dp(5));
         quick.addView(add, addParams);
+        Button taskType = compactAction("Single ▾", Color.rgb(15, 105, 80),
+                Color.argb(220, 226, 244, 238));
+        taskType.setContentDescription("Task type: single task or with subtasks");
+        LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(dp(84), dp(42));
+        typeParams.setMarginStart(dp(4));
+        quick.addView(taskType, typeParams);
+        taskType.setOnClickListener(v -> showChoicePopup(taskType,
+                new String[]{getString(R.string.task_structure_single),
+                        getString(R.string.task_structure_multiple)},
+                subtaskEditor.isMultiple() ? 1 : 0, Color.rgb(15, 105, 80), index -> {
+                    subtaskEditor.setMultiple(index == 1);
+                    taskType.setText(index == 1 ? "Subtasks ▾" : "Single ▾");
+                }));
         LinearLayout.LayoutParams quickParams = new LinearLayout.LayoutParams(-1, dp(48));
         quickParams.topMargin = dp(2);
         root.addView(quick, quickParams);
@@ -529,7 +547,6 @@ public final class FamilyTaskOverlayService extends Service {
                             quickTimeMode[0], customQuickTime);
                 }));
 
-        FamilyTaskSubtaskEditor subtaskEditor = new FamilyTaskSubtaskEditor(this);
         root.addView(subtaskEditor, new LinearLayout.LayoutParams(-1, -2));
 
         countText = text("", 10f, true);
@@ -562,7 +579,7 @@ public final class FamilyTaskOverlayService extends Service {
             if (!subtaskEditor.validate()) return;
             FamilyTask task = new FamilyTask();
             task.title = value;
-            task.notes = FamilyTaskSubtasks.encode("", subtaskEditor.getItems());
+            task.notes = FamilyTaskSubtasks.encode("", subtaskEditor.getItems(), subtaskEditor.getCompleted());
             task.dueAt = resolveQuickDueAt(quickDateMode[0], customQuickDateAt[0],
                     quickTimeMode[0], customQuickTime);
             task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
@@ -573,6 +590,7 @@ public final class FamilyTaskOverlayService extends Service {
             repository.save(task, () -> {
                 input.setText("");
                 subtaskEditor.reset();
+                taskType.setText("Single ▾");
                 refresh();
             });
         };
@@ -1141,8 +1159,12 @@ public final class FamilyTaskOverlayService extends Service {
         copy.addView(meta, new LinearLayout.LayoutParams(-1, -2));
         FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);
         if (!taskContent.items.isEmpty()) {
-            TextView subtasks = text("• " + TextUtils.join("\n• ", taskContent.items), 11f, false);
-            subtasks.setTextColor(Color.rgb(69, 112, 99));
+            LinearLayout subtasks = new LinearLayout(this);
+            subtasks.setOrientation(LinearLayout.VERTICAL);
+            FamilyTaskSubtaskList.bind(subtasks, taskContent, (index, checked) -> {
+                task.notes = FamilyTaskSubtasks.withCompleted(task.notes, index, checked);
+                repository.save(task, this::refresh);
+            });
             copy.addView(subtasks, new LinearLayout.LayoutParams(-1, -2));
         }
         card.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));

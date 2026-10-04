@@ -144,6 +144,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 });
             }
 
+            @Override public void onSubtaskChanged(@NonNull FamilyTask task, int index, boolean checked) {
+                task.notes = FamilyTaskSubtasks.withCompleted(task.notes, index, checked);
+                repository.save(task, FamilyTasksFragment.this::reload);
+            }
+
             @Override public void onEdit(@NonNull FamilyTask task) { prepareEditor(task); }
             @Override public void onDelete(@NonNull FamilyTask task) { confirmDelete(task); }
         });
@@ -917,7 +922,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 requestVoiceCapture(form.taskTitleInput, form.taskEditorVoiceWave));
         FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);
         FamilyTaskSubtaskEditor subtaskEditor = new FamilyTaskSubtaskEditor(requireContext());
-        subtaskEditor.setItems(taskContent.items);
+        subtaskEditor.setContent(taskContent);
         form.taskSubtasksHost.addView(subtaskEditor);
         form.taskNotesInput.setText(taskContent.notes);
         form.taskPriorityInput.setText(priorities[indexOf(priorityValues, task.priority)], false);
@@ -969,7 +974,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             }
             if (!subtaskEditor.validate()) return;
             task.title = title;
-            task.notes = FamilyTaskSubtasks.encode(text(form.taskNotesInput), subtaskEditor.getItems());
+            task.notes = FamilyTaskSubtasks.encode(text(form.taskNotesInput), subtaskEditor.getItems(), subtaskEditor.getCompleted());
             task.dueAt = dueAt[0];
             task.priority = priorityValues[Math.max(0,
                     indexOf(priorities, text(form.taskPriorityInput)))];

@@ -35,4 +35,31 @@ public class FamilyTaskSubtasksTest {
                 FamilyTaskSubtasks.encode("Keep notes", Arrays.asList("One")));
         assertEquals("Keep notes", FamilyTaskSubtasks.encode(result.notes, Collections.emptyList()));
     }
+
+    @Test public void checkboxStateSurvivesRoundTrip() {
+        FamilyTaskSubtasks.Content content = FamilyTaskSubtasks.decode(
+                FamilyTaskSubtasks.encode("Keep notes", Arrays.asList("दूध", "Medicine"),
+                        Arrays.asList(true, false)));
+        assertEquals("Keep notes", content.notes);
+        assertEquals(Arrays.asList("दूध", "Medicine"), content.items);
+        assertEquals(Arrays.asList(true, false), content.completed);
+    }
+    @Test public void oldBulletListsAreUncheckedAndCanBeToggled() {
+        String original = "Keep notes\n\nSubtasks:\n• One\n• Two";
+        FamilyTaskSubtasks.Content old = FamilyTaskSubtasks.decode(original);
+        assertEquals(Arrays.asList(false, false), old.completed);
+        FamilyTaskSubtasks.Content checked = FamilyTaskSubtasks.decode(
+                FamilyTaskSubtasks.withCompleted(original, 1, true));
+        assertEquals("Keep notes", checked.notes);
+        assertEquals(Arrays.asList("One", "Two"), checked.items);
+        assertEquals(Arrays.asList(false, true), checked.completed);
+        FamilyTaskSubtasks.Content reopened = FamilyTaskSubtasks.decode(
+                FamilyTaskSubtasks.withCompleted(
+                        FamilyTaskSubtasks.encode(checked.notes, checked.items, checked.completed), 1, false));
+        assertEquals(Arrays.asList(false, false), reopened.completed);
+    }
+    @Test public void invalidCheckboxIndexDoesNotChangeNotes() {
+        String original = "Subtasks:\n• One";
+        assertEquals(original, FamilyTaskSubtasks.withCompleted(original, 2, true));
+    }
 }
