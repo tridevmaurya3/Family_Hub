@@ -82,7 +82,8 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
         LinearLayout row = new LinearLayout(getContext());
         row.setOrientation(HORIZONTAL);
         EditText input = new EditText(getContext());
-        input.setTextSize(13);
+        input.setTextSize(12);
+        input.setIncludeFontPadding(false);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         input.setSingleLine(true);
         input.setHint(R.string.task_subtask_hint);

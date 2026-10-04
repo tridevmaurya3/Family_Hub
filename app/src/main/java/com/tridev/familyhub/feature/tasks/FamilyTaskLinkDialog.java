@@ -97,6 +97,7 @@ final class FamilyTaskLinkDialog {
         financeInput.setText(financeLabels.get(financeIndex), false);
         loanInput.setText(loanLabels.get(loanIndex), false);
 
+        com.tridev.familyhub.core.ui.CompactFormStyle.apply(root);
         new MaterialAlertDialogBuilder(context, R.style.ThemeOverlay_FamilyHub_FormDialog)
                 .setTitle(R.string.family_tasks_link_dialog_title)
                 .setView(root)
@@ -144,7 +145,7 @@ final class FamilyTaskLinkDialog {
         input.setDropDownVerticalOffset(dp(context, 6));
         input.setDropDownBackgroundDrawable(context.getDrawable(R.drawable.bg_premium_dropdown_popup));
         input.setAdapter(new ArrayAdapter<>(context,
-                android.R.layout.simple_dropdown_item_1line, labels));
+                R.layout.item_form_dropdown, labels));
         input.setOnClickListener(v -> input.showDropDown());
         layout.addView(input, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 52)));
