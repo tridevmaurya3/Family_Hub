@@ -49,7 +49,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         optionsScroll.setVisibility(GONE);
         addView(optionsScroll, new LayoutParams(-1, (int)(180 * getResources().getDisplayMetrics().density)));
         toggle.setOnClickListener(v -> optionsScroll.setVisibility(optionsScroll.getVisibility() == GONE ? VISIBLE : GONE));
-        lead = new Spinner(context);
+        lead = new Spinner(context, Spinner.MODE_DROPDOWN);
         String[] labels = {context.getString(R.string.task_reminder_off), context.getString(R.string.task_reminder_at_time),
                 context.getString(R.string.task_reminder_5_minutes), context.getString(R.string.task_reminder_15_minutes),
                 context.getString(R.string.task_reminder_30_minutes), context.getString(R.string.task_reminder_1_hour),
@@ -64,7 +64,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
         });
         if (quick) details.addView(lead, new LayoutParams(-1, -2));
-        mode = new Spinner(context);
+        mode = new Spinner(context, Spinner.MODE_DROPDOWN);
         mode.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item,
                 new String[]{context.getString(R.string.task_reminder_normal), context.getString(R.string.task_reminder_important)}));
         mode.setSelection(task != null && FamilyTaskReminderPreferences.important(context, task) ? 1 : 0);
