@@ -1144,16 +1144,19 @@ public final class FamilyTaskOverlayService extends Service {
         com.google.android.material.checkbox.MaterialCheckBox check =
                 new com.google.android.material.checkbox.MaterialCheckBox(
                         new android.view.ContextThemeWrapper(this, R.style.Theme_FamilyHub));
+        check.setMinHeight(0);
+        check.setMinimumHeight(0);
+        check.setPadding(0, 0, 0, 0);
         check.setChecked(completedMode);
         check.setContentDescription((completedMode ? "Reopen " : "Complete ") + task.title);
-        LinearLayout.LayoutParams mainCheckParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        LinearLayout.LayoutParams mainCheckParams = new LinearLayout.LayoutParams(dp(42), dp(32));
         mainCheckParams.gravity = Gravity.TOP;
         heading.addView(check, mainCheckParams);
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         TextView title = text(task.title, 13.5f, true);
-        title.setMinHeight(dp(42));
+        title.setMinHeight(dp(32));
         title.setTextColor(Color.rgb(31, 48, 43));
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);

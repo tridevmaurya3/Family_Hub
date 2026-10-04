@@ -21,13 +21,17 @@ public final class FamilyTaskSubtaskList {
             int columnWidth = Math.round(42 * container.getResources().getDisplayMetrics().density);
             MaterialCheckBox check = new MaterialCheckBox(new android.view.ContextThemeWrapper(
                     container.getContext(), com.tridev.familyhub.R.style.Theme_FamilyHub));
+            int rowHeight = Math.round(32 * container.getResources().getDisplayMetrics().density);
+            check.setMinHeight(0);
+            check.setMinimumHeight(0);
+            check.setPadding(0, 0, 0, 0);
             TextView label = new TextView(container.getContext());
             label.setText(content.items.get(i));
             label.setTextSize(12);
             check.setChecked(content.completed.get(i));
             check.setContentDescription(content.items.get(i));
             strike(label, check.isChecked());
-            row.addView(check, new LinearLayout.LayoutParams(columnWidth, columnWidth));
+            row.addView(check, new LinearLayout.LayoutParams(columnWidth, rowHeight));
             LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, -2, 1f);
             labelParams.setMarginStart(Math.round(4 * container.getResources().getDisplayMetrics().density));
             row.addView(label, labelParams);

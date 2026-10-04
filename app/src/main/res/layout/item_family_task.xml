@@ -16,7 +16,8 @@
             android:gravity="center_vertical" android:orientation="horizontal">
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/task_completed" android:layout_width="42dp"
-                android:layout_height="42dp" android:layout_gravity="top"
+                android:layout_height="32dp" android:minHeight="0dp"
+                android:padding="0dp" android:layout_gravity="top"
                 android:buttonTint="@color/fh_module_grocery" />
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                 android:layout_marginStart="4dp" android:layout_weight="1"
@@ -24,7 +25,7 @@
                 <TextView android:id="@+id/task_title"
                     style="@style/TextAppearance.FamilyHub.CardTitle"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:minHeight="42dp" android:gravity="center_vertical"
+                    android:minHeight="32dp" android:gravity="center_vertical"
                     android:breakStrategy="balanced" android:maxLines="3"
                     android:textColor="@color/fh_text_primary" />
                 <TextView android:id="@+id/task_due"
