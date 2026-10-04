@@ -1,9 +1,9 @@
 package com.tridev.familyhub.feature.familylive;
 
 import android.content.Context;
-import android.graphics.Color;
 import android.util.AttributeSet;
-import android.view.MotionEvent;
+import android.graphics.drawable.GradientDrawable;
+import android.widget.FrameLayout;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -13,7 +13,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 import com.tridev.familyhub.R;
 
 /**
@@ -22,7 +21,7 @@ import com.tridev.familyhub.R;
  * The menu collapses when its main button is tapped again, when an action is
  * used, or when the activity restores the map legend after an empty-map tap.
  */
-public final class FamilyMapExpandableControlsView extends MaterialCardView {
+public final class FamilyMapExpandableControlsView extends FrameLayout {
 
     @Nullable
     private View actionsContainer;
@@ -59,6 +58,9 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
             int defStyleAttr
     ) {
         super(context, attrs, defStyleAttr);
+        setBackground(null);
+        setElevation(0F);
+        setStateListAnimator(null);
         setClickable(false);
         setFocusable(false);
     }
@@ -192,12 +194,14 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
         }
 
         expanded = true;
-        setCardBackgroundColor(ContextCompat.getColor(
+        GradientDrawable panel = new GradientDrawable();
+        panel.setColor(ContextCompat.getColor(
                 getContext(), R.color.family_map_panel_surface));
-        setStrokeWidth(Math.max(1, Math.round(
-                getResources().getDisplayMetrics().density)));
-        setStrokeColor(ContextCompat.getColor(
-                getContext(), R.color.family_map_panel_stroke));
+        panel.setCornerRadius(getResources().getDimension(R.dimen.radius_18));
+        panel.setStroke(Math.max(1, Math.round(
+                getResources().getDisplayMetrics().density)),
+                ContextCompat.getColor(getContext(), R.color.family_map_panel_stroke));
+        setBackground(panel);
         updateExpandedWidth();
 
         actionsContainer.setVisibility(VISIBLE);
@@ -224,8 +228,7 @@ public final class FamilyMapExpandableControlsView extends MaterialCardView {
 
     private void collapse(boolean animate) {
         expanded = false;
-        setCardBackgroundColor(Color.TRANSPARENT);
-        setStrokeWidth(0);
+        setBackground(null);
 
         if (actionsContainer != null) {
             actionsContainer.animate().cancel();
