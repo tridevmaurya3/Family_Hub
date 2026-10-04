@@ -10,6 +10,8 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -26,6 +28,15 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
 import com.tridev.familyhub.R;
+import androidx.room.InvalidationTracker;
+import com.tridev.familyhub.data.local.FamilyHubDatabase;
+import com.tridev.familyhub.data.local.entity.FamilyTask;
+import com.tridev.familyhub.data.local.entity.GroceryItem;
+import com.tridev.familyhub.data.repository.GroceryRepository;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
@@ -44,9 +55,22 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams params;
     private View icon;
     private PopupWindow selector;
+    private FamilyHubDatabase database;
+    private Button groceryChoice, taskChoice;
+    private final Handler countHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService countExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean destroyed;
+    private int countGeneration;
+    private final InvalidationTracker.Observer countObserver =
+            new InvalidationTracker.Observer("grocery_items", "family_tasks") {
+                @Override public void onInvalidated(@androidx.annotation.NonNull Set<String> tables) {
+                    countHandler.post(UniversalFamilyQuickHubService.this::refreshPendingCounts);
+                }
+            };
 
     @Override public void onCreate() {
         super.onCreate();
+        database = FamilyHubDatabase.getInstance(this);
         createChannel();
         startForeground(NOTIFICATION_ID, new NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle("Family Quick Hub")
@@ -101,7 +125,46 @@ public final class UniversalFamilyQuickHubService extends Service {
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
+        groceryChoice = grocery;
+        taskChoice = tasks;
+        countGeneration++;
+        selector.setOnDismissListener(() -> {
+            database.getInvalidationTracker().removeObserver(countObserver);
+            groceryChoice = null;
+            taskChoice = null;
+            countGeneration++;
+        });
         selector.showAsDropDown(anchor,-dp(112),dp(4));
+        database.getInvalidationTracker().addObserver(countObserver);
+        refreshPendingCounts();
+    }
+
+    private void refreshPendingCounts() {
+        if (destroyed || groceryChoice == null || taskChoice == null) return;
+        final int generation = countGeneration;
+        countExecutor.execute(() -> {
+            // Read existing Room state only; do not start sync or repository maintenance.
+            List<GroceryItem> groceries = database.groceryItemDao().getAll();
+            GroceryRepository.annotateRecurrence(groceries, groceries, System.currentTimeMillis());
+            int groceryCount = 0;
+            for (GroceryItem item : groceries) {
+                if (!item.isPurchased && !item.recurrenceShadowed) groceryCount++;
+            }
+            int taskCount = 0;
+            for (FamilyTask task : database.familyTaskDao().getAll()) {
+                if (FamilyTask.STATUS_PENDING.equals(task.status)) taskCount++;
+            }
+            final int pendingGroceries = groceryCount;
+            final int pendingTasks = taskCount;
+            countHandler.post(() -> {
+                if (destroyed || generation != countGeneration
+                        || groceryChoice == null || taskChoice == null) return;
+                groceryChoice.setText("🛒  Grocery" + (pendingGroceries > 0 ? " (" + pendingGroceries + ")" : ""));
+                taskChoice.setText("✓  To-Do" + (pendingTasks > 0 ? " (" + pendingTasks + ")" : ""));
+                groceryChoice.setContentDescription("Grocery, " + pendingGroceries + " pending");
+                taskChoice.setContentDescription("To-Do, " + pendingTasks + " pending");
+            });
+        });
     }
 
     private void showOpacity(View anchor){SharedPreferences p=getSharedPreferences(PREFS,MODE_PRIVATE);SeekBar bar=new SeekBar(this);bar.setPadding(dp(12),0,dp(12),0);bar.setProgress(Math.round((p.getFloat("button_alpha",.92f)-.10f)/.90f*100));PopupWindow pop=new PopupWindow(bar,dp(210),dp(52),true);pop.setOutsideTouchable(true);pop.setBackgroundDrawable(round(Color.WHITE,Color.rgb(184,207,199),16));pop.setElevation(dp(12));bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}public void onProgressChanged(SeekBar s,int value,boolean user){float a=.10f+(value/100f)*.90f;if(icon!=null)icon.setAlpha(a);p.edit().putFloat("button_alpha",a).apply();}});pop.showAsDropDown(anchor,-dp(162),dp(4));}
@@ -111,7 +174,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return Math.round(v*getResources().getDisplayMetrics().density);} private int clamp(int v,int a,int b){return Math.max(a,Math.min(b,v));}
-    @Override public void onDestroy(){if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
+    @Override public void onDestroy(){destroyed=true;countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
     @Nullable @Override public IBinder onBind(Intent intent){return null;}
     private void createChannel(){if(Build.VERSION.SDK_INT>=26){NotificationManager n=getSystemService(NotificationManager.class);if(n!=null)n.createNotificationChannel(new NotificationChannel(CHANNEL,"Family Quick Hub",NotificationManager.IMPORTANCE_LOW));}}
 }
