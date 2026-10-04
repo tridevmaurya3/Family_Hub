@@ -19,7 +19,8 @@ public final class FamilyTaskSubtaskList {
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             int columnWidth = Math.round(42 * container.getResources().getDisplayMetrics().density);
-            MaterialCheckBox check = new MaterialCheckBox(container.getContext());
+            MaterialCheckBox check = new MaterialCheckBox(new android.view.ContextThemeWrapper(
+                    container.getContext(), com.tridev.familyhub.R.style.Theme_FamilyHub));
             TextView label = new TextView(container.getContext());
             label.setText(content.items.get(i));
             label.setTextSize(12);

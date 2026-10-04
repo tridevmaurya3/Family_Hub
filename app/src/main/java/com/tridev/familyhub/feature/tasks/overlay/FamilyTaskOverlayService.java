@@ -1142,7 +1142,8 @@ public final class FamilyTaskOverlayService extends Service {
         cardParams.setMargins(0, dp(3), 0, dp(4));
 
         com.google.android.material.checkbox.MaterialCheckBox check =
-                new com.google.android.material.checkbox.MaterialCheckBox(this);
+                new com.google.android.material.checkbox.MaterialCheckBox(
+                        new android.view.ContextThemeWrapper(this, R.style.Theme_FamilyHub));
         check.setChecked(completedMode);
         check.setContentDescription((completedMode ? "Reopen " : "Complete ") + task.title);
         LinearLayout.LayoutParams mainCheckParams = new LinearLayout.LayoutParams(dp(42), dp(42));
