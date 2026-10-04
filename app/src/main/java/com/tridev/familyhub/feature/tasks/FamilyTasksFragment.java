@@ -157,6 +157,18 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
         setupGroceryStyleControls();
         setupQuickAddOptions();
+        quickSubtaskEditor = new FamilyTaskSubtaskEditor(requireContext());
+        quickSubtaskEditor.useExternalModeControl();
+        binding.taskQuickSubtasksHost.addView(quickSubtaskEditor);
+        updateQuickStructureLabel();
+        binding.taskQuickStructureButton.setOnClickListener(anchor -> showPremiumFilterPopup(
+                anchor, new String[]{getString(R.string.task_quick_single), getString(R.string.task_quick_multiple)},
+                quickSubtaskEditor.isMultiple() ? 1 : 0,
+                ContextCompat.getColor(requireContext(), R.color.fh_module_grocery), index -> {
+                    quickSubtaskEditor.setMultiple(index == 1);
+                    binding.taskQuickSubtasksHost.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
+                    updateQuickStructureLabel();
+                }));
         quickReminderOptions = new FamilyTaskReminderOptionsView(requireContext(), null, true);
         binding.taskQuickReminderHost.addView(quickReminderOptions);
 
@@ -699,6 +711,13 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     @Override public void onAddRequested() { prepareEditor(null); }
 
     private FamilyTaskReminderOptionsView quickReminderOptions;
+    private FamilyTaskSubtaskEditor quickSubtaskEditor;
+
+    private void updateQuickStructureLabel() {
+        if (binding == null) return;
+        binding.taskQuickStructureButton.setText(getString(quickSubtaskEditor.isMultiple()
+                ? R.string.task_quick_multiple : R.string.task_quick_single) + "  ▾");
+    }
 
     @Override public void onResume() {
         super.onResume();
@@ -708,11 +727,15 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private void quickAdd() {
         String title = text(binding.taskQuickAddInput);
         if (title.isEmpty()) {
-            prepareEditor(null);
+            if (quickSubtaskEditor.isMultiple()) binding.taskQuickAddLayout.setError(getString(R.string.family_tasks_required));
+            else prepareEditor(null);
             return;
         }
+        binding.taskQuickAddLayout.setError(null);
+        if (!quickSubtaskEditor.validate()) return;
         FamilyTask task = new FamilyTask();
         task.title = title;
+        task.notes = FamilyTaskSubtasks.encode("", quickSubtaskEditor.getItems(), quickSubtaskEditor.getCompleted());
         task.dueAt = resolveQuickDueAt();
         task.priority = quickPriorityMode == 2 ? FamilyTask.PRIORITY_URGENT
                 : quickPriorityMode == 1 ? FamilyTask.PRIORITY_HIGH
@@ -727,6 +750,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             FamilyTaskScheduler.schedule(reminderContext, task);
             if (binding != null) {
                 binding.taskQuickAddInput.setText("");
+                quickSubtaskEditor.reset();
+                binding.taskQuickSubtasksHost.setVisibility(View.GONE);
+                updateQuickStructureLabel();
                 reload();
             }
         });
@@ -937,7 +963,24 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);
         FamilyTaskSubtaskEditor subtaskEditor = new FamilyTaskSubtaskEditor(requireContext());
         subtaskEditor.setContent(taskContent);
+        subtaskEditor.useExternalModeControl();
         form.taskSubtasksHost.addView(subtaskEditor);
+        String[] structures = {getString(R.string.task_quick_single), getString(R.string.task_quick_multiple)};
+        form.taskStructureInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, structures));
+        form.taskStructureInput.setText(structures[subtaskEditor.isMultiple() ? 1 : 0], false);
+        form.taskStructureInput.setOnItemClickListener((parent, view, position, id) -> subtaskEditor.setMultiple(position == 1));
+        String[] dates = {getString(R.string.task_due_today), getString(R.string.task_due_tomorrow), getString(R.string.family_tasks_custom_date)};
+        form.taskDatePresetInput.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, dates));
+        form.taskDatePresetInput.setOnItemClickListener((parent, view, position, id) -> {
+            if (position < 2) setSmartDue(form, dueAt, position);
+            else {
+                updateDueText(form, dueAt[0]);
+                pickDateTime(dueAt[0], selected -> {
+                    dueAt[0] = selected;
+                    updateDueText(form, selected);
+                });
+            }
+        });
         form.taskNotesInput.setText(taskContent.notes);
         form.taskPriorityInput.setText(priorities[indexOf(priorityValues, task.priority)], false);
         form.taskRepeatInput.setText(repeats[indexOf(repeatValues, task.repeatType)], false);
@@ -970,12 +1013,6 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
         updateDueText(form, dueAt[0]);
         form.taskDueInput.setOnClickListener(v -> pickDateTime(dueAt[0], selected -> {
-            dueAt[0] = selected;
-            updateDueText(form, selected);
-        }));
-        form.taskDueToday.setOnClickListener(v -> setSmartDue(form, dueAt, 0));
-        form.taskDueTomorrow.setOnClickListener(v -> setSmartDue(form, dueAt, 1));
-        form.taskDueNextWeek.setOnClickListener(v -> pickDateTime(dueAt[0], selected -> {
             dueAt[0] = selected;
             updateDueText(form, selected);
         }));
@@ -1249,6 +1286,16 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private void updateDueText(DialogFamilyTaskBinding form, long value) {
         form.taskDueInput.setText(DateFormat.getDateTimeInstance(
                 DateFormat.MEDIUM, DateFormat.SHORT).format(new Date(value)));
+        Calendar day = Calendar.getInstance();
+        day.setTimeInMillis(startOfToday());
+        long today = day.getTimeInMillis();
+        day.add(Calendar.DAY_OF_YEAR, 1);
+        long tomorrow = day.getTimeInMillis();
+        day.add(Calendar.DAY_OF_YEAR, 1);
+        int label = value >= today && value < tomorrow ? R.string.task_due_today
+                : value >= tomorrow && value < day.getTimeInMillis() ? R.string.task_due_tomorrow
+                : R.string.family_tasks_custom_date;
+        form.taskDatePresetInput.setText(getString(label), false);
     }
 
     private static String text(android.widget.TextView view) {
@@ -1282,3 +1329,4 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         super.onDestroyView();
     }
 }
+

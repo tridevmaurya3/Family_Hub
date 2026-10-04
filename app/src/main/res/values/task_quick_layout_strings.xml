@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="task_quick_single">Single</string>
+    <string name="task_quick_multiple">With subtasks</string>
+    <string name="task_quick_structure_label">Task type</string>
+    <string name="task_quick_date_label">Date</string>
+</resources>
