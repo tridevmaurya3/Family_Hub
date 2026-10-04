@@ -1142,11 +1142,14 @@ public final class FamilyTaskOverlayService extends Service {
         CheckBox check = new CheckBox(this);
         check.setChecked(completedMode);
         check.setContentDescription((completedMode ? "Reopen " : "Complete ") + task.title);
-        card.addView(check, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        LinearLayout.LayoutParams mainCheckParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        mainCheckParams.gravity = Gravity.TOP;
+        card.addView(check, mainCheckParams);
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         TextView title = text(task.title, 13.5f, true);
+        title.setMinHeight(dp(42));
         title.setTextColor(Color.rgb(31, 48, 43));
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
