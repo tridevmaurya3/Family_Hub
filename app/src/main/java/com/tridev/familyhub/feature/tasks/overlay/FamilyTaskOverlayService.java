@@ -1131,7 +1131,9 @@ public final class FamilyTaskOverlayService extends Service {
 
     private void addTaskRow(@NonNull FamilyTask task) {
         if (taskRows == null) return;
-        LinearLayout card = row();
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout heading = row();
         card.setPadding(dp(8), dp(7), dp(8), dp(7));
         card.setBackground(round(Color.argb(235, 231, 246, 240),
                 14, Color.argb(160, 184, 220, 207)));
@@ -1139,12 +1141,13 @@ public final class FamilyTaskOverlayService extends Service {
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
         cardParams.setMargins(0, dp(3), 0, dp(4));
 
-        CheckBox check = new CheckBox(this);
+        com.google.android.material.checkbox.MaterialCheckBox check =
+                new com.google.android.material.checkbox.MaterialCheckBox(this);
         check.setChecked(completedMode);
         check.setContentDescription((completedMode ? "Reopen " : "Complete ") + task.title);
         LinearLayout.LayoutParams mainCheckParams = new LinearLayout.LayoutParams(dp(42), dp(42));
         mainCheckParams.gravity = Gravity.TOP;
-        card.addView(check, mainCheckParams);
+        heading.addView(check, mainCheckParams);
 
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
@@ -1153,13 +1156,18 @@ public final class FamilyTaskOverlayService extends Service {
         title.setTextColor(Color.rgb(31, 48, 43));
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
-        copy.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, -2, 1f);
+        titleParams.setMarginStart(dp(4));
+        heading.addView(title, titleParams);
+        card.addView(heading, new LinearLayout.LayoutParams(-1, -2));
         String detail = dueDetail(task);
         TextView meta = text(detail, 10.5f, false);
         meta.setTextColor(isCalendarOverdue(task)
                 ? Color.rgb(190, 42, 61) : Color.rgb(69, 112, 99));
         meta.setMaxLines(3);
-        copy.addView(meta, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams metaParams = new LinearLayout.LayoutParams(-1, -2);
+        metaParams.setMarginStart(dp(46));
+        copy.addView(meta, metaParams);
         FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);
         if (!taskContent.items.isEmpty()) {
             LinearLayout subtasks = new LinearLayout(this);
@@ -1170,7 +1178,7 @@ public final class FamilyTaskOverlayService extends Service {
             });
             copy.addView(subtasks, new LinearLayout.LayoutParams(-1, -2));
         }
-        card.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
+        card.addView(copy, new LinearLayout.LayoutParams(-1, -2));
 
         TextView priority = text(priorityLabel(task), 9f, true);
         priority.setGravity(Gravity.CENTER);
@@ -1182,7 +1190,7 @@ public final class FamilyTaskOverlayService extends Service {
         LinearLayout.LayoutParams priorityParams = new LinearLayout.LayoutParams(dp(58), dp(28));
         priorityParams.setMarginStart(dp(4));
         priorityParams.gravity = Gravity.CENTER_VERTICAL;
-        card.addView(priority, priorityParams);
+        heading.addView(priority, priorityParams);
 
         check.setOnCheckedChangeListener((button, checked) -> {
             repository.setCompleted(task, checked, () -> {
