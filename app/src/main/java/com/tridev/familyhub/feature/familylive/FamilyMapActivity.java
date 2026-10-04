@@ -740,8 +740,11 @@ public final class FamilyMapActivity extends AppCompatActivity {
         if (controlRail.getVisibility() != visibility) {
             controlRail.setVisibility(visibility);
         }
-        if (bottomPanel.getVisibility() != visibility) {
-            bottomPanel.setVisibility(visibility);
+        int legendVisibility = visible
+                && (expandableControls == null || !expandableControls.isExpanded())
+                ? View.VISIBLE : View.GONE;
+        if (bottomPanel.getVisibility() != legendVisibility) {
+            bottomPanel.setVisibility(legendVisibility);
         }
         findViewById(R.id.familyMapHost).post(this::applyMapPadding);
     }

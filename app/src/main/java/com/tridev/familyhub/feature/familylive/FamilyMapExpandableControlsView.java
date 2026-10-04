@@ -165,13 +165,16 @@ public final class FamilyMapExpandableControlsView extends FrameLayout {
             return;
         }
 
-        int currentVisibility = legendPanel.getVisibility();
-        boolean becameVisible = lastLegendVisibility != VISIBLE
-                && currentVisibility == VISIBLE;
-        lastLegendVisibility = currentVisibility;
+        // Location updates may request the legend again while the menu is open.
+        // Keep it hidden without changing the user's expanded menu state.
+        if (expanded && legendPanel.getVisibility() != GONE) {
+            legendPanel.setVisibility(GONE);
+        }
+        lastLegendVisibility = legendPanel.getVisibility();
+    }
 
-        // Live-map redraws may restore the legend. They must not reset a
-        // menu that the user deliberately left open.
+    public boolean isExpanded() {
+        return expanded;
     }
 
     public void collapseFromMapTap() {
