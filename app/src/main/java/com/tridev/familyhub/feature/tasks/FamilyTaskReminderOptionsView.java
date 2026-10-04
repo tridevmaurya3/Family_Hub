@@ -44,9 +44,9 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         follow = findViewById(R.id.reminder_followup);
         toggle.setText(quick ? R.string.task_reminder_quick_default : R.string.task_reminder_options);
         toggle.setOnClickListener(v -> { details.setVisibility(details.getVisibility() == GONE ? VISIBLE : GONE); refreshAccess(); });
-        String[] labels = {themed.getString(R.string.task_reminder_off), themed.getString(R.string.task_reminder_at_time),
-                themed.getString(R.string.task_reminder_5_minutes), themed.getString(R.string.task_reminder_15_minutes),
-                themed.getString(R.string.task_reminder_30_minutes), themed.getString(R.string.task_reminder_1_hour), themed.getString(R.string.task_reminder_1_day)};
+        String[] labels = {themed.getString(R.string.task_reminder_off), themed.getString(R.string.task_reminder_short_at),
+                themed.getString(R.string.task_reminder_short_5), themed.getString(R.string.task_reminder_short_15),
+                themed.getString(R.string.task_reminder_short_30), themed.getString(R.string.task_reminder_short_hour), themed.getString(R.string.task_reminder_short_day)};
         lead.setAdapter(new ArrayAdapter<>(themed, android.R.layout.simple_list_item_1, labels));
         lead.setText(labels[leadIndex], false);
         lead.setOnItemClickListener((parent, view, position, id) -> {

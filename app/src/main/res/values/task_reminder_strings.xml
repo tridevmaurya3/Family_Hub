@@ -19,10 +19,16 @@
     <string name="task_reminder_open">Open tasks</string>
     <string name="task_reminder_alert_type">Alert type</string>
     <string name="task_reminder_mode_normal">Normal</string>
-    <string name="task_reminder_mode_important">Important (alarm sound)</string>
+    <string name="task_reminder_mode_important">Important</string>
     <string name="task_reminder_test">Test notification</string>
     <string name="task_reminder_test_message">Task reminders can reach this phone.</string>
     <string name="task_reminder_test_sent">Test notification sent</string>
     <string name="task_reminder_permission_required">Enable notifications for Family To-Do reminders.</string>
+    <string name="task_reminder_short_at">At time</string>
+    <string name="task_reminder_short_5">5 min before</string>
+    <string name="task_reminder_short_15">15 min before</string>
+    <string name="task_reminder_short_30">30 min before</string>
+    <string name="task_reminder_short_hour">1 hour before</string>
+    <string name="task_reminder_short_day">1 day before</string>
 </resources>
 
