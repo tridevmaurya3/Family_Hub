@@ -198,6 +198,8 @@ final class FamilyTaskAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             binding.taskMeta.setText(binding.getRoot().getContext().getString(
                     R.string.family_tasks_assigned_to, who) + repeat + created
                     + grocery + finance + loan);
+            binding.taskNotes.setMaxLines(FamilyTaskSubtasks.decode(task.notes).items.isEmpty()
+                    ? 2 : Integer.MAX_VALUE);
             binding.taskNotes.setText(task.notes);
             binding.taskNotes.setVisibility(task.notes.isEmpty() ? View.GONE : View.VISIBLE);
             binding.taskCompleted.setOnCheckedChangeListener((button, checked) -> listener.onCompletedChanged(task, checked));
