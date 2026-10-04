@@ -33,6 +33,7 @@ import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.repository.GroceryRepository;
+import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -145,10 +146,19 @@ public final class UniversalFamilyQuickHubService extends Service {
         countExecutor.execute(() -> {
             // Read existing Room state only; do not start sync or repository maintenance.
             List<GroceryItem> groceries = database.groceryItemDao().getAll();
-            GroceryRepository.annotateRecurrence(groceries, groceries, System.currentTimeMillis());
+            long now = System.currentTimeMillis();
+            GroceryRepository.annotateRecurrence(groceries, groceries, now);
             int groceryCount = 0;
             for (GroceryItem item : groceries) {
-                if (!item.isPurchased && !item.recurrenceShadowed) groceryCount++;
+                if (item.isPurchased || item.recurrenceShadowed) continue;
+                // Use the same current-cycle visibility rule as the Grocery list.
+                // Recurring masters waiting for their next due date are not counted.
+                if (GroceryRecurrenceEngine.matchesCycle(item, GroceryItem.LIST_DAILY, now)
+                        || GroceryRecurrenceEngine.matchesCycle(item, GroceryItem.LIST_WEEKLY, now)
+                        || GroceryRecurrenceEngine.matchesCycle(item, GroceryItem.LIST_FORTNIGHTLY, now)
+                        || GroceryRecurrenceEngine.matchesCycle(item, GroceryItem.LIST_MONTHLY, now)) {
+                    groceryCount++;
+                }
             }
             int taskCount = 0;
             for (FamilyTask task : database.familyTaskDao().getAll()) {
