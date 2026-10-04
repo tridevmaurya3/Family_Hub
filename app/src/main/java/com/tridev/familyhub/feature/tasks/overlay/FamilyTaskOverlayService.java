@@ -46,6 +46,8 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.feature.tasks.FamilyTaskSubtaskEditor;
+import com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks;
 import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
 import com.tridev.familyhub.data.repository.FamilyTaskRepository;
@@ -527,6 +529,9 @@ public final class FamilyTaskOverlayService extends Service {
                             quickTimeMode[0], customQuickTime);
                 }));
 
+        FamilyTaskSubtaskEditor subtaskEditor = new FamilyTaskSubtaskEditor(this);
+        root.addView(subtaskEditor, new LinearLayout.LayoutParams(-1, -2));
+
         countText = text("", 10f, true);
         countText.setTextColor(Color.rgb(84, 93, 105));
         countText.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -554,8 +559,10 @@ public final class FamilyTaskOverlayService extends Service {
                         .putExtra(MainActivity.EXTRA_OPEN_TASK_EDITOR, true));
                 return;
             }
+            if (!subtaskEditor.validate()) return;
             FamilyTask task = new FamilyTask();
             task.title = value;
+            task.notes = FamilyTaskSubtasks.encode("", subtaskEditor.getItems());
             task.dueAt = resolveQuickDueAt(quickDateMode[0], customQuickDateAt[0],
                     quickTimeMode[0], customQuickTime);
             task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
@@ -565,6 +572,7 @@ public final class FamilyTaskOverlayService extends Service {
                     ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
             repository.save(task, () -> {
                 input.setText("");
+                subtaskEditor.reset();
                 refresh();
             });
         };
@@ -1131,6 +1139,12 @@ public final class FamilyTaskOverlayService extends Service {
                 ? Color.rgb(190, 42, 61) : Color.rgb(69, 112, 99));
         meta.setMaxLines(3);
         copy.addView(meta, new LinearLayout.LayoutParams(-1, -2));
+        FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);
+        if (!taskContent.items.isEmpty()) {
+            TextView subtasks = text("• " + TextUtils.join("\n• ", taskContent.items), 11f, false);
+            subtasks.setTextColor(Color.rgb(69, 112, 99));
+            copy.addView(subtasks, new LinearLayout.LayoutParams(-1, -2));
+        }
         card.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
 
         TextView priority = text(priorityLabel(task), 9f, true);

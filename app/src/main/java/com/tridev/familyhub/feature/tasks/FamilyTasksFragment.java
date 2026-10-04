@@ -915,7 +915,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         form.taskTitleInput.setText(task.title);
         form.taskTitleLayout.setEndIconOnClickListener(v ->
                 requestVoiceCapture(form.taskTitleInput, form.taskEditorVoiceWave));
-        form.taskNotesInput.setText(task.notes);
+        FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);
+        FamilyTaskSubtaskEditor subtaskEditor = new FamilyTaskSubtaskEditor(requireContext());
+        subtaskEditor.setItems(taskContent.items);
+        form.taskSubtasksHost.addView(subtaskEditor);
+        form.taskNotesInput.setText(taskContent.notes);
         form.taskPriorityInput.setText(priorities[indexOf(priorityValues, task.priority)], false);
         form.taskRepeatInput.setText(repeats[indexOf(repeatValues, task.repeatType)], false);
         form.taskMemberInput.setText(task.assignedMemberName.isEmpty()
@@ -963,8 +967,9 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 form.taskTitleLayout.setError(getString(R.string.family_tasks_required));
                 return;
             }
+            if (!subtaskEditor.validate()) return;
             task.title = title;
-            task.notes = text(form.taskNotesInput);
+            task.notes = FamilyTaskSubtasks.encode(text(form.taskNotesInput), subtaskEditor.getItems());
             task.dueAt = dueAt[0];
             task.priority = priorityValues[Math.max(0,
                     indexOf(priorities, text(form.taskPriorityInput)))];

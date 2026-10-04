@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="task_structure_single">Single task</string>
+    <string name="task_structure_multiple">With subtasks</string>
+    <string name="task_subtask_add">+ Add subtask</string>
+    <string name="task_subtask_hint">Subtask name</string>
+    <string name="task_subtask_remove">Remove subtask</string>
+    <string name="task_subtask_required">Enter a subtask name or remove this row</string>
+</resources>
