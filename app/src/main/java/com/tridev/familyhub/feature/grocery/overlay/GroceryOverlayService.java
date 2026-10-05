@@ -452,6 +452,15 @@ public class GroceryOverlayService extends Service {
         final String[] cycleTypes = {GroceryItem.LIST_DAILY, GroceryItem.LIST_TWO_MONTH,
                 GroceryItem.LIST_THREE_MONTH, GroceryItem.LIST_MONTHLY};
         Spinner cycle = compactSpinner(cycleLabels);
+        cycle.setAdapter(new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, cycleLabels) {
+            @Override public View getView(int position, View convertView, ViewGroup parent) {
+                return spinnerSelectedText(getItem(position) + " ▾");
+            }
+            @Override public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                return premiumDropDownText(getItem(position));
+            }
+        });
         cycle.setContentDescription("Grocery cycle: Daily, Weekly, Fortnightly or Monthly");
         for (int index = 0; index < cycleTypes.length; index++) {
             if (cycleTypes[index].equals(visibleListType)) cycle.setSelection(index);
