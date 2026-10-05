@@ -428,13 +428,13 @@ public final class FamilyTaskOverlayService extends Service {
         quick.addView(quickField, new LinearLayout.LayoutParams(0, dp(42), 1f));
         LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(42), dp(42));
         addParams.setMarginStart(dp(5));
-        quick.addView(add, addParams);
         Button taskType = compactAction("Single ▾", Color.rgb(15, 105, 80),
                 Color.argb(220, 226, 244, 238));
         taskType.setContentDescription("Task type: single task or with subtasks");
         LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(dp(84), dp(42));
         typeParams.setMarginStart(dp(4));
         quick.addView(taskType, typeParams);
+        quick.addView(add, addParams);
         taskType.setOnClickListener(v -> showChoicePopup(taskType,
                 new String[]{getString(R.string.task_structure_single),
                         getString(R.string.task_structure_multiple)},
@@ -758,7 +758,12 @@ public final class FamilyTaskOverlayService extends Service {
                 getString(R.string.family_tasks_overlay_next_7_days),
                 getString(R.string.family_tasks_overlay_next_15_days),
                 getString(R.string.family_tasks_overlay_next_30_days),
-                getString(R.string.family_tasks_overlay_all)};
+                getString(R.string.family_tasks_overlay_all),
+                getString(R.string.family_tasks_overlay_all_past_pending),
+                getString(R.string.family_tasks_overlay_yesterday),
+                getString(R.string.family_tasks_overlay_past_7_days),
+                getString(R.string.family_tasks_overlay_past_15_days),
+                getString(R.string.family_tasks_overlay_past_30_days)};
         showChoicePopup(anchor, labels, dateMode, Color.rgb(15, 108, 89), index -> {
             dateMode = index;
             anchor.setText(dayLabel() + "  ▾");
@@ -892,8 +897,17 @@ public final class FamilyTaskOverlayService extends Service {
                     Math.round(measure.getPaint().measureText("✓  " + label)) + dp(36));
         }
         int maxWidth = getResources().getDisplayMetrics().widthPixels - dp(28);
-        PopupWindow popup = new PopupWindow(root, Math.min(widest, maxWidth),
-                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        View popupContent = root;
+        int popupHeight = ViewGroup.LayoutParams.WRAP_CONTENT;
+        if (labels.length > 7) {
+            ScrollView choices = new ScrollView(this);
+            choices.setFillViewport(false);
+            choices.addView(root, new ScrollView.LayoutParams(-1, -2));
+            popupContent = choices;
+            popupHeight = Math.min(dp(320), getResources().getDisplayMetrics().heightPixels / 2);
+        }
+        PopupWindow popup = new PopupWindow(popupContent, Math.min(widest, maxWidth),
+                popupHeight, true);
         popup.setOutsideTouchable(true);
         popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popup.setElevation(dp(12));
@@ -1503,6 +1517,16 @@ public final class FamilyTaskOverlayService extends Service {
 
     @NonNull
     private String dayLabel() {
+        if (dateMode == FamilyTaskOverlayPastRange.ALL_PAST)
+            return getString(R.string.family_tasks_overlay_all_past_pending);
+        if (dateMode == FamilyTaskOverlayPastRange.YESTERDAY)
+            return getString(R.string.family_tasks_overlay_yesterday);
+        if (dateMode == FamilyTaskOverlayPastRange.SEVEN_DAYS)
+            return getString(R.string.family_tasks_overlay_past_7_days);
+        if (dateMode == FamilyTaskOverlayPastRange.FIFTEEN_DAYS)
+            return getString(R.string.family_tasks_overlay_past_15_days);
+        if (dateMode == FamilyTaskOverlayPastRange.THIRTY_DAYS)
+            return getString(R.string.family_tasks_overlay_past_30_days);
         if (dateMode == DATE_ALL) return getString(R.string.family_tasks_overlay_all);
         if (dateMode == DATE_TODAY) return getString(R.string.family_tasks_overlay_today);
         if (dateMode == DATE_ADJACENT_DAY) return getString(completedMode
@@ -1547,6 +1571,8 @@ public final class FamilyTaskOverlayService extends Service {
 
     private long[] selectedRange() {
         Calendar calendar = Calendar.getInstance();
+        long[] pastRange = FamilyTaskOverlayPastRange.calculate(dateMode, calendar);
+        if (pastRange != null) return pastRange;
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
@@ -1611,3 +1637,4 @@ public final class FamilyTaskOverlayService extends Service {
         super.onDestroy();
     }
 }
+

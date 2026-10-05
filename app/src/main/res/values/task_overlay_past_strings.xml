@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="family_tasks_overlay_all_past_pending">Past pending</string>
+    <string name="family_tasks_overlay_past_7_days">Past 7 days</string>
+    <string name="family_tasks_overlay_past_15_days">Past 15 days</string>
+    <string name="family_tasks_overlay_past_30_days">Past 30 days</string>
+</resources>
