@@ -46,6 +46,8 @@ public final class NotesOverlayService extends Service {
     private int inputActivities;
     private boolean collapsed;
     private int expandedHeight;
+    private boolean closing;
+    private Runnable unregisterBack;
     private final android.app.Application.ActivityLifecycleCallbacks inputLifecycle =
             new android.app.Application.ActivityLifecycleCallbacks() {
         private boolean inputActivity(android.app.Activity activity) {
@@ -96,16 +98,39 @@ public final class NotesOverlayService extends Service {
         params = new WindowManager.LayoutParams(clamp(saved.getInt("w", (int)(width * .94f)), dp(300), width - dp(16)),
                 clamp(saved.getInt("h", (int)(height * .72f)), dp(360), height - dp(80)),
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH, PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
         params.x = clamp(saved.getInt("x", dp(8)), 0, Math.max(0, width - params.width));
         params.y = clamp(saved.getInt("y", dp(60)), 0, Math.max(0, height - params.height));
         params.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                 | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN;
         panel = new FrameLayout(themed) {
+            private boolean blankTap;
+            private float downX, downY;
             @Override public boolean dispatchTouchEvent(MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+                int action = event.getActionMasked();
+                if (action == MotionEvent.ACTION_OUTSIDE) { if (inputActivities == 0) dismissPanel(); return true; }
+                if (action == MotionEvent.ACTION_DOWN) {
+                    FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+                    downX = event.getX(); downY = event.getY();
+                    // Protect the title/drag handles; only background taps dismiss.
+                    blankTap = downY > dp(54) && !interactiveAt(this, downX, downY);
+                } else if (action == MotionEvent.ACTION_MOVE) {
+                    int slop = android.view.ViewConfiguration.get(themed).getScaledTouchSlop();
+                    if (Math.abs(event.getX() - downX) > slop || Math.abs(event.getY() - downY) > slop)
+                        blankTap = false;
+                } else if (action == MotionEvent.ACTION_UP) {
+                    boolean dismiss = blankTap; blankTap = false;
+                    if (dismiss) { dismissPanel(); return true; }
+                } else if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_DOWN) blankTap = false;
                 return super.dispatchTouchEvent(event);
+            }
+            @Override public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+                return handleBack(event) || super.dispatchKeyEvent(event);
+            }
+            @Override public boolean dispatchKeyEventPreIme(android.view.KeyEvent event) {
+                return handleBack(event) || super.dispatchKeyEventPreIme(event);
             }
         };
         panel.setAlpha(1f);
@@ -147,26 +172,64 @@ public final class NotesOverlayService extends Service {
             collapse.setText(collapsed ? "Expand" : "Collapse");
             manager.updateViewLayout(panel, params);
         });
-        close.setOnClickListener(v -> stopSelf());
+        close.setOnClickListener(v -> dismissPanel());
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new NotesWorkspaceView(themed, repository, true, this::edit);
         restoreWorkspace(); workspace.activate();
         drag(titleStack, false);
         TextView grip = new TextView(themed); grip.setText("◢"); grip.setTextColor(Color.rgb(32, 87, 140));
+        grip.setClickable(true);
         grip.setContentDescription("Resize floating Notes"); grip.setGravity(Gravity.BOTTOM | Gravity.END);
         panel.addView(grip, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.BOTTOM | Gravity.END));
         drag(grip, true);
-        panel.setOnKeyListener((view, keyCode, event) -> {
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
-                if (body.getChildCount() > 0 && body.getChildAt(0) != workspace) restoreWorkspace();
-                else stopSelf();
-                return true;
-            }
-            return false;
-        });
         manager.addView(panel, params);
         panel.requestFocus();
+        panel.post(() -> {
+            if (!closing && panel != null && Build.VERSION.SDK_INT >= 33) registerGestureBack();
+        });
+    }
+    private void dismissPanel() {
+        if (closing) return;
+        closing = true;
+        if (panel != null) {
+            ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                    .hideSoftInputFromWindow(panel.getWindowToken(), 0);
+            panel.setVisibility(View.GONE);
+        }
+        stopSelf();
+    }
+    private boolean handleBack(android.view.KeyEvent event) {
+        if (event.getKeyCode() != android.view.KeyEvent.KEYCODE_BACK) return false;
+        if (event.getAction() == android.view.KeyEvent.ACTION_UP && !event.isCanceled()) dismissPanel();
+        return true;
+    }
+    @androidx.annotation.RequiresApi(33)
+    private void registerGestureBack() {
+        android.window.OnBackInvokedDispatcher dispatcher = panel.findOnBackInvokedDispatcher();
+        if (dispatcher == null) return;
+        android.window.OnBackInvokedCallback callback = this::dismissPanel;
+        dispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback);
+        unregisterBack = () -> dispatcher.unregisterOnBackInvokedCallback(callback);
+    }
+    /** Ignore scroll containers themselves, but protect every interactive child/card. */
+    private boolean interactiveAt(View view, float x, float y) {
+        boolean scrollHost = view instanceof android.widget.ScrollView
+                || view instanceof androidx.core.widget.NestedScrollView
+                || view instanceof androidx.recyclerview.widget.RecyclerView;
+        if (view != panel && !scrollHost && (view.isClickable() || view.isLongClickable() || view.isFocusable())) return true;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = group.getChildCount() - 1; i >= 0; i--) {
+                View child = group.getChildAt(i);
+                if (child.getVisibility() != View.VISIBLE) continue;
+                float localX = x + group.getScrollX() - child.getX();
+                float localY = y + group.getScrollY() - child.getY();
+                if (localX >= 0 && localX < child.getWidth() && localY >= 0 && localY < child.getHeight()
+                        && interactiveAt(child, localX, localY)) return true;
+            }
+        }
+        return false;
     }
     private void edit(NoteEntry note) {
         final boolean quickDraft = note != null && note.id == 0;
@@ -223,6 +286,6 @@ public final class NotesOverlayService extends Service {
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private int clamp(int value, int min, int max) { return Math.max(Math.min(min, max), Math.min(max, value)); }
-    @Override public void onDestroy() { getApplication().unregisterActivityLifecycleCallbacks(inputLifecycle); disposeEditor(); if (workspace != null) workspace.deactivate(); if (panel != null) try { manager.removeView(panel); } catch (IllegalArgumentException ignored) { } panel = null; super.onDestroy(); }
+    @Override public void onDestroy() { if (unregisterBack != null) { unregisterBack.run(); unregisterBack = null; } getApplication().unregisterActivityLifecycleCallbacks(inputLifecycle); disposeEditor(); if (workspace != null) workspace.deactivate(); if (panel != null) try { manager.removeView(panel); } catch (IllegalArgumentException ignored) { } panel = null; super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }
 }
