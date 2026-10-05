@@ -206,8 +206,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                         && recyclerView.canScrollVertically(1)) {
                     setGroceryHeaderCollapsed(true);
                 } else if (groceryHeaderCollapsed
-                        && (!recyclerView.canScrollVertically(-1)
-                        || (dy < 0 && firstVisible <= 0))) {
+                        && dy < 0 && !recyclerView.canScrollVertically(-1)) {
                     setGroceryHeaderCollapsed(false);
                 }
             }
@@ -217,10 +216,9 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                     @NonNull RecyclerView recyclerView, int newState) {
                 if (newState != RecyclerView.SCROLL_STATE_IDLE
                         || !groceryHeaderCollapsed) return;
-                RecyclerView.LayoutManager manager = recyclerView.getLayoutManager();
-                if (manager instanceof LinearLayoutManager
-                        && ((LinearLayoutManager) manager)
-                        .findFirstVisibleItemPosition() <= 0) {
+                // A tall first card may still be partially scrolled. Expand only
+                // at the actual top, otherwise the viewport jumps mid-scroll.
+                if (!recyclerView.canScrollVertically(-1)) {
                     setGroceryHeaderCollapsed(false);
                 }
             }
