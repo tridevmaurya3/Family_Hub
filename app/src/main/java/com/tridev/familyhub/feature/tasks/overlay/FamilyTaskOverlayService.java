@@ -280,16 +280,19 @@ public final class FamilyTaskOverlayService extends Service {
         shell.addView(highlight, highlightParams);
 
         LinearLayout header = row();
+        header.setGravity(Gravity.TOP);
         LinearLayout titleStack = new LinearLayout(this);
         titleStack.setOrientation(LinearLayout.VERTICAL);
-        titleStack.setGravity(Gravity.CENTER_VERTICAL);
+        titleStack.setGravity(Gravity.TOP);
         TextView title = text(getString(R.string.family_tasks_title), 15f, true);
+        title.setGravity(Gravity.START | Gravity.TOP);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         title.setTextColor(Color.rgb(31, 52, 46));
         titleStack.addView(title, new LinearLayout.LayoutParams(-1, dp(24)));
         liveStatus = text(getString(R.string.family_tasks_overlay_connecting), 9f, true);
         liveStatus.setTextColor(Color.rgb(84, 93, 105));
+        liveStatus.setGravity(Gravity.START | Gravity.TOP);
         titleStack.addView(liveStatus, new LinearLayout.LayoutParams(-1, dp(18)));
         header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(44), 1f));
 
