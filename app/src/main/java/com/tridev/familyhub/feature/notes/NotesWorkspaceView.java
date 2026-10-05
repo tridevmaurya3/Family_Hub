@@ -56,13 +56,14 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         LinearLayout tools = row();
         TextInputLayout searchLayout = new TextInputLayout(context);
         searchLayout.setHint(getResources().getString(R.string.notes_search_hint));
-        searchLayout.setHintEnabled(false);
         searchLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         search = new TextInputEditText(context);
         search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         search.setSingleLine(true);
         search.setHint(R.string.notes_search_hint);
         searchLayout.addView(search, new LayoutParams(-1, -2));
+        // Material requires its EditText to be attached before disabling hints.
+        searchLayout.setHintEnabled(false);
         tools.addView(searchLayout, new LayoutParams(0, -2, 1f));
         String[] categories = getResources().getStringArray(R.array.notes_category_labels);
         String[] categoryChoices = new String[categories.length + 1];
@@ -79,13 +80,14 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         LinearLayout quickRow = row();
         TextInputLayout quickLayout = new TextInputLayout(context);
         quickLayout.setHint(getResources().getString(R.string.notes_quick_add));
-        quickLayout.setHintEnabled(false);
         quickLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         quick = new TextInputEditText(context);
         quick.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         quick.setSingleLine(true);
         quick.setHint(R.string.notes_quick_add);
         quickLayout.addView(quick, new LayoutParams(-1, -2));
+        // Material requires its EditText to be attached before disabling hints.
+        quickLayout.setHintEnabled(false);
         LinearLayout quickBlock = new LinearLayout(context);
         quickBlock.setOrientation(VERTICAL);
         quickBlock.addView(label("Note title", 10));
