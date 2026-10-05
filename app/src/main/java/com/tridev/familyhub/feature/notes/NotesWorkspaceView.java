@@ -79,8 +79,13 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 {"All active", "Pending", "Completed", "Pinned", "Archived"},
                 {"Pinned / Latest", "Title A–Z", "Reminder first"},
                 {"All types", "Text note", "Checklist"}, categoryChoices};
-        for (int i = 0; i < filterWidths.length; i++)
-            filterWidths[i] = dropdownWidth(context, filterChoices[i]);
+        String[] filterNames = {"Status", "Sort", "Type", "Category"};
+        for (int i = 0; i < filterWidths.length; i++) {
+            String[] compactChoices = new String[filterChoices[i].length];
+            for (int j = 0; j < compactChoices.length; j++)
+                compactChoices[j] = compactFilterLabel(filterNames[i], filterChoices[i][j]);
+            filterWidths[i] = dropdownWidth(context, compactChoices);
+        }
         addView(tools, new LayoutParams(-1, -2));
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -179,7 +184,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         input.setDropDownVerticalOffset(dp(4));
         input.setAdapter(new android.widget.ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, labels) {
             @Override public View getView(int position, View recycled, android.view.ViewGroup owner) {
-                TextView selected = choice(labels[position] + "  ▾");
+                TextView selected = choice(compactFilterLabel(name, labels[position]) + "  ▾");
                 selected.setMaxLines(2);
                 selected.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 return selected;
@@ -218,13 +223,11 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             ((LinearLayout) categoryFilter.getParent()).removeView(categoryFilter);
             target.addView(categoryFilter);
         }
-        int firstThree = filterWidths[0] + filterWidths[1] + filterWidths[2] + dp(12);
         for (int i = 0; i < filterRow.getChildCount(); i++) {
             View child = filterRow.getChildAt(i);
             LayoutParams params = (LayoutParams) child.getLayoutParams();
-            boolean compressed = !allFit && firstThree > available;
-            params.width = compressed ? 0 : filterWidths[i];
-            params.weight = compressed ? 1f : 0f;
+            params.width = 0;
+            params.weight = allFit ? filterWidths[i] : 1f;
             params.setMarginStart(i == 0 ? 0 : dp(6));
             child.setLayoutParams(params);
         }
@@ -234,6 +237,22 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             params.bottomMargin = dp(4);
             categoryFilter.setLayoutParams(params);
         }
+    }
+    private static String compactFilterLabel(String name, String value) {
+        // Keep full descriptions in the popup; shorten only the closed filter.
+        if ("Status".equals(name)) {
+            if ("All active".equals(value)) return "Active";
+            if ("Completed".equals(value)) return "Done";
+            if ("Archived".equals(value)) return "Archive";
+        } else if ("Sort".equals(name)) {
+            if ("Pinned / Latest".equals(value)) return "Latest";
+            if ("Title A–Z".equals(value)) return "A–Z";
+            if ("Reminder first".equals(value)) return "Due";
+        } else if ("Type".equals(name)) {
+            if ("All types".equals(value)) return "All";
+            if ("Text note".equals(value)) return "Text";
+        } else if ("Category".equals(name) && "All categories".equals(value)) return "All";
+        return value;
     }
     static int dropdownWidth(Context context, String[] labels) {
         android.text.TextPaint paint = new android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
