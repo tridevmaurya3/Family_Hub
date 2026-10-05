@@ -262,7 +262,7 @@ public final class FamilyTaskOverlayService extends Service {
         FrameLayout shell = new FrameLayout(this);
         shell.setBackground(panelGradient());
         shell.setElevation(dp(16));
-        shell.setAlpha(prefs.getFloat("alpha", 0.88f));
+        shell.setAlpha(1f);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -966,7 +966,7 @@ public final class FamilyTaskOverlayService extends Service {
                 float alpha = 0.10f + (p / 100f) * 0.90f;
                 value.setText(Math.round(alpha * 100f) + "%");
                 if (stripView != null) stripView.setAlpha(alpha);
-                if (panelView != null) panelView.setAlpha(alpha);
+                if (panelView != null) panelView.setAlpha(1f);
                 prefs.edit().putFloat("alpha", alpha).apply();
             }
         });
@@ -1456,9 +1456,9 @@ public final class FamilyTaskOverlayService extends Service {
     @NonNull
     private GradientDrawable panelGradient() {
         GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.argb(250, 252, 255, 253),
-                        Color.argb(247, 241, 249, 246),
-                        Color.argb(250, 252, 253, 255)});
+                new int[]{Color.rgb(252, 255, 253),
+                        Color.rgb(241, 249, 246),
+                        Color.rgb(252, 253, 255)});
         drawable.setCornerRadius(dp(24));
         drawable.setStroke(dp(1), Color.argb(205, 126, 190, 165));
         return drawable;
@@ -1637,4 +1637,5 @@ public final class FamilyTaskOverlayService extends Service {
         super.onDestroy();
     }
 }
+
 

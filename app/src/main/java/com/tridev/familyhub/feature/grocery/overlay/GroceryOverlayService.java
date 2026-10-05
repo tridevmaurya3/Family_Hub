@@ -343,6 +343,7 @@ public class GroceryOverlayService extends Service {
         root.setOnClickListener(v -> {
             if (!overlayShoppingMode) closePanel();
         });
+        panelRoot.setAlpha(1f);
         panelRoot.addView(root, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -370,23 +371,28 @@ public class GroceryOverlayService extends Service {
 
         LinearLayout titleStack = new LinearLayout(this);
         titleStack.setOrientation(LinearLayout.VERTICAL);
-        titleStack.setGravity(Gravity.CENTER_VERTICAL);
+        titleStack.setGravity(Gravity.BOTTOM);
 
         TextView title = text("Family Grocery", 16, true);
+        title.setGravity(Gravity.START | Gravity.BOTTOM);
+        title.setIncludeFontPadding(false);
         title.setSingleLine(true);
         title.setEllipsize(TextUtils.TruncateAt.END);
         titleStack.addView(title, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(26)));
 
         LinearLayout subtitleRow = new LinearLayout(this);
-        subtitleRow.setGravity(Gravity.CENTER_VERTICAL);
+        subtitleRow.setGravity(Gravity.TOP);
         TextView shoppingSubtitle = text("(" + getString(R.string.grocery_list_type) + ")", 10, true);
         shoppingSubtitle.setTextColor(Color.rgb(84, 93, 105));
-        shoppingSubtitle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        shoppingSubtitle.setGravity(Gravity.START | Gravity.TOP);
+        shoppingSubtitle.setIncludeFontPadding(false);
         shoppingSubtitle.setSingleLine(true);
         shoppingSubtitle.setEllipsize(TextUtils.TruncateAt.END);
         overlayLiveStatus = text("● Connecting", 9, true);
         overlayLiveStatus.setSingleLine(true);
+        overlayLiveStatus.setGravity(Gravity.START | Gravity.TOP);
+        overlayLiveStatus.setIncludeFontPadding(false);
         overlayLiveStatus.setTextColor(Color.rgb(84, 93, 105));
         LinearLayout.LayoutParams liveStatusParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, dp(20));
@@ -437,8 +443,8 @@ public class GroceryOverlayService extends Service {
         root.addView(header, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(42)));
         LinearLayout.LayoutParams subtitleStripParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(22));
-        subtitleStripParams.bottomMargin = dp(1);
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(20));
+        subtitleStripParams.bottomMargin = 0;
         root.addView(subtitleRow, subtitleStripParams);
 
         overlayFormDetails = new LinearLayout(this);
@@ -3071,8 +3077,8 @@ public class GroceryOverlayService extends Service {
 
     private GradientDrawable panelGradient() {
         GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.argb(252, 239, 250, 243), Color.argb(250, 255, 244, 245),
-                        Color.argb(252, 238, 246, 253)});
+                new int[]{Color.rgb(239, 250, 243), Color.rgb(255, 244, 245),
+                        Color.rgb(238, 246, 253)});
         drawable.setCornerRadius(dp(20));
         drawable.setStroke(dp(1), Color.argb(225, 199, 213, 220));
         return drawable;
@@ -3136,4 +3142,5 @@ public class GroceryOverlayService extends Service {
         super.onDestroy();
     }
 }
+
 
