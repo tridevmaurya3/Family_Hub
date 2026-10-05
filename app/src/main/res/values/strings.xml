@@ -1635,4 +1635,8 @@ Sharing: %12$s</string>
     <string name="family_tasks_linked_to_grocery">Linked to Grocery</string>
     <string name="family_tasks_grocery_category">Grocery category</string>
     <string name="family_tasks_grocery_list">Grocery list</string>
+    <string name="notes_quick_content_hint">Write a note</string>
+    <string name="notes_quick_checklist_hint">One checklist item per line</string>
+    <string name="notes_quick_items_required">Enter at least one checklist item</string>
+    <string name="notes_quick_saved">Note saved</string>
 </resources>

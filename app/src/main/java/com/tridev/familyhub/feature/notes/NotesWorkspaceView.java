@@ -35,6 +35,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private final TextView empty;
     private final TextInputEditText search;
     private final TextInputEditText quick;
+    private TextInputEditText quickContent;
+    private int quickCategory;
+    private boolean quickSaving;
     private List<NoteEntry> notes = new ArrayList<>();
     private int status, type, sort, quickType, generation;
     private String category = "";
@@ -106,31 +109,77 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         LinearLayout quickBlock = new LinearLayout(context);
         quickBlock.setOrientation(VERTICAL);
         quickBlock.addView(label("Note title", 10));
-        quickBlock.addView(quickLayout, new LayoutParams(-1, -2));
+        quickBlock.addView(quickLayout, new LayoutParams(-1, dp(48)));
         quickRow.addView(quickBlock, new LayoutParams(0, -2, 1.7f));
-        dropdown(quickRow, "Note type", new String[]{"Text note", "Checklist"}, position -> quickType = position);
+        dropdown(quickRow, "Note type", new String[]{"Text note", "Checklist"}, position -> {
+            quickType = position;
+            if (quickContent != null) quickContent.setHint(position == 1
+                    ? R.string.notes_quick_checklist_hint : R.string.notes_quick_content_hint);
+        });
         MaterialButton add = new MaterialButton(context);
         add.setText("+"); add.setContentDescription(getResources().getString(R.string.notes_add));
         add.setMinWidth(0); add.setMinimumWidth(0); add.setPadding(0, 0, 0, 0);
         add.setTextSize(24); add.setCornerRadius(dp(24));
-        LayoutParams addParams = new LayoutParams(dp(44), dp(44));
+        add.setInsetTop(0); add.setInsetBottom(0);
+        LayoutParams addParams = new LayoutParams(dp(48), dp(48));
         LinearLayout addBlock = new LinearLayout(context);
         addBlock.setOrientation(VERTICAL);
         // Give the button the same label space as its neighbouring fields.
         addBlock.addView(label(" ", 10));
-        addBlock.addView(add, new LayoutParams(dp(44), dp(44)));
+        addBlock.addView(add, new LayoutParams(dp(48), dp(48)));
         addParams.height = LayoutParams.WRAP_CONTENT;
-        addParams.setMarginStart(dp(6)); addParams.bottomMargin = dp(4);
+        addParams.setMarginStart(dp(6)); addParams.bottomMargin = 0;
         quickRow.addView(addBlock, addParams);
         addView(quickRow, new LayoutParams(-1, -2));
+        LinearLayout contentRow = row();
+        LinearLayout contentBlock = new LinearLayout(context);
+        contentBlock.setOrientation(VERTICAL);
+        contentBlock.addView(label("Content / items", 10));
+        TextInputLayout contentLayout = new TextInputLayout(context);
+        contentLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        quickContent = new TextInputEditText(context);
+        quickContent.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        quickContent.setMinLines(2); quickContent.setMaxLines(4);
+        quickContent.setHint(R.string.notes_quick_content_hint);
+        contentLayout.addView(quickContent, new LayoutParams(-1, -2));
+        contentLayout.setHintEnabled(false);
+        contentBlock.addView(contentLayout, new LayoutParams(-1, -2));
+        contentRow.addView(contentBlock, new LayoutParams(0, -2, 1.7f));
+        dropdown(contentRow, "Note category", categories, position -> quickCategory = position);
+        addView(contentRow, new LayoutParams(-1, -2));
         add.setOnClickListener(v -> {
+            if (quickSaving) return;
             String title = value(quick);
-            if (title.isEmpty()) { editor.edit(null); return; }
-            quickLayout.setError(null);
+            if (title.isEmpty()) {
+                quick.setError(getResources().getString(R.string.notes_title_required));
+                quick.requestFocus();
+                return;
+            }
+            quick.setError(null);
+            String content = value(quickContent);
+            if (quickType == 1 && NotesChecklist.parse(content).isEmpty()) {
+                contentLayout.setError(getResources().getString(R.string.notes_quick_items_required));
+                quickContent.requestFocus();
+                return;
+            }
+            contentLayout.setError(null);
             NoteEntry note = new NoteEntry(); note.title = title;
             note.noteType = quickType == 1 ? NoteEntry.TYPE_CHECKLIST : NoteEntry.TYPE_TEXT;
-            note.category = categories[0]; note.collaborationStatus = "PENDING";
-            editor.edit(note);
+            note.content = content;
+            note.category = categories[quickCategory]; note.collaborationStatus = "PENDING";
+            quickSaving = true; add.setEnabled(false);
+            quick.setEnabled(false); quickContent.setEnabled(false);
+            repository.save(note, () -> {
+                quickSaving = false; add.setEnabled(true);
+                quick.setEnabled(true); quickContent.setEnabled(true);
+                if (title.equals(value(quick)) && content.equals(value(quickContent))) clearQuickAdd();
+                if (isAttachedToWindow()) {
+                    reload();
+                    android.widget.Toast.makeText(getContext(), R.string.notes_quick_saved,
+                            android.widget.Toast.LENGTH_SHORT).show();
+                }
+            });
         });
         summary = label("", 11); addView(summary, new LayoutParams(-1, -2));
         empty = label(getResources().getString(R.string.notes_no_matching), 12);
@@ -199,10 +248,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             }
             public void onNothingSelected(android.widget.AdapterView<?> owner) { }
         });
-        block.addView(input, new LayoutParams(-1, dp(44)));
+        block.addView(input, new LayoutParams(-1, dp("Note type".equals(name) ? 48 : 44)));
         LayoutParams params = new LayoutParams(0, -2, 1f);
         params.setMarginStart(parent.getChildCount() == 0 ? 0 : dp(6));
-        params.bottomMargin = dp(4);
+        params.bottomMargin = "Note type".equals(name) ? 0 : dp(4);
         parent.addView(block, params);
         return block;
     }
@@ -283,7 +332,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private TextView label(String text, int size) { TextView view = new TextView(getContext()); view.setText(text); view.setTextSize(size); view.setPadding(0, dp(4), 0, dp(4)); return view; }
     private static String value(TextInputEditText input) { return input.getText() == null ? "" : input.getText().toString().trim(); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    public void clearQuickAdd() { quick.setText(""); }
+    public void clearQuickAdd() { quick.setText(""); if (quickContent != null) quickContent.setText(""); }
     public void activate() { if (active) return; active = true; repository.startRealtimeSync(this::reload); reload(); }
     public void deactivate() { active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {

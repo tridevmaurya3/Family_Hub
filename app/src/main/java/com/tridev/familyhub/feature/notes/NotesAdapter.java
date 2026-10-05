@@ -84,6 +84,8 @@ public class NotesAdapter
 
         void bind(@NonNull NoteEntry note) {
             binding.noteTitle.setText(note.title);
+            binding.noteCompleted.setContentDescription(note.title + ", "
+                    + binding.getRoot().getContext().getString(R.string.notes_mark_completed));
             binding.noteCompleted.setOnCheckedChangeListener(null);
             binding.noteCompleted.setChecked(NotesSmartFilter.completed(note));
             binding.noteCompleted.setEnabled(!note.isArchived);
@@ -92,7 +94,8 @@ public class NotesAdapter
             binding.noteChecklist.removeAllViews();
             boolean checklist = NoteEntry.TYPE_CHECKLIST.equals(note.noteType);
             binding.noteChecklist.setVisibility(checklist ? View.VISIBLE : View.GONE);
-            binding.noteContent.setVisibility(checklist ? View.GONE : View.VISIBLE);
+            binding.noteContent.setVisibility(checklist || note.content == null || note.content.isEmpty()
+                    ? View.GONE : View.VISIBLE);
             if (checklist) {
                 java.util.List<NotesChecklist.Item> items = NotesChecklist.parse(note.content);
                 for (int i = 0; i < items.size(); i++) {
