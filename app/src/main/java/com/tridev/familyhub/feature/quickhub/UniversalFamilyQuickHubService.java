@@ -56,6 +56,8 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams params;
     private View icon;
     private PopupWindow selector;
+    private View selectorAnchor;
+    private LinearLayout selectorContent;
     private FamilyHubDatabase database;
     private Button groceryChoice, taskChoice, notesChoice;
     private final Handler countHandler = new Handler(Looper.getMainLooper());
@@ -124,8 +126,11 @@ public final class UniversalFamilyQuickHubService extends Service {
         Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), opacity=choice("◐  More");
         coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
         coloredIcon(tasks, R.drawable.ic_family_task, R.color.fh_primary);
-        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(notes,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(dp(142),dp(36)));
-        selector=new PopupWindow(box,dp(154),dp(156),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
+        selectorAnchor = anchor;
+        selectorContent = box;
+        int width = selectorWidth(box);
+        selector=new PopupWindow(box,width,dp(156),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
@@ -145,9 +150,11 @@ public final class UniversalFamilyQuickHubService extends Service {
             notesChoice = null;
             groceryChoice = null;
             taskChoice = null;
+            selectorAnchor = null;
+            selectorContent = null;
             countGeneration++;
         });
-        selector.showAsDropDown(anchor,-dp(112),dp(4));
+        selector.showAsDropDown(anchor, anchor.getWidth() - width, dp(4));
         database.getInvalidationTracker().addObserver(countObserver);
         refreshPendingCounts();
     }
@@ -192,6 +199,11 @@ public final class UniversalFamilyQuickHubService extends Service {
                 }
                 groceryChoice.setContentDescription("Grocery, " + pendingGroceries + " pending");
                 taskChoice.setContentDescription("To-Do, " + pendingTasks + " pending");
+                if (selector != null && selector.isShowing() && selectorContent != null
+                        && selectorAnchor != null && selectorAnchor.isAttachedToWindow()) {
+                    int width = selectorWidth(selectorContent);
+                    selector.update(selectorAnchor, selectorAnchor.getWidth() - width, dp(4), width, -1);
+                }
             });
         });
     }
@@ -205,7 +217,21 @@ public final class UniversalFamilyQuickHubService extends Service {
         button.setCompoundDrawablesRelative(icon, null, null, null);
         button.setCompoundDrawablePadding(dp(6));
     }
-    private Button choice(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setGravity(Gravity.CENTER);b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);b.setPadding(dp(8),0,dp(8),0);b.setBackground(round(Color.argb(245,247,252,249),Color.argb(140,184,207,199),12));return b;}
+    private Button choice(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);b.setTextAlignment(View.TEXT_ALIGNMENT_GRAVITY);b.setMinWidth(0);b.setMinimumWidth(0);b.setSingleLine(true);b.setPadding(dp(8),0,dp(8),0);b.setBackground(round(Color.argb(245,247,252,249),Color.argb(140,184,207,199),12));return b;}
+    /** One compact width for all rows, including the longest live count label. */
+    private int selectorWidth(LinearLayout content) {
+        int widest = 0;
+        for (int index = 0; index < content.getChildCount(); index++) {
+            Button row = (Button) content.getChildAt(index);
+            int width = (int) Math.ceil(row.getPaint().measureText(row.getText().toString()));
+            android.graphics.drawable.Drawable drawable = row.getCompoundDrawablesRelative()[0];
+            if (drawable != null) width += drawable.getBounds().width() + row.getCompoundDrawablePadding();
+            width += row.getPaddingLeft() + row.getPaddingRight();
+            widest = Math.max(widest, width);
+        }
+        return Math.min(widest + content.getPaddingLeft() + content.getPaddingRight() + dp(4),
+                getResources().getDisplayMetrics().widthPixels - dp(16));
+    }
     private void open(Class<?> selected,String action,Class<?> other){if (selected != com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class) stopService(new Intent(this,com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class));stopService(new Intent(this,other));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
