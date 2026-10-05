@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** One smart workspace for the normal Notes page and the floating Notes panel. */
-public final class NotesWorkspaceView extends LinearLayout {
+public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout {
     public interface EditorHost { void edit(NoteEntry note); }
     private final NotesRepository repository;
     private final EditorHost editor;
@@ -47,7 +47,8 @@ public final class NotesWorkspaceView extends LinearLayout {
         LinearLayout filters = row();
         dropdown(filters, new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
                 position -> { status = position; reload(); });
-        dropdown(filters, new String[]{"All types", "Text note", "Checklist"},
+        LinearLayout typeFilters = row();
+        dropdown(typeFilters, new String[]{"All types", "Text note", "Checklist"},
                 position -> { type = position; render(); });
         dropdown(filters, new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
                 position -> { sort = position; render(); });
@@ -64,7 +65,8 @@ public final class NotesWorkspaceView extends LinearLayout {
         String[] categoryChoices = new String[categories.length + 1];
         categoryChoices[0] = "All categories";
         System.arraycopy(categories, 0, categoryChoices, 1, categories.length);
-        dropdown(tools, categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
+        dropdown(typeFilters, categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
+        addView(typeFilters, new LayoutParams(-1, -2));
         addView(tools, new LayoutParams(-1, -2));
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -135,7 +137,11 @@ public final class NotesWorkspaceView extends LinearLayout {
         });
         RecyclerView list = new RecyclerView(context);
         list.setLayoutManager(new LinearLayoutManager(context)); list.setAdapter(adapter);
+        list.setVerticalScrollBarEnabled(true);
+        list.setClipToPadding(false);
+        list.setPadding(0, dp(4), 0, dp(16));
         addView(list, new LayoutParams(-1, 0, 1f));
+        makeControlsScrollable(0, indexOfChild(list));
         CompactFormStyle.applyInputs(this);
         detail.setCornerRadius(dp(14)); add.setCornerRadius(dp(14));
     }
@@ -143,6 +149,7 @@ public final class NotesWorkspaceView extends LinearLayout {
     private void dropdown(LinearLayout parent, String[] labels, Selection callback) {
         TextInputLayout layout = new TextInputLayout(getContext());
         layout.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
+        layout.setHint(labels[0]);
         MaterialAutoCompleteTextView input = new MaterialAutoCompleteTextView(getContext());
         input.setInputType(InputType.TYPE_NULL);
         input.setAdapter(new android.widget.ArrayAdapter<>(getContext(), R.layout.item_form_dropdown, labels));

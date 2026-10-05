@@ -44,6 +44,8 @@ public final class NotesOverlayService extends Service {
     private NotesRepository repository;
     private NotesWorkspaceView workspace;
     private int inputActivities;
+    private boolean collapsed;
+    private int expandedHeight;
     private final android.app.Application.ActivityLifecycleCallbacks inputLifecycle =
             new android.app.Application.ActivityLifecycleCallbacks() {
         private boolean inputActivity(android.app.Activity activity) {
@@ -129,7 +131,23 @@ public final class NotesOverlayService extends Service {
         MaterialButton collapse = button("Collapse"); header.addView(collapse, new LinearLayout.LayoutParams(dp(72), dp(44)));
         MaterialButton close = button("×"); close.setContentDescription("Close floating Notes");
         header.addView(close, new LinearLayout.LayoutParams(dp(42), dp(44)));
-        collapse.setOnClickListener(v -> stopSelf()); close.setOnClickListener(v -> stopSelf());
+        collapse.setOnClickListener(v -> {
+            collapsed = !collapsed;
+            if (collapsed) {
+                expandedHeight = params.height;
+                body.setVisibility(View.GONE);
+                params.height = dp(76);
+                ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
+                        .hideSoftInputFromWindow(panel.getWindowToken(), 0);
+                panel.requestFocus();
+            } else {
+                params.height = expandedHeight;
+                body.setVisibility(View.VISIBLE);
+            }
+            collapse.setText(collapsed ? "Expand" : "Collapse");
+            manager.updateViewLayout(panel, params);
+        });
+        close.setOnClickListener(v -> stopSelf());
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new NotesWorkspaceView(themed, repository, true, this::edit);
@@ -139,6 +157,14 @@ public final class NotesOverlayService extends Service {
         grip.setContentDescription("Resize floating Notes"); grip.setGravity(Gravity.BOTTOM | Gravity.END);
         panel.addView(grip, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.BOTTOM | Gravity.END));
         drag(grip, true);
+        panel.setOnKeyListener((view, keyCode, event) -> {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+                if (body.getChildCount() > 0 && body.getChildAt(0) != workspace) restoreWorkspace();
+                else stopSelf();
+                return true;
+            }
+            return false;
+        });
         manager.addView(panel, params);
         panel.requestFocus();
     }
@@ -164,6 +190,7 @@ public final class NotesOverlayService extends Service {
     private void drag(View handle, boolean resize) {
         final float[] initial = new float[2]; final int[] original = new int[2];
         handle.setOnTouchListener((view, event) -> {
+            if (resize && collapsed) return true;
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 initial[0] = event.getRawX(); initial[1] = event.getRawY();
                 original[0] = resize ? params.width : params.x; original[1] = resize ? params.height : params.y;
@@ -179,7 +206,7 @@ public final class NotesOverlayService extends Service {
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt("x", params.x).putInt("y", params.y)
-                        .putInt("w", params.width).putInt("h", params.height).apply(); return true;
+                        .putInt("w", params.width).putInt("h", collapsed ? expandedHeight : params.height).apply(); return true;
             }
             return false;
         });

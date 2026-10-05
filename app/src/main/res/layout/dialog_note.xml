@@ -6,7 +6,8 @@
     android:layout_height="wrap_content"
     android:background="@drawable/bg_form_floating_shell"
     android:overScrollMode="never"
-    android:scrollbars="none">
+    android:scrollbars="vertical"
+    android:fadeScrollbars="false">
 
     <LinearLayout
         android:layout_width="match_parent"

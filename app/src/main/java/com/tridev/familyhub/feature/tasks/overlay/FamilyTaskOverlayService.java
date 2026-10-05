@@ -264,8 +264,8 @@ public final class FamilyTaskOverlayService extends Service {
         shell.setElevation(dp(16));
         shell.setAlpha(1f);
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
+        com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout root =
+                new com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout(this);
         root.setPadding(dp(14), dp(10), dp(14), dp(12));
         shell.addView(root, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -572,6 +572,7 @@ public final class FamilyTaskOverlayService extends Service {
         LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(-1, 0, 1f);
         scrollParams.topMargin = dp(2);
         root.addView(scroll, scrollParams);
+        root.makeControlsScrollable(1, root.indexOfChild(scroll));
 
         View.OnClickListener save = v -> {
             String value = input.getText().toString().trim();

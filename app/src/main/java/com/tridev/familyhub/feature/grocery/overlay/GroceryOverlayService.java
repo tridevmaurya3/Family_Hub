@@ -332,8 +332,8 @@ public class GroceryOverlayService extends Service {
                 return super.dispatchTouchEvent(event);
             }
         };
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
+        com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout root =
+                new com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout(this);
         root.setPadding(dp(14), dp(10), dp(18), dp(14));
         root.setBackground(panelGradient());
         root.setElevation(dp(16));
@@ -827,9 +827,7 @@ public class GroceryOverlayService extends Service {
         overlayItemScroll.setScrollbarFadingEnabled(false);
         overlayItemScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         overlayItemScroll.setClickable(true);
-        overlayItemScroll.setOnClickListener(v -> {
-            if (!overlayShoppingMode) closePanel();
-        });
+
         overlayItemScroll.addView(itemContainer, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
@@ -855,9 +853,8 @@ public class GroceryOverlayService extends Service {
             rememberStandardOverlayMode(overlayFormCollapsed ? MODE_MINI : MODE_NORMAL);
         });
         setOverlayFormCollapsed(overlayFormCollapsed);
-        overlayItemScroll.setOnScrollChangeListener((view, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-            if (!overlayFormCollapsed && scrollY > oldScrollY + dp(2)) setOverlayFormCollapsed(true);
-        });
+        // A scroll gesture must not change form height underneath the user's finger.
+        root.makeControlsScrollable(1, root.indexOfChild(overlayItemScroll));
 
         voice.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();

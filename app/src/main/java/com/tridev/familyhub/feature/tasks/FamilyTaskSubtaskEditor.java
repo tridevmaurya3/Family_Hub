@@ -9,7 +9,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.ScrollView;
+import androidx.core.widget.NestedScrollView;
 import java.util.ArrayList;
 import java.util.List;
 import com.tridev.familyhub.R;
@@ -21,7 +21,7 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
     private final RadioButton multiple;
     private final LinearLayout details;
     private final LinearLayout rows;
-    private final ScrollView scroll;
+    private final NestedScrollView scroll;
     private final List<EditText> inputs = new ArrayList<>();
     private final List<CheckBox> checks = new ArrayList<>();
 
@@ -40,9 +40,9 @@ public final class FamilyTaskSubtaskEditor extends LinearLayout {
         details.setOrientation(VERTICAL);
         rows = new LinearLayout(context);
         rows.setOrientation(VERTICAL);
-        scroll = new ScrollView(context);
+        scroll = new NestedScrollView(context);
         scroll.setFillViewport(false);
-        scroll.addView(rows, new ScrollView.LayoutParams(-1, -2));
+        scroll.addView(rows, new NestedScrollView.LayoutParams(-1, -2));
         details.addView(scroll, new LayoutParams(-1, -2));
         Button add = new Button(context);
         add.setText(R.string.task_subtask_add);
