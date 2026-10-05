@@ -43,6 +43,9 @@ public class NotesFragment extends Fragment implements AddActionHost {
         repository = new NotesRepository(requireContext());
         workspace = new NotesWorkspaceView(requireContext(), repository, false, this::showEditor);
         binding.notesWorkspaceContainer.addView(workspace, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        android.widget.TextView syncTag = binding.notesOverview.findViewById(R.id.module_overview_detail);
+        workspace.setSyncStatusListener((live, connecting) -> syncTag.setText(live
+                ? R.string.notes_sync_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline));
         workspace.activate();
     }
     @Override public void onAddRequested() { showEditor(null); }

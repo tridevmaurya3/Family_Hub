@@ -36,7 +36,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private final TextInputEditText search;
     private final TextInputEditText quick;
     private TextInputEditText quickContent;
-    private int quickCategory;
+    private int quickCategory, quickSharing;
+    private NotesRepository.SyncStatusCallback syncStatusListener;
+    private boolean liveSync, connectingSync;
     private boolean quickSaving;
     private List<NoteEntry> notes = new ArrayList<>();
     private int status, type, sort, quickType, generation;
@@ -146,7 +148,11 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         contentLayout.setHintEnabled(false);
         contentBlock.addView(contentLayout, new LayoutParams(-1, -2));
         contentRow.addView(contentBlock, new LayoutParams(0, -2, 1.7f));
-        dropdown(contentRow, "Note category", categories, position -> quickCategory = position);
+        LinearLayout choicesRow = row();
+        dropdown(choicesRow, "Note category", categories, position -> quickCategory = position);
+        dropdown(choicesRow, "Sharing", new String[]{context.getString(R.string.notes_private_status),
+                context.getString(R.string.notes_shared_status)}, position -> quickSharing = position);
+        contentRow.addView(choicesRow, new LayoutParams(0, -2, 1.8f));
         addView(contentRow, new LayoutParams(-1, -2));
         add.setOnClickListener(v -> {
             if (quickSaving) return;
@@ -168,6 +174,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             note.noteType = quickType == 1 ? NoteEntry.TYPE_CHECKLIST : NoteEntry.TYPE_TEXT;
             note.content = content;
             note.category = categories[quickCategory]; note.collaborationStatus = "PENDING";
+            note.isShared = quickSharing == 1;
             quickSaving = true; add.setEnabled(false);
             quick.setEnabled(false); quickContent.setEnabled(false);
             repository.save(note, () -> {
@@ -333,7 +340,15 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private static String value(TextInputEditText input) { return input.getText() == null ? "" : input.getText().toString().trim(); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     public void clearQuickAdd() { quick.setText(""); if (quickContent != null) quickContent.setText(""); }
-    public void activate() { if (active) return; active = true; repository.startRealtimeSync(this::reload); reload(); }
+    public void activate() { if (active) return; active = true; repository.startRealtimeSync(this::reload, (live, connecting) -> {
+        if (!active) return;
+        liveSync = live; connectingSync = connecting;
+        if (syncStatusListener != null) syncStatusListener.onStateChanged(live, connecting);
+    }); reload(); }
+    public void setSyncStatusListener(NotesRepository.SyncStatusCallback listener) {
+        syncStatusListener = listener;
+        listener.onStateChanged(liveSync, connectingSync);
+    }
     public void deactivate() { active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {
         if (!active) return;

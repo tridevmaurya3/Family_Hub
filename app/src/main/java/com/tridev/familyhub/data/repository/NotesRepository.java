@@ -29,6 +29,8 @@ public class NotesRepository {
         void onNotesLoaded(@NonNull List<NoteEntry> notes);
     }
 
+    public interface SyncStatusCallback { void onStateChanged(boolean live, boolean connecting); }
+
     public interface ActionCallback {
         void onComplete();
     }
@@ -51,6 +53,10 @@ public class NotesRepository {
 
     /** Starts family-scoped inbound sync and refreshes the visible page on changes. */
     public void startRealtimeSync(@NonNull ActionCallback onChanged) {
+        startRealtimeSync(onChanged, null);
+    }
+
+    public void startRealtimeSync(@NonNull ActionCallback onChanged, @Nullable SyncStatusCallback status) {
         stopRealtimeSync();
         retryPendingSharedNotes();
         subscriber = new FamilyCollaborationSubscriber("notes",
@@ -70,7 +76,7 @@ public class NotesRepository {
                             mainHandler.post(onChanged::onComplete);
                         });
                     }
-                });
+                }, status == null ? null : status::onStateChanged);
         subscriber.start();
     }
 

@@ -1639,4 +1639,7 @@ Sharing: %12$s</string>
     <string name="notes_quick_checklist_hint">One checklist item per line</string>
     <string name="notes_quick_items_required">Enter at least one checklist item</string>
     <string name="notes_quick_saved">Note saved</string>
+    <string name="notes_sync_live">● Live • Quick notes</string>
+    <string name="notes_sync_connecting">● Connecting • Quick notes</string>
+    <string name="notes_sync_offline">● Not live • Quick notes</string>
 </resources>

@@ -176,6 +176,8 @@ public final class NotesOverlayService extends Service {
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new NotesWorkspaceView(themed, repository, true, this::edit);
+        workspace.setSyncStatusListener((live, connecting) -> state.setText(live
+                ? R.string.notes_sync_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline));
         restoreWorkspace(); workspace.activate();
         drag(titleStack, false);
         TextView grip = new TextView(themed); grip.setText("◢"); grip.setTextColor(Color.rgb(32, 87, 140));
