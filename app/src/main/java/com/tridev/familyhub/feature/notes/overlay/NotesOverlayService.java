@@ -43,9 +43,35 @@ public final class NotesOverlayService extends Service {
     private Context themed;
     private NotesRepository repository;
     private NotesWorkspaceView workspace;
+    private int inputActivities;
+    private final android.app.Application.ActivityLifecycleCallbacks inputLifecycle =
+            new android.app.Application.ActivityLifecycleCallbacks() {
+        private boolean inputActivity(android.app.Activity activity) {
+            return activity instanceof com.tridev.familyhub.core.ui.FormVoiceCaptureActivity
+                    || activity instanceof NotesNotificationPermissionActivity;
+        }
+        public void onActivityCreated(android.app.Activity activity, android.os.Bundle state) {
+            if (inputActivity(activity)) {
+                inputActivities++;
+                if (panel != null) panel.setVisibility(View.INVISIBLE);
+            }
+        }
+        public void onActivityDestroyed(android.app.Activity activity) {
+            if (inputActivity(activity)) {
+                inputActivities = Math.max(0, inputActivities - 1);
+                if (inputActivities == 0 && panel != null) panel.setVisibility(View.VISIBLE);
+            }
+        }
+        public void onActivityStarted(android.app.Activity activity) { }
+        public void onActivityResumed(android.app.Activity activity) { }
+        public void onActivityPaused(android.app.Activity activity) { }
+        public void onActivityStopped(android.app.Activity activity) { }
+        public void onActivitySaveInstanceState(android.app.Activity activity, android.os.Bundle state) { }
+    };
 
     @Override public void onCreate() {
         super.onCreate();
+        getApplication().registerActivityLifecycleCallbacks(inputLifecycle);
         NotificationManager notifications = getSystemService(NotificationManager.class);
         notifications.createNotificationChannel(new NotificationChannel(CHANNEL, "Floating Notes", NotificationManager.IMPORTANCE_LOW));
         startForeground(4219, new NotificationCompat.Builder(this, CHANNEL)
@@ -160,6 +186,6 @@ public final class NotesOverlayService extends Service {
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private int clamp(int value, int min, int max) { return Math.max(Math.min(min, max), Math.min(max, value)); }
-    @Override public void onDestroy() { disposeEditor(); if (workspace != null) workspace.deactivate(); if (panel != null) try { manager.removeView(panel); } catch (IllegalArgumentException ignored) { } panel = null; super.onDestroy(); }
+    @Override public void onDestroy() { getApplication().unregisterActivityLifecycleCallbacks(inputLifecycle); disposeEditor(); if (workspace != null) workspace.deactivate(); if (panel != null) try { manager.removeView(panel); } catch (IllegalArgumentException ignored) { } panel = null; super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }
 }
