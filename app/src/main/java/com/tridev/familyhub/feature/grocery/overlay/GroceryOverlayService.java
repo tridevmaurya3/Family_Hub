@@ -137,6 +137,7 @@ public class GroceryOverlayService extends Service {
     private boolean voicePanelDetached;
     private boolean voiceStripWasVisible;
     @Nullable private android.speech.SpeechRecognizer overlaySpeechRecognizer;
+    private boolean microphoneForegroundActive;
     @Nullable private EditText overlayVoiceInput;
     @Nullable private ImageButton overlayVoiceButton;
     @Nullable private TextView overlayVoiceStatus;
@@ -183,7 +184,7 @@ public class GroceryOverlayService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        startForeground(NOTIFICATION_ID, createNotification());
+        startOverlayForeground();
         getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                 .putBoolean(KEY_ENABLED, true).apply();
         String savedOverlayMode = getSharedPreferences(PREFS, MODE_PRIVATE)
@@ -210,6 +211,17 @@ public class GroceryOverlayService extends Service {
                 androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
         // The universal hub owns the launcher; ACTION_SHOW can still display
         // the legacy strip for callers that explicitly request it.
+    }
+
+    private void startOverlayForeground() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            // The manifest also declares microphone for optional voice capture.
+            // Do not activate that type merely to open or restore the overlay.
+            startForeground(NOTIFICATION_ID, createNotification(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification());
+        }
     }
 
     @Override
@@ -2527,9 +2539,15 @@ public class GroceryOverlayService extends Service {
                 Color.rgb(220, 45, 82), 0L);
 
         try {
-            // Use the foreground overlay service itself. On Android 14+ its
-            // manifest microphone FGS type keeps RECORD_AUDIO available while
-            // Family Hub remains behind the floating panel.
+            // Activate microphone only after a user tap and RECORD_AUDIO check.
+            // Android can still reject while-in-use eligibility; the existing
+            // catch keeps the overlay open and reports voice failure safely.
+            if (android.os.Build.VERSION.SDK_INT >= 34) {
+                startForeground(NOTIFICATION_ID, createNotification(),
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                                | android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+                microphoneForegroundActive = true;
+            }
             overlaySpeechRecognizer = android.speech.SpeechRecognizer
                     .createSpeechRecognizer(this);
             overlaySpeechRecognizer.setRecognitionListener(
@@ -2656,6 +2674,10 @@ public class GroceryOverlayService extends Service {
             android.speech.SpeechRecognizer recognizer = overlaySpeechRecognizer;
             overlaySpeechRecognizer = null;
             recognizer.destroy();
+        }
+        if (microphoneForegroundActive) {
+            microphoneForegroundActive = false;
+            startOverlayForeground();
         }
         if (overlayVoiceButton != null) {
             overlayVoiceButton.setColorFilter(Color.rgb(15, 108, 189));
