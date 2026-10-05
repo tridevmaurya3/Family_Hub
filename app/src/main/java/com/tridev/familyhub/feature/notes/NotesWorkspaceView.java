@@ -99,7 +99,14 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         add.setMinWidth(0); add.setMinimumWidth(0); add.setPadding(0, 0, 0, 0);
         add.setTextSize(24); add.setCornerRadius(dp(24));
         LayoutParams addParams = new LayoutParams(dp(44), dp(44));
-        addParams.setMarginStart(dp(6)); addParams.topMargin = dp(18); quickRow.addView(add, addParams);
+        LinearLayout addBlock = new LinearLayout(context);
+        addBlock.setOrientation(VERTICAL);
+        // Give the button the same label space as its neighbouring fields.
+        addBlock.addView(label(" ", 10));
+        addBlock.addView(add, new LayoutParams(dp(44), dp(44)));
+        addParams.height = LayoutParams.WRAP_CONTENT;
+        addParams.setMarginStart(dp(6)); addParams.bottomMargin = dp(4);
+        quickRow.addView(addBlock, addParams);
         addView(quickRow, new LayoutParams(-1, -2));
         add.setOnClickListener(v -> {
             String title = value(quick);
@@ -158,7 +165,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         input.setContentDescription(name);
         input.setBackground(fieldBackground());
         input.setPopupBackgroundDrawable(fieldBackground());
-        input.setDropDownWidth(Math.min(dp(240), getResources().getDisplayMetrics().widthPixels - dp(24)));
+        input.setDropDownWidth(dropdownWidth(getContext(), labels));
         input.setDropDownVerticalOffset(dp(4));
         input.setAdapter(new android.widget.ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, labels) {
             @Override public View getView(int position, View recycled, android.view.ViewGroup owner) {
@@ -182,6 +189,16 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         params.setMarginStart(parent.getChildCount() == 0 ? 0 : dp(6));
         params.bottomMargin = dp(4);
         parent.addView(block, params);
+    }
+    static int dropdownWidth(Context context, String[] labels) {
+        android.text.TextPaint paint = new android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        float density = context.getResources().getDisplayMetrics().density;
+        paint.setTextSize(12 * context.getResources().getDisplayMetrics().scaledDensity);
+        float longest = 0;
+        for (String label : labels) if (label != null) longest = Math.max(longest, paint.measureText(label));
+        int desired = (int) Math.ceil(longest) + Math.round(34 * density);
+        int available = context.getResources().getDisplayMetrics().widthPixels - Math.round(24 * density);
+        return Math.max(1, Math.min(desired, available));
     }
     private TextView choice(String value) {
         TextView text = new TextView(getContext());

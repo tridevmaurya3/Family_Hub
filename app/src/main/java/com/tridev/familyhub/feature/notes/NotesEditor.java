@@ -176,6 +176,7 @@ public final class NotesEditor {
                                        String[] labels) {
         ArrayAdapter<String> choices = new ArrayAdapter<>(input.getContext(), R.layout.item_form_dropdown, labels);
         input.setAdapter(choices);
+        input.setDropDownWidth(NotesWorkspaceView.dropdownWidth(input.getContext(), labels));
         input.setThreshold(0);
         input.setKeyListener(null);
         Runnable show = () -> choices.getFilter().filter(null, count -> {
