@@ -41,7 +41,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private boolean quickPinned, restoringDraft;
     private long quickReminder;
     private android.content.SharedPreferences draftStore;
-    private MaterialButton textTab, checklistTab;
+    private android.widget.Spinner typeInput;
+    private java.util.List<String> noteCategories;
+    private boolean restoringCategories;
+    private androidx.appcompat.app.AlertDialog categoryDialog;
     private TextView draftTag;
     private android.widget.Spinner categoryInput, sharingInput;
     private LinearLayout undoBar;
@@ -90,11 +93,12 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         searchLayout.setHintEnabled(false);
         searchLayout.setStartIconDrawable(R.drawable.ic_search);
         tools.addView(searchLayout, new LayoutParams(0, -2, 1f));
-        String[] categories = getResources().getStringArray(R.array.notes_category_labels);
+        noteCategories = NotesCategories.labels(context);
+        String[] categories = noteCategories.toArray(new String[0]);
         String[] categoryChoices = new String[categories.length + 1];
         categoryChoices[0] = "All categories";
         System.arraycopy(categories, 0, categoryChoices, 1, categories.length);
-        categoryFilter = dropdown(filters, "Category", categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
+        categoryFilter = dropdown(filters, "Category", categoryChoices, position -> { if (restoringCategories) return; category = position == 0 ? "" : noteCategories.get(position - 1); render(); });
         String[][] filterChoices = {
                 {"All active", "Pending", "Completed", "Pinned", "Archived"},
                 {"Pinned / Latest", "Title A–Z", "Reminder first"},
@@ -119,15 +123,6 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         composerBackground.setStroke(dp(1), Color.rgb(228, 220, 244)); composerCard.setBackground(composerBackground);
         LayoutParams composerParams = new LayoutParams(-1, -2); composerParams.topMargin = dp(8);
         addView(composerCard, composerParams);
-        LinearLayout modeRow = row();
-        TextView quickLabel = label("Quick add", 12); quickLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-        modeRow.addView(quickLabel, new LayoutParams(0, -2, 1));
-        textTab = chip("Text"); checklistTab = chip("Checklist");
-        modeRow.addView(textTab, new LayoutParams(dp(64), dp(40)));
-        modeRow.addView(checklistTab, new LayoutParams(dp(80), dp(40)));
-        composerCard.addView(modeRow);
-        textTab.setOnClickListener(v -> selectQuickType(0));
-        checklistTab.setOnClickListener(v -> selectQuickType(1));
         LinearLayout quickRow = row();
         TextInputLayout quickLayout = new TextInputLayout(context);
         quickLayout.setHint(getResources().getString(R.string.notes_quick_add));
@@ -144,6 +139,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
 
         quickBlock.addView(quickLayout, new LayoutParams(-1, dp(48)));
         quickRow.addView(quickBlock, new LayoutParams(0, -2, 1f));
+        LinearLayout typeBlock = dropdown(quickRow, "Note type", new String[]{"Text", "Checklist"}, this::selectQuickType);
+        typeInput = (android.widget.Spinner) typeBlock.getChildAt(0);
+        LayoutParams typeParams = new LayoutParams(dp(100), -2); typeParams.setMarginStart(dp(6));
+        typeBlock.setLayoutParams(typeParams);
         MaterialButton add = new MaterialButton(context);
         add.setText("+"); add.setContentDescription(getResources().getString(R.string.notes_add));
         add.setMinWidth(0); add.setMinimumWidth(0); add.setPadding(0, 0, 0, 0);
@@ -175,10 +174,22 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         contentBlock.addView(contentLayout, new LayoutParams(-1, -2));
         contentRow.addView(contentBlock, new LayoutParams(-1, -2));
         LinearLayout choicesRow = row();
-        LinearLayout categoryBlock = dropdown(choicesRow, "Note category", categories, position -> { quickCategory = position; scheduleDraft(); });
+        java.util.List<String> createChoices = new java.util.ArrayList<>(noteCategories); createChoices.add(NotesCategories.ADD);
+        LinearLayout categoryBlock = dropdown(choicesRow, "Note category", createChoices.toArray(new String[0]), position -> {
+            if (restoringCategories) return;
+            if (position >= noteCategories.size()) {
+                categoryInput.setSelection(quickCategory);
+                if (categoryDialog != null && categoryDialog.isShowing()) return;
+                categoryDialog = NotesCategories.prompt(context, overlay, added -> {
+                    refreshCategories(added); scheduleDraft();
+                });
+                return;
+            }
+            quickCategory = position; scheduleDraft();
+        });
         categoryInput = (android.widget.Spinner) categoryBlock.getChildAt(0);
-        LinearLayout sharingBlock = dropdown(choicesRow, "Sharing", new String[]{context.getString(R.string.notes_private_status),
-                context.getString(R.string.notes_shared_status)}, position -> { quickSharing = position; scheduleDraft(); });
+        LinearLayout sharingBlock = dropdown(choicesRow, "Sharing", new String[]{context.getString(R.string.notes_shared_status),
+                context.getString(R.string.notes_private_status)}, position -> { quickSharing = position; scheduleDraft(); });
         sharingInput = (android.widget.Spinner) sharingBlock.getChildAt(0);
         composerCard.addView(contentRow, new LayoutParams(-1, -2));
         quickChecklist = new NotesChecklistComposer(context, quickContent, contentBlock);
@@ -206,13 +217,21 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             tomorrow.setText(quickReminder > 0 ? "✓ Tomorrow 9 AM" : "Tomorrow"); scheduleDraft();
         });
         pin.setOnClickListener(v -> { quickPinned = !quickPinned; pin.setText(quickPinned ? "✓ Pinned" : "Pin"); scheduleDraft(); });
-        if (overlay) {
-            MaterialButton more = chip("More options ▾"); composerCard.addView(more, new LayoutParams(-2, dp(36)));
-            shortcuts.setVisibility(GONE);
-            more.setOnClickListener(v -> { boolean expand = shortcuts.getVisibility() != VISIBLE;
-                shortcuts.setVisibility(expand ? VISIBLE : GONE); more.setText(expand ? "Less options ▴" : "More options ▾"); });
-        }
-        composerCard.addView(shortcuts);
+        MaterialButton more = chip("More ▾"); more.setContentDescription("More options");
+        LayoutParams moreParams = new LayoutParams(0, dp(48), 1f); moreParams.setMarginStart(dp(6));
+        choicesRow.addView(more, moreParams);
+        more.setOnClickListener(v -> {
+            androidx.appcompat.widget.PopupMenu menu = new androidx.appcompat.widget.PopupMenu(context, more);
+            android.view.MenuItem reminder = menu.getMenu().add(0, 1, 0, "Tomorrow · 9 AM");
+            android.view.MenuItem pinned = menu.getMenu().add(0, 2, 1, "Pinned");
+            menu.getMenu().setGroupCheckable(0, true, false);
+            reminder.setChecked(quickReminder > 0); pinned.setChecked(quickPinned);
+            menu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == 1) tomorrow.performClick(); else pin.performClick();
+                item.setChecked(item.getItemId() == 1 ? quickReminder > 0 : quickPinned);
+                more.setText(quickReminder > 0 || quickPinned ? "More • ▾" : "More ▾"); return true;
+            }); menu.show();
+        });
         draftTag = label("", 10); draftTag.setTextColor(Color.rgb(128, 89, 191));
         composerCard.addView(draftTag);
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
@@ -221,13 +240,15 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         restoringDraft = true;
         quick.setText(draftStore.getString("title", "")); quickContent.setText(draftStore.getString("content", ""));
         quickCategory = Math.min(categories.length - 1, Math.max(0, draftStore.getInt("category", 0)));
-        quickSharing = draftStore.getBoolean("shared", false) ? 1 : 0;
+        boolean hasDraft = !value(quick).isEmpty() || !value(quickContent).isEmpty() || !draftStore.getString("item", "").isEmpty();
+        quickSharing = !hasDraft || draftStore.getBoolean("shared", true) ? 0 : 1;
         categoryInput.setSelection(quickCategory); sharingInput.setSelection(quickSharing);
         quickReminder = draftStore.getLong("reminder", 0);
         if (quickReminder <= System.currentTimeMillis()) quickReminder = 0; quickPinned = draftStore.getBoolean("pinned", false);
         tomorrow.setText(quickReminder > 0 ? "✓ Tomorrow 9 AM" : "Tomorrow"); pin.setText(quickPinned ? "✓ Pinned" : "Pin");
         quickChecklist.setPendingDraft(draftStore.getString("item", ""));
-        selectQuickType(draftStore.getInt("type", 0)); restoringDraft = false;
+        selectQuickType(draftStore.getInt("type", 0)); typeInput.setSelection(quickType); restoringDraft = false;
+        more.setText(quickReminder > 0 || quickPinned ? "More • ▾" : "More ▾");
         draftTag.setVisibility(GONE);
         if (!value(quick).isEmpty() || !value(quickContent).isEmpty() || !quickChecklist.pendingDraft().isEmpty()) { draftTag.setText("● Draft restored"); draftTag.setVisibility(VISIBLE); }
         TextWatcher draftWatcher = new TextWatcher() {
@@ -256,8 +277,8 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             NoteEntry note = new NoteEntry(); note.title = title;
             note.noteType = quickType == 1 ? NoteEntry.TYPE_CHECKLIST : NoteEntry.TYPE_TEXT;
             note.content = content;
-            note.category = categories[quickCategory]; note.collaborationStatus = "PENDING";
-            note.isShared = quickSharing == 1; note.isPinned = quickPinned; note.reminderAt = quickReminder;
+            note.category = noteCategories.get(quickCategory); note.collaborationStatus = "PENDING";
+            note.isShared = quickSharing == 0; note.isPinned = quickPinned; note.reminderAt = quickReminder;
             if (quickType == 1 && NotesChecklist.completed(content) == NotesChecklist.parse(content).size())
                 note.collaborationStatus = "COMPLETED";
             quickSaving = true; add.setEnabled(false);
@@ -266,8 +287,8 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 quickSaving = false; add.setEnabled(true);
                 quick.setEnabled(true); quickContent.setEnabled(true);
                 if (title.equals(value(quick)) && content.equals(value(quickContent))) {
-                    clearQuickAdd(); quickReminder = 0; quickPinned = false;
-                    tomorrow.setText("Tomorrow"); pin.setText("Pin");
+                    clearQuickAdd(); quickReminder = 0; quickPinned = false; quickSharing = 0; sharingInput.setSelection(0);
+                    tomorrow.setText("Tomorrow"); pin.setText("Pin"); more.setText("More ▾");
                     uiHandler.removeCallbacks(persistDraft); draftStore.edit().clear().apply(); draftTag.setText(""); draftTag.setVisibility(GONE);
                 }
                 if (isAttachedToWindow()) {
@@ -318,6 +339,34 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         makeControlsScrollable(0, indexOfChild(list));
         CompactFormStyle.applyInputs(this);
         add.setCornerRadius(dp(24));
+        quickRow.setGravity(Gravity.CENTER_VERTICAL);
+    }
+    @SuppressWarnings("unchecked")
+    private void refreshCategories(String selected) {
+        java.util.List<String> updated = NotesCategories.labels(getContext());
+        for (NoteEntry note : notes) if (note.category != null && !note.category.isEmpty() && !updated.contains(note.category)) updated.add(note.category);
+        if (selected != null && !updated.contains(selected)) updated.add(selected);
+        if (updated.equals(noteCategories)) {
+            if (selected != null) { quickCategory = updated.indexOf(selected); categoryInput.setSelection(quickCategory); }
+            return;
+        }
+        String current = selected == null ? noteCategories.get(Math.min(quickCategory, noteCategories.size() - 1)) : selected;
+        noteCategories = updated; restoringCategories = true;
+        android.widget.ArrayAdapter<String> create = (android.widget.ArrayAdapter<String>) categoryInput.getAdapter();
+        create.setNotifyOnChange(false); create.clear(); create.addAll(updated); create.add(NotesCategories.ADD); create.notifyDataSetChanged();
+        quickCategory = Math.max(0, updated.indexOf(current)); categoryInput.setSelection(quickCategory);
+        categoryInput.setDropDownWidth(dropdownWidth(getContext(), createLabels(updated, true)));
+        android.widget.Spinner filter = (android.widget.Spinner) categoryFilter.getChildAt(0);
+        android.widget.ArrayAdapter<String> catalogue = (android.widget.ArrayAdapter<String>) filter.getAdapter();
+        catalogue.setNotifyOnChange(false); catalogue.clear(); catalogue.add("All categories"); catalogue.addAll(updated); catalogue.notifyDataSetChanged();
+        filter.setSelection(category.isEmpty() ? 0 : Math.max(0, updated.indexOf(category) + 1));
+        filter.setDropDownWidth(dropdownWidth(getContext(), createLabels(updated, false)));
+        restoringCategories = false;
+    }
+    private static String[] createLabels(java.util.List<String> labels, boolean create) {
+        java.util.List<String> values = new java.util.ArrayList<>(labels);
+        if (create) values.add(NotesCategories.ADD); else values.add(0, "All categories");
+        return values.toArray(new String[0]);
     }
     private MaterialButton chip(String text) {
         MaterialButton button = new MaterialButton(getContext()); button.setText(text); button.setAllCaps(false);
@@ -332,13 +381,6 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private void selectQuickType(int selected) {
         quickType = selected == 1 ? 1 : 0;
         if (quickChecklist != null) quickChecklist.setChecklist(quickType == 1);
-        if (textTab != null) {
-            int purple = Color.rgb(131, 104, 205), pale = Color.rgb(240, 235, 252);
-            textTab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(quickType == 0 ? purple : pale));
-            checklistTab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(quickType == 1 ? purple : pale));
-            textTab.setTextColor(quickType == 0 ? Color.WHITE : purple); checklistTab.setTextColor(quickType == 1 ? Color.WHITE : purple);
-            textTab.setSelected(quickType == 0); checklistTab.setSelected(quickType == 1);
-        }
         scheduleDraft();
     }
     private void scheduleDraft() {
@@ -349,7 +391,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         if (draftStore == null || quickSaving) return;
         draftStore.edit().putString("title", value(quick)).putString("content", value(quickContent))
                 .putString("item", quickChecklist.pendingDraft()).putInt("type", quickType).putInt("category", quickCategory)
-                .putBoolean("shared", quickSharing == 1).putBoolean("pinned", quickPinned).putLong("reminder", quickReminder).apply();
+                .putBoolean("shared", quickSharing == 0).putBoolean("pinned", quickPinned).putLong("reminder", quickReminder).apply();
         draftTag.setText(value(quick).isEmpty() && value(quickContent).isEmpty() && quickChecklist.pendingDraft().isEmpty() ? "" : "● Draft saved");
         draftTag.setVisibility(draftTag.getText().length() == 0 ? GONE : VISIBLE);
     }
@@ -369,13 +411,14 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
 
         android.widget.Spinner input = new android.widget.Spinner(getContext(), android.widget.Spinner.MODE_DROPDOWN);
         input.setContentDescription(name);
+        input.setPadding(0, 0, 0, 0); input.setMinimumHeight(0);
         input.setBackground(fieldBackground());
         input.setPopupBackgroundDrawable(fieldBackground());
         input.setDropDownWidth(dropdownWidth(getContext(), labels));
         input.setDropDownVerticalOffset(dp(4));
-        input.setAdapter(new android.widget.ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, labels) {
+        input.setAdapter(new android.widget.ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, new java.util.ArrayList<>(java.util.Arrays.asList(labels))) {
             @Override public View getView(int position, View recycled, android.view.ViewGroup owner) {
-                TextView selected = choice(compactFilterLabel(name, labels[position]) + "  ▾");
+                TextView selected = choice(compactFilterLabel(name, getItem(position)) + "  ▾");
                 if ("Note category".equals(name) || "Sharing".equals(name)) {
                     android.graphics.drawable.Drawable icon = androidx.core.content.ContextCompat.getDrawable(getContext(),
                             "Sharing".equals(name) ? R.drawable.ic_lock : R.drawable.ic_family);
@@ -383,12 +426,15 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                         icon.setBounds(0, 0, dp(14), dp(14)); selected.setCompoundDrawablePadding(dp(5));
                         selected.setCompoundDrawablesRelative(icon, null, null, null); }
                 }
+                selected.setMinHeight(0); selected.setIncludeFontPadding(false);
+                selected.setPadding(dp(8), 0, dp(6), 0);
+                selected.setLayoutParams(new android.widget.AbsListView.LayoutParams(-1, dp(48)));
                 selected.setMaxLines(1);
                 selected.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 return selected;
             }
             @Override public View getDropDownView(int position, View recycled, android.view.ViewGroup owner) {
-                return choice(labels[position]);
+                return choice(getItem(position));
             }
         });
         input.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -397,10 +443,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             }
             public void onNothingSelected(android.widget.AdapterView<?> owner) { }
         });
-        block.addView(input, new LayoutParams(-1, dp("Note type".equals(name) ? 48 : 44)));
+        block.addView(input, new LayoutParams(-1, dp(48)));
         LayoutParams params = new LayoutParams(0, -2, 1f);
         params.setMarginStart(parent.getChildCount() == 0 ? 0 : dp(6));
-        params.bottomMargin = "Note type".equals(name) ? 0 : dp(4);
+        params.topMargin = dp(3); params.bottomMargin = dp(3);
         parent.addView(block, params);
         return block;
     }
@@ -492,11 +538,11 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         syncStatusListener = listener;
         listener.onStateChanged(liveSync, connectingSync);
     }
-    public void deactivate() { saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
+    public void deactivate() { if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {
         if (!active) return;
         final int request = ++generation;
-        NotesRepository.NotesCallback callback = loaded -> { if (active && request == generation) { notes = loaded; render(); } };
+        NotesRepository.NotesCallback callback = loaded -> { if (active && request == generation) { notes = loaded; refreshCategories(null); render(); } };
         if (status == 4) repository.loadArchived(callback); else repository.loadActive("", callback);
     }
     private void render() {

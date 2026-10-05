@@ -37,9 +37,23 @@ public final class NotesEditor {
                 context.getResources().getStringArray(R.array.notes_type_labels);
         String[] colorLabels =
                 context.getResources().getStringArray(R.array.notes_color_labels);
-        String[] categoryLabels =
-                context.getResources().getStringArray(R.array.notes_category_labels);
+        java.util.List<String> catalogue = NotesCategories.labels(context);
+        if (existing != null && !note.category.isEmpty() && !catalogue.contains(note.category)) catalogue.add(note.category);
+        catalogue.add(NotesCategories.ADD);
+        String[] categoryLabels = catalogue.toArray(new String[0]);
         installChoices(form.noteCategoryInput, categoryLabels);
+        final String[] categorySelection = {existing == null ? categoryLabels[0] : note.category};
+        form.noteCategoryInput.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = textOf(form.noteCategoryInput);
+            if (!NotesCategories.ADD.equals(selected)) { categorySelection[0] = selected; return; }
+            form.noteCategoryInput.setText(categorySelection[0], false);
+            androidx.appcompat.app.AlertDialog picker = NotesCategories.prompt(context, overlay, added -> {
+                java.util.List<String> values = NotesCategories.labels(context); values.add(NotesCategories.ADD);
+                installChoices(form.noteCategoryInput, values.toArray(new String[0]));
+                categorySelection[0] = added; form.noteCategoryInput.setText(added, false);
+            });
+            pickers.add(picker); picker.setOnDismissListener(dialog -> pickers.remove(picker));
+        });
         installChoices(form.noteTypeInput, typeLabels);
         installChoices(form.noteColorInput, colorLabels);
         String[] collaborationLabels =
@@ -47,6 +61,7 @@ public final class NotesEditor {
         installChoices(form.noteCollaborationStatusInput, collaborationLabels);
 
         if (existing == null) {
+            form.noteSharedSwitch.setChecked(true);
             form.noteCategoryInput.setText(categoryLabels[0], false);
             form.noteTypeInput.setText(typeLabels[0], false);
             form.noteColorInput.setText(colorLabels[0], false);
@@ -193,7 +208,7 @@ public final class NotesEditor {
     public static void dispose(View root) {
         Object tag = root.getTag();
         if (tag instanceof java.util.List<?>) {
-            for (Object value : (java.util.List<?>) tag) if (value instanceof Dialog) ((Dialog) value).dismiss();
+            for (Object value : new java.util.ArrayList<>((java.util.List<?>) tag)) if (value instanceof Dialog) ((Dialog) value).dismiss();
             root.setTag(null);
         }
     }
