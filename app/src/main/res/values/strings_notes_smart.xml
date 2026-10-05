@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notes_mark_completed">Mark completed</string>
+    <string name="notes_quick_add">Quick add a note</string>
+    <string name="notes_full_editor">Add details / reminder</string>
+    <string name="notes_no_matching">No notes match these filters. Add a note or change filters.</string>
+    <string name="notes_checklist_editor_hint">One item per line. [x] marks a completed item.</string>
+    <string name="notes_text_editor_hint">Write your note</string>
+</resources>

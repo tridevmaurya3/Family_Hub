@@ -13,6 +13,13 @@
         android:orientation="vertical"
         android:padding="@dimen/card_padding">
 
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/note_completed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notes_mark_completed"
+            android:textSize="11sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,6 +86,17 @@
             android:layout_marginTop="@dimen/space_6" android:background="@drawable/bg_status_pill"
             android:paddingStart="@dimen/space_8" android:paddingTop="@dimen/space_4"
             android:paddingEnd="@dimen/space_8" android:paddingBottom="@dimen/space_4" />
+
+        <LinearLayout
+            android:id="@+id/note_checklist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+        <TextView
+            android:id="@+id/note_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="10sp" />
 
         <TextView
             android:id="@+id/note_content"
@@ -162,3 +180,4 @@
         </HorizontalScrollView>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
+

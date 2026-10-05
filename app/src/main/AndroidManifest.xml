@@ -101,6 +101,18 @@
         </service>
 
         <service
+            android:name=".feature.notes.overlay.NotesOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled floating Notes quick-add and checklist workspace" />
+        </service>
+        <activity android:name=".feature.notes.overlay.NotesNotificationPermissionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FamilyHub.VoiceCapture" />
+
+        <service
             android:name=".feature.quickhub.UniversalFamilyQuickHubService"
             android:exported="false"
             android:foregroundServiceType="specialUse"
@@ -323,6 +335,7 @@
     </application>
 
 </manifest>
+
 
 
 

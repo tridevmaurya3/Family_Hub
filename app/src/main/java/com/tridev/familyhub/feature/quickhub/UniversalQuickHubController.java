@@ -15,6 +15,7 @@ public final class UniversalQuickHubController {
     public static void setVisible(Context c,boolean visible){if(isEnabled(c))c.startService(new Intent(c,UniversalFamilyQuickHubService.class).setAction(visible?UniversalFamilyQuickHubService.ACTION_SHOW:UniversalFamilyQuickHubService.ACTION_HIDE));}
     public static void stop(Context c){c.getSharedPreferences(UniversalFamilyQuickHubService.PREFS,Context.MODE_PRIVATE).edit().putBoolean(UniversalFamilyQuickHubService.KEY_ENABLED,false).apply();c.stopService(new Intent(c,UniversalFamilyQuickHubService.class));stopLegacy(c);}
     private static void stopLegacy(Context c){
+        c.stopService(new Intent(c, com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class));
         c.stopService(new Intent(c,GroceryOverlayService.class));
         c.stopService(new Intent(c,FamilyTaskOverlayService.class));
         c.getSharedPreferences(GroceryOverlayService.PREFS,Context.MODE_PRIVATE)
@@ -23,3 +24,4 @@ public final class UniversalQuickHubController {
                 .edit().putBoolean(FamilyTaskOverlayService.KEY_ENABLED,false).apply();
     }
 }
+

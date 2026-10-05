@@ -30,6 +30,8 @@ public class NotesAdapter
         void onArchivedChanged(@NonNull NoteEntry note, boolean archived);
 
         void onDelete(@NonNull NoteEntry note);
+        default void onStatusChanged(@NonNull NoteEntry note, boolean completed) { }
+        default void onChecklistChanged(@NonNull NoteEntry note, int index, boolean checked) { }
     }
 
     private final List<NoteEntry> notes = new ArrayList<>();
@@ -82,6 +84,33 @@ public class NotesAdapter
 
         void bind(@NonNull NoteEntry note) {
             binding.noteTitle.setText(note.title);
+            binding.noteCompleted.setOnCheckedChangeListener(null);
+            binding.noteCompleted.setChecked(NotesSmartFilter.completed(note));
+            binding.noteCompleted.setEnabled(!note.isArchived);
+            binding.noteCompleted.setOnCheckedChangeListener((button, checked) ->
+                    listener.onStatusChanged(note, checked));
+            binding.noteChecklist.removeAllViews();
+            boolean checklist = NoteEntry.TYPE_CHECKLIST.equals(note.noteType);
+            binding.noteChecklist.setVisibility(checklist ? View.VISIBLE : View.GONE);
+            binding.noteContent.setVisibility(checklist ? View.GONE : View.VISIBLE);
+            if (checklist) {
+                java.util.List<NotesChecklist.Item> items = NotesChecklist.parse(note.content);
+                for (int i = 0; i < items.size(); i++) {
+                    final int index = i;
+                    NotesChecklist.Item item = items.get(i);
+                    android.widget.CheckBox check = new android.widget.CheckBox(binding.getRoot().getContext());
+                    check.setText(item.text);
+                    check.setTextSize(12);
+                    check.setChecked(item.checked);
+                    check.setEnabled(!note.isArchived);
+                    if (item.checked) check.setPaintFlags(check.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+                    check.setOnCheckedChangeListener((button, checked) ->
+                            listener.onChecklistChanged(note, index, checked));
+                    binding.noteChecklist.addView(check);
+                }
+                binding.noteProgress.setText(NotesChecklist.completed(note.content) + "/" + items.size() + " completed");
+            }
+            binding.noteProgress.setVisibility(checklist ? View.VISIBLE : View.GONE);
             binding.noteContent.setText(
                     note.content == null || note.content.isEmpty()
                             ? binding.getRoot().getContext().getString(
@@ -199,3 +228,4 @@ public class NotesAdapter
         }
     }
 }
+

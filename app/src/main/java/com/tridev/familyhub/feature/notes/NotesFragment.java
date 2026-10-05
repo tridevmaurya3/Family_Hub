@@ -1,372 +1,79 @@
 package com.tridev.familyhub.feature.notes;
 
-import android.os.Bundle;
-import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.fragment.app.Fragment;
 import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-
+import androidx.fragment.app.Fragment;
+import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.snackbar.Snackbar;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
 import com.tridev.familyhub.data.repository.NotesRepository;
-import com.tridev.familyhub.databinding.DialogNoteBinding;
 import com.tridev.familyhub.databinding.FragmentNotesBinding;
 import com.tridev.familyhub.feature.main.AddActionHost;
 import com.tridev.familyhub.feature.main.MainActivity;
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Date;
 
-/** Offline-first Fluent notes and checklists screen. */
+/** Smart Notes page; shared workspace/editor also power the floating Notes panel. */
 public class NotesFragment extends Fragment implements AddActionHost {
-
-    private static final String[] NOTE_TYPES = {
-            NoteEntry.TYPE_TEXT,
-            NoteEntry.TYPE_CHECKLIST
-    };
-    private static final String[] COLOR_KEYS = {
-            "BLUE", "GREEN", "AMBER", "PINK", "NEUTRAL"
-    };
-
     private FragmentNotesBinding binding;
     private NotesRepository repository;
-    private NotesAdapter adapter;
-    private boolean showingArchived;
+    private NotesWorkspaceView workspace;
+    @Nullable private AlertDialog editorDialog;
 
-    @Nullable
-    @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState
-    ) {
+    @Nullable @Override public View onCreateView(@NonNull LayoutInflater inflater,
+            @Nullable ViewGroup container, @Nullable Bundle state) {
         binding = FragmentNotesBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
-
-    @Override
-    public void onViewCreated(
-            @NonNull View view,
-            @Nullable Bundle savedInstanceState
-    ) {
-        super.onViewCreated(view, savedInstanceState);
+    @Override public void onViewCreated(@NonNull View view, @Nullable Bundle state) {
+        super.onViewCreated(view, state);
         binding.notesOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
-                R.string.feature_menu_title,
-                clickedView -> ((MainActivity) requireActivity()).showFeatureMenu());
+                R.string.feature_menu_title, v -> ((MainActivity) requireActivity()).showFeatureMenu());
+        binding.notesSummary.setVisibility(View.GONE);
+        binding.notesSearchLayout.setVisibility(View.GONE);
+        binding.notesRecyclerView.setVisibility(View.GONE);
+        binding.notesEmptyState.setVisibility(View.GONE);
         repository = new NotesRepository(requireContext());
-        adapter = new NotesAdapter(new NotesAdapter.NoteActionListener() {
-            @Override
-            public void onEdit(@NonNull NoteEntry note) {
-                showEditor(note);
-            }
-
-            @Override
-            public void onPinnedChanged(
-                    @NonNull NoteEntry note,
-                    boolean pinned
-            ) {
-                repository.setPinned(note, pinned, NotesFragment.this::reload);
-            }
-
-            @Override
-            public void onArchivedChanged(
-                    @NonNull NoteEntry note,
-                    boolean archived
-            ) {
-                repository.setArchived(
-                        note,
-                        archived,
-                        NotesFragment.this::reload
-                );
-            }
-
-            @Override
-            public void onDelete(@NonNull NoteEntry note) {
-                confirmDelete(note);
-            }
-        });
-        binding.notesRecyclerView.setLayoutManager(
-                new LinearLayoutManager(requireContext())
-        );
-        binding.notesRecyclerView.setAdapter(adapter);
-        repository.startRealtimeSync(this::reload);
-        binding.emptyAddNoteButton.setOnClickListener(
-                clickedView -> showEditor(null)
-        );
-        binding.notesArchiveToggle.setOnClickListener(clickedView -> {
-            showingArchived = !showingArchived;
-            binding.notesArchiveToggle.setText(
-                    showingArchived
-                            ? R.string.notes_show_active
-                            : R.string.notes_show_archived
-            );
-            binding.notesSearchLayout.setVisibility(
-                    showingArchived ? View.GONE : View.VISIBLE
-            );
-            reload();
-        });
-        binding.notesSearchInput.addTextChangedListener(
-                new android.text.TextWatcher() {
-                    @Override
-                    public void beforeTextChanged(
-                            CharSequence text, int start, int count, int after
-                    ) {
-                        // No action required.
-                    }
-
-                    @Override
-                    public void onTextChanged(
-                            CharSequence text, int start, int before, int count
-                    ) {
-                        if (!showingArchived) {
-                            reload();
-                        }
-                    }
-
-                    @Override
-                    public void afterTextChanged(
-                            android.text.Editable editable
-                    ) {
-                        // No action required.
-                    }
-                }
-        );
-        reload();
+        workspace = new NotesWorkspaceView(requireContext(), repository, false, this::showEditor);
+        binding.notesWorkspaceContainer.addView(workspace, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        workspace.activate();
     }
-
-    @Override
-    public void onAddRequested() {
-        showEditor(null);
+    @Override public void onAddRequested() { showEditor(null); }
+    private void showEditor(@Nullable NoteEntry note) {
+        if (binding == null) return;
+        if (editorDialog != null) editorDialog.dismiss();
+        final boolean isNew = note == null || note.id == 0;
+        final boolean quickDraft = note != null && note.id == 0;
+        View form = NotesEditor.create(requireContext(), getLayoutInflater(), repository, note, false,
+                () -> { if (editorDialog != null) editorDialog.dismiss(); },
+                () -> {
+                    if (binding == null) return;
+                    if (editorDialog != null) editorDialog.dismiss();
+                    if (quickDraft) workspace.clearQuickAdd();
+                    workspace.reload();
+                    com.google.android.material.snackbar.Snackbar.make(binding.getRoot(),
+                            isNew ? R.string.notes_added : R.string.notes_updated,
+                            com.google.android.material.snackbar.Snackbar.LENGTH_SHORT).show();
+                    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(requireContext(),
+                            Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5301);
+                });
+        editorDialog = new MaterialAlertDialogBuilder(requireContext()).setView(form).create();
+        editorDialog.setOnDismissListener(dialog -> NotesEditor.dispose(form));
+        editorDialog.show();
     }
-
-    private void showEditor(@Nullable NoteEntry existing) {
-        DialogNoteBinding form = DialogNoteBinding.inflate(getLayoutInflater());
-        com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
-        NoteEntry note = existing == null ? new NoteEntry() : existing;
-        final long[] reminderAt = {note.reminderAt};
-        String[] typeLabels =
-                getResources().getStringArray(R.array.notes_type_labels);
-        String[] colorLabels =
-                getResources().getStringArray(R.array.notes_color_labels);
-        String[] categoryLabels =
-                getResources().getStringArray(R.array.notes_category_labels);
-        form.noteCategoryInput.setAdapter(new ArrayAdapter<>(
-                requireContext(),
-                R.layout.item_form_dropdown,
-                categoryLabels
-        ));
-        form.noteTypeInput.setAdapter(new ArrayAdapter<>(
-                requireContext(),
-                R.layout.item_form_dropdown,
-                typeLabels
-        ));
-        form.noteColorInput.setAdapter(new ArrayAdapter<>(
-                requireContext(),
-                R.layout.item_form_dropdown,
-                colorLabels
-        ));
-        String[] collaborationLabels =
-                getResources().getStringArray(R.array.collaboration_status_labels);
-        form.noteCollaborationStatusInput.setAdapter(new ArrayAdapter<>(
-                requireContext(),
-                R.layout.item_form_dropdown,
-                collaborationLabels
-        ));
-
-        if (existing == null) {
-            form.noteCategoryInput.setText(categoryLabels[0], false);
-            form.noteTypeInput.setText(typeLabels[0], false);
-            form.noteColorInput.setText(colorLabels[0], false);
-            form.noteCollaborationStatusInput.setText(collaborationLabels[0], false);
-        } else {
-            form.noteDialogTitle.setText(R.string.notes_edit);
-            form.noteTitleInput.setText(note.title);
-            form.noteContentInput.setText(note.content);
-            form.noteCategoryInput.setText(note.category, false);
-            form.noteTypeInput.setText(
-                    typeLabels[indexOf(NOTE_TYPES, note.noteType)],
-                    false
-            );
-            form.noteColorInput.setText(
-                    colorLabels[indexOf(COLOR_KEYS, note.colorKey)],
-                    false
-            );
-            form.noteSharedSwitch.setChecked(note.isShared);
-            form.noteCollaborationStatusInput.setText(note.collaborationStatus, false);
-        }
-        if (reminderAt[0] > 0L) form.noteReminderInput.setText(
-                DateFormat.getDateTimeInstance().format(new Date(reminderAt[0])));
-        form.noteReminderInput.setOnClickListener(v -> {
-            Calendar c = Calendar.getInstance();
-            if (reminderAt[0] > 0L) c.setTimeInMillis(reminderAt[0]);
-            new DatePickerDialog(requireContext(), (d,y,m,day) -> {
-                c.set(y,m,day);
-                new TimePickerDialog(requireContext(), (t,h,min) -> {
-                    c.set(Calendar.HOUR_OF_DAY,h); c.set(Calendar.MINUTE,min);
-                    c.set(Calendar.SECOND,0); reminderAt[0]=c.getTimeInMillis();
-                    form.noteReminderInput.setText(DateFormat.getDateTimeInstance().format(c.getTime()));
-                },c.get(Calendar.HOUR_OF_DAY),c.get(Calendar.MINUTE),false).show();
-            },c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();
-        });
-
-        AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
-                .setView(form.getRoot())
-                .create();
-        form.cancelNoteButton.setOnClickListener(
-                clickedView -> dialog.dismiss()
-        );
-        form.saveNoteButton.setOnClickListener(clickedView -> {
-            String title = textOf(form.noteTitleInput);
-            int typeIndex = indexOf(typeLabels, textOf(form.noteTypeInput));
-            int colorIndex = indexOf(
-                    colorLabels,
-                    textOf(form.noteColorInput)
-            );
-            if (title.isEmpty()) {
-                form.noteTitleLayout.setError(
-                        getString(R.string.notes_title_required)
-                );
-                return;
-            }
-            form.noteTitleLayout.setError(null);
-            note.title = title;
-            note.content = textOf(form.noteContentInput);
-            note.category = textOf(form.noteCategoryInput);
-            note.noteType = NOTE_TYPES[typeIndex];
-            note.colorKey = COLOR_KEYS[colorIndex];
-            note.isShared = form.noteSharedSwitch.isChecked();
-            note.collaborationStatus = textOf(form.noteCollaborationStatusInput);
-            note.reminderAt = reminderAt[0];
-            repository.save(note, () -> {
-                if (binding == null) {
-                    return;
-                }
-                dialog.dismiss();
-                requestNotificationPermissionIfNeeded();
-                reload();
-                Snackbar.make(
-                        binding.getRoot(),
-                        existing == null
-                                ? R.string.notes_added
-                                : R.string.notes_updated,
-                        Snackbar.LENGTH_SHORT
-                ).show();
-            });
-        });
-        dialog.show();
-    }
-
-    private void requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && ContextCompat.checkSelfPermission(requireContext(),
-                Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 5301);
-        }
-    }
-
-    private void confirmDelete(@NonNull NoteEntry note) {
-        new MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.notes_delete_title)
-                .setMessage(getString(
-                        R.string.notes_delete_message,
-                        note.title
-                ))
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.remove, (dialog, which) ->
-                        repository.delete(note, this::reload)
-                )
-                .show();
-    }
-
-    private void reload() {
-        if (binding == null) {
-            return;
-        }
-        if (showingArchived) {
-            repository.loadArchived(this::renderNotes);
-        } else {
-            repository.loadActive(
-                    textOf(binding.notesSearchInput),
-                    this::renderNotes
-            );
-        }
-    }
-
-    private void renderNotes(
-            @NonNull java.util.List<NoteEntry> notes
-    ) {
-        if (binding == null) {
-            return;
-        }
-        adapter.submitList(notes);
-        binding.notesCountValue.setText(String.valueOf(notes.size()));
-        binding.notesCountLabel.setText(
-                showingArchived
-                        ? R.string.notes_archived_count
-                        : R.string.notes_active_count
-        );
-        boolean empty = notes.isEmpty();
-        binding.notesRecyclerView.setVisibility(
-                empty ? View.GONE : View.VISIBLE
-        );
-        binding.notesEmptyState.setVisibility(
-                empty ? View.VISIBLE : View.GONE
-        );
-        binding.notesEmptyTitle.setText(
-                showingArchived
-                        ? R.string.notes_archived_empty_title
-                        : R.string.notes_empty_title
-        );
-        binding.notesEmptyDetail.setText(
-                showingArchived
-                        ? R.string.notes_archived_empty_detail
-                        : R.string.notes_empty_detail
-        );
-        binding.emptyAddNoteButton.setVisibility(
-                showingArchived ? View.GONE : View.VISIBLE
-        );
-    }
-
-    private int indexOf(
-            @NonNull String[] values,
-            @NonNull String selected
-    ) {
-        for (int index = 0; index < values.length; index++) {
-            if (values[index].equalsIgnoreCase(selected)) {
-                return index;
-            }
-        }
-        return 0;
-    }
-
-    @NonNull
-    private String textOf(@NonNull android.widget.EditText input) {
-        return input.getText() == null
-                ? ""
-                : input.getText().toString().trim();
-    }
-
-    @Override
-    public void onDestroyView() {
-        if (repository != null) repository.stopRealtimeSync();
-        binding.notesRecyclerView.setAdapter(null);
-        binding = null;
+    @Override public void onDestroyView() {
+        if (editorDialog != null) editorDialog.dismiss();
+        editorDialog = null;
+        if (workspace != null) workspace.deactivate();
+        workspace = null; repository = null; binding = null;
         super.onDestroyView();
     }
 }
-

@@ -57,13 +57,13 @@ public final class UniversalFamilyQuickHubService extends Service {
     private View icon;
     private PopupWindow selector;
     private FamilyHubDatabase database;
-    private Button groceryChoice, taskChoice;
+    private Button groceryChoice, taskChoice, notesChoice;
     private final Handler countHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService countExecutor = Executors.newSingleThreadExecutor();
     private volatile boolean destroyed;
     private int countGeneration;
     private final InvalidationTracker.Observer countObserver =
-            new InvalidationTracker.Observer("grocery_items", "family_tasks") {
+            new InvalidationTracker.Observer("grocery_items", "family_tasks", "notes") {
                 @Override public void onInvalidated(@androidx.annotation.NonNull Set<String> tables) {
                     countHandler.post(UniversalFamilyQuickHubService.this::refreshPendingCounts);
                 }
@@ -75,7 +75,7 @@ public final class UniversalFamilyQuickHubService extends Service {
         createChannel();
         startForeground(NOTIFICATION_ID, new NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle("Family Quick Hub")
-                .setContentText("Grocery and To-Do quick access").setOngoing(true)
+                .setContentText("Grocery, To-Do and Notes quick access").setOngoing(true)
                 .setContentIntent(android.app.PendingIntent.getActivity(this, 0,
                         new Intent(this, MainActivity.class), android.app.PendingIntent.FLAG_IMMUTABLE))
                 .build());
@@ -121,16 +121,28 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("🛒  Grocery"), tasks=choice("✓  To-Do"), opacity=choice("◐  More"); box.addView(grocery,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(dp(142),dp(36)));
-        selector=new PopupWindow(box,dp(154),dp(120),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), opacity=choice("◐  More");
+        coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
+        coloredIcon(tasks, R.drawable.ic_family_task, R.color.fh_primary);
+        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(notes,new LinearLayout.LayoutParams(dp(142),dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(dp(142),dp(36)));
+        selector=new PopupWindow(box,dp(154),dp(156),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
+        notes.setOnClickListener(v -> {
+            open(com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class,
+                    com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.ACTION_OPEN_PANEL,
+                    GroceryOverlayService.class);
+            stopService(new Intent(this, FamilyTaskOverlayService.class));
+            selector.dismiss();
+        });
+        notesChoice = notes;
         groceryChoice = grocery;
         taskChoice = tasks;
         countGeneration++;
         selector.setOnDismissListener(() -> {
             database.getInvalidationTracker().removeObserver(countObserver);
+            notesChoice = null;
             groceryChoice = null;
             taskChoice = null;
             countGeneration++;
@@ -164,13 +176,20 @@ public final class UniversalFamilyQuickHubService extends Service {
             for (FamilyTask task : database.familyTaskDao().getAll()) {
                 if (FamilyTask.STATUS_PENDING.equals(task.status)) taskCount++;
             }
+            com.tridev.familyhub.data.model.DashboardStats notesStats = new com.tridev.familyhub.data.model.DashboardStats();
+            com.tridev.familyhub.data.model.NotesDashboardSummary.from(database.noteDao().getActive()).applyTo(notesStats);
+            final int pendingNotes = notesStats.getPendingNotes();
             final int pendingGroceries = groceryCount;
             final int pendingTasks = taskCount;
             countHandler.post(() -> {
                 if (destroyed || generation != countGeneration
                         || groceryChoice == null || taskChoice == null) return;
-                groceryChoice.setText("🛒  Grocery" + (pendingGroceries > 0 ? " (" + pendingGroceries + ")" : ""));
-                taskChoice.setText("✓  To-Do" + (pendingTasks > 0 ? " (" + pendingTasks + ")" : ""));
+                groceryChoice.setText("Grocery" + (pendingGroceries > 0 ? " (" + pendingGroceries + ")" : ""));
+                taskChoice.setText("To-Do" + (pendingTasks > 0 ? " (" + pendingTasks + ")" : ""));
+                if (notesChoice != null) {
+                    notesChoice.setText("Notes" + (pendingNotes > 0 ? " (" + pendingNotes + ")" : ""));
+                    notesChoice.setContentDescription("Notes, " + pendingNotes + " pending");
+                }
                 groceryChoice.setContentDescription("Grocery, " + pendingGroceries + " pending");
                 taskChoice.setContentDescription("To-Do, " + pendingTasks + " pending");
             });
@@ -179,8 +198,15 @@ public final class UniversalFamilyQuickHubService extends Service {
 
     private void showOpacity(View anchor){SharedPreferences p=getSharedPreferences(PREFS,MODE_PRIVATE);SeekBar bar=new SeekBar(this);bar.setPadding(dp(12),0,dp(12),0);bar.setProgress(Math.round((p.getFloat("button_alpha",.92f)-.10f)/.90f*100));PopupWindow pop=new PopupWindow(bar,dp(210),dp(52),true);pop.setOutsideTouchable(true);pop.setBackgroundDrawable(round(Color.WHITE,Color.rgb(184,207,199),16));pop.setElevation(dp(12));bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar s){}public void onStopTrackingTouch(SeekBar s){}public void onProgressChanged(SeekBar s,int value,boolean user){float a=.10f+(value/100f)*.90f;if(icon!=null)icon.setAlpha(a);p.edit().putFloat("button_alpha",a).apply();}});pop.showAsDropDown(anchor,-dp(162),dp(4));}
 
+    private void coloredIcon(Button button, int drawable, int color) {
+        android.graphics.drawable.Drawable icon = androidx.core.content.ContextCompat.getDrawable(this, drawable).mutate();
+        androidx.core.graphics.drawable.DrawableCompat.setTint(icon, androidx.core.content.ContextCompat.getColor(this, color));
+        icon.setBounds(0, 0, dp(20), dp(20));
+        button.setCompoundDrawablesRelative(icon, null, null, null);
+        button.setCompoundDrawablePadding(dp(6));
+    }
     private Button choice(String text){Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);b.setGravity(Gravity.CENTER);b.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);b.setPadding(dp(8),0,dp(8),0);b.setBackground(round(Color.argb(245,247,252,249),Color.argb(140,184,207,199),12));return b;}
-    private void open(Class<?> selected,String action,Class<?> other){stopService(new Intent(this,other));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}
+    private void open(Class<?> selected,String action,Class<?> other){if (selected != com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class) stopService(new Intent(this,com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class));stopService(new Intent(this,other));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return Math.round(v*getResources().getDisplayMetrics().density);} private int clamp(int v,int a,int b){return Math.max(a,Math.min(b,v));}
@@ -188,3 +214,4 @@ public final class UniversalFamilyQuickHubService extends Service {
     @Nullable @Override public IBinder onBind(Intent intent){return null;}
     private void createChannel(){if(Build.VERSION.SDK_INT>=26){NotificationManager n=getSystemService(NotificationManager.class);if(n!=null)n.createNotificationChannel(new NotificationChannel(CHANNEL,"Family Quick Hub",NotificationManager.IMPORTANCE_LOW));}}
 }
+
