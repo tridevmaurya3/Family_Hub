@@ -39,28 +39,12 @@ public final class NotesEditor {
                 context.getResources().getStringArray(R.array.notes_color_labels);
         String[] categoryLabels =
                 context.getResources().getStringArray(R.array.notes_category_labels);
-        form.noteCategoryInput.setAdapter(new ArrayAdapter<>(
-                context,
-                R.layout.item_form_dropdown,
-                categoryLabels
-        ));
-        form.noteTypeInput.setAdapter(new ArrayAdapter<>(
-                context,
-                R.layout.item_form_dropdown,
-                typeLabels
-        ));
-        form.noteColorInput.setAdapter(new ArrayAdapter<>(
-                context,
-                R.layout.item_form_dropdown,
-                colorLabels
-        ));
+        installChoices(form.noteCategoryInput, categoryLabels);
+        installChoices(form.noteTypeInput, typeLabels);
+        installChoices(form.noteColorInput, colorLabels);
         String[] collaborationLabels =
                 context.getResources().getStringArray(R.array.collaboration_status_labels);
-        form.noteCollaborationStatusInput.setAdapter(new ArrayAdapter<>(
-                context,
-                R.layout.item_form_dropdown,
-                collaborationLabels
-        ));
+        installChoices(form.noteCollaborationStatusInput, collaborationLabels);
 
         if (existing == null) {
             form.noteCategoryInput.setText(categoryLabels[0], false);
@@ -185,6 +169,25 @@ public final class NotesEditor {
         form.noteContentInput.addTextChangedListener(watcher);
         form.noteTypeInput.addTextChangedListener(watcher);
         render.run();
+    }
+
+    /** Show the full catalogue, independent of the currently selected text. */
+    private static void installChoices(com.google.android.material.textfield.MaterialAutoCompleteTextView input,
+                                       String[] labels) {
+        ArrayAdapter<String> choices = new ArrayAdapter<>(input.getContext(), R.layout.item_form_dropdown, labels);
+        input.setAdapter(choices);
+        input.setThreshold(0);
+        input.setKeyListener(null);
+        Runnable show = () -> choices.getFilter().filter(null, count -> {
+            if (input.isAttachedToWindow()) input.showDropDown();
+        });
+        input.setOnClickListener(view -> show.run());
+        android.view.ViewParent parent = input.getParent();
+        while (parent != null && !(parent instanceof com.google.android.material.textfield.TextInputLayout))
+            parent = parent.getParent();
+        if (parent instanceof com.google.android.material.textfield.TextInputLayout)
+            ((com.google.android.material.textfield.TextInputLayout) parent)
+                    .setEndIconOnClickListener(view -> show.run());
     }
 
     public static void dispose(View root) {

@@ -45,27 +45,30 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         this.repository = repository; this.overlay = overlay; this.editor = editor;
         setOrientation(VERTICAL);
         LinearLayout filters = row();
-        dropdown(filters, new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
+        dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
                 position -> { status = position; reload(); });
         LinearLayout typeFilters = row();
-        dropdown(typeFilters, new String[]{"All types", "Text note", "Checklist"},
+        dropdown(typeFilters, "Type", new String[]{"All types", "Text note", "Checklist"},
                 position -> { type = position; render(); });
-        dropdown(filters, new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
+        dropdown(filters, "Sort", new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
                 position -> { sort = position; render(); });
         addView(filters, new LayoutParams(-1, -2));
         LinearLayout tools = row();
         TextInputLayout searchLayout = new TextInputLayout(context);
         searchLayout.setHint(getResources().getString(R.string.notes_search_hint));
+        searchLayout.setHintEnabled(false);
+        searchLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         search = new TextInputEditText(context);
         search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         search.setSingleLine(true);
+        search.setHint(R.string.notes_search_hint);
         searchLayout.addView(search, new LayoutParams(-1, -2));
         tools.addView(searchLayout, new LayoutParams(0, -2, 1f));
         String[] categories = getResources().getStringArray(R.array.notes_category_labels);
         String[] categoryChoices = new String[categories.length + 1];
         categoryChoices[0] = "All categories";
         System.arraycopy(categories, 0, categoryChoices, 1, categories.length);
-        dropdown(typeFilters, categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
+        dropdown(typeFilters, "Category", categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
         addView(typeFilters, new LayoutParams(-1, -2));
         addView(tools, new LayoutParams(-1, -2));
         search.addTextChangedListener(new TextWatcher() {
@@ -76,36 +79,35 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         LinearLayout quickRow = row();
         TextInputLayout quickLayout = new TextInputLayout(context);
         quickLayout.setHint(getResources().getString(R.string.notes_quick_add));
+        quickLayout.setHintEnabled(false);
+        quickLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         quick = new TextInputEditText(context);
         quick.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         quick.setSingleLine(true);
+        quick.setHint(R.string.notes_quick_add);
         quickLayout.addView(quick, new LayoutParams(-1, -2));
-        quickRow.addView(quickLayout, new LayoutParams(0, -2, 1.5f));
-        dropdown(quickRow, new String[]{"Text note", "Checklist"}, position -> quickType = position);
+        LinearLayout quickBlock = new LinearLayout(context);
+        quickBlock.setOrientation(VERTICAL);
+        quickBlock.addView(label("Note title", 10));
+        quickBlock.addView(quickLayout, new LayoutParams(-1, -2));
+        quickRow.addView(quickBlock, new LayoutParams(0, -2, 1.7f));
+        dropdown(quickRow, "Note type", new String[]{"Text note", "Checklist"}, position -> quickType = position);
         MaterialButton add = new MaterialButton(context);
         add.setText("+"); add.setContentDescription(getResources().getString(R.string.notes_add));
         add.setMinWidth(0); add.setMinimumWidth(0); add.setPadding(0, 0, 0, 0);
-        add.setTextSize(24);
+        add.setTextSize(24); add.setCornerRadius(dp(24));
         LayoutParams addParams = new LayoutParams(dp(44), dp(44));
-        addParams.setMarginStart(dp(4)); quickRow.addView(add, addParams);
+        addParams.setMarginStart(dp(6)); addParams.topMargin = dp(18); quickRow.addView(add, addParams);
         addView(quickRow, new LayoutParams(-1, -2));
         add.setOnClickListener(v -> {
             String title = value(quick);
-            if (title.isEmpty()) { quickLayout.setError(getResources().getString(R.string.notes_title_required)); return; }
+            if (title.isEmpty()) { editor.edit(null); return; }
             quickLayout.setError(null);
             NoteEntry note = new NoteEntry(); note.title = title;
             note.noteType = quickType == 1 ? NoteEntry.TYPE_CHECKLIST : NoteEntry.TYPE_TEXT;
             note.category = categories[0]; note.collaborationStatus = "PENDING";
-            if (quickType == 1) editor.edit(note);
-            else {
-                add.setEnabled(false);
-                repository.save(note, () -> { add.setEnabled(true); if (active) { quick.setText(""); reload(); } });
-            }
+            editor.edit(note);
         });
-        MaterialButton detail = new MaterialButton(context);
-        detail.setText(R.string.notes_full_editor);
-        detail.setOnClickListener(v -> editor.edit(null));
-        addView(detail, new LayoutParams(-1, dp(40)));
         summary = label("", 11); addView(summary, new LayoutParams(-1, -2));
         empty = label(getResources().getString(R.string.notes_no_matching), 12);
         addView(empty, new LayoutParams(-1, -2));
@@ -143,22 +145,56 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         addView(list, new LayoutParams(-1, 0, 1f));
         makeControlsScrollable(0, indexOfChild(list));
         CompactFormStyle.applyInputs(this);
-        detail.setCornerRadius(dp(14)); add.setCornerRadius(dp(14));
+        add.setCornerRadius(dp(24));
     }
     private interface Selection { void selected(int position); }
-    private void dropdown(LinearLayout parent, String[] labels, Selection callback) {
-        TextInputLayout layout = new TextInputLayout(getContext());
-        layout.setEndIconMode(TextInputLayout.END_ICON_DROPDOWN_MENU);
-        layout.setHint(labels[0]);
-        MaterialAutoCompleteTextView input = new MaterialAutoCompleteTextView(getContext());
-        input.setInputType(InputType.TYPE_NULL);
-        input.setAdapter(new android.widget.ArrayAdapter<>(getContext(), R.layout.item_form_dropdown, labels));
-        input.setText(labels[0], false);
-        input.setOnItemClickListener((p, view, position, id) -> callback.selected(position));
-        layout.addView(input, new LayoutParams(-1, -2));
+    private void dropdown(LinearLayout parent, String name, String[] labels, Selection callback) {
+        LinearLayout block = new LinearLayout(getContext());
+        block.setOrientation(VERTICAL);
+        block.addView(label(name, 10));
+        android.widget.Spinner input = new android.widget.Spinner(getContext(), android.widget.Spinner.MODE_DROPDOWN);
+        input.setContentDescription(name);
+        input.setBackground(fieldBackground());
+        input.setPopupBackgroundDrawable(fieldBackground());
+        input.setDropDownWidth(Math.min(dp(240), getResources().getDisplayMetrics().widthPixels - dp(24)));
+        input.setDropDownVerticalOffset(dp(4));
+        input.setAdapter(new android.widget.ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, labels) {
+            @Override public View getView(int position, View recycled, android.view.ViewGroup owner) {
+                TextView selected = choice(labels[position] + "  ▾");
+                selected.setMaxLines(2);
+                selected.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                return selected;
+            }
+            @Override public View getDropDownView(int position, View recycled, android.view.ViewGroup owner) {
+                return choice(labels[position]);
+            }
+        });
+        input.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> owner, View view, int position, long id) {
+                callback.selected(position);
+            }
+            public void onNothingSelected(android.widget.AdapterView<?> owner) { }
+        });
+        block.addView(input, new LayoutParams(-1, dp(44)));
         LayoutParams params = new LayoutParams(0, -2, 1f);
-        params.setMarginStart(parent.getChildCount() == 0 ? 0 : dp(4));
-        parent.addView(layout, params);
+        params.setMarginStart(parent.getChildCount() == 0 ? 0 : dp(6));
+        params.bottomMargin = dp(4);
+        parent.addView(block, params);
+    }
+    private TextView choice(String value) {
+        TextView text = new TextView(getContext());
+        text.setText(value); text.setTextSize(12); text.setTextColor(Color.rgb(31, 42, 49));
+        text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        text.setMinHeight(dp(44)); text.setPadding(dp(10), dp(4), dp(8), dp(4));
+        text.setLayoutParams(new android.widget.AbsListView.LayoutParams(-1, -2));
+        return text;
+    }
+    private GradientDrawable fieldBackground() {
+        GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.WHITE, Color.rgb(244, 249, 252)});
+        background.setCornerRadius(dp(14));
+        background.setStroke(dp(1), Color.rgb(204, 214, 222));
+        return background;
     }
     private LinearLayout row() { LinearLayout row = new LinearLayout(getContext()); row.setGravity(Gravity.CENTER_VERTICAL); return row; }
     private TextView label(String text, int size) { TextView view = new TextView(getContext()); view.setText(text); view.setTextSize(size); view.setPadding(0, dp(4), 0, dp(4)); return view; }

@@ -120,7 +120,7 @@ public final class NotesOverlayService extends Service {
         LinearLayout header = new LinearLayout(themed); header.setGravity(Gravity.TOP);
         LinearLayout titleStack = new LinearLayout(themed); titleStack.setOrientation(LinearLayout.VERTICAL);
         TextView title = new TextView(themed); title.setText("Family Notes");
-        title.setTextSize(15); title.setTextColor(Color.rgb(32, 87, 140));
+        title.setTextSize(16); title.setTextColor(Color.rgb(31, 42, 49));
         title.setTypeface(null, android.graphics.Typeface.BOLD); title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END); title.setIncludeFontPadding(false);
         TextView state = new TextView(themed); state.setText("● Notes • Quick access"); state.setTextSize(10);
@@ -186,7 +186,17 @@ public final class NotesOverlayService extends Service {
         if (body != null && body.getChildCount() > 0 && body.getChildAt(0) != workspace)
             NotesEditor.dispose(body.getChildAt(0));
     }
-    private MaterialButton button(String label) { MaterialButton button = new MaterialButton(themed); button.setText(label); button.setAllCaps(false); button.setTextSize(10); button.setCornerRadius(dp(14)); button.setMinWidth(0); button.setPadding(0, 0, 0, 0); return button; }
+    private MaterialButton button(String label) {
+        MaterialButton button = new MaterialButton(themed);
+        button.setText(label); button.setAllCaps(false); button.setTextSize(10);
+        button.setCornerRadius(dp(18)); button.setMinWidth(0); button.setMinimumWidth(0);
+        button.setPadding(0, 0, 0, 0);
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(228, 246, 239)));
+        button.setTextColor(Color.rgb(31, 92, 76));
+        button.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.rgb(133, 183, 165)));
+        button.setStrokeWidth(dp(1));
+        return button;
+    }
     private void drag(View handle, boolean resize) {
         final float[] initial = new float[2]; final int[] original = new int[2];
         handle.setOnTouchListener((view, event) -> {
