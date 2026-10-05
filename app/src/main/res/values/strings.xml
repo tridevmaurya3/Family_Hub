@@ -1642,4 +1642,10 @@ Sharing: %12$s</string>
     <string name="notes_sync_live">● Live • Quick notes</string>
     <string name="notes_sync_connecting">● Connecting • Quick notes</string>
     <string name="notes_sync_offline">● Not live • Quick notes</string>
+    <string name="notes_checklist_add_hint">Add item or paste multiple lines</string>
+    <string name="notes_checklist_item">Checklist item</string>
+    <string name="notes_checklist_toggle_all">Check or uncheck all items</string>
+    <string name="notes_checklist_clear_done">Remove completed items</string>
+    <string name="notes_checklist_move_up">Move item up</string>
+    <string name="notes_checklist_progress">%1$d/%2$d completed</string>
 </resources>

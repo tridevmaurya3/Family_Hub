@@ -36,6 +36,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private final TextInputEditText search;
     private final TextInputEditText quick;
     private TextInputEditText quickContent;
+    private NotesChecklistComposer quickChecklist;
     private int quickCategory, quickSharing;
     private NotesRepository.SyncStatusCallback syncStatusListener;
     private boolean liveSync, connectingSync;
@@ -115,6 +116,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         quickRow.addView(quickBlock, new LayoutParams(0, -2, 1.7f));
         dropdown(quickRow, "Note type", new String[]{"Text note", "Checklist"}, position -> {
             quickType = position;
+            if (quickChecklist != null) quickChecklist.setChecklist(position == 1);
             if (quickContent != null) quickContent.setHint(position == 1
                     ? R.string.notes_quick_checklist_hint : R.string.notes_quick_content_hint);
         });
@@ -154,6 +156,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 context.getString(R.string.notes_shared_status)}, position -> quickSharing = position);
         contentRow.addView(choicesRow, new LayoutParams(0, -2, 1.8f));
         addView(contentRow, new LayoutParams(-1, -2));
+        quickChecklist = new NotesChecklistComposer(context, quickContent, contentBlock);
+        addView(quickChecklist, new LayoutParams(-1, -2));
+        quickChecklist.setChecklist(quickType == 1);
         add.setOnClickListener(v -> {
             if (quickSaving) return;
             String title = value(quick);
@@ -163,10 +168,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 return;
             }
             quick.setError(null);
+            if (quickType == 1) quickChecklist.commitPending();
             String content = value(quickContent);
             if (quickType == 1 && NotesChecklist.parse(content).isEmpty()) {
-                contentLayout.setError(getResources().getString(R.string.notes_quick_items_required));
-                quickContent.requestFocus();
+                quickChecklist.showEmptyError();
                 return;
             }
             contentLayout.setError(null);
@@ -175,6 +180,8 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             note.content = content;
             note.category = categories[quickCategory]; note.collaborationStatus = "PENDING";
             note.isShared = quickSharing == 1;
+            if (quickType == 1 && NotesChecklist.completed(content) == NotesChecklist.parse(content).size())
+                note.collaborationStatus = "COMPLETED";
             quickSaving = true; add.setEnabled(false);
             quick.setEnabled(false); quickContent.setEnabled(false);
             repository.save(note, () -> {
@@ -339,7 +346,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private TextView label(String text, int size) { TextView view = new TextView(getContext()); view.setText(text); view.setTextSize(size); view.setPadding(0, dp(4), 0, dp(4)); return view; }
     private static String value(TextInputEditText input) { return input.getText() == null ? "" : input.getText().toString().trim(); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    public void clearQuickAdd() { quick.setText(""); if (quickContent != null) quickContent.setText(""); }
+    public void clearQuickAdd() { quick.setText(""); if (quickContent != null) quickContent.setText(""); if (quickChecklist != null) quickChecklist.clearDraft(); }
     public void activate() { if (active) return; active = true; repository.startRealtimeSync(this::reload, (live, connecting) -> {
         if (!active) return;
         liveSync = live; connectingSync = connecting;

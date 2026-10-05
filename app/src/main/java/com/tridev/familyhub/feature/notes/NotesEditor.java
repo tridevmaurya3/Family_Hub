@@ -96,7 +96,7 @@ public final class NotesEditor {
                 form.noteContentInput.setHint(position == 1
                         ? R.string.notes_checklist_editor_hint : R.string.notes_text_editor_hint));
 
-        attachChecklistPreview(form, typeLabels);
+        NotesChecklistComposer checklistEditor = attachChecklistPreview(form, typeLabels);
         form.cancelNoteButton.setOnClickListener(v -> onCancel.run());
         form.saveNoteButton.setOnClickListener(clickedView -> {
             String title = textOf(form.noteTitleInput);
@@ -112,6 +112,12 @@ public final class NotesEditor {
                 return;
             }
             form.noteTitleLayout.setError(null);
+            if (typeIndex == 1 && checklistEditor != null) {
+                checklistEditor.commitPending();
+                if (NotesChecklist.parse(textOf(form.noteContentInput)).isEmpty()) {
+                    checklistEditor.showEmptyError(); return;
+                }
+            }
             note.title = title;
             note.content = textOf(form.noteContentInput);
             note.category = textOf(form.noteCategoryInput);
@@ -130,45 +136,38 @@ public final class NotesEditor {
         return form.getRoot();
     }
 
-    private static void attachChecklistPreview(DialogNoteBinding form, String[] typeLabels) {
+    private static NotesChecklistComposer attachChecklistPreview(DialogNoteBinding form, String[] typeLabels) {
         android.view.ViewParent owner = form.noteContentInput.getParent();
         while (owner != null && !(owner instanceof com.google.android.material.textfield.TextInputLayout)) owner = owner.getParent();
-        if (owner == null || !(owner.getParent() instanceof android.widget.LinearLayout)) return;
+        if (owner == null || !(owner.getParent() instanceof android.widget.LinearLayout)) return null;
         android.widget.LinearLayout parent = (android.widget.LinearLayout) owner.getParent();
-        android.widget.LinearLayout preview = new android.widget.LinearLayout(form.getRoot().getContext());
-        preview.setOrientation(android.widget.LinearLayout.VERTICAL);
-        parent.addView(preview, parent.indexOfChild((View) owner) + 1);
-        Runnable render = () -> {
+        NotesChecklistComposer composer = new NotesChecklistComposer(form.getRoot().getContext(),
+                form.noteContentInput, (View) owner);
+        parent.addView(composer, parent.indexOfChild((View) owner) + 1);
+        Runnable update = () -> {
             boolean checklist = indexOf(typeLabels, textOf(form.noteTypeInput)) == 1;
-            preview.setVisibility(checklist ? View.VISIBLE : View.GONE);
-            preview.removeAllViews();
-            if (!checklist) return;
-            java.util.List<NotesChecklist.Item> items = NotesChecklist.parse(textOf(form.noteContentInput));
-            for (int i = 0; i < items.size(); i++) {
-                final int index = i;
-                NotesChecklist.Item item = items.get(i);
-                android.widget.CheckBox check = new android.widget.CheckBox(preview.getContext());
-                check.setText(item.text); check.setTextSize(12); check.setChecked(item.checked);
-                if (item.checked) check.setPaintFlags(check.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-                check.setOnCheckedChangeListener((button, checked) -> {
-                    String content = NotesChecklist.toggle(textOf(form.noteContentInput), index, checked);
-                    form.noteContentInput.setText(content);
-                    if (NotesChecklist.completed(content) == NotesChecklist.parse(content).size())
-                        form.noteCollaborationStatusInput.setText("COMPLETED", false);
-                    else if ("COMPLETED".equals(textOf(form.noteCollaborationStatusInput)))
-                        form.noteCollaborationStatusInput.setText("PENDING", false);
-                });
-                preview.addView(check);
-            }
+            composer.setChecklist(checklist);
         };
-        android.text.TextWatcher watcher = new android.text.TextWatcher() {
+        form.noteTypeInput.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            public void onTextChanged(CharSequence s, int start, int before, int count) { render.run(); }
+            public void onTextChanged(CharSequence s, int start, int before, int count) { update.run(); }
             public void afterTextChanged(android.text.Editable text) { }
-        };
-        form.noteContentInput.addTextChangedListener(watcher);
-        form.noteTypeInput.addTextChangedListener(watcher);
-        render.run();
+        });
+        form.noteContentInput.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (indexOf(typeLabels, textOf(form.noteTypeInput)) != 1) return;
+                String content = textOf(form.noteContentInput);
+                int countItems = NotesChecklist.parse(content).size();
+                if (countItems > 0 && NotesChecklist.completed(content) == countItems)
+                    form.noteCollaborationStatusInput.setText("COMPLETED", false);
+                else if ("COMPLETED".equals(textOf(form.noteCollaborationStatusInput)))
+                    form.noteCollaborationStatusInput.setText("PENDING", false);
+            }
+            public void afterTextChanged(android.text.Editable text) { }
+        });
+        update.run();
+        return composer;
     }
 
     /** Show the full catalogue, independent of the currently selected text. */
