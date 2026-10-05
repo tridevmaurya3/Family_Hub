@@ -136,8 +136,8 @@ public final class NotesOverlayService extends Service {
         panel.setAlpha(1f);
         panel.setFocusableInTouchMode(true);
         GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.rgb(240, 248, 255), Color.rgb(250, 245, 255), Color.WHITE});
-        background.setCornerRadius(dp(22)); background.setStroke(dp(1), Color.rgb(190, 208, 224));
+                new int[]{Color.rgb(249, 247, 253), Color.rgb(252, 250, 255), Color.WHITE});
+        background.setCornerRadius(dp(22)); background.setStroke(dp(1), Color.rgb(223, 214, 240));
         panel.setBackground(background);
         LinearLayout root = new LinearLayout(themed); root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(10), dp(8), dp(10), dp(22));
@@ -176,8 +176,10 @@ public final class NotesOverlayService extends Service {
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new NotesWorkspaceView(themed, repository, true, this::edit);
-        workspace.setSyncStatusListener((live, connecting) -> state.setText(live
-                ? R.string.notes_sync_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline));
+        workspace.setSyncStatusListener((live, connecting) -> {
+            state.setText(live ? R.string.notes_sync_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline);
+            state.setTextColor(live ? Color.rgb(38, 139, 88) : Color.rgb(110, 98, 130));
+        });
         restoreWorkspace(); workspace.activate();
         drag(titleStack, false);
         TextView grip = new TextView(themed); grip.setText("◢"); grip.setTextColor(Color.rgb(32, 87, 140));
@@ -256,9 +258,9 @@ public final class NotesOverlayService extends Service {
         button.setText(label); button.setAllCaps(false); button.setTextSize(10);
         button.setCornerRadius(dp(18)); button.setMinWidth(0); button.setMinimumWidth(0);
         button.setPadding(0, 0, 0, 0);
-        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(228, 246, 239)));
-        button.setTextColor(Color.rgb(31, 92, 76));
-        button.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.rgb(133, 183, 165)));
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(247, 244, 253)));
+        button.setTextColor(Color.rgb(106, 82, 145));
+        button.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.rgb(220, 211, 238)));
         button.setStrokeWidth(dp(1));
         return button;
     }

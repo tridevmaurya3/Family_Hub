@@ -729,7 +729,7 @@
     <string name="notes_archived_count">Archived notes</string>
     <string name="notes_show_archived">View archived</string>
     <string name="notes_show_active">View active</string>
-    <string name="notes_search_hint">Search title, content, or category</string>
+    <string name="notes_search_hint">Search notes and checklists…</string>
     <string name="notes_empty_title">No notes yet</string>
     <string name="notes_empty_detail">Create a note or checklist for information you want to keep handy.</string>
     <string name="notes_archived_empty_title">Archive is empty</string>
@@ -1648,4 +1648,6 @@ Sharing: %12$s</string>
     <string name="notes_checklist_clear_done">Remove completed items</string>
     <string name="notes_checklist_move_up">Move item up</string>
     <string name="notes_checklist_progress">%1$d/%2$d completed</string>
+    <string name="notes_actions">Note actions</string>
+    <string name="notes_main_live">● Live · Family sync</string>
 </resources>

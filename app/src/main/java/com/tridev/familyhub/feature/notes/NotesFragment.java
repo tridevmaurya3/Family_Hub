@@ -44,8 +44,10 @@ public class NotesFragment extends Fragment implements AddActionHost {
         workspace = new NotesWorkspaceView(requireContext(), repository, false, this::showEditor);
         binding.notesWorkspaceContainer.addView(workspace, new android.widget.FrameLayout.LayoutParams(-1, -1));
         android.widget.TextView syncTag = binding.notesOverview.findViewById(R.id.module_overview_detail);
-        workspace.setSyncStatusListener((live, connecting) -> syncTag.setText(live
-                ? R.string.notes_sync_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline));
+        workspace.setSyncStatusListener((live, connecting) -> {
+            syncTag.setText(live ? R.string.notes_main_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline);
+            syncTag.setTextColor(live ? android.graphics.Color.rgb(38, 139, 88) : android.graphics.Color.rgb(110, 98, 130));
+        });
         workspace.activate();
     }
     @Override public void onAddRequested() { showEditor(null); }

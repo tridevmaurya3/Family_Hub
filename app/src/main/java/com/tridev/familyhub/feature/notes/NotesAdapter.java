@@ -34,7 +34,7 @@ public class NotesAdapter
         default void onChecklistChanged(@NonNull NoteEntry note, int index, boolean checked) { }
     }
 
-    private final List<NoteEntry> notes = new ArrayList<>();
+    private final List<Object> notes = new ArrayList<>();
     private final NoteActionListener listener;
 
     public NotesAdapter(@NonNull NoteActionListener listener) {
@@ -43,7 +43,19 @@ public class NotesAdapter
 
     public void submitList(@NonNull List<NoteEntry> updated) {
         notes.clear();
-        notes.addAll(updated);
+        boolean grouped = true, seenRecent = false;
+        for (NoteEntry note : updated) {
+            if (!note.isPinned) seenRecent = true;
+            else if (seenRecent) grouped = false;
+        }
+        Boolean lastPinned = null;
+        for (NoteEntry note : updated) {
+            if (grouped && (lastPinned == null || lastPinned != note.isPinned)) {
+                notes.add(note.isArchived ? "Archived" : note.isPinned ? "Pinned" : "Recent");
+                lastPinned = note.isPinned;
+            }
+            notes.add(note);
+        }
         notifyDataSetChanged();
     }
 
@@ -53,6 +65,14 @@ public class NotesAdapter
             @NonNull ViewGroup parent,
             int viewType
     ) {
+        if (viewType == 1) {
+            android.widget.TextView heading = new android.widget.TextView(parent.getContext());
+            heading.setTextSize(12); heading.setTypeface(null, android.graphics.Typeface.BOLD);
+            int unit = Math.round(parent.getResources().getDisplayMetrics().density);
+            heading.setPadding(4 * unit, 10 * unit, 0, 6 * unit);
+            heading.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
+            return new NoteViewHolder(heading);
+        }
         return new NoteViewHolder(ItemNoteBinding.inflate(
                 LayoutInflater.from(parent.getContext()),
                 parent,
@@ -65,8 +85,12 @@ public class NotesAdapter
             @NonNull NoteViewHolder holder,
             int position
     ) {
-        holder.bind(notes.get(position));
+        Object item = notes.get(position);
+        if (item instanceof String) ((android.widget.TextView) holder.itemView).setText((String) item);
+        else holder.bind((NoteEntry) item);
     }
+
+    @Override public int getItemViewType(int position) { return notes.get(position) instanceof String ? 1 : 0; }
 
     @Override
     public int getItemCount() {
@@ -76,6 +100,8 @@ public class NotesAdapter
     class NoteViewHolder extends RecyclerView.ViewHolder {
 
         private final ItemNoteBinding binding;
+
+        NoteViewHolder(android.widget.TextView heading) { super(heading); this.binding = null; }
 
         NoteViewHolder(@NonNull ItemNoteBinding binding) {
             super(binding.getRoot());
@@ -89,6 +115,7 @@ public class NotesAdapter
             binding.noteCompleted.setOnCheckedChangeListener(null);
             binding.noteCompleted.setChecked(NotesSmartFilter.completed(note));
             binding.noteCompleted.setEnabled(!note.isArchived);
+            binding.noteCompleted.setButtonTintList(ColorStateList.valueOf(android.graphics.Color.rgb(140, 106, 204)));
             binding.noteCompleted.setOnCheckedChangeListener((button, checked) ->
                     listener.onStatusChanged(note, checked));
             binding.noteChecklist.removeAllViews();
@@ -98,7 +125,7 @@ public class NotesAdapter
                     ? View.GONE : View.VISIBLE);
             if (checklist) {
                 java.util.List<NotesChecklist.Item> items = NotesChecklist.parse(note.content);
-                for (int i = 0; i < items.size(); i++) {
+                for (int i = 0; i < Math.min(2, items.size()); i++) {
                     final int index = i;
                     NotesChecklist.Item item = items.get(i);
                     android.widget.CheckBox check = new android.widget.CheckBox(binding.getRoot().getContext());
@@ -111,9 +138,13 @@ public class NotesAdapter
                             listener.onChecklistChanged(note, index, checked));
                     binding.noteChecklist.addView(check);
                 }
-                binding.noteProgress.setText(NotesChecklist.completed(note.content) + "/" + items.size() + " completed");
+                binding.noteProgress.setText(NotesChecklist.completed(note.content) + "/" + items.size() + " done"
+                        + (items.size() > 2 ? " · Tap to see all " + items.size() : ""));
+                binding.noteProgressBar.setMax(Math.max(1, items.size()));
+                binding.noteProgressBar.setProgress(NotesChecklist.completed(note.content));
             }
             binding.noteProgress.setVisibility(checklist ? View.VISIBLE : View.GONE);
+            binding.noteProgressBar.setVisibility(checklist ? View.VISIBLE : View.GONE);
             binding.noteContent.setText(
                     note.content == null || note.content.isEmpty()
                             ? binding.getRoot().getContext().getString(
@@ -133,10 +164,8 @@ public class NotesAdapter
                             ? R.string.notes_type_checklist
                             : R.string.notes_type_text
             );
-            binding.noteUpdated.setText(DateFormat.getDateTimeInstance(
-                    DateFormat.MEDIUM,
-                    DateFormat.SHORT
-            ).format(new Date(note.updatedAt)));
+            binding.noteUpdated.setText(android.text.format.DateUtils.isToday(note.updatedAt) ? "Today"
+                    : DateFormat.getDateInstance(DateFormat.SHORT).format(new Date(note.updatedAt)));
             binding.notePinned.setVisibility(
                     note.isPinned ? View.VISIBLE : View.GONE
             );
@@ -162,13 +191,28 @@ public class NotesAdapter
 
             int accent = accentColor(note.colorKey);
             int container = containerColor(note.colorKey);
-            binding.getRoot().setStrokeColor(accent);
-            binding.getRoot().setCardBackgroundColor(container);
+            binding.getRoot().setStrokeColor(android.graphics.Color.rgb(226, 217, 241));
+            binding.getRoot().setCardBackgroundColor("BLUE".equals(note.colorKey) ? android.graphics.Color.rgb(252, 250, 255) : container);
             binding.noteIcon.setImageTintList(
                     ColorStateList.valueOf(accent)
             );
             binding.noteType.setTextColor(accent);
 
+            binding.noteMore.setOnClickListener(v -> {
+                androidx.appcompat.widget.PopupMenu menu = new androidx.appcompat.widget.PopupMenu(v.getContext(), v);
+                menu.getMenu().add(0, 1, 0, R.string.edit);
+                if (!note.isArchived) menu.getMenu().add(0, 2, 1, note.isPinned ? R.string.notes_unpin : R.string.notes_pin);
+                menu.getMenu().add(0, 3, 2, note.isArchived ? R.string.notes_restore : R.string.notes_archive);
+                menu.getMenu().add(0, 4, 3, R.string.remove);
+                menu.setOnMenuItemClickListener(item -> {
+                    switch (item.getItemId()) {
+                        case 1: listener.onEdit(note); break;
+                        case 2: listener.onPinnedChanged(note, !note.isPinned); break;
+                        case 3: listener.onArchivedChanged(note, !note.isArchived); break;
+                        case 4: listener.onDelete(note); break;
+                    } return true;
+                }); menu.show();
+            });
             binding.getRoot().setOnClickListener(
                     view -> listener.onEdit(note)
             );

@@ -38,6 +38,18 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private TextInputEditText quickContent;
     private NotesChecklistComposer quickChecklist;
     private int quickCategory, quickSharing;
+    private boolean quickPinned, restoringDraft;
+    private long quickReminder;
+    private android.content.SharedPreferences draftStore;
+    private MaterialButton textTab, checklistTab;
+    private TextView draftTag;
+    private android.widget.Spinner categoryInput, sharingInput;
+    private LinearLayout undoBar;
+    private NoteEntry pendingDelete;
+    private final java.util.Set<Long> deleting = new java.util.HashSet<>();
+    private final android.os.Handler uiHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable persistDraft = this::saveDraft;
+    private final Runnable finishDelete = this::commitDelete;
     private NotesRepository.SyncStatusCallback syncStatusListener;
     private boolean liveSync, connectingSync;
     private boolean quickSaving;
@@ -53,6 +65,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         super(context);
         this.repository = repository; this.overlay = overlay; this.editor = editor;
         setOrientation(VERTICAL);
+        setBackgroundColor(Color.rgb(248, 247, 253));
         LinearLayout filters = row();
         filterRow = filters;
         dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
@@ -75,6 +88,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         searchLayout.addView(search, new LayoutParams(-1, -2));
         // Material requires its EditText to be attached before disabling hints.
         searchLayout.setHintEnabled(false);
+        searchLayout.setStartIconDrawable(R.drawable.ic_search);
         tools.addView(searchLayout, new LayoutParams(0, -2, 1f));
         String[] categories = getResources().getStringArray(R.array.notes_category_labels);
         String[] categoryChoices = new String[categories.length + 1];
@@ -98,6 +112,22 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             public void onTextChanged(CharSequence s, int start, int before, int count) { render(); }
             public void afterTextChanged(Editable text) { }
         });
+        LinearLayout composerCard = new LinearLayout(context);
+        composerCard.setOrientation(VERTICAL); composerCard.setPadding(dp(10), dp(8), dp(10), dp(8));
+        GradientDrawable composerBackground = new GradientDrawable();
+        composerBackground.setColor(Color.rgb(250, 248, 255)); composerBackground.setCornerRadius(dp(18));
+        composerBackground.setStroke(dp(1), Color.rgb(228, 220, 244)); composerCard.setBackground(composerBackground);
+        LayoutParams composerParams = new LayoutParams(-1, -2); composerParams.topMargin = dp(8);
+        addView(composerCard, composerParams);
+        LinearLayout modeRow = row();
+        TextView quickLabel = label("Quick add", 12); quickLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        modeRow.addView(quickLabel, new LayoutParams(0, -2, 1));
+        textTab = chip("Text"); checklistTab = chip("Checklist");
+        modeRow.addView(textTab, new LayoutParams(dp(64), dp(40)));
+        modeRow.addView(checklistTab, new LayoutParams(dp(80), dp(40)));
+        composerCard.addView(modeRow);
+        textTab.setOnClickListener(v -> selectQuickType(0));
+        checklistTab.setOnClickListener(v -> selectQuickType(1));
         LinearLayout quickRow = row();
         TextInputLayout quickLayout = new TextInputLayout(context);
         quickLayout.setHint(getResources().getString(R.string.notes_quick_add));
@@ -111,15 +141,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         quickLayout.setHintEnabled(false);
         LinearLayout quickBlock = new LinearLayout(context);
         quickBlock.setOrientation(VERTICAL);
-        quickBlock.addView(label("Note title", 10));
+
         quickBlock.addView(quickLayout, new LayoutParams(-1, dp(48)));
-        quickRow.addView(quickBlock, new LayoutParams(0, -2, 1.7f));
-        dropdown(quickRow, "Note type", new String[]{"Text note", "Checklist"}, position -> {
-            quickType = position;
-            if (quickChecklist != null) quickChecklist.setChecklist(position == 1);
-            if (quickContent != null) quickContent.setHint(position == 1
-                    ? R.string.notes_quick_checklist_hint : R.string.notes_quick_content_hint);
-        });
+        quickRow.addView(quickBlock, new LayoutParams(0, -2, 1f));
         MaterialButton add = new MaterialButton(context);
         add.setText("+"); add.setContentDescription(getResources().getString(R.string.notes_add));
         add.setMinWidth(0); add.setMinimumWidth(0); add.setPadding(0, 0, 0, 0);
@@ -129,16 +153,16 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         LinearLayout addBlock = new LinearLayout(context);
         addBlock.setOrientation(VERTICAL);
         // Give the button the same label space as its neighbouring fields.
-        addBlock.addView(label(" ", 10));
+
         addBlock.addView(add, new LayoutParams(dp(48), dp(48)));
         addParams.height = LayoutParams.WRAP_CONTENT;
         addParams.setMarginStart(dp(6)); addParams.bottomMargin = 0;
         quickRow.addView(addBlock, addParams);
-        addView(quickRow, new LayoutParams(-1, -2));
+        composerCard.addView(quickRow, new LayoutParams(-1, -2));
         LinearLayout contentRow = row();
         LinearLayout contentBlock = new LinearLayout(context);
         contentBlock.setOrientation(VERTICAL);
-        contentBlock.addView(label("Content / items", 10));
+
         TextInputLayout contentLayout = new TextInputLayout(context);
         contentLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
         quickContent = new TextInputEditText(context);
@@ -149,16 +173,70 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         contentLayout.addView(quickContent, new LayoutParams(-1, -2));
         contentLayout.setHintEnabled(false);
         contentBlock.addView(contentLayout, new LayoutParams(-1, -2));
-        contentRow.addView(contentBlock, new LayoutParams(0, -2, 1.7f));
+        contentRow.addView(contentBlock, new LayoutParams(-1, -2));
         LinearLayout choicesRow = row();
-        dropdown(choicesRow, "Note category", categories, position -> quickCategory = position);
-        dropdown(choicesRow, "Sharing", new String[]{context.getString(R.string.notes_private_status),
-                context.getString(R.string.notes_shared_status)}, position -> quickSharing = position);
-        contentRow.addView(choicesRow, new LayoutParams(0, -2, 1.8f));
-        addView(contentRow, new LayoutParams(-1, -2));
+        LinearLayout categoryBlock = dropdown(choicesRow, "Note category", categories, position -> { quickCategory = position; scheduleDraft(); });
+        categoryInput = (android.widget.Spinner) categoryBlock.getChildAt(0);
+        LinearLayout sharingBlock = dropdown(choicesRow, "Sharing", new String[]{context.getString(R.string.notes_private_status),
+                context.getString(R.string.notes_shared_status)}, position -> { quickSharing = position; scheduleDraft(); });
+        sharingInput = (android.widget.Spinner) sharingBlock.getChildAt(0);
+        composerCard.addView(contentRow, new LayoutParams(-1, -2));
         quickChecklist = new NotesChecklistComposer(context, quickContent, contentBlock);
-        addView(quickChecklist, new LayoutParams(-1, -2));
-        quickChecklist.setChecklist(quickType == 1);
+        composerCard.addView(quickChecklist, new LayoutParams(-1, -2));
+        composerCard.addView(choicesRow, new LayoutParams(-1, -2));
+        LinearLayout shortcuts = row();
+        MaterialButton tomorrow = chip("Tomorrow"); MaterialButton pin = chip("Pin");
+        tomorrow.setIconResource(R.drawable.ic_bell); tomorrow.setIconSize(dp(14));
+        pin.setIconResource(R.drawable.ic_notes_pin); pin.setIconSize(dp(14));
+        shortcuts.addView(tomorrow, new LayoutParams(-2, dp(40)));
+        shortcuts.addView(pin, new LayoutParams(-2, dp(40)));
+        tomorrow.setOnClickListener(v -> {
+            if (quickReminder > 0) quickReminder = 0;
+            else {
+                java.util.Calendar date = java.util.Calendar.getInstance(); date.add(java.util.Calendar.DAY_OF_YEAR, 1);
+                date.set(java.util.Calendar.HOUR_OF_DAY, 9); date.set(java.util.Calendar.MINUTE, 0);
+                date.set(java.util.Calendar.SECOND, 0); date.set(java.util.Calendar.MILLISECOND, 0);
+                quickReminder = date.getTimeInMillis();
+                if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
+                        android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                    context.startActivity(new android.content.Intent(context,
+                            com.tridev.familyhub.feature.notes.overlay.NotesNotificationPermissionActivity.class)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            }
+            tomorrow.setText(quickReminder > 0 ? "✓ Tomorrow 9 AM" : "Tomorrow"); scheduleDraft();
+        });
+        pin.setOnClickListener(v -> { quickPinned = !quickPinned; pin.setText(quickPinned ? "✓ Pinned" : "Pin"); scheduleDraft(); });
+        if (overlay) {
+            MaterialButton more = chip("More options ▾"); composerCard.addView(more, new LayoutParams(-2, dp(36)));
+            shortcuts.setVisibility(GONE);
+            more.setOnClickListener(v -> { boolean expand = shortcuts.getVisibility() != VISIBLE;
+                shortcuts.setVisibility(expand ? VISIBLE : GONE); more.setText(expand ? "Less options ▴" : "More options ▾"); });
+        }
+        composerCard.addView(shortcuts);
+        draftTag = label("", 10); draftTag.setTextColor(Color.rgb(128, 89, 191));
+        composerCard.addView(draftTag);
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        String owner = user == null ? "local" : user.getUid();
+        draftStore = context.getSharedPreferences("notes_draft_" + owner + (overlay ? "_floating" : "_main"), Context.MODE_PRIVATE);
+        restoringDraft = true;
+        quick.setText(draftStore.getString("title", "")); quickContent.setText(draftStore.getString("content", ""));
+        quickCategory = Math.min(categories.length - 1, Math.max(0, draftStore.getInt("category", 0)));
+        quickSharing = draftStore.getBoolean("shared", false) ? 1 : 0;
+        categoryInput.setSelection(quickCategory); sharingInput.setSelection(quickSharing);
+        quickReminder = draftStore.getLong("reminder", 0);
+        if (quickReminder <= System.currentTimeMillis()) quickReminder = 0; quickPinned = draftStore.getBoolean("pinned", false);
+        tomorrow.setText(quickReminder > 0 ? "✓ Tomorrow 9 AM" : "Tomorrow"); pin.setText(quickPinned ? "✓ Pinned" : "Pin");
+        quickChecklist.setPendingDraft(draftStore.getString("item", ""));
+        selectQuickType(draftStore.getInt("type", 0)); restoringDraft = false;
+        draftTag.setVisibility(GONE);
+        if (!value(quick).isEmpty() || !value(quickContent).isEmpty() || !quickChecklist.pendingDraft().isEmpty()) { draftTag.setText("● Draft restored"); draftTag.setVisibility(VISIBLE); }
+        TextWatcher draftWatcher = new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void onTextChanged(CharSequence s, int start, int before, int count) { scheduleDraft(); }
+            public void afterTextChanged(Editable text) { }
+        };
+        quick.addTextChangedListener(draftWatcher); quickContent.addTextChangedListener(draftWatcher);
+        quickChecklist.setDraftChangedListener(this::scheduleDraft);
         add.setOnClickListener(v -> {
             if (quickSaving) return;
             String title = value(quick);
@@ -179,7 +257,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             note.noteType = quickType == 1 ? NoteEntry.TYPE_CHECKLIST : NoteEntry.TYPE_TEXT;
             note.content = content;
             note.category = categories[quickCategory]; note.collaborationStatus = "PENDING";
-            note.isShared = quickSharing == 1;
+            note.isShared = quickSharing == 1; note.isPinned = quickPinned; note.reminderAt = quickReminder;
             if (quickType == 1 && NotesChecklist.completed(content) == NotesChecklist.parse(content).size())
                 note.collaborationStatus = "COMPLETED";
             quickSaving = true; add.setEnabled(false);
@@ -187,7 +265,11 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             repository.save(note, () -> {
                 quickSaving = false; add.setEnabled(true);
                 quick.setEnabled(true); quickContent.setEnabled(true);
-                if (title.equals(value(quick)) && content.equals(value(quickContent))) clearQuickAdd();
+                if (title.equals(value(quick)) && content.equals(value(quickContent))) {
+                    clearQuickAdd(); quickReminder = 0; quickPinned = false;
+                    tomorrow.setText("Tomorrow"); pin.setText("Pin");
+                    uiHandler.removeCallbacks(persistDraft); draftStore.edit().clear().apply(); draftTag.setText(""); draftTag.setVisibility(GONE);
+                }
                 if (isAttachedToWindow()) {
                     reload();
                     android.widget.Toast.makeText(getContext(), R.string.notes_quick_saved,
@@ -203,12 +285,8 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             public void onPinnedChanged(NoteEntry note, boolean pinned) { repository.setPinned(note, pinned, NotesWorkspaceView.this::reload); }
             public void onArchivedChanged(NoteEntry note, boolean archived) { repository.setArchived(note, archived, NotesWorkspaceView.this::reload); }
             public void onDelete(NoteEntry note) {
-                androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(getContext())
-                        .setTitle(R.string.notes_delete_title)
-                        .setMessage(getResources().getString(R.string.notes_delete_message, note.title))
-                        .setNegativeButton(R.string.cancel, null)
-                        .setPositiveButton(R.string.remove, (d, which) -> repository.delete(note, NotesWorkspaceView.this::reload)).create();
-                NotesEditor.present(dialog, overlay);
+                commitDelete(); pendingDelete = note; undoBar.setVisibility(VISIBLE); render();
+                uiHandler.postDelayed(finishDelete, 5000);
             }
             public void onStatusChanged(NoteEntry note, boolean completed) {
                 note.collaborationStatus = completed ? "COMPLETED" : "PENDING";
@@ -230,15 +308,65 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         list.setClipToPadding(false);
         list.setPadding(0, dp(4), 0, dp(16));
         addView(list, new LayoutParams(-1, 0, 1f));
+        undoBar = row(); undoBar.setPadding(dp(8), 0, dp(8), 0); undoBar.setBackgroundColor(Color.rgb(235, 230, 245));
+        undoBar.addView(label("Note removed", 11), new LayoutParams(0, -2, 1));
+        MaterialButton undo = chip("Undo"); undoBar.addView(undo, new LayoutParams(-2, dp(44)));
+        undo.setOnClickListener(v -> { uiHandler.removeCallbacks(finishDelete); pendingDelete = null;
+            undoBar.setVisibility(GONE); render(); });
+        undoBar.setVisibility(GONE); addView(undoBar, new LayoutParams(-1, -2));
+        if (overlay) { TextView footer = label("Quick save without opening a form", 10); footer.setPadding(dp(6), dp(4), dp(6), 0); addView(footer); }
         makeControlsScrollable(0, indexOfChild(list));
         CompactFormStyle.applyInputs(this);
         add.setCornerRadius(dp(24));
+    }
+    private MaterialButton chip(String text) {
+        MaterialButton button = new MaterialButton(getContext()); button.setText(text); button.setAllCaps(false);
+        button.setTextSize(11); button.setMinWidth(0); button.setMinimumWidth(0);
+        button.setPadding(dp(8), 0, dp(8), 0); button.setInsetTop(0); button.setInsetBottom(0);
+        button.setCornerRadius(dp(18));
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(244, 239, 253)));
+        button.setTextColor(Color.rgb(123, 92, 176)); button.setStrokeWidth(dp(1));
+        button.setStrokeColor(android.content.res.ColorStateList.valueOf(Color.rgb(226, 217, 241)));
+        return button;
+    }
+    private void selectQuickType(int selected) {
+        quickType = selected == 1 ? 1 : 0;
+        if (quickChecklist != null) quickChecklist.setChecklist(quickType == 1);
+        if (textTab != null) {
+            int purple = Color.rgb(131, 104, 205), pale = Color.rgb(240, 235, 252);
+            textTab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(quickType == 0 ? purple : pale));
+            checklistTab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(quickType == 1 ? purple : pale));
+            textTab.setTextColor(quickType == 0 ? Color.WHITE : purple); checklistTab.setTextColor(quickType == 1 ? Color.WHITE : purple);
+            textTab.setSelected(quickType == 0); checklistTab.setSelected(quickType == 1);
+        }
+        scheduleDraft();
+    }
+    private void scheduleDraft() {
+        if (draftStore == null || restoringDraft) return;
+        uiHandler.removeCallbacks(persistDraft); uiHandler.postDelayed(persistDraft, 350);
+    }
+    private void saveDraft() {
+        if (draftStore == null || quickSaving) return;
+        draftStore.edit().putString("title", value(quick)).putString("content", value(quickContent))
+                .putString("item", quickChecklist.pendingDraft()).putInt("type", quickType).putInt("category", quickCategory)
+                .putBoolean("shared", quickSharing == 1).putBoolean("pinned", quickPinned).putLong("reminder", quickReminder).apply();
+        draftTag.setText(value(quick).isEmpty() && value(quickContent).isEmpty() && quickChecklist.pendingDraft().isEmpty() ? "" : "● Draft saved");
+        draftTag.setVisibility(draftTag.getText().length() == 0 ? GONE : VISIBLE);
+    }
+    private void commitDelete() {
+        uiHandler.removeCallbacks(finishDelete);
+        NoteEntry deleted = pendingDelete; pendingDelete = null;
+        if (undoBar != null) undoBar.setVisibility(GONE);
+        if (deleted != null) {
+            deleting.add(deleted.id);
+            repository.delete(deleted, () -> { deleting.remove(deleted.id); reload(); });
+        }
     }
     private interface Selection { void selected(int position); }
     private LinearLayout dropdown(LinearLayout parent, String name, String[] labels, Selection callback) {
         LinearLayout block = new LinearLayout(getContext());
         block.setOrientation(VERTICAL);
-        block.addView(label(name, 10));
+
         android.widget.Spinner input = new android.widget.Spinner(getContext(), android.widget.Spinner.MODE_DROPDOWN);
         input.setContentDescription(name);
         input.setBackground(fieldBackground());
@@ -248,7 +376,14 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         input.setAdapter(new android.widget.ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, labels) {
             @Override public View getView(int position, View recycled, android.view.ViewGroup owner) {
                 TextView selected = choice(compactFilterLabel(name, labels[position]) + "  ▾");
-                selected.setMaxLines(2);
+                if ("Note category".equals(name) || "Sharing".equals(name)) {
+                    android.graphics.drawable.Drawable icon = androidx.core.content.ContextCompat.getDrawable(getContext(),
+                            "Sharing".equals(name) ? R.drawable.ic_lock : R.drawable.ic_family);
+                    if (icon != null) { icon = icon.mutate(); icon.setTint(Color.rgb(117, 92, 156));
+                        icon.setBounds(0, 0, dp(14), dp(14)); selected.setCompoundDrawablePadding(dp(5));
+                        selected.setCompoundDrawablesRelative(icon, null, null, null); }
+                }
+                selected.setMaxLines(1);
                 selected.setEllipsize(android.text.TextUtils.TruncateAt.END);
                 return selected;
             }
@@ -303,6 +438,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     }
     private static String compactFilterLabel(String name, String value) {
         // Keep full descriptions in the popup; shorten only the closed filter.
+        if ("Sharing".equals(name) && "Shared with family".equals(value)) return "Shared";
         if ("Status".equals(name)) {
             if ("All active".equals(value)) return "Active";
             if ("Completed".equals(value)) return "Done";
@@ -312,9 +448,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             if ("Title A–Z".equals(value)) return "A–Z";
             if ("Reminder first".equals(value)) return "Due";
         } else if ("Type".equals(name)) {
-            if ("All types".equals(value)) return "All";
+            if ("All types".equals(value)) return "All types";
             if ("Text note".equals(value)) return "Text";
-        } else if ("Category".equals(name) && "All categories".equals(value)) return "All";
+        } else if ("Category".equals(name) && "All categories".equals(value)) return "Category";
         return value;
     }
     static int dropdownWidth(Context context, String[] labels) {
@@ -337,9 +473,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     }
     private GradientDrawable fieldBackground() {
         GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.WHITE, Color.rgb(244, 249, 252)});
+                new int[]{Color.rgb(254, 252, 255), Color.rgb(249, 247, 253)});
         background.setCornerRadius(dp(14));
-        background.setStroke(dp(1), Color.rgb(204, 214, 222));
+        background.setStroke(dp(1), Color.rgb(227, 219, 242));
         return background;
     }
     private LinearLayout row() { LinearLayout row = new LinearLayout(getContext()); row.setGravity(Gravity.CENTER_VERTICAL); return row; }
@@ -356,7 +492,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         syncStatusListener = listener;
         listener.onStateChanged(liveSync, connectingSync);
     }
-    public void deactivate() { active = false; generation++; repository.stopRealtimeSync(); }
+    public void deactivate() { saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {
         if (!active) return;
         final int request = ++generation;
@@ -366,6 +502,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private void render() {
         if (adapter == null) return;
         List<NoteEntry> visible = NotesSmartFilter.apply(notes, status, type, category, sort, value(search));
+        visible.removeIf(n -> deleting.contains(n.id) || pendingDelete != null && n.id == pendingDelete.id);
         adapter.submitList(visible);
         int pending = 0, pinned = 0;
         for (NoteEntry note : notes) { if (!note.isArchived && !NotesSmartFilter.completed(note)) pending++; if (note.isPinned) pinned++; }
