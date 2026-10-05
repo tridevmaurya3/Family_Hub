@@ -217,7 +217,7 @@
                     <LinearLayout android:id="@+id/dashboard_pending_card" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:clickable="true" android:focusable="true" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
                         <TextView android:id="@+id/dashboard_pending_value" style="@style/TextAppearance.FamilyHub.SectionTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/fh_primary" />
                         <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/dashboard_pending" />
-                        <TextView android:id="@+id/dashboard_pending_source" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:maxLines="2" android:text="@string/dashboard_pending_sources" android:textSize="9sp" />
+                        <TextView android:id="@+id/dashboard_pending_source" style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" android:maxLines="4" android:text="@string/dashboard_pending_sources" android:textSize="9sp" />
                     </LinearLayout>
                     <View android:layout_width="6dp" android:layout_height="1dp" />
                     <LinearLayout android:id="@+id/dashboard_upcoming_card" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_status_pill" android:clickable="true" android:focusable="true" android:gravity="center" android:orientation="vertical" android:padding="@dimen/space_8">
@@ -296,8 +296,17 @@
 
             <com.tridev.familyhub.core.ui.cards.ActionCardView
                 android:id="@+id/action_todo"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_grocery"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
         </LinearLayout>
 
         <LinearLayout
@@ -314,7 +323,7 @@
                 android:layout_weight="1" />
 
             <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_grocery"
+                android:id="@+id/action_note_entries"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="@dimen/space_4"
@@ -911,3 +920,4 @@
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>
+

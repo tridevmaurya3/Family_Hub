@@ -14,6 +14,7 @@ import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
+import com.tridev.familyhub.data.model.NotesDashboardSummary;
 import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
 
 import java.util.Calendar;
@@ -218,8 +219,7 @@ public class DashboardRepository {
                 stats.setVehiclesDueSoon(
                         database.vehicleDao().countDueBy(thirtyDaysFromNow)
                 );
-                stats.setActiveNotes(database.noteDao().countActive());
-                stats.setPinnedNotes(database.noteDao().countPinned());
+                NotesDashboardSummary.from(database.noteDao().getActive()).applyTo(stats);
                 if (!cloudMembershipsLoaded) {
                     stats.setFamilyLiveSharing(
                             database.familyLiveStatusDao()
@@ -399,3 +399,4 @@ public class DashboardRepository {
         mainHandler.removeCallbacksAndMessages(null);
     }
 }
+

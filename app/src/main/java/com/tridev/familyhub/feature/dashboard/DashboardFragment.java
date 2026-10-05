@@ -75,6 +75,9 @@ public class DashboardFragment extends Fragment {
     @Nullable private FamilyTaskRepository taskRepository;
     @Nullable private DashboardData latestDashboardData;
     private int taskPendingCount;
+    @Nullable private com.tridev.familyhub.data.repository.NotesRepository notesSummaryRepository;
+    @Nullable private com.tridev.familyhub.data.local.FamilyHubDatabase notesSummaryDatabase;
+    @Nullable private androidx.room.InvalidationTracker.Observer notesSummaryObserver;
 
     private StatusCardView financeStatusCard;
     private StatusCardView healthStatusCard;
@@ -132,6 +135,7 @@ public class DashboardFragment extends Fragment {
         setupStatusCards();
         setupActionCards();
         startTaskRealtimeSummary();
+        observeNotesSummary();
         setupNotificationAction();
         setupDashboardHighlights();
         setupDashboardSectionPreferences();
@@ -476,8 +480,11 @@ public class DashboardFragment extends Fragment {
                 v -> openFeature(new DocumentsFragment()));
     }
 
-    /** Uses six unique dashboard shortcuts without repeating hero/status cards. */
+    /** Dashboard shortcuts preserve existing destinations and add Notes. */
     private void setupActionCards() {
+        binding.actionNoteEntries.setOnClickListener(v -> openFeature(new NotesFragment()));
+        binding.actionNoteEntries.setValueTextCentered(true);
+        renderNotesAction(new DashboardStats());
         binding.actionPlanner.setOnClickListener(
                 v -> openFeature(new PlannerFragment()));
         binding.actionGrocery.setOnClickListener(
@@ -709,6 +716,7 @@ public class DashboardFragment extends Fragment {
                     binding.dashboardLoading.setVisibility(View.GONE);
                     binding.dashboardErrorCard.setVisibility(View.GONE);
                     latestDashboardData = data;
+                    loadNotesSummary();
                     renderFinance(data.getStats());
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
@@ -730,7 +738,8 @@ public class DashboardFragment extends Fragment {
 
     private void renderPrioritySummary(@NonNull DashboardData data) {
         DashboardStats stats = data.getStats();
-        int pending = stats.getPlannerOpen() + stats.getGroceryPending() + taskPendingCount;
+        int pending = stats.getPlannerOpen() + stats.getGroceryPending() + taskPendingCount
+                + stats.getPendingNotes();
         int upcoming = stats.getUpcomingReminders();
         int urgent = stats.getDocumentsExpiringSoon()
                 + stats.getVehiclesDueSoon();
@@ -738,8 +747,8 @@ public class DashboardFragment extends Fragment {
         binding.dashboardUpcomingValue.setText(String.valueOf(upcoming));
         binding.dashboardUrgentValue.setText(String.valueOf(urgent));
         binding.dashboardPendingSource.setText(getString(
-                R.string.dashboard_pending_breakdown,
-                stats.getPlannerOpen(), stats.getGroceryPending(), taskPendingCount));
+                R.string.dashboard_pending_with_notes,
+                stats.getPlannerOpen(), stats.getGroceryPending(), taskPendingCount, stats.getPendingNotes()));
         binding.dashboardUpcomingSource.setText(getString(
                 R.string.dashboard_upcoming_breakdown,
                 stats.getUpcomingReminders()));
@@ -791,6 +800,11 @@ public class DashboardFragment extends Fragment {
         if (todo > 0) {
             labels.add(getString(R.string.dashboard_priority_todo, todo));
             actions.add(() -> openFeature(new FamilyTasksFragment()));
+        }
+
+        if (stats.getPendingNotes() > 0) {
+            labels.add(getString(R.string.dashboard_priority_notes, stats.getPendingNotes()));
+            actions.add(() -> openFeature(new NotesFragment()));
         }
 
         if (labels.isEmpty()) {
@@ -893,7 +907,41 @@ public class DashboardFragment extends Fragment {
         }
     }
 
+    private void renderNotesAction(@NonNull DashboardStats stats) {
+        if (binding == null) return;
+        binding.actionNoteEntries.setModel(new ActionCardModel(
+                getString(R.string.action_notes_title),
+                getString(R.string.action_pending_value, stats.getPendingNotes()),
+                getString(R.string.dashboard_notes_details, stats.getActiveNotes(), stats.getPinnedNotes()),
+                R.drawable.ic_note, R.color.fh_info, R.color.fh_info_container));
+    }
+
+    /** Observe local note changes without adding a network connection or publishing notes. */
+    private void observeNotesSummary() {
+        notesSummaryRepository = new com.tridev.familyhub.data.repository.NotesRepository(requireContext());
+        notesSummaryDatabase = com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(requireContext());
+        notesSummaryObserver = new androidx.room.InvalidationTracker.Observer("notes") {
+            @Override public void onInvalidated(@NonNull java.util.Set<String> tables) {
+                headerClockHandler.post(() -> loadNotesSummary());
+            }
+        };
+        notesSummaryDatabase.getInvalidationTracker().addObserver(notesSummaryObserver);
+    }
+
+    private void loadNotesSummary() {
+        if (binding == null || notesSummaryRepository == null) return;
+        notesSummaryRepository.loadActive("", notes -> {
+            if (binding == null) return;
+            DashboardStats stats = latestDashboardData != null
+                    ? latestDashboardData.getStats() : new DashboardStats();
+            com.tridev.familyhub.data.model.NotesDashboardSummary.from(notes).applyTo(stats);
+            renderNotesAction(stats);
+            if (latestDashboardData != null) renderPrioritySummary(latestDashboardData);
+        });
+    }
+
     private void renderActionCards(@NonNull DashboardStats stats) {
+        renderNotesAction(stats);
         binding.actionPlanner.setModel(new ActionCardModel(
                 getString(R.string.action_planner_title),
                 getString(R.string.action_open_value, stats.getPlannerOpen()),
@@ -1057,6 +1105,12 @@ public class DashboardFragment extends Fragment {
             taskRepository.stopRealtimeSync();
             taskRepository = null;
         }
+        if (notesSummaryDatabase != null && notesSummaryObserver != null) {
+            notesSummaryDatabase.getInvalidationTracker().removeObserver(notesSummaryObserver);
+        }
+        notesSummaryObserver = null;
+        notesSummaryDatabase = null;
+        notesSummaryRepository = null;
         latestDashboardData = null;
         taskPendingCount = 0;
         financeStatusCard = null;
@@ -1068,3 +1122,4 @@ public class DashboardFragment extends Fragment {
         super.onDestroyView();
     }
 }
+

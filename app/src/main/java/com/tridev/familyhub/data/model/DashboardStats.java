@@ -36,6 +36,7 @@ public class DashboardStats {
     public int documentsExpiringSoon;
     public int vehiclesDueSoon;
     public int activeNotes;
+    public int pendingNotes;
     public int pinnedNotes;
     public int familyLiveSharing;
 
@@ -178,6 +179,10 @@ public class DashboardStats {
         this.activeNotes = activeNotes;
     }
 
+    public int getPendingNotes() { return pendingNotes; }
+
+    public void setPendingNotes(int pendingNotes) { this.pendingNotes = pendingNotes; }
+
     public int getPinnedNotes() {
         return pinnedNotes;
     }
@@ -194,3 +199,4 @@ public class DashboardStats {
         this.familyLiveSharing = familyLiveSharing;
     }
 }
+

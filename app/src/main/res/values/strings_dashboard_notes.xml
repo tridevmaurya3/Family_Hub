@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dashboard_pending_with_notes">Planner %1$d · Grocery %2$d · To-Do %3$d · Notes %4$d</string>
+    <string name="dashboard_priority_notes">Notes (%1$d pending)</string>
+    <string name="dashboard_notes_details">%1$d active · %2$d pinned</string>
+</resources>
