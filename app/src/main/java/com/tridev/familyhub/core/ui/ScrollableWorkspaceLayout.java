@@ -21,7 +21,10 @@ public class ScrollableWorkspaceLayout extends LinearLayout {
             removeViewAt(first);
             fields.addView(child, params);
         }
-        controls = new ControlsScroll(getContext());
+        // Inflate scrollbar attributes with the View constructor. Enabling bars
+        // later can leave ScrollBarDrawable null in a programmatic NestedScrollView.
+        controls = (ControlsScroll) android.view.LayoutInflater.from(getContext())
+                .inflate(com.tridev.familyhub.R.layout.workspace_controls_scroll, this, false);
         controls.addView(fields, new ScrollView.LayoutParams(-1, -2));
         addView(controls, first, new LinearLayout.LayoutParams(-1, -2));
     }
@@ -39,11 +42,10 @@ public class ScrollableWorkspaceLayout extends LinearLayout {
         }
         super.onMeasure(widthSpec, heightSpec);
     }
-    private static final class ControlsScroll extends androidx.core.widget.NestedScrollView {
+    public static final class ControlsScroll extends androidx.core.widget.NestedScrollView {
         int limit = Integer.MAX_VALUE;
-        ControlsScroll(Context context) {
-            super(context); setFillViewport(false); setVerticalScrollBarEnabled(true);
-            setScrollbarFadingEnabled(false);
+        public ControlsScroll(Context context, android.util.AttributeSet attrs) {
+            super(context, attrs);
         }
         @Override protected void onMeasure(int widthSpec, int heightSpec) {
             int height = MeasureSpec.getMode(heightSpec) == MeasureSpec.UNSPECIFIED

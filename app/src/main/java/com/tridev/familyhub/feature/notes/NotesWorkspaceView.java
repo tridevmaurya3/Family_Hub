@@ -135,9 +135,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 repository.save(note, NotesWorkspaceView.this::reload);
             }
         });
-        RecyclerView list = new RecyclerView(context);
+        RecyclerView list = (RecyclerView) android.view.LayoutInflater.from(context)
+                .inflate(R.layout.notes_workspace_list, this, false);
         list.setLayoutManager(new LinearLayoutManager(context)); list.setAdapter(adapter);
-        list.setVerticalScrollBarEnabled(true);
         list.setClipToPadding(false);
         list.setPadding(0, dp(4), 0, dp(16));
         addView(list, new LayoutParams(-1, 0, 1f));
