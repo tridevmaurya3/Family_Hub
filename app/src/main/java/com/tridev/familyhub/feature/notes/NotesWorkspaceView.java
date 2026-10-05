@@ -271,7 +271,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         adapter = new NotesAdapter(new NotesAdapter.NoteActionListener() {
             public void onEdit(NoteEntry note) { editor.edit(note); }
             public void onOpen(NoteEntry note) {
-                if (NoteEntry.TYPE_CHECKLIST.equals(note.noteType)) showChecklist(note); else editor.edit(note);
+                if (NoteEntry.TYPE_CHECKLIST.equals(note.noteType)) showChecklist(note); else showNote(note);
             }
             public void onActions(NoteEntry note) { showActions(note); }
             public void onPinnedChanged(NoteEntry note, boolean pinned) { repository.setPinned(note, pinned, NotesWorkspaceView.this::reload); }
@@ -315,6 +315,15 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private androidx.appcompat.app.AlertDialog panel(LinearLayout content) {
         androidx.appcompat.app.AlertDialog dialog = NotesPanels.show(getContext(), overlay, content);
         panels.add(dialog); dialog.setOnDismissListener(d -> panels.remove(dialog)); return dialog;
+    }
+    private void showNote(NoteEntry note) {
+        LinearLayout content = NotesPanels.content(getContext(), note.title);
+        TextView body = label(note.content == null ? "" : note.content, 12);
+        body.setTextIsSelectable(true);
+        content.addView(body, new LayoutParams(-1, -2));
+        MaterialButton close = NotesPanels.action(getContext(), "Close"); content.addView(close);
+        androidx.appcompat.app.AlertDialog dialog = panel(content);
+        close.setOnClickListener(v -> dialog.dismiss());
     }
     private void showChecklist(NoteEntry note) {
         LinearLayout content = NotesPanels.content(getContext(), note.title);

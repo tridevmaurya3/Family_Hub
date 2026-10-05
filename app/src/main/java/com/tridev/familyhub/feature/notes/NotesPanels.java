@@ -38,6 +38,19 @@ final class NotesPanels {
         AlertDialog dialog = new MaterialAlertDialogBuilder(context).setView(scroll).create();
         NotesEditor.present(dialog, overlay);
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        if (dialog.getWindow() != null) {
+            android.util.DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+            int maxWidth = Math.max(1, metrics.widthPixels - dp(context, 40));
+            int maxHeight = Math.max(1, metrics.heightPixels - dp(context, 96));
+            // Measure natural text width first, then wrap long content within the screen.
+            content.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            int width = Math.min(maxWidth, Math.max(dp(context, 160), content.getMeasuredWidth()));
+            content.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            int height = Math.min(maxHeight, content.getMeasuredHeight());
+            dialog.getWindow().setLayout(width, height);
+        }
         return dialog;
     }
     static int dp(Context context, int value) { return Math.round(value * context.getResources().getDisplayMetrics().density); }
