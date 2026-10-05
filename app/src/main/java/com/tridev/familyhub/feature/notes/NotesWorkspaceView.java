@@ -39,21 +39,26 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private int status, type, sort, quickType, generation;
     private String category = "";
     private boolean active;
+    private final LinearLayout filterRow, searchRow, categoryFilter;
+    private final int[] filterWidths = new int[4];
+    private int filterLayoutWidth = -1;
 
     public NotesWorkspaceView(Context context, NotesRepository repository, boolean overlay, EditorHost editor) {
         super(context);
         this.repository = repository; this.overlay = overlay; this.editor = editor;
         setOrientation(VERTICAL);
         LinearLayout filters = row();
+        filterRow = filters;
         dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
                 position -> { status = position; reload(); });
-        LinearLayout typeFilters = row();
-        dropdown(typeFilters, "Type", new String[]{"All types", "Text note", "Checklist"},
-                position -> { type = position; render(); });
         dropdown(filters, "Sort", new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
                 position -> { sort = position; render(); });
+        dropdown(filters, "Type", new String[]{"All types", "Text note", "Checklist"},
+                position -> { type = position; render(); });
         addView(filters, new LayoutParams(-1, -2));
         LinearLayout tools = row();
+        searchRow = tools;
+        tools.setGravity(Gravity.BOTTOM);
         TextInputLayout searchLayout = new TextInputLayout(context);
         searchLayout.setHint(getResources().getString(R.string.notes_search_hint));
         searchLayout.setBoxBackgroundMode(TextInputLayout.BOX_BACKGROUND_OUTLINE);
@@ -69,8 +74,13 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         String[] categoryChoices = new String[categories.length + 1];
         categoryChoices[0] = "All categories";
         System.arraycopy(categories, 0, categoryChoices, 1, categories.length);
-        dropdown(typeFilters, "Category", categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
-        addView(typeFilters, new LayoutParams(-1, -2));
+        categoryFilter = dropdown(filters, "Category", categoryChoices, position -> { category = position == 0 ? "" : categories[position - 1]; render(); });
+        String[][] filterChoices = {
+                {"All active", "Pending", "Completed", "Pinned", "Archived"},
+                {"Pinned / Latest", "Title A–Z", "Reminder first"},
+                {"All types", "Text note", "Checklist"}, categoryChoices};
+        for (int i = 0; i < filterWidths.length; i++)
+            filterWidths[i] = dropdownWidth(context, filterChoices[i]);
         addView(tools, new LayoutParams(-1, -2));
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -157,7 +167,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         add.setCornerRadius(dp(24));
     }
     private interface Selection { void selected(int position); }
-    private void dropdown(LinearLayout parent, String name, String[] labels, Selection callback) {
+    private LinearLayout dropdown(LinearLayout parent, String name, String[] labels, Selection callback) {
         LinearLayout block = new LinearLayout(getContext());
         block.setOrientation(VERTICAL);
         block.addView(label(name, 10));
@@ -189,6 +199,41 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         params.setMarginStart(parent.getChildCount() == 0 ? 0 : dp(6));
         params.bottomMargin = dp(4);
         parent.addView(block, params);
+        return block;
+    }
+    @Override protected void onMeasure(int widthSpec, int heightSpec) {
+        int available = Math.max(1, MeasureSpec.getSize(widthSpec) - getPaddingLeft() - getPaddingRight());
+        if (available != filterLayoutWidth) {
+            filterLayoutWidth = available;
+            arrangeFilters(available);
+        }
+        super.onMeasure(widthSpec, heightSpec);
+    }
+    private void arrangeFilters(int available) {
+        int required = dp(18);
+        for (int width : filterWidths) required += width;
+        boolean allFit = required <= available;
+        LinearLayout target = allFit ? filterRow : searchRow;
+        if (categoryFilter.getParent() != target) {
+            ((LinearLayout) categoryFilter.getParent()).removeView(categoryFilter);
+            target.addView(categoryFilter);
+        }
+        int firstThree = filterWidths[0] + filterWidths[1] + filterWidths[2] + dp(12);
+        for (int i = 0; i < filterRow.getChildCount(); i++) {
+            View child = filterRow.getChildAt(i);
+            LayoutParams params = (LayoutParams) child.getLayoutParams();
+            boolean compressed = !allFit && firstThree > available;
+            params.width = compressed ? 0 : filterWidths[i];
+            params.weight = compressed ? 1f : 0f;
+            params.setMarginStart(i == 0 ? 0 : dp(6));
+            child.setLayoutParams(params);
+        }
+        if (!allFit) {
+            LayoutParams params = new LayoutParams(Math.min(filterWidths[3], available / 2), -2);
+            params.setMarginStart(dp(6));
+            params.bottomMargin = dp(4);
+            categoryFilter.setLayoutParams(params);
+        }
     }
     static int dropdownWidth(Context context, String[] labels) {
         android.text.TextPaint paint = new android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
