@@ -26,6 +26,8 @@ public class NotesAdapter
         void onEdit(@NonNull NoteEntry note);
         default void onOpen(@NonNull NoteEntry note) { onEdit(note); }
         default void onActions(@NonNull NoteEntry note) { onEdit(note); }
+        default void onOpen(@NonNull NoteEntry note, View anchor) { onOpen(note); }
+        default void onActions(@NonNull NoteEntry note, View anchor) { onActions(note); }
 
         void onPinnedChanged(@NonNull NoteEntry note, boolean pinned);
 
@@ -200,11 +202,11 @@ public class NotesAdapter
             );
             binding.noteType.setTextColor(accent);
 
-            binding.noteMore.setOnClickListener(v -> listener.onActions(note));
+            binding.noteMore.setOnClickListener(v -> listener.onActions(note, v));
             binding.getRoot().setOnClickListener(
-                    view -> listener.onOpen(note)
+                    view -> listener.onOpen(note, binding.getRoot())
             );
-            binding.noteProgress.setOnClickListener(view -> listener.onOpen(note));
+            binding.noteProgress.setOnClickListener(view -> listener.onOpen(note, binding.getRoot()));
             binding.editNoteButton.setOnClickListener(
                     view -> listener.onEdit(note)
             );

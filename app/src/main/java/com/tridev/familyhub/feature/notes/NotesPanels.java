@@ -20,6 +20,7 @@ final class NotesPanels {
         TextView heading = new TextView(context); heading.setText(title); heading.setTextSize(16);
         heading.setTextColor(Color.rgb(108, 76, 155)); heading.setTypeface(null, android.graphics.Typeface.BOLD);
         heading.setPadding(0, 0, 0, dp(context, 10)); root.addView(heading);
+        if (title == null || title.isEmpty()) heading.setVisibility(View.GONE);
         return root;
     }
     static MaterialButton action(Context context, String text) {
@@ -50,6 +51,31 @@ final class NotesPanels {
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
             int height = Math.min(maxHeight, content.getMeasuredHeight());
             dialog.getWindow().setLayout(width, height);
+        }
+        return dialog;
+    }
+    static AlertDialog showAnchored(Context context, boolean overlay, LinearLayout content, View anchor, boolean above) {
+        AlertDialog dialog = show(context, overlay, content);
+        android.view.Window window = dialog.getWindow();
+        if (window != null) {
+            android.graphics.Rect frame = new android.graphics.Rect();
+            anchor.getWindowVisibleDisplayFrame(frame);
+            int[] position = new int[2]; anchor.getLocationOnScreen(position);
+            android.view.WindowManager.LayoutParams params = window.getAttributes();
+            int margin = dp(context, 8);
+            int left = Math.max(frame.left + margin, Math.min(position[0], frame.right - params.width - margin));
+            int desiredTop = above ? position[1] - params.height - margin : position[1] + anchor.getHeight();
+            // Prefer the requested side, falling back to the side with available space.
+            if (above && desiredTop < frame.top + margin) desiredTop = position[1];
+            if (!above && desiredTop + params.height > frame.bottom - margin)
+                desiredTop = position[1] - params.height;
+            int top = Math.max(frame.top + margin, Math.min(desiredTop, frame.bottom - params.height - margin));
+            params.gravity = android.view.Gravity.TOP | android.view.Gravity.LEFT;
+            params.x = left; params.y = top - frame.top;
+            params.dimAmount = 0f;
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.setAttributes(params);
+            dialog.setCanceledOnTouchOutside(true);
         }
         return dialog;
     }
