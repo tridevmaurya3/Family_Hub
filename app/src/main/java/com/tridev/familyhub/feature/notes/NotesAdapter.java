@@ -24,6 +24,8 @@ public class NotesAdapter
 
     public interface NoteActionListener {
         void onEdit(@NonNull NoteEntry note);
+        default void onOpen(@NonNull NoteEntry note) { onEdit(note); }
+        default void onActions(@NonNull NoteEntry note) { onEdit(note); }
 
         void onPinnedChanged(@NonNull NoteEntry note, boolean pinned);
 
@@ -198,24 +200,11 @@ public class NotesAdapter
             );
             binding.noteType.setTextColor(accent);
 
-            binding.noteMore.setOnClickListener(v -> {
-                androidx.appcompat.widget.PopupMenu menu = new androidx.appcompat.widget.PopupMenu(v.getContext(), v);
-                menu.getMenu().add(0, 1, 0, R.string.edit);
-                if (!note.isArchived) menu.getMenu().add(0, 2, 1, note.isPinned ? R.string.notes_unpin : R.string.notes_pin);
-                menu.getMenu().add(0, 3, 2, note.isArchived ? R.string.notes_restore : R.string.notes_archive);
-                menu.getMenu().add(0, 4, 3, R.string.remove);
-                menu.setOnMenuItemClickListener(item -> {
-                    switch (item.getItemId()) {
-                        case 1: listener.onEdit(note); break;
-                        case 2: listener.onPinnedChanged(note, !note.isPinned); break;
-                        case 3: listener.onArchivedChanged(note, !note.isArchived); break;
-                        case 4: listener.onDelete(note); break;
-                    } return true;
-                }); menu.show();
-            });
+            binding.noteMore.setOnClickListener(v -> listener.onActions(note));
             binding.getRoot().setOnClickListener(
-                    view -> listener.onEdit(note)
+                    view -> listener.onOpen(note)
             );
+            binding.noteProgress.setOnClickListener(view -> listener.onOpen(note));
             binding.editNoteButton.setOnClickListener(
                     view -> listener.onEdit(note)
             );

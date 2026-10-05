@@ -45,6 +45,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private java.util.List<String> noteCategories;
     private boolean restoringCategories;
     private androidx.appcompat.app.AlertDialog categoryDialog;
+    private final java.util.List<android.app.Dialog> panels = new java.util.ArrayList<>();
     private TextView draftTag;
     private android.widget.Spinner categoryInput, sharingInput;
     private LinearLayout undoBar;
@@ -195,43 +196,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         quickChecklist = new NotesChecklistComposer(context, quickContent, contentBlock);
         composerCard.addView(quickChecklist, new LayoutParams(-1, -2));
         composerCard.addView(choicesRow, new LayoutParams(-1, -2));
-        LinearLayout shortcuts = row();
-        MaterialButton tomorrow = chip("Tomorrow"); MaterialButton pin = chip("Pin");
-        tomorrow.setIconResource(R.drawable.ic_bell); tomorrow.setIconSize(dp(14));
-        pin.setIconResource(R.drawable.ic_notes_pin); pin.setIconSize(dp(14));
-        shortcuts.addView(tomorrow, new LayoutParams(-2, dp(40)));
-        shortcuts.addView(pin, new LayoutParams(-2, dp(40)));
-        tomorrow.setOnClickListener(v -> {
-            if (quickReminder > 0) quickReminder = 0;
-            else {
-                java.util.Calendar date = java.util.Calendar.getInstance(); date.add(java.util.Calendar.DAY_OF_YEAR, 1);
-                date.set(java.util.Calendar.HOUR_OF_DAY, 9); date.set(java.util.Calendar.MINUTE, 0);
-                date.set(java.util.Calendar.SECOND, 0); date.set(java.util.Calendar.MILLISECOND, 0);
-                quickReminder = date.getTimeInMillis();
-                if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(context,
-                        android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
-                    context.startActivity(new android.content.Intent(context,
-                            com.tridev.familyhub.feature.notes.overlay.NotesNotificationPermissionActivity.class)
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
-            }
-            tomorrow.setText(quickReminder > 0 ? "✓ Tomorrow 9 AM" : "Tomorrow"); scheduleDraft();
-        });
-        pin.setOnClickListener(v -> { quickPinned = !quickPinned; pin.setText(quickPinned ? "✓ Pinned" : "Pin"); scheduleDraft(); });
         MaterialButton more = chip("More ▾"); more.setContentDescription("More options");
         LayoutParams moreParams = new LayoutParams(0, dp(48), 1f); moreParams.setMarginStart(dp(6));
         choicesRow.addView(more, moreParams);
-        more.setOnClickListener(v -> {
-            androidx.appcompat.widget.PopupMenu menu = new androidx.appcompat.widget.PopupMenu(context, more);
-            android.view.MenuItem reminder = menu.getMenu().add(0, 1, 0, "Tomorrow · 9 AM");
-            android.view.MenuItem pinned = menu.getMenu().add(0, 2, 1, "Pinned");
-            menu.getMenu().setGroupCheckable(0, true, false);
-            reminder.setChecked(quickReminder > 0); pinned.setChecked(quickPinned);
-            menu.setOnMenuItemClickListener(item -> {
-                if (item.getItemId() == 1) tomorrow.performClick(); else pin.performClick();
-                item.setChecked(item.getItemId() == 1 ? quickReminder > 0 : quickPinned);
-                more.setText(quickReminder > 0 || quickPinned ? "More • ▾" : "More ▾"); return true;
-            }); menu.show();
-        });
+        more.setOnClickListener(v -> showQuickOptions(more));
         draftTag = label("", 10); draftTag.setTextColor(Color.rgb(128, 89, 191));
         composerCard.addView(draftTag);
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
@@ -245,7 +213,6 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         categoryInput.setSelection(quickCategory); sharingInput.setSelection(quickSharing);
         quickReminder = draftStore.getLong("reminder", 0);
         if (quickReminder <= System.currentTimeMillis()) quickReminder = 0; quickPinned = draftStore.getBoolean("pinned", false);
-        tomorrow.setText(quickReminder > 0 ? "✓ Tomorrow 9 AM" : "Tomorrow"); pin.setText(quickPinned ? "✓ Pinned" : "Pin");
         quickChecklist.setPendingDraft(draftStore.getString("item", ""));
         selectQuickType(draftStore.getInt("type", 0)); typeInput.setSelection(quickType); restoringDraft = false;
         more.setText(quickReminder > 0 || quickPinned ? "More • ▾" : "More ▾");
@@ -288,7 +255,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 quick.setEnabled(true); quickContent.setEnabled(true);
                 if (title.equals(value(quick)) && content.equals(value(quickContent))) {
                     clearQuickAdd(); quickReminder = 0; quickPinned = false; quickSharing = 0; sharingInput.setSelection(0);
-                    tomorrow.setText("Tomorrow"); pin.setText("Pin"); more.setText("More ▾");
+                    more.setText("More ▾");
                     uiHandler.removeCallbacks(persistDraft); draftStore.edit().clear().apply(); draftTag.setText(""); draftTag.setVisibility(GONE);
                 }
                 if (isAttachedToWindow()) {
@@ -303,6 +270,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         addView(empty, new LayoutParams(-1, -2));
         adapter = new NotesAdapter(new NotesAdapter.NoteActionListener() {
             public void onEdit(NoteEntry note) { editor.edit(note); }
+            public void onOpen(NoteEntry note) {
+                if (NoteEntry.TYPE_CHECKLIST.equals(note.noteType)) showChecklist(note); else editor.edit(note);
+            }
+            public void onActions(NoteEntry note) { showActions(note); }
             public void onPinnedChanged(NoteEntry note, boolean pinned) { repository.setPinned(note, pinned, NotesWorkspaceView.this::reload); }
             public void onArchivedChanged(NoteEntry note, boolean archived) { repository.setArchived(note, archived, NotesWorkspaceView.this::reload); }
             public void onDelete(NoteEntry note) {
@@ -340,6 +311,108 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         CompactFormStyle.applyInputs(this);
         add.setCornerRadius(dp(24));
         quickRow.setGravity(Gravity.CENTER_VERTICAL);
+    }
+    private androidx.appcompat.app.AlertDialog panel(LinearLayout content) {
+        androidx.appcompat.app.AlertDialog dialog = NotesPanels.show(getContext(), overlay, content);
+        panels.add(dialog); dialog.setOnDismissListener(d -> panels.remove(dialog)); return dialog;
+    }
+    private void showChecklist(NoteEntry note) {
+        LinearLayout content = NotesPanels.content(getContext(), note.title);
+        TextView progress = label("", 11); content.addView(progress);
+        List<NotesChecklist.Item> entries = NotesChecklist.parse(note.content);
+        Runnable update = () -> progress.setText(NotesChecklist.completed(note.content) + "/" + entries.size() + " completed");
+        update.run();
+        for (int i = 0; i < entries.size(); i++) {
+            final int index = i;
+            com.google.android.material.checkbox.MaterialCheckBox check = new com.google.android.material.checkbox.MaterialCheckBox(getContext());
+            check.setText(entries.get(i).text); check.setTextSize(12); check.setChecked(entries.get(i).checked);
+            check.setEnabled(!note.isArchived); check.setPadding(dp(6), dp(4), dp(6), dp(4));
+            check.setButtonTintList(android.content.res.ColorStateList.valueOf(Color.rgb(135, 100, 197)));
+            if (entries.get(i).checked) check.setPaintFlags(check.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            check.setOnCheckedChangeListener((button, checked) -> {
+                note.content = NotesChecklist.toggle(note.content, index, checked);
+                note.collaborationStatus = NotesChecklist.completed(note.content) == entries.size() ? "COMPLETED" : "PENDING";
+                int flags = check.getPaintFlags(); check.setPaintFlags(checked ? flags | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
+                        : flags & ~android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+                update.run(); repository.save(note, this::reload);
+            });
+            content.addView(check, new LayoutParams(-1, -2));
+        }
+        MaterialButton close = NotesPanels.action(getContext(), "Close"); content.addView(close);
+        androidx.appcompat.app.AlertDialog dialog = panel(content); close.setOnClickListener(v -> dialog.dismiss());
+    }
+    private void showActions(NoteEntry note) {
+        LinearLayout content = NotesPanels.content(getContext(), "Note actions");
+        MaterialButton edit = NotesPanels.action(getContext(), "Edit"); content.addView(edit);
+        MaterialButton pin = NotesPanels.action(getContext(), note.isPinned ? "Unpin" : "Pin");
+        if (!note.isArchived) content.addView(pin);
+        MaterialButton archive = NotesPanels.action(getContext(), note.isArchived ? "Restore" : "Archive"); content.addView(archive);
+        MaterialButton remove = NotesPanels.action(getContext(), "Remove"); remove.setTextColor(Color.rgb(176, 52, 65)); content.addView(remove);
+        androidx.appcompat.app.AlertDialog dialog = panel(content);
+        edit.setOnClickListener(v -> { dialog.dismiss(); editor.edit(note); });
+        pin.setOnClickListener(v -> { dialog.dismiss(); repository.setPinned(note, !note.isPinned, this::reload); });
+        archive.setOnClickListener(v -> { dialog.dismiss(); repository.setArchived(note, !note.isArchived, this::reload); });
+        remove.setOnClickListener(v -> { dialog.dismiss(); commitDelete(); pendingDelete = note; undoBar.setVisibility(VISIBLE); render(); uiHandler.postDelayed(finishDelete, 5000); });
+    }
+    private void showQuickOptions(MaterialButton more) {
+        LinearLayout content = NotesPanels.content(getContext(), "More options");
+        TextView description = label("Reminder alerts you at the selected date and time after the note is saved.", 12); content.addView(description);
+        TextView selected = label(reminderLabel(), 12); content.addView(selected);
+        com.google.android.material.checkbox.MaterialCheckBox reminder = new com.google.android.material.checkbox.MaterialCheckBox(getContext());
+        reminder.setText("Reminder enabled"); reminder.setChecked(quickReminder > 0); content.addView(reminder);
+        MaterialButton choose = NotesPanels.action(getContext(), "Choose date & time"); content.addView(choose);
+        MaterialButton tomorrow = NotesPanels.action(getContext(), "Tomorrow · 9 AM shortcut"); content.addView(tomorrow);
+        com.google.android.material.checkbox.MaterialCheckBox pinned = new com.google.android.material.checkbox.MaterialCheckBox(getContext());
+        pinned.setText("Pinned — keep this note at the top"); pinned.setChecked(quickPinned); content.addView(pinned);
+        for (com.google.android.material.checkbox.MaterialCheckBox check : new com.google.android.material.checkbox.MaterialCheckBox[]{reminder, pinned})
+            check.setButtonTintList(android.content.res.ColorStateList.valueOf(Color.rgb(135, 100, 197)));
+        Runnable changed = () -> { selected.setText(reminderLabel()); more.setText(quickReminder > 0 || quickPinned ? "More • ▾" : "More ▾"); scheduleDraft(); };
+        reminder.setOnCheckedChangeListener((button, checked) -> {
+            if (!checked) { quickReminder = 0; changed.run(); }
+            else if (quickReminder == 0) chooseReminder(() -> { reminder.setChecked(quickReminder > 0); changed.run(); }, () -> reminder.setChecked(false));
+        });
+        choose.setOnClickListener(v -> chooseReminder(() -> { reminder.setChecked(true); changed.run(); }, () -> { }));
+        tomorrow.setOnClickListener(v -> { java.util.Calendar date = java.util.Calendar.getInstance(); date.add(java.util.Calendar.DAY_OF_YEAR, 1);
+            date.set(java.util.Calendar.HOUR_OF_DAY, 9); date.set(java.util.Calendar.MINUTE, 0); date.set(java.util.Calendar.SECOND, 0); date.set(java.util.Calendar.MILLISECOND, 0);
+            quickReminder = date.getTimeInMillis(); reminder.setChecked(true); requestReminderPermission(); changed.run(); });
+        pinned.setOnCheckedChangeListener((button, checked) -> { quickPinned = checked; changed.run(); });
+        MaterialButton done = NotesPanels.action(getContext(), "Done"); content.addView(done);
+        androidx.appcompat.app.AlertDialog dialog = panel(content); done.setOnClickListener(v -> dialog.dismiss());
+    }
+    private String reminderLabel() {
+        return quickReminder > 0 ? "Reminder: " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM,
+                java.text.DateFormat.SHORT).format(new java.util.Date(quickReminder)) : "No reminder set";
+    }
+    private void requestReminderPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(getContext(),
+                android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            getContext().startActivity(new android.content.Intent(getContext(), com.tridev.familyhub.feature.notes.overlay.NotesNotificationPermissionActivity.class)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+    private void chooseReminder(Runnable saved, Runnable cancelled) {
+        LinearLayout content = NotesPanels.content(getContext(), "Reminder date & time");
+        android.content.Context themed = new android.view.ContextThemeWrapper(getContext(), R.style.ThemeOverlay_FamilyHub_NotesPanel);
+        android.widget.DatePicker date = new android.widget.DatePicker(themed);
+        android.widget.TimePicker time = new android.widget.TimePicker(themed);
+        time.setIs24HourView(android.text.format.DateFormat.is24HourFormat(getContext()));
+        java.util.Calendar initial = java.util.Calendar.getInstance();
+        if (quickReminder > 0) initial.setTimeInMillis(quickReminder); else initial.add(java.util.Calendar.HOUR_OF_DAY, 1);
+        date.updateDate(initial.get(java.util.Calendar.YEAR), initial.get(java.util.Calendar.MONTH), initial.get(java.util.Calendar.DAY_OF_MONTH));
+        time.setHour(initial.get(java.util.Calendar.HOUR_OF_DAY)); time.setMinute(initial.get(java.util.Calendar.MINUTE));
+        content.addView(date, new LayoutParams(-1, -2)); content.addView(time, new LayoutParams(-1, -2));
+        TextView error = label("", 11); error.setTextColor(Color.rgb(176, 52, 65)); content.addView(error);
+        MaterialButton apply = NotesPanels.action(getContext(), "Set reminder"); content.addView(apply);
+        MaterialButton cancel = NotesPanels.action(getContext(), "Cancel"); content.addView(cancel);
+        androidx.appcompat.app.AlertDialog dialog = panel(content);
+        final boolean[] accepted = {false};
+        dialog.setOnDismissListener(d -> { panels.remove(dialog); if (!accepted[0]) cancelled.run(); });
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        apply.setOnClickListener(v -> {
+            date.clearFocus(); time.clearFocus(); java.util.Calendar chosen = java.util.Calendar.getInstance();
+            chosen.set(date.getYear(), date.getMonth(), date.getDayOfMonth(), time.getHour(), time.getMinute(), 0); chosen.set(java.util.Calendar.MILLISECOND, 0);
+            if (chosen.getTimeInMillis() <= System.currentTimeMillis()) { error.setText("Choose a future date and time"); return; }
+            accepted[0] = true; quickReminder = chosen.getTimeInMillis(); dialog.dismiss(); requestReminderPermission(); saved.run();
+        });
     }
     @SuppressWarnings("unchecked")
     private void refreshCategories(String selected) {
@@ -538,7 +611,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         syncStatusListener = listener;
         listener.onStateChanged(liveSync, connectingSync);
     }
-    public void deactivate() { if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
+    public void deactivate() { for (android.app.Dialog dialog : new java.util.ArrayList<>(panels)) dialog.dismiss(); panels.clear(); if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {
         if (!active) return;
         final int request = ++generation;

@@ -30,11 +30,17 @@ final class NotesCategories {
         return values;
     }
     static AlertDialog prompt(Context context, boolean overlay, Consumer<String> saved) {
-        EditText input = new EditText(context); input.setHint("Category name"); input.setSingleLine(true);
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context).setTitle("Add new category")
-                .setView(input).setNegativeButton(R.string.cancel, null).setPositiveButton("Add", null).create();
-        NotesEditor.present(dialog, overlay);
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+        android.widget.LinearLayout content = NotesPanels.content(context, "Add new category");
+        com.google.android.material.textfield.TextInputLayout field = new com.google.android.material.textfield.TextInputLayout(context);
+        com.google.android.material.textfield.TextInputEditText input = new com.google.android.material.textfield.TextInputEditText(context);
+        input.setHint("Category name"); input.setSingleLine(true); field.addView(input);
+        field.setHintEnabled(false); content.addView(field);
+        com.tridev.familyhub.core.ui.CompactFormStyle.applyInputs(field);
+        com.google.android.material.button.MaterialButton add = NotesPanels.action(context, "Add category"); content.addView(add);
+        com.google.android.material.button.MaterialButton cancel = NotesPanels.action(context, "Cancel"); content.addView(cancel);
+        AlertDialog dialog = NotesPanels.show(context, overlay, content);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        add.setOnClickListener(v -> {
             String name = input.getText().toString().trim();
             if (name.isEmpty() || ADD.equals(name)) { input.setError("Enter a category name"); return; }
             List<String> values = labels(context);

@@ -1,0 +1,8 @@
+<resources>
+    <style name="ThemeOverlay.FamilyHub.NotesPanel" parent="">
+        <item name="colorPrimary">#8A68BC</item>
+        <item name="colorSecondary">#8A68BC</item>
+        <item name="android:colorAccent">#8A68BC</item>
+        <item name="android:colorControlActivated">#8A68BC</item>
+    </style>
+</resources>
