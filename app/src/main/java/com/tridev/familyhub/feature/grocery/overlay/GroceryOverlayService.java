@@ -35,8 +35,6 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -449,66 +447,26 @@ public class GroceryOverlayService extends Service {
         overlayOptionalDetails.setOrientation(LinearLayout.VERTICAL);
 
         final String[] selectedListType = {visibleListType};
-        RadioGroup listTypeGroup = new RadioGroup(this);
-        listTypeGroup.setOrientation(RadioGroup.HORIZONTAL);
-        listTypeGroup.setGravity(Gravity.CENTER_VERTICAL);
-
-        RadioButton daily = new RadioButton(this);
-        daily.setId(View.generateViewId());
-        daily.setText("Daily");
-        daily.setTextSize(8.5f);
-        daily.setSingleLine(true);
-        daily.setMinWidth(0);
-        daily.setMinimumWidth(0);
-        daily.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(daily, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        daily.setChecked(GroceryItem.LIST_DAILY.equals(visibleListType));
-
-        RadioButton monthly = new RadioButton(this);
-        monthly.setId(View.generateViewId());
-        monthly.setText("Monthly");
-        monthly.setTextSize(8.5f);
-        monthly.setSingleLine(true);
-        monthly.setMinWidth(0);
-        monthly.setMinimumWidth(0);
-        monthly.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(monthly, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        monthly.setChecked(GroceryItem.LIST_MONTHLY.equals(visibleListType));
-
-        RadioButton twoMonth = new RadioButton(this);
-        twoMonth.setId(View.generateViewId());
-        twoMonth.setText("Weekly");
-        twoMonth.setTextSize(8.5f);
-        twoMonth.setSingleLine(true);
-        twoMonth.setMinWidth(0);
-        twoMonth.setMinimumWidth(0);
-        twoMonth.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(twoMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        twoMonth.setChecked(GroceryItem.LIST_TWO_MONTH.equals(visibleListType));
-
-        RadioButton threeMonth = new RadioButton(this);
-        threeMonth.setId(View.generateViewId());
-        threeMonth.setText("Fortnightly");
-        threeMonth.setTextSize(8.5f);
-        threeMonth.setSingleLine(true);
-        threeMonth.setMinWidth(0);
-        threeMonth.setMinimumWidth(0);
-        threeMonth.setPadding(0, 0, 0, 0);
-        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(threeMonth, 6, 9, 1, TypedValue.COMPLEX_UNIT_SP);
-        threeMonth.setChecked(GroceryItem.LIST_THREE_MONTH.equals(visibleListType));
-
-        listTypeGroup.addView(daily, new RadioGroup.LayoutParams(0, dp(36), 1f));
-        listTypeGroup.addView(twoMonth, new RadioGroup.LayoutParams(0, dp(36), 1f));
-        listTypeGroup.addView(threeMonth, new RadioGroup.LayoutParams(0, dp(36), 1f));
-        listTypeGroup.addView(monthly, new RadioGroup.LayoutParams(0, dp(36), 1f));
-        listTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == -1) return;
-            if (checkedId == threeMonth.getId()) selectedListType[0] = GroceryItem.LIST_THREE_MONTH;
-            else if (checkedId == twoMonth.getId()) selectedListType[0] = GroceryItem.LIST_TWO_MONTH;
-            else if (checkedId == monthly.getId()) selectedListType[0] = GroceryItem.LIST_MONTHLY;
-            else selectedListType[0] = GroceryItem.LIST_DAILY;
-            visibleListType = selectedListType[0];
-            refreshPanel();
+        final String[] cycleLabels = {"Daily", "Weekly", "Fortnightly", "Monthly"};
+        // Preserve the existing stored cycle values and recurrence behavior.
+        final String[] cycleTypes = {GroceryItem.LIST_DAILY, GroceryItem.LIST_TWO_MONTH,
+                GroceryItem.LIST_THREE_MONTH, GroceryItem.LIST_MONTHLY};
+        Spinner cycle = compactSpinner(cycleLabels);
+        cycle.setContentDescription("Grocery cycle: Daily, Weekly, Fortnightly or Monthly");
+        for (int index = 0; index < cycleTypes.length; index++) {
+            if (cycleTypes[index].equals(visibleListType)) cycle.setSelection(index);
+        }
+        cycle.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,
+                                                 View view, int position, long id) {
+                String listType = cycleTypes[position];
+                selectedListType[0] = listType;
+                if (!listType.equals(visibleListType)) {
+                    visibleListType = listType;
+                    refreshPanel();
+                }
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent) { }
         });
 
         screenOn.setOnClickListener(v -> {
@@ -522,9 +480,6 @@ public class GroceryOverlayService extends Service {
         applyOverlayHeaderChipState(shoppingModeDropdown, overlayShoppingMode, false);
         shoppingModeDropdown.setOnClickListener(v -> showOverlayShoppingMenu(
                 shoppingModeDropdown, screenOn, shoppingSubtitle));
-
-        root.addView(listTypeGroup, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(40)));
 
         final String[] quantityUnits = getResources().getStringArray(R.array.grocery_quantity_units);
         final String[] categoryLabels = GroceryOptionCatalog.categoryLabels(this);
@@ -637,14 +592,22 @@ public class GroceryOverlayService extends Service {
         quickField.addView(voice, voiceParams);
         quickAdd.addView(quickField, new LinearLayout.LayoutParams(0, dp(42), 1f));
 
+        LinearLayout.LayoutParams cycleParams = new LinearLayout.LayoutParams(dp(92), dp(42));
+        cycleParams.setMarginStart(dp(4));
+        quickAdd.addView(cycle, cycleParams);
+
         Button add = new Button(this);
-        add.setText("＋ Add");
-        add.setTextSize(12f);
+        add.setText("+");
+        add.setContentDescription(getString(R.string.grocery_overlay_quick_item));
+        add.setMinWidth(0);
+        add.setMinimumWidth(0);
+        add.setPadding(0, 0, 0, 0);
+        add.setTextSize(24f);
         add.setTextColor(Color.WHITE);
         add.setBackground(rounded(Color.rgb(15, 108, 189), Color.rgb(15, 108, 189), 22));
         add.setElevation(dp(3));
-        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(82), dp(42));
-        addParams.setMarginStart(dp(8));
+        LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        addParams.setMarginStart(dp(5));
         quickAdd.addView(add, addParams);
         root.addView(quickAdd);
 
@@ -3164,3 +3127,4 @@ public class GroceryOverlayService extends Service {
         super.onDestroy();
     }
 }
+
