@@ -54,30 +54,41 @@ final class NotesPanels {
         }
         return dialog;
     }
-    static AlertDialog showAnchored(Context context, boolean overlay, LinearLayout content, View anchor, boolean above) {
-        AlertDialog dialog = show(context, overlay, content);
-        android.view.Window window = dialog.getWindow();
-        if (window != null) {
-            android.graphics.Rect frame = new android.graphics.Rect();
-            anchor.getWindowVisibleDisplayFrame(frame);
-            int[] position = new int[2]; anchor.getLocationOnScreen(position);
-            android.view.WindowManager.LayoutParams params = window.getAttributes();
-            int margin = dp(context, 8);
-            int left = Math.max(frame.left + margin, Math.min(position[0], frame.right - params.width - margin));
-            int desiredTop = above ? position[1] - params.height - margin : position[1] + anchor.getHeight();
-            // Prefer the requested side, falling back to the side with available space.
-            if (above && desiredTop < frame.top + margin) desiredTop = position[1];
-            if (!above && desiredTop + params.height > frame.bottom - margin)
-                desiredTop = position[1] - params.height;
-            int top = Math.max(frame.top + margin, Math.min(desiredTop, frame.bottom - params.height - margin));
-            params.gravity = android.view.Gravity.TOP | android.view.Gravity.LEFT;
-            params.x = left; params.y = top - frame.top;
-            params.dimAmount = 0f;
-            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            window.setAttributes(params);
-            dialog.setCanceledOnTouchOutside(true);
+    interface OptionAction { void selected(String option); }
+    static android.widget.PopupWindow dropdown(Context context, boolean overlay, View anchor,
+            java.util.List<String> options, OptionAction action) {
+        LinearLayout rows = content(context, "");
+        rows.setPadding(dp(context, 6), dp(context, 4), dp(context, 6), dp(context, 4));
+        android.widget.ScrollView scroll = (android.widget.ScrollView) android.view.LayoutInflater.from(context)
+                .inflate(com.tridev.familyhub.R.layout.notes_panel_scroll, null, false);
+        scroll.addView(rows, new android.widget.ScrollView.LayoutParams(-1, -2));
+        android.widget.PopupWindow menu = new android.widget.PopupWindow(context);
+        for (String option : options) {
+            TextView item = new TextView(context); item.setText(option); item.setTextSize(12);
+            item.setTextColor("Remove".equals(option) ? Color.rgb(176, 52, 65) : Color.rgb(108, 76, 155));
+            item.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            item.setPadding(dp(context, 12), 0, dp(context, 12), 0);
+            android.graphics.drawable.GradientDrawable pressed = new android.graphics.drawable.GradientDrawable();
+            pressed.setColor(Color.rgb(235, 226, 249)); pressed.setCornerRadius(dp(context, 10));
+            android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
+            background.addState(new int[]{android.R.attr.state_pressed}, pressed);
+            background.addState(new int[]{}, new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            item.setBackground(background);
+            rows.addView(item, new LinearLayout.LayoutParams(-1, dp(context, 44)));
+            item.setOnClickListener(v -> { menu.dismiss(); action.selected(option); });
         }
-        return dialog;
+        rows.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int width = Math.min(context.getResources().getDisplayMetrics().widthPixels - dp(context, 24), rows.getMeasuredWidth());
+        menu.setContentView(scroll); menu.setWidth(width); menu.setHeight(dropdownHeight(rows, context));
+        menu.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        menu.setElevation(dp(context, 4)); menu.setFocusable(true); menu.setOutsideTouchable(true);
+        if (overlay) menu.setWindowLayoutType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        menu.showAsDropDown(anchor, 0, dp(context, 4), android.view.Gravity.END);
+        return menu;
+    }
+    private static int dropdownHeight(View rows, Context context) {
+        return Math.min(rows.getMeasuredHeight(), context.getResources().getDisplayMetrics().heightPixels - dp(context, 96));
     }
     static int dp(Context context, int value) { return Math.round(value * context.getResources().getDisplayMetrics().density); }
 }

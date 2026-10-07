@@ -46,6 +46,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private java.util.List<String> noteCategories;
     private boolean restoringCategories;
     private androidx.appcompat.app.AlertDialog categoryDialog;
+    private final java.util.List<android.widget.PopupWindow> menus = new java.util.ArrayList<>();
     private final java.util.List<android.app.Dialog> panels = new java.util.ArrayList<>();
     private TextView draftTag;
     private android.widget.Spinner categoryInput, sharingInput;
@@ -273,7 +274,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         adapter = new NotesAdapter(new NotesAdapter.NoteActionListener() {
             public void onEdit(NoteEntry note) { editor.edit(note); }
             public void onOpen(NoteEntry note, View anchor) {
-                if (NoteEntry.TYPE_CHECKLIST.equals(note.noteType)) showChecklist(note, anchor); else showNote(note);
+                if (!NoteEntry.TYPE_CHECKLIST.equals(note.noteType)) showNote(note);
             }
             public void onActions(NoteEntry note, View anchor) { showActions(note, anchor); }
             public void onPinnedChanged(NoteEntry note, boolean pinned) { repository.setPinned(note, pinned, NotesWorkspaceView.this::reload); }
@@ -328,47 +329,17 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         androidx.appcompat.app.AlertDialog dialog = panel(content);
         close.setOnClickListener(v -> dialog.dismiss());
     }
-    private androidx.appcompat.app.AlertDialog anchoredPanel(LinearLayout content, View anchor, boolean above) {
-        androidx.appcompat.app.AlertDialog dialog = NotesPanels.showAnchored(getContext(), overlay, content, anchor, above);
-        panels.add(dialog); dialog.setOnDismissListener(d -> panels.remove(dialog)); return dialog;
-    }
-    private void showChecklist(NoteEntry note, View anchor) {
-        LinearLayout content = NotesPanels.content(getContext(), note.title);
-        TextView progress = label("", 11); content.addView(progress);
-        List<NotesChecklist.Item> entries = NotesChecklist.parse(note.content);
-        Runnable update = () -> progress.setText(NotesChecklist.completed(note.content) + "/" + entries.size() + " completed");
-        update.run();
-        for (int i = 0; i < entries.size(); i++) {
-            final int index = i;
-            com.google.android.material.checkbox.MaterialCheckBox check = new com.google.android.material.checkbox.MaterialCheckBox(getContext());
-            check.setText(entries.get(i).text); check.setTextSize(12); check.setChecked(entries.get(i).checked);
-            check.setEnabled(!note.isArchived); check.setPadding(dp(6), dp(4), dp(6), dp(4));
-            check.setButtonTintList(android.content.res.ColorStateList.valueOf(Color.rgb(135, 100, 197)));
-            if (entries.get(i).checked) check.setPaintFlags(check.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-            check.setOnCheckedChangeListener((button, checked) -> {
-                note.content = NotesChecklist.toggle(note.content, index, checked);
-                note.collaborationStatus = NotesChecklist.completed(note.content) == entries.size() ? "COMPLETED" : "PENDING";
-                int flags = check.getPaintFlags(); check.setPaintFlags(checked ? flags | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
-                        : flags & ~android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-                update.run(); repository.save(note, this::reload);
-            });
-            content.addView(check, new LayoutParams(-1, -2));
-        }
-        MaterialButton close = NotesPanels.action(getContext(), "Close"); content.addView(close);
-        androidx.appcompat.app.AlertDialog dialog = anchoredPanel(content, anchor, true); close.setOnClickListener(v -> dialog.dismiss());
-    }
     private void showActions(NoteEntry note, View anchor) {
-        LinearLayout content = NotesPanels.content(getContext(), "");
-        MaterialButton edit = NotesPanels.action(getContext(), "Edit"); content.addView(edit);
-        MaterialButton pin = NotesPanels.action(getContext(), note.isPinned ? "Unpin" : "Pin");
-        if (!note.isArchived) content.addView(pin);
-        MaterialButton archive = NotesPanels.action(getContext(), note.isArchived ? "Restore" : "Archive"); content.addView(archive);
-        MaterialButton remove = NotesPanels.action(getContext(), "Remove"); remove.setTextColor(Color.rgb(176, 52, 65)); content.addView(remove);
-        androidx.appcompat.app.AlertDialog dialog = anchoredPanel(content, anchor, false);
-        edit.setOnClickListener(v -> { dialog.dismiss(); editor.edit(note); });
-        pin.setOnClickListener(v -> { dialog.dismiss(); repository.setPinned(note, !note.isPinned, this::reload); });
-        archive.setOnClickListener(v -> { dialog.dismiss(); repository.setArchived(note, !note.isArchived, this::reload); });
-        remove.setOnClickListener(v -> { dialog.dismiss(); commitDelete(); pendingDelete = note; undoBar.setVisibility(VISIBLE); render(); uiHandler.postDelayed(finishDelete, 5000); });
+        java.util.List<String> labels = new java.util.ArrayList<>(); labels.add("Edit");
+        if (!note.isArchived) labels.add(note.isPinned ? "Unpin" : "Pin");
+        labels.add(note.isArchived ? "Restore" : "Archive"); labels.add("Remove");
+        android.widget.PopupWindow menu = NotesPanels.dropdown(getContext(), overlay, anchor, labels, option -> {
+            if ("Edit".equals(option)) editor.edit(note);
+            else if ("Pin".equals(option) || "Unpin".equals(option)) repository.setPinned(note, !note.isPinned, this::reload);
+            else if ("Archive".equals(option) || "Restore".equals(option)) repository.setArchived(note, !note.isArchived, this::reload);
+            else { commitDelete(); pendingDelete = note; undoBar.setVisibility(VISIBLE); render(); uiHandler.postDelayed(finishDelete, 5000); }
+        });
+        menus.add(menu); menu.setOnDismissListener(() -> menus.remove(menu));
     }
     private void showQuickOptions(MaterialButton more) {
         LinearLayout content = NotesPanels.content(getContext(), "More options");
@@ -628,7 +599,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         listener.onStateChanged(liveSync, connectingSync);
     }
     @Override protected void onDetachedFromWindow() { if (inlineVoice != null) inlineVoice.stop(); super.onDetachedFromWindow(); }
-    public void deactivate() { if (inlineVoice != null) inlineVoice.stop(); for (android.app.Dialog dialog : new java.util.ArrayList<>(panels)) dialog.dismiss(); panels.clear(); if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
+    public void deactivate() { for (android.widget.PopupWindow menu : new java.util.ArrayList<>(menus)) menu.dismiss(); menus.clear(); if (inlineVoice != null) inlineVoice.stop(); for (android.app.Dialog dialog : new java.util.ArrayList<>(panels)) dialog.dismiss(); panels.clear(); if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {
         if (!active) return;
         final int request = ++generation;

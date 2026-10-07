@@ -40,6 +40,7 @@ public class NotesAdapter
 
     private final List<Object> notes = new ArrayList<>();
     private final NoteActionListener listener;
+    private final java.util.Set<Long> expandedChecklists = new java.util.HashSet<>();
 
     public NotesAdapter(@NonNull NoteActionListener listener) {
         this.listener = listener;
@@ -129,11 +130,11 @@ public class NotesAdapter
                     ? View.GONE : View.VISIBLE);
             if (checklist) {
                 java.util.List<NotesChecklist.Item> items = NotesChecklist.parse(note.content);
-                for (int i = 0; i < Math.min(2, items.size()); i++) {
+                for (int i = 0; i < (expandedChecklists.contains(note.id) ? items.size() : Math.min(5, items.size())); i++) {
                     final int index = i;
                     NotesChecklist.Item item = items.get(i);
                     android.widget.CheckBox check = new android.widget.CheckBox(binding.getRoot().getContext());
-                    check.setText(item.text);
+                    check.setText((i + 1) + ". " + item.text);
                     check.setTextSize(12);
                     check.setChecked(item.checked);
                     check.setEnabled(!note.isArchived);
@@ -143,7 +144,7 @@ public class NotesAdapter
                     binding.noteChecklist.addView(check);
                 }
                 binding.noteProgress.setText(NotesChecklist.completed(note.content) + "/" + items.size() + " done"
-                        + (items.size() > 2 ? " · Tap to see all " + items.size() : ""));
+                        + (items.size() > 5 ? (expandedChecklists.contains(note.id) ? " · Show less" : " · Show more (" + (items.size() - 5) + ")") : ""));
                 binding.noteProgressBar.setMax(Math.max(1, items.size()));
                 binding.noteProgressBar.setProgress(NotesChecklist.completed(note.content));
             }
@@ -204,9 +205,9 @@ public class NotesAdapter
 
             binding.noteMore.setOnClickListener(v -> listener.onActions(note, v));
             binding.getRoot().setOnClickListener(
-                    view -> listener.onOpen(note, binding.getRoot())
+                    view -> { if (checklist) toggleChecklist(note); else listener.onOpen(note, binding.getRoot()); }
             );
-            binding.noteProgress.setOnClickListener(view -> listener.onOpen(note, binding.getRoot()));
+            binding.noteProgress.setOnClickListener(view -> { if (checklist) toggleChecklist(note); else listener.onOpen(note, binding.getRoot()); });
             binding.editNoteButton.setOnClickListener(
                     view -> listener.onEdit(note)
             );
@@ -221,6 +222,11 @@ public class NotesAdapter
             );
         }
 
+        private void toggleChecklist(NoteEntry note) {
+            if (NotesChecklist.parse(note.content).size() <= 5) return;
+            if (!expandedChecklists.remove(note.id)) expandedChecklists.add(note.id);
+            bind(note);
+        }
         private int accentColor(@NonNull String key) {
             int color;
             switch (key == null ? "" : key) {

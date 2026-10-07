@@ -25,7 +25,7 @@ final class NotesChecklistComposer extends LinearLayout {
     private final android.widget.ProgressBar progressBar;
     private Runnable draftChanged;
     private List<NotesChecklist.Item> items = new ArrayList<>();
-    private boolean writing;
+    private boolean writing, expanded;
 
     NotesChecklistComposer(Context context, TextInputEditText source, View textField) {
         super(context);
@@ -92,7 +92,7 @@ final class NotesChecklistComposer extends LinearLayout {
     }
     private void render() {
         rows.removeAllViews();
-        for (int i = 0; i < items.size(); i++) {
+        for (int i = 0; i < (expanded ? items.size() : Math.min(5, items.size())); i++) {
             final int index = i;
             NotesChecklist.Item item = items.get(i);
             LinearLayout row = new LinearLayout(getContext()); row.setGravity(Gravity.CENTER_VERTICAL);
@@ -100,8 +100,10 @@ final class NotesChecklistComposer extends LinearLayout {
             check.setContentDescription(item.text);
             check.setButtonTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.rgb(140, 106, 204)));
             row.addView(check, new LayoutParams(dp(44), dp(48)));
+            TextView number = new TextView(getContext()); number.setText((i + 1) + "."); number.setTextSize(12);
+            number.setPadding(0, 0, dp(4), 0); row.addView(number, new LayoutParams(-2, -2));
             TextInputEditText title = new TextInputEditText(getContext());
-            title.setText(item.text); title.setTextSize(12); title.setSingleLine(true);
+            title.setText(item.text); title.setTextSize(12); title.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
             title.setContentDescription(getResources().getString(R.string.notes_checklist_item));
             if (item.checked) title.setPaintFlags(title.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
             title.setBackground(null); row.addView(title, new LayoutParams(0, -2, 1));
@@ -140,6 +142,11 @@ final class NotesChecklistComposer extends LinearLayout {
             background.setStroke(dp(1), android.graphics.Color.rgb(232, 224, 245)); row.setBackground(background);
             LayoutParams rowParams = new LayoutParams(-1, -2); rowParams.topMargin = dp(4);
             rows.addView(row, rowParams);
+        }
+        if (items.size() > 5) {
+            MaterialButton more = button(expanded ? "Show less" : "Show more (" + (items.size() - 5) + ")", "Expand or collapse checklist");
+            rows.addView(more, new LayoutParams(-2, dp(44)));
+            more.setOnClickListener(v -> { expanded = !expanded; render(); });
         }
         updateProgress();
     }
