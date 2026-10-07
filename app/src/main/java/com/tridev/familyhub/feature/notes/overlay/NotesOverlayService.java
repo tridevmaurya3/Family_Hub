@@ -78,13 +78,25 @@ public final class NotesOverlayService extends Service {
         getApplication().registerActivityLifecycleCallbacks(inputLifecycle);
         NotificationManager notifications = getSystemService(NotificationManager.class);
         notifications.createNotificationChannel(new NotificationChannel(CHANNEL, "Floating Notes", NotificationManager.IMPORTANCE_LOW));
-        startForeground(4219, new NotificationCompat.Builder(this, CHANNEL)
-                .setSmallIcon(R.drawable.ic_note).setContentTitle("Family Notes")
-                .setContentText("Notes and checklists quick access").setOngoing(true)
-                .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE)).build());
+        startForeground(4219, voiceNotification());
         manager = getSystemService(WindowManager.class);
         themed = new ContextThemeWrapper(this, R.style.Theme_FamilyHub);
         repository = new NotesRepository(this);
+    }
+    private android.app.Notification voiceNotification() {
+        return new NotificationCompat.Builder(this, CHANNEL)
+                .setSmallIcon(R.drawable.ic_note).setContentTitle("Family Notes")
+                .setContentText("Notes and checklists quick access").setOngoing(true)
+                .setContentIntent(PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE)).build();
+    }
+    public void beginMicrophone() {
+        if (Build.VERSION.SDK_INT >= 34) startForeground(4219, voiceNotification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                        | android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
+    }
+    public void endMicrophone() {
+        if (Build.VERSION.SDK_INT >= 34) startForeground(4219, voiceNotification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (!Settings.canDrawOverlays(this)) { stopSelf(); return START_NOT_STICKY; }

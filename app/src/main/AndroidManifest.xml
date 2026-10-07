@@ -103,7 +103,7 @@
         <service
             android:name=".feature.notes.overlay.NotesOverlayService"
             android:exported="false"
-            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse|microphone"
             android:stopWithTask="false">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-enabled floating Notes quick-add and checklist workspace" />

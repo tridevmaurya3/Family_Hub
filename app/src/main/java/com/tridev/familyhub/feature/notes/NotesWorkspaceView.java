@@ -30,6 +30,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private final NotesRepository repository;
     private final EditorHost editor;
     private final boolean overlay;
+    private NotesInlineVoice inlineVoice;
     private final NotesAdapter adapter;
     private final TextView summary;
     private final TextView empty;
@@ -72,8 +73,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         setBackgroundColor(Color.rgb(248, 247, 253));
         LinearLayout filters = row();
         filterRow = filters;
-        dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
+        LinearLayout statusBlock = dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
                 position -> { status = position; reload(); });
+        if (overlay) { status = 1; ((android.widget.Spinner) statusBlock.getChildAt(0)).setSelection(1); }
         dropdown(filters, "Sort", new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
                 position -> { sort = position; render(); });
         dropdown(filters, "Type", new String[]{"All types", "Text note", "Checklist"},
@@ -309,6 +311,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         if (overlay) { TextView footer = label("Quick save without opening a form", 10); footer.setPadding(dp(6), dp(4), dp(6), 0); addView(footer); }
         makeControlsScrollable(0, indexOfChild(list));
         CompactFormStyle.applyInputs(this);
+        if (overlay) { inlineVoice = new NotesInlineVoice(context); inlineVoice.bind(this); }
         add.setCornerRadius(dp(24));
         quickRow.setGravity(Gravity.CENTER_VERTICAL);
     }
@@ -624,7 +627,8 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         syncStatusListener = listener;
         listener.onStateChanged(liveSync, connectingSync);
     }
-    public void deactivate() { for (android.app.Dialog dialog : new java.util.ArrayList<>(panels)) dialog.dismiss(); panels.clear(); if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
+    @Override protected void onDetachedFromWindow() { if (inlineVoice != null) inlineVoice.stop(); super.onDetachedFromWindow(); }
+    public void deactivate() { if (inlineVoice != null) inlineVoice.stop(); for (android.app.Dialog dialog : new java.util.ArrayList<>(panels)) dialog.dismiss(); panels.clear(); if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
     public void reload() {
         if (!active) return;
         final int request = ++generation;
