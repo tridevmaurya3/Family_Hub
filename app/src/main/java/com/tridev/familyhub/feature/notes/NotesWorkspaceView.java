@@ -76,7 +76,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         filterRow = filters;
         LinearLayout statusBlock = dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
                 position -> { status = position; reload(); });
-        if (overlay) { status = 1; ((android.widget.Spinner) statusBlock.getChildAt(0)).setSelection(1); }
+        status = 1; ((android.widget.Spinner) statusBlock.getChildAt(0)).setSelection(1);
         dropdown(filters, "Sort", new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
                 position -> { sort = position; render(); });
         dropdown(filters, "Type", new String[]{"All types", "Text note", "Checklist"},
