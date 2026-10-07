@@ -78,7 +78,9 @@ public final class NotesOverlayService extends Service {
         getApplication().registerActivityLifecycleCallbacks(inputLifecycle);
         NotificationManager notifications = getSystemService(NotificationManager.class);
         notifications.createNotificationChannel(new NotificationChannel(CHANNEL, "Floating Notes", NotificationManager.IMPORTANCE_LOW));
-        startForeground(4219, voiceNotification());
+        if (Build.VERSION.SDK_INT >= 34) startForeground(4219, voiceNotification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        else startForeground(4219, voiceNotification());
         manager = getSystemService(WindowManager.class);
         themed = new ContextThemeWrapper(this, R.style.Theme_FamilyHub);
         repository = new NotesRepository(this);
