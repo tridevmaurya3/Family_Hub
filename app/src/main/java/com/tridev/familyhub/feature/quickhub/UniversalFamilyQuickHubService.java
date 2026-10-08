@@ -126,7 +126,7 @@ public final class UniversalFamilyQuickHubService extends Service {
         Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), opacity=choice("More");
         coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
         coloredIcon(tasks, R.drawable.ic_family_task, R.color.fh_primary);
-        coloredIcon(opacity, R.drawable.ic_more, R.color.fh_primary);
+        coloredIcon(opacity, R.drawable.ic_transparency, R.color.fh_primary);
         coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
         selectorAnchor = anchor;
         selectorContent = box;

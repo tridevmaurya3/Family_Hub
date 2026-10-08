@@ -110,7 +110,9 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
 
         ImageView icon = new ImageView(getContext());
         icon.setImageResource(iconResource);
-        icon.setImageTintList(navColors());
+        icon.setImageTintList(destinationId == R.id.nav_tasks
+                ? ColorStateList.valueOf(ContextCompat.getColor(getContext(), R.color.fh_primary))
+                : null);
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         item.addView(icon, new LayoutParams(dp(23), dp(23)));
 
