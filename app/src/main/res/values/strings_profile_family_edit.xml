@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_edit_family_name">Edit family name</string>
+    <string name="profile_family_name_save">Save</string>
+    <string name="profile_family_name_length">Enter a family name with 2–60 characters</string>
+</resources>

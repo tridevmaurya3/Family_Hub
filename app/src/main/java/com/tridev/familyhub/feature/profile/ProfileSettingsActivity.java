@@ -44,6 +44,13 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     private TextView roleView;
     private ProgressBar progress;
     private MaterialSwitch darkThemeSwitch;
+    private com.google.android.material.button.MaterialButton editFamilyButton;
+    private com.google.firebase.database.DatabaseReference familyReference;
+    private com.google.firebase.database.ValueEventListener familyListener;
+    private String currentFamilyId = "";
+    private String profileUid = "";
+    private boolean canEditFamily;
+    private boolean nameInitialized;
 
     private final ActivityResultLauncher<String> photoPicker =
             registerForActivityResult(
@@ -77,6 +84,8 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         emailView = findViewById(R.id.textProfileEmail);
         familyView = findViewById(R.id.textProfileFamily);
         roleView = findViewById(R.id.textProfileRole);
+        editFamilyButton = findViewById(R.id.buttonProfileEditFamily);
+        editFamilyButton.setOnClickListener(v -> editFamilyName());
         progress = findViewById(R.id.progressProfile);
         darkThemeSwitch = findViewById(R.id.switchProfileDarkTheme);
 
@@ -112,13 +121,13 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
 
         prepareThemeSwitch();
         renderProfilePhoto();
-        loadProfile();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         attachStableThemeListener();
+        loadProfile();
     }
 
     @Override
@@ -127,6 +136,20 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
             darkThemeSwitch.setOnCheckedChangeListener(null);
         }
         super.onPause();
+    }
+
+    @Override protected void onStop() {
+        detachFamilyListener();
+        super.onStop();
+    }
+
+    private void detachFamilyListener() {
+        if (familyReference != null && familyListener != null)
+            familyReference.removeEventListener(familyListener);
+        familyReference = null;
+        familyListener = null;
+        canEditFamily = false;
+        if (editFamilyButton != null) editFamilyButton.setVisibility(View.GONE);
     }
 
     private void applySystemBarInsets() {
@@ -203,8 +226,14 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
             return;
         }
 
+        detachFamilyListener();
+        currentFamilyId = "";
+        profileUid = user.getUid();
         String displayName = user.getDisplayName();
-        nameInput.setText(displayName == null ? "" : displayName.trim());
+        if (!nameInitialized) {
+            nameInput.setText(displayName == null ? "" : displayName.trim());
+            nameInitialized = true;
+        }
         emailView.setText(safeText(user.getEmail()));
         progress.setVisibility(View.VISIBLE);
 
@@ -265,20 +294,74 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     }
 
     private void loadFamilyName(@NonNull String familyId) {
-        FirebaseDatabase.getInstance().getReference()
-                .child("families")
-                .child(familyId)
-                .child("name")
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    progress.setVisibility(View.GONE);
-                    String name = stringValue(snapshot);
-                    familyView.setText(name.isEmpty() ? familyId : name);
-                })
-                .addOnFailureListener(error -> {
-                    progress.setVisibility(View.GONE);
-                    familyView.setText(familyId);
-                });
+        if (isFinishing() || isDestroyed() || !getLifecycle().getCurrentState()
+                .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return;
+        detachFamilyListener();
+        currentFamilyId = familyId;
+        familyReference = FirebaseDatabase.getInstance().getReference()
+                .child("families").child(familyId);
+        familyListener = new com.google.firebase.database.ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (isFinishing() || isDestroyed()) return;
+                progress.setVisibility(View.GONE);
+                String name = stringValue(snapshot.child("name"));
+                familyView.setText(name.isEmpty() ? familyId : name);
+                canEditFamily = profileUid.equals(stringValue(snapshot.child("ownerUid")));
+                editFamilyButton.setVisibility(canEditFamily ? View.VISIBLE : View.GONE);
+            }
+            @Override public void onCancelled(@NonNull com.google.firebase.database.DatabaseError error) {
+                progress.setVisibility(View.GONE);
+                canEditFamily = false;
+                editFamilyButton.setVisibility(View.GONE);
+                familyView.setText(R.string.profile_unknown);
+                Toast.makeText(ProfileSettingsActivity.this, R.string.profile_load_error, Toast.LENGTH_LONG).show();
+            }
+        };
+        familyReference.addValueEventListener(familyListener);
+    }
+
+    private void editFamilyName() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (!canEditFamily || currentFamilyId.isEmpty() || user == null
+                || !profileUid.equals(user.getUid())) return;
+        final String familyId = currentFamilyId;
+        com.google.android.material.textfield.TextInputLayout field =
+                new com.google.android.material.textfield.TextInputLayout(this);
+        field.setHint(getString(R.string.profile_family));
+        TextInputEditText input = new TextInputEditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        input.setSingleLine(true);
+        field.addView(input, new android.widget.LinearLayout.LayoutParams(-1, -2));
+        field.setPadding(dp(20), dp(8), dp(20), 0);
+        input.setText(familyView.getText());
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.profile_edit_family_name).setView(field)
+                .setNegativeButton(R.string.action_cancel, null)
+                .setPositiveButton(R.string.profile_family_name_save, null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(view -> {
+                    String name = input.getText() == null ? "" : input.getText().toString().trim();
+                    if (name.length() < 2 || name.length() > 60) {
+                        field.setError(getString(R.string.profile_family_name_length));
+                        return;
+                    }
+                    FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+                    if (!canEditFamily || !familyId.equals(currentFamilyId) || current == null
+                            || !profileUid.equals(current.getUid())) return;
+                    dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                    FirebaseDatabase.getInstance().getReference().child("families")
+                            .child(familyId).child("name").setValue(name)
+                            .addOnSuccessListener(unused -> {
+                                dialog.dismiss();
+                                Toast.makeText(this, R.string.profile_saved, Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(error -> {
+                                dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                                field.setError(getString(R.string.profile_save_error));
+                            });
+                }));
+        dialog.show();
     }
 
     private void saveProfile() {

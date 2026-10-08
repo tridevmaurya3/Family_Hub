@@ -231,6 +231,12 @@
                     android:layout_marginTop="2dp"
                     android:text="@string/profile_unknown" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonProfileEditFamily"
+                    style="@style/Widget.FamilyHub.Button.Action"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/profile_edit_family_name" android:visibility="gone" />
+
                 <TextView
                     style="@style/TextAppearance.FamilyHub.Caption"
                     android:layout_width="match_parent"
