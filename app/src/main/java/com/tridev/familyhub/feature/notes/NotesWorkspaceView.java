@@ -70,6 +70,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private final LinearLayout filterRow, searchRow, categoryFilter;
     private final int[] filterWidths = new int[4];
     private int filterLayoutWidth = -1;
+    private LinearLayout quickDetails;
+    private RecyclerView workspaceList;
+    private boolean searchVisible;
 
     public NotesWorkspaceView(Context context, NotesRepository repository, boolean overlay, EditorHost editor) {
         super(context);
@@ -120,6 +123,7 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                 compactChoices[j] = compactFilterLabel(filterNames[i], filterChoices[i][j]);
             filterWidths[i] = dropdownWidth(context, compactChoices);
         }
+        tools.setVisibility(GONE);
         addView(tools, new LayoutParams(-1, -2));
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
@@ -168,6 +172,9 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         addParams.setMarginStart(dp(6)); addParams.bottomMargin = 0;
         quickRow.addView(addBlock, addParams);
         composerCard.addView(quickRow, new LayoutParams(-1, -2));
+        quickDetails = new LinearLayout(context);
+        quickDetails.setOrientation(VERTICAL);
+        composerCard.addView(quickDetails, new LayoutParams(-1, -2));
         LinearLayout contentRow = row();
         LinearLayout contentBlock = new LinearLayout(context);
         contentBlock.setOrientation(VERTICAL);
@@ -201,16 +208,16 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         LinearLayout sharingBlock = dropdown(choicesRow, "Sharing", new String[]{context.getString(R.string.notes_shared_status),
                 context.getString(R.string.notes_private_status)}, position -> { quickSharing = position; scheduleDraft(); });
         sharingInput = (android.widget.Spinner) sharingBlock.getChildAt(0);
-        composerCard.addView(contentRow, new LayoutParams(-1, -2));
+        quickDetails.addView(contentRow, new LayoutParams(-1, -2));
         quickChecklist = new NotesChecklistComposer(context, quickContent, contentBlock);
-        composerCard.addView(quickChecklist, new LayoutParams(-1, -2));
-        composerCard.addView(choicesRow, new LayoutParams(-1, -2));
+        quickDetails.addView(quickChecklist, new LayoutParams(-1, -2));
+        quickDetails.addView(choicesRow, new LayoutParams(-1, -2));
         MaterialButton more = chip("More ▾"); more.setContentDescription("More options");
         LayoutParams moreParams = new LayoutParams(0, dp(48), 1f); moreParams.setMarginStart(dp(6));
         choicesRow.addView(more, moreParams);
         more.setOnClickListener(v -> showQuickOptions(more));
         draftTag = label("", 10); draftTag.setTextColor(Color.rgb(128, 89, 191));
-        composerCard.addView(draftTag);
+        quickDetails.addView(draftTag);
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         String owner = user == null ? "local" : user.getUid();
         draftStore = context.getSharedPreferences("notes_draft_" + owner + (overlay ? "_floating" : "_main"), Context.MODE_PRIVATE);
@@ -316,12 +323,60 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
             undoBar.setVisibility(GONE); render(); });
         undoBar.setVisibility(GONE); addView(undoBar, new LayoutParams(-1, -2));
         if (overlay) { TextView footer = label("Quick save without opening a form", 10); footer.setPadding(dp(6), dp(4), dp(6), 0); addView(footer); }
-        makeControlsScrollable(0, indexOfChild(list));
+        makeNotesScrollable(list);
         CompactFormStyle.applyInputs(this);
         if (overlay) { inlineVoice = new NotesInlineVoice(context); inlineVoice.bind(this); }
         add.setCornerRadius(dp(24));
         quickRow.setGravity(Gravity.CENTER_VERTICAL);
     }
+
+    private void makeNotesScrollable(RecyclerView list) {
+        workspaceList = list;
+        LinearLayout controls = new LinearLayout(getContext());
+        controls.setOrientation(VERTICAL);
+        int first = overlay ? 0 : 1; // Keep main-page status cards fixed.
+        while (indexOfChild(list) > first) {
+            View child = getChildAt(first);
+            android.view.ViewGroup.LayoutParams params = child.getLayoutParams();
+            removeViewAt(first);
+            controls.addView(child, params);
+        }
+        RecyclerView.Adapter<RecyclerView.ViewHolder> header = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            @Override public RecyclerView.ViewHolder onCreateViewHolder(android.view.ViewGroup parent, int viewType) {
+                controls.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
+                return new RecyclerView.ViewHolder(controls) {};
+            }
+            @Override public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) { }
+            @Override public int getItemCount() { return 1; }
+        };
+        list.setAdapter(new androidx.recyclerview.widget.ConcatAdapter(header, adapter));
+    }
+
+    public void toggleSearch() {
+        searchVisible = !searchVisible;
+        searchRow.setVisibility(searchVisible ? VISIBLE : GONE);
+        if (searchVisible) {
+            if (workspaceList != null) workspaceList.scrollToPosition(0);
+            search.post(() -> {
+                search.requestFocus();
+                android.view.inputmethod.InputMethodManager keyboard =
+                        (android.view.inputmethod.InputMethodManager) getContext()
+                                .getSystemService(Context.INPUT_METHOD_SERVICE);
+                if (keyboard != null) keyboard.showSoftInput(search, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            });
+        } else {
+            search.setText("");
+            search.clearFocus();
+            android.view.inputmethod.InputMethodManager keyboard =
+                    (android.view.inputmethod.InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (keyboard != null) keyboard.hideSoftInputFromWindow(search.getWindowToken(), 0);
+        }
+    }
+
+    public void setQuickControlsCollapsed(boolean collapsed) {
+        if (quickDetails != null) quickDetails.setVisibility(collapsed ? GONE : VISIBLE);
+    }
+
     private androidx.appcompat.app.AlertDialog panel(LinearLayout content) {
         androidx.appcompat.app.AlertDialog dialog = NotesPanels.show(getContext(), overlay, content);
         panels.add(dialog); dialog.setOnDismissListener(d -> panels.remove(dialog)); return dialog;
@@ -525,27 +580,14 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         super.onMeasure(widthSpec, heightSpec);
     }
     private void arrangeFilters(int available) {
-        int required = dp(18);
-        for (int width : filterWidths) required += width;
-        boolean allFit = required <= available;
-        LinearLayout target = allFit ? filterRow : searchRow;
-        if (categoryFilter.getParent() != target) {
-            ((LinearLayout) categoryFilter.getParent()).removeView(categoryFilter);
-            target.addView(categoryFilter);
-        }
+        // Keep Category with the filters even when Search is hidden.
         for (int i = 0; i < filterRow.getChildCount(); i++) {
             View child = filterRow.getChildAt(i);
             LayoutParams params = (LayoutParams) child.getLayoutParams();
             params.width = 0;
-            params.weight = allFit ? filterWidths[i] : 1f;
+            params.weight = filterWidths[i];
             params.setMarginStart(i == 0 ? 0 : dp(6));
             child.setLayoutParams(params);
-        }
-        if (!allFit) {
-            LayoutParams params = new LayoutParams(Math.min(filterWidths[3], available / 2), -2);
-            params.setMarginStart(dp(6));
-            params.bottomMargin = dp(4);
-            categoryFilter.setLayoutParams(params);
         }
     }
     private static String compactFilterLabel(String name, String value) {

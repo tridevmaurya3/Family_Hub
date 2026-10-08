@@ -60,6 +60,14 @@
         </LinearLayout>
 
         <ImageButton
+            android:id="@+id/module_overview_search"
+            android:layout_width="36dp" android:layout_height="36dp"
+            android:background="@drawable/bg_icon_button"
+            android:contentDescription="@string/notes_search_hint"
+            android:padding="9dp" android:src="@drawable/ic_search"
+            android:visibility="gone" app:tint="@color/fh_module_notes" />
+
+        <ImageButton
             android:id="@+id/module_overview_notification"
             android:layout_width="36dp"
             android:layout_height="36dp"

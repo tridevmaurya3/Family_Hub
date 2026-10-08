@@ -45,7 +45,6 @@ public final class NotesOverlayService extends Service {
     private NotesWorkspaceView workspace;
     private int inputActivities;
     private boolean collapsed;
-    private int expandedHeight;
     private boolean closing;
     private Runnable unregisterBack;
     private final android.app.Application.ActivityLifecycleCallbacks inputLifecycle =
@@ -167,22 +166,20 @@ public final class NotesOverlayService extends Service {
         titleStack.addView(title, new LinearLayout.LayoutParams(-1, dp(24)));
         titleStack.addView(state, new LinearLayout.LayoutParams(-1, dp(18)));
         header.addView(titleStack, new LinearLayout.LayoutParams(0, dp(44), 1f));
+        android.widget.ImageButton searchToggle = new android.widget.ImageButton(themed);
+        searchToggle.setImageResource(R.drawable.ic_search);
+        searchToggle.setColorFilter(Color.rgb(106, 82, 145));
+        searchToggle.setContentDescription("Search notes and checklists");
+        searchToggle.setBackgroundResource(R.drawable.bg_icon_button);
+        searchToggle.setPadding(dp(10), dp(10), dp(10), dp(10));
+        header.addView(searchToggle, new LinearLayout.LayoutParams(dp(40), dp(44)));
+        searchToggle.setOnClickListener(v -> { if (workspace != null) workspace.toggleSearch(); });
         MaterialButton collapse = button("Collapse"); header.addView(collapse, new LinearLayout.LayoutParams(dp(72), dp(44)));
         MaterialButton close = button("×"); close.setContentDescription("Close floating Notes");
         header.addView(close, new LinearLayout.LayoutParams(dp(42), dp(44)));
         collapse.setOnClickListener(v -> {
             collapsed = !collapsed;
-            if (collapsed) {
-                expandedHeight = params.height;
-                body.setVisibility(View.GONE);
-                params.height = dp(76);
-                ((android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE))
-                        .hideSoftInputFromWindow(panel.getWindowToken(), 0);
-                panel.requestFocus();
-            } else {
-                params.height = expandedHeight;
-                body.setVisibility(View.VISIBLE);
-            }
+            if (workspace != null) workspace.setQuickControlsCollapsed(collapsed);
             collapse.setText(collapsed ? "Expand" : "Collapse");
             manager.updateViewLayout(panel, params);
         });
@@ -281,7 +278,6 @@ public final class NotesOverlayService extends Service {
     private void drag(View handle, boolean resize) {
         final float[] initial = new float[2]; final int[] original = new int[2];
         handle.setOnTouchListener((view, event) -> {
-            if (resize && collapsed) return true;
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 initial[0] = event.getRawX(); initial[1] = event.getRawY();
                 original[0] = resize ? params.width : params.x; original[1] = resize ? params.height : params.y;
@@ -297,7 +293,7 @@ public final class NotesOverlayService extends Service {
             }
             if (event.getAction() == MotionEvent.ACTION_UP) {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt("x", params.x).putInt("y", params.y)
-                        .putInt("w", params.width).putInt("h", collapsed ? expandedHeight : params.height).apply(); return true;
+                        .putInt("w", params.width).putInt("h", params.height).apply(); return true;
             }
             return false;
         });

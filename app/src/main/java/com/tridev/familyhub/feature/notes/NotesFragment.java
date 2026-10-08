@@ -48,6 +48,7 @@ public class NotesFragment extends Fragment implements AddActionHost {
             syncTag.setText(live ? R.string.notes_main_live : connecting ? R.string.notes_sync_connecting : R.string.notes_sync_offline);
             syncTag.setTextColor(live ? android.graphics.Color.rgb(38, 139, 88) : android.graphics.Color.rgb(110, 98, 130));
         });
+        binding.notesOverview.setSearchAction(v -> workspace.toggleSearch());
         workspace.activate();
     }
     @Override public void onAddRequested() { showEditor(null); }
