@@ -61,6 +61,10 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     private boolean quickSaving;
     private List<NoteEntry> notes = new ArrayList<>();
     private int status, type, sort, quickType, generation;
+    private android.widget.Spinner statusInput;
+    private final TextView[] statusCounts = new TextView[4];
+    private final LinearLayout[] statusCards = new LinearLayout[4];
+    private List<NoteEntry> summaryNotes = new ArrayList<>();
     private String category = "";
     private boolean active;
     private final LinearLayout filterRow, searchRow, categoryFilter;
@@ -72,11 +76,13 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
         this.repository = repository; this.overlay = overlay; this.editor = editor;
         setOrientation(VERTICAL);
         setBackgroundColor(Color.rgb(248, 247, 253));
+        if (!overlay) addStatusCards();
         LinearLayout filters = row();
         filterRow = filters;
         LinearLayout statusBlock = dropdown(filters, "Status", new String[]{"All active", "Pending", "Completed", "Pinned", "Archived"},
                 position -> { status = position; reload(); });
-        status = 1; ((android.widget.Spinner) statusBlock.getChildAt(0)).setSelection(1);
+        statusInput = (android.widget.Spinner) statusBlock.getChildAt(0);
+        status = 1; statusInput.setSelection(1);
         dropdown(filters, "Sort", new String[]{"Pinned / Latest", "Title A–Z", "Reminder first"},
                 position -> { sort = position; render(); });
         dropdown(filters, "Type", new String[]{"All types", "Text note", "Checklist"},
@@ -600,17 +606,100 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
     }
     @Override protected void onDetachedFromWindow() { if (inlineVoice != null) inlineVoice.stop(); super.onDetachedFromWindow(); }
     public void deactivate() { for (android.widget.PopupWindow menu : new java.util.ArrayList<>(menus)) menu.dismiss(); menus.clear(); if (inlineVoice != null) inlineVoice.stop(); for (android.app.Dialog dialog : new java.util.ArrayList<>(panels)) dialog.dismiss(); panels.clear(); if (categoryDialog != null) categoryDialog.dismiss(); categoryDialog = null; saveDraft(); uiHandler.removeCallbacks(persistDraft); commitDelete(); active = false; generation++; repository.stopRealtimeSync(); }
+
+    private void addStatusCards() {
+        LinearLayout cards = row();
+        cards.setBaselineAligned(false);
+        String[] labels = {"All active", "Pending", "Completed", "Pinned"};
+        int[] accents = {R.color.fh_module_notes, R.color.fh_info,
+                R.color.fh_success, R.color.fh_warning};
+        int[] fills = {R.color.fh_module_notes_container, R.color.fh_info_container,
+                R.color.fh_module_grocery_container, R.color.fh_warning_container};
+        for (int index = 0; index < labels.length; index++) {
+            final int selectedStatus = index;
+            int accent = androidx.core.content.ContextCompat.getColor(getContext(), accents[index]);
+            LinearLayout card = new LinearLayout(getContext());
+            card.setOrientation(VERTICAL);
+            card.setGravity(Gravity.CENTER);
+            card.setPadding(dp(4), dp(8), dp(4), dp(8));
+            card.setMinimumHeight(dp(68));
+            GradientDrawable background = new GradientDrawable();
+            background.setColor(androidx.core.content.ContextCompat.getColor(getContext(), fills[index]));
+            background.setCornerRadius(dp(16));
+            background.setStroke(dp(1), accent);
+            card.setBackground(background);
+            card.setClickable(true);
+            card.setFocusable(true);
+            TextView title = new TextView(getContext());
+            title.setText(labels[index]);
+            title.setTextSize(10f);
+            title.setTextColor(accent);
+            title.setGravity(Gravity.CENTER);
+            title.setSingleLine(true);
+            title.setIncludeFontPadding(false);
+            card.addView(title, new LayoutParams(-2, -2));
+            TextView count = new TextView(getContext());
+            count.setText("0");
+            count.setTextSize(18f);
+            count.setTextColor(accent);
+            count.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+            count.setGravity(Gravity.CENTER);
+            card.addView(count, new LayoutParams(-2, -2));
+            statusCounts[index] = count;
+            statusCards[index] = card;
+            card.setOnClickListener(view -> {
+                if (statusInput == null) return;
+                if (statusInput.getSelectedItemPosition() == selectedStatus) {
+                    status = selectedStatus;
+                    reload();
+                } else {
+                    statusInput.setSelection(selectedStatus);
+                }
+            });
+            LayoutParams params = new LayoutParams(0, -1, 1f);
+            if (index > 0) params.setMarginStart(dp(6));
+            cards.addView(card, params);
+        }
+        LayoutParams params = new LayoutParams(-1, -2);
+        params.bottomMargin = dp(6);
+        addView(cards, params);
+    }
+
+    private void updateStatusCards() {
+        if (overlay) return;
+        int[] counts = new int[4];
+        for (NoteEntry note : summaryNotes) {
+            if (note.isArchived || deleting.contains(note.id)
+                    || pendingDelete != null && note.id == pendingDelete.id) continue;
+            counts[0]++;
+            counts[NotesSmartFilter.completed(note) ? 2 : 1]++;
+            if (note.isPinned) counts[3]++;
+        }
+        String[] labels = {"All active", "Pending", "Completed", "Pinned"};
+        for (int index = 0; index < counts.length; index++) {
+            statusCounts[index].setText(String.valueOf(counts[index]));
+            statusCards[index].setSelected(status == index);
+            statusCards[index].setContentDescription(labels[index] + ", " + counts[index] + " notes");
+        }
+    }
+
     public void reload() {
         if (!active) return;
         final int request = ++generation;
-        NotesRepository.NotesCallback callback = loaded -> { if (active && request == generation) { notes = loaded; refreshCategories(null); render(); } };
-        if (status == 4) repository.loadArchived(callback); else repository.loadActive("", callback);
+        NotesRepository.NotesCallback callback = loaded -> { if (active && request == generation) { notes = loaded; if (status != 4) summaryNotes = loaded; refreshCategories(null); render(); } };
+        if (status == 4) {
+            repository.loadArchived(callback);
+            if (!overlay) repository.loadActive("", loaded -> {
+                if (active && request == generation) { summaryNotes = loaded; updateStatusCards(); }
+            });
+        } else repository.loadActive("", callback);
     }
     private void render() {
         if (adapter == null) return;
         List<NoteEntry> visible = NotesSmartFilter.apply(notes, status, type, category, sort, value(search));
         visible.removeIf(n -> deleting.contains(n.id) || pendingDelete != null && n.id == pendingDelete.id);
         adapter.submitList(visible);
+        updateStatusCards();
         int pending = 0, pinned = 0;
         for (NoteEntry note : notes) { if (!note.isArchived && !NotesSmartFilter.completed(note)) pending++; if (note.isPinned) pinned++; }
         summary.setText(visible.size() + " shown • " + pending + " pending • " + pinned + " pinned");
