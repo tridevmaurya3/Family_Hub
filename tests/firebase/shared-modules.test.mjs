@@ -37,9 +37,9 @@ after(async () => { if (env) await env.cleanup(); });
 function item(module) {
   const common = { cloudId: 'record', familyId: 'familyA', updatedByUid: writer, updatedAt: 1000 };
   switch (module) {
-    case 'health': return { ...common, shared: true, createdAt: 900, memberName: 'Member', recordType: 'MEDICINE', title: 'Medicine' };
-    case 'vehicles': return { ...common, shared: true, createdAt: 900, ownerName: 'Member', vehicleType: 'CAR', displayName: 'Car' };
-    case 'properties': return { ...common, shared: true, createdAt: 900, ownerName: 'Member', propertyType: 'HOUSE', title: 'House' };
+    case 'health': return { ...common, assignedMemberId: 'account_member-alice', assignedMemberName: 'Member', collaborationStatus: 'ACTIVE', shared: true, createdAt: 900, memberName: 'Member', recordType: 'MEDICINE', title: 'Medicine' };
+    case 'vehicles': return { ...common, assignedMemberId: 'account_member-alice', assignedMemberName: 'Member', collaborationStatus: 'ACTIVE', shared: true, createdAt: 900, ownerName: 'Member', vehicleType: 'CAR', displayName: 'Car' };
+    case 'properties': return { ...common, assignedMemberId: 'account_member-alice', assignedMemberName: 'Member', collaborationStatus: 'ACTIVE', shared: true, createdAt: 900, ownerName: 'Member', propertyType: 'HOUSE', title: 'House' };
     case 'finance': return { ...common, shared: true, entryType: 'EXPENSE', amount: 100, category: 'Food', transactionDate: '2026-10-08', accountName: 'Cash', paymentMethod: 'CASH', recurring: false, updatedByName: 'Alice' };
     default: return { ...common, collaborationStatus: 'PENDING', assignedMemberId: '', assignedMemberName: '', title: 'Record' };
   }

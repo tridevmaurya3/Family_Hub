@@ -80,6 +80,7 @@ public class HealthRepository {
 
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
+        retryPendingShared();
         subscriber = new FamilyCollaborationSubscriber("health",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
@@ -91,14 +92,31 @@ public class HealthRepository {
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             HealthRecord local = healthRecordDao.getByCloudId(cloudId);
-                            if (local == null || !local.isShared) return;
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             long localId = local.id;
+                            HealthReminderScheduler.cancel(appContext, local.id);
                             healthRecordDao.delete(local);
                             mainHandler.post(() -> callback.onRemoved(localId));
                         });
                     }
                 });
         subscriber.start();
+    }
+
+    /** Matches Notes' startup retry, restricted to the account that saved the record. */
+    private void retryPendingShared() {
+        String uid = FamilySharedRecordSupport.currentUid();
+        if (uid.isEmpty()) return;
+        DATABASE_EXECUTOR.execute(() -> {
+            for (HealthRecord pending : healthRecordDao.getPendingShared(uid)) {
+                if (FamilySharedRecordSupport.canRetry(pending.isShared, pending.familyId,
+                        pending.updatedByUid, FamilySharedRecordSupport.currentUid())) {
+                    pending.cloudId = FamilySharedRecordSupport.cloudId(pending.cloudId);
+                    healthRecordDao.update(pending);
+                    publish(pending);
+                }
+            }
+        });
     }
 
     public void stopRealtimeSync() {
@@ -306,6 +324,12 @@ public class HealthRepository {
             }
             record.updatedAt = System.currentTimeMillis();
 
+            if (record.isShared) {
+                record.cloudId = FamilySharedRecordSupport.cloudId(record.cloudId);
+                if (record.familyId.isEmpty()) {
+                    record.updatedByUid = FamilySharedRecordSupport.currentUid();
+                }
+            }
             if (record.id == 0L) {
                 record.id = healthRecordDao.insert(record);
             } else {
@@ -340,12 +364,17 @@ public class HealthRepository {
         values.put("timelineNote", record.timelineNote);
         values.put("shared", true);
         values.put("createdAt", record.createdAt);
+        values.put("assignedMemberId", FamilySharedRecordSupport.profileId(
+                familyMemberDao, record.familyMemberId, FamilySharedRecordSupport.currentUid()));
+        values.put("assignedMemberName", record.assignedMemberName);
+        values.put("collaborationStatus", "ACTIVE");
         FamilyCollaborationPublisher.publish("health", record.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    record.cloudId = cloudId;
-                    record.familyId = familyId;
-                    record.updatedByUid = uid;
-                    healthRecordDao.update(record);
+                    HealthRecord current = healthRecordDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId;
+                    current.updatedByUid = uid;
+                    healthRecordDao.update(current);
                 }));
     }
 
@@ -362,8 +391,8 @@ public class HealthRepository {
             if (insert) record = new HealthRecord();
 
             String memberName = text(snapshot, "memberName");
-            FamilyMember member = familyMemberDao.getByName(memberName);
-            if (member == null) return;
+            FamilyMember member = FamilySharedRecordSupport.resolveMember(
+                    familyMemberDao, familyId, text(snapshot, "assignedMemberId"), memberName);
 
             record.cloudId = cloudId;
             record.familyId = familyId;

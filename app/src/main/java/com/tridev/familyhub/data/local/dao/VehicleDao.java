@@ -37,6 +37,10 @@ public interface VehicleDao {
     @Query("SELECT * FROM vehicles WHERE cloudId = :cloudId LIMIT 1")
     Vehicle getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM vehicles WHERE isShared = 1 AND familyId = '' "
+            + "AND updatedByUid = :uid")
+    List<Vehicle> getPendingShared(String uid);
+
     @Query("SELECT COUNT(*) FROM vehicles WHERE "
             + "(insuranceExpiryAt > 0 AND insuranceExpiryAt <= :deadline) OR "
             + "(pollutionExpiryAt > 0 AND pollutionExpiryAt <= :deadline) OR "

@@ -39,6 +39,10 @@ public interface HealthRecordDao {
     @Query("SELECT * FROM health_records WHERE cloudId = :cloudId LIMIT 1")
     HealthRecord getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM health_records WHERE isShared = 1 AND familyId = '' "
+            + "AND updatedByUid = :uid")
+    List<HealthRecord> getPendingShared(String uid);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(HealthRecord record);
 

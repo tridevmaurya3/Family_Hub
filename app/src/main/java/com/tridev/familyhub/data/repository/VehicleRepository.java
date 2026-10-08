@@ -64,6 +64,7 @@ public class VehicleRepository {
 
     public void startRealtimeSync(@NonNull Runnable onChanged) {
         stopRealtimeSync();
+        retryPendingShared();
         subscriber = new FamilyCollaborationSubscriber("vehicles",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
@@ -74,13 +75,30 @@ public class VehicleRepository {
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             Vehicle local = vehicleDao.getByCloudId(cloudId);
-                            if (local == null || !local.isShared) return;
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
+                            VehicleReminderScheduler.cancelAll(appContext, local.id);
                             vehicleDao.delete(local);
                             mainHandler.post(onChanged);
                         });
                     }
                 });
         subscriber.start();
+    }
+
+    /** Matches Notes' startup retry, restricted to the account that saved the record. */
+    private void retryPendingShared() {
+        String uid = FamilySharedRecordSupport.currentUid();
+        if (uid.isEmpty()) return;
+        DATABASE_EXECUTOR.execute(() -> {
+            for (Vehicle pending : vehicleDao.getPendingShared(uid)) {
+                if (FamilySharedRecordSupport.canRetry(pending.isShared, pending.familyId,
+                        pending.updatedByUid, FamilySharedRecordSupport.currentUid())) {
+                    pending.cloudId = FamilySharedRecordSupport.cloudId(pending.cloudId);
+                    vehicleDao.update(pending);
+                    publish(pending);
+                }
+            }
+        });
     }
 
     public void stopRealtimeSync() {
@@ -149,6 +167,12 @@ public class VehicleRepository {
                     vehicle.createdAt = System.currentTimeMillis();
                 }
                 vehicle.updatedAt = System.currentTimeMillis();
+                if (vehicle.isShared) {
+                    vehicle.cloudId = FamilySharedRecordSupport.cloudId(vehicle.cloudId);
+                    if (vehicle.familyId.isEmpty()) {
+                        vehicle.updatedByUid = FamilySharedRecordSupport.currentUid();
+                    }
+                }
                 if (vehicle.id == 0L) {
                     vehicle.id = vehicleDao.insert(vehicle);
                 } else {
@@ -191,12 +215,17 @@ public class VehicleRepository {
         values.put("timelineNote", vehicle.timelineNote);
         values.put("shared", true);
         values.put("createdAt", vehicle.createdAt);
+        values.put("assignedMemberId", FamilySharedRecordSupport.profileId(
+                familyMemberDao, vehicle.ownerMemberId, FamilySharedRecordSupport.currentUid()));
+        values.put("assignedMemberName", vehicle.assignedOwnerName);
+        values.put("collaborationStatus", "ACTIVE");
         FamilyCollaborationPublisher.publish("vehicles", vehicle.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    vehicle.cloudId = cloudId;
-                    vehicle.familyId = familyId;
-                    vehicle.updatedByUid = uid;
-                    vehicleDao.update(vehicle);
+                    Vehicle current = vehicleDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId;
+                    current.updatedByUid = uid;
+                    vehicleDao.update(current);
                 }));
     }
 
@@ -211,8 +240,9 @@ public class VehicleRepository {
             if (vehicle != null && vehicle.updatedAt > updatedAt) return;
             boolean insert = vehicle == null;
             if (insert) vehicle = new Vehicle();
-            FamilyMember owner = familyMemberDao.getByName(text(snapshot, "ownerName"));
-            if (owner == null) return;
+            FamilyMember owner = FamilySharedRecordSupport.resolveMember(
+                    familyMemberDao, familyId, text(snapshot, "assignedMemberId"),
+                    text(snapshot, "ownerName"));
             vehicle.cloudId = cloudId; vehicle.familyId = familyId;
             vehicle.ownerMemberId = owner.id; vehicle.assignedOwnerName = owner.name;
             vehicle.vehicleType = fallback(text(snapshot, "vehicleType"), Vehicle.TYPE_OTHER);

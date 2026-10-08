@@ -59,6 +59,7 @@ public class PropertyRepository {
 
     public void startRealtimeSync(@NonNull Runnable changed) {
         stopRealtimeSync();
+        retryPendingShared();
         subscriber = new FamilyCollaborationSubscriber("properties",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
@@ -69,12 +70,28 @@ public class PropertyRepository {
                             @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             PropertyEntry local = propertyDao.getByCloudId(cloudId);
-                            if (local == null || !local.isShared) return;
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             propertyDao.delete(local); mainHandler.post(changed);
                         });
                     }
                 });
         subscriber.start();
+    }
+
+    /** Matches Notes' startup retry, restricted to the account that saved the record. */
+    private void retryPendingShared() {
+        String uid = FamilySharedRecordSupport.currentUid();
+        if (uid.isEmpty()) return;
+        DATABASE_EXECUTOR.execute(() -> {
+            for (PropertyEntry pending : propertyDao.getPendingShared(uid)) {
+                if (FamilySharedRecordSupport.canRetry(pending.isShared, pending.familyId,
+                        pending.updatedByUid, FamilySharedRecordSupport.currentUid())) {
+                    pending.cloudId = FamilySharedRecordSupport.cloudId(pending.cloudId);
+                    propertyDao.update(pending);
+                    publish(pending);
+                }
+            }
+        });
     }
 
     public void stopRealtimeSync() {
@@ -144,6 +161,12 @@ public class PropertyRepository {
                 property.createdAt = System.currentTimeMillis();
             }
             property.updatedAt = System.currentTimeMillis();
+            if (property.isShared) {
+                property.cloudId = FamilySharedRecordSupport.cloudId(property.cloudId);
+                if (property.familyId.isEmpty()) {
+                    property.updatedByUid = FamilySharedRecordSupport.currentUid();
+                }
+            }
             if (property.id == 0L) {
                 property.id = propertyDao.insert(property);
             } else {
@@ -169,9 +192,16 @@ public class PropertyRepository {
         v.put("purchaseDate", p.purchaseDate); v.put("registrationReference", p.registrationReference);
         v.put("notes", p.notes); v.put("linkedDocumentTitle", p.linkedDocumentTitle);
         v.put("timelineNote", p.timelineNote); v.put("shared", true); v.put("createdAt", p.createdAt);
+        v.put("assignedMemberId", FamilySharedRecordSupport.profileId(
+                familyMemberDao, p.ownerMemberId, FamilySharedRecordSupport.currentUid()));
+        v.put("assignedMemberName", p.assignedOwnerName);
+        v.put("collaborationStatus", "ACTIVE");
         FamilyCollaborationPublisher.publish("properties", p.cloudId, v,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    p.cloudId=cloudId; p.familyId=familyId; p.updatedByUid=uid; propertyDao.update(p);
+                    PropertyEntry current = propertyDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId; current.updatedByUid = uid;
+                    propertyDao.update(current);
                 }));
     }
 
@@ -181,8 +211,10 @@ public class PropertyRepository {
             String cloudId=text(s,"cloudId"); if(cloudId.isEmpty()) return;
             long updated=number(s,"updatedAt"); PropertyEntry p=propertyDao.getByCloudId(cloudId);
             if(p!=null && p.updatedAt>updated) return; boolean insert=p==null;
-            if(insert) p=new PropertyEntry(); FamilyMember owner=familyMemberDao.getByName(text(s,"ownerName"));
-            if(owner==null) return; p.cloudId=cloudId; p.familyId=familyId;
+            if(insert) p=new PropertyEntry();
+            FamilyMember owner = FamilySharedRecordSupport.resolveMember(
+                    familyMemberDao, familyId, text(s, "assignedMemberId"), text(s, "ownerName"));
+            p.cloudId=cloudId; p.familyId=familyId;
             p.ownerMemberId=owner.id; p.assignedOwnerName=owner.name;
             p.propertyType=fallback(text(s,"propertyType"),PropertyEntry.TYPE_OTHER);
             p.title=text(s,"title"); p.address=text(s,"address"); p.city=text(s,"city");

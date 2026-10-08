@@ -14,6 +14,9 @@ import java.util.List;
 @Dao
 public interface FamilyMemberDao {
 
+    @Query("SELECT * FROM family_members WHERE id = :id LIMIT 1")
+    FamilyMember getById(long id);
+
     @Query("SELECT * FROM family_members ORDER BY name COLLATE NOCASE ASC")
     List<FamilyMember> getAll();
 

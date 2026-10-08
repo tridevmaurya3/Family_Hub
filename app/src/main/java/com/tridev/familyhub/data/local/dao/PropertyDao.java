@@ -37,6 +37,10 @@ public interface PropertyDao {
     @Query("SELECT * FROM properties WHERE cloudId = :cloudId LIMIT 1")
     PropertyEntry getByCloudId(String cloudId);
 
+    @Query("SELECT * FROM properties WHERE isShared = 1 AND familyId = '' "
+            + "AND updatedByUid = :uid")
+    List<PropertyEntry> getPendingShared(String uid);
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(PropertyEntry property);
 
