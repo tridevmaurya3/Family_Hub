@@ -36,6 +36,17 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         Context themed = getContext();
         LayoutInflater.from(themed).inflate(R.layout.view_family_task_reminder_options, this, true);
         MaterialButton toggle = findViewById(R.id.reminder_toggle);
+        if (quick) {
+            removeView(toggle);
+            toggle.setSingleLine(true);
+            toggle.setEllipsize(null);
+            toggle.setMinHeight((int) (40 * getResources().getDisplayMetrics().density + 0.5f));
+            android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(themed);
+            scroll.setFillViewport(true);
+            scroll.addView(toggle, new android.widget.HorizontalScrollView.LayoutParams(
+                    LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+            addView(scroll, 0, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        }
         View details = findViewById(R.id.reminder_details);
         notificationAccess = findViewById(R.id.reminder_notification_access);
         exactAccess = findViewById(R.id.reminder_exact_access);

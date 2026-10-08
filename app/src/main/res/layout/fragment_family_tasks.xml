@@ -285,42 +285,49 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_quick_add_panel" />
 
-    <LinearLayout
+    <HorizontalScrollView
         android:id="@+id/task_quick_options"
-        android:layout_width="0dp" android:layout_height="42dp"
-        android:layout_marginTop="2dp" android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_marginTop="2dp" android:fillViewport="true"
+        android:scrollbars="horizontal"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/task_quick_subtasks_host">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:gravity="center_vertical" android:orientation="horizontal">
         <com.google.android.material.button.MaterialButton
             android:id="@+id/task_quick_date_button"
             style="@style/Widget.FamilyHub.FloatingCompact.Action"
-            android:layout_width="0dp" android:layout_height="38dp"
-            android:layout_weight="1" android:text="@string/family_tasks_overlay_today"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minHeight="38dp" android:singleLine="true" android:ellipsize="none"
+            android:text="@string/family_tasks_overlay_today"
             android:textSize="10sp" android:textColor="@color/fh_module_grocery" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/task_quick_time_button"
             style="@style/Widget.FamilyHub.FloatingCompact.Action"
-            android:layout_width="0dp" android:layout_height="38dp"
-            android:layout_marginStart="4dp" android:layout_weight="1"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minHeight="38dp" android:singleLine="true" android:ellipsize="none"
+            android:layout_marginStart="4dp"
             android:text="@string/family_tasks_quick_time" android:textSize="10sp"
             android:textColor="@color/fh_warning" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/task_quick_priority_button"
             style="@style/Widget.FamilyHub.FloatingCompact.Action"
-            android:layout_width="0dp" android:layout_height="38dp"
-            android:layout_marginStart="4dp" android:layout_weight="1"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minHeight="38dp" android:singleLine="true" android:ellipsize="none"
+            android:layout_marginStart="4dp"
             android:text="@string/task_priority_normal" android:textSize="10sp"
             android:textColor="@color/fh_primary" />
         <com.google.android.material.button.MaterialButton
             android:id="@+id/task_quick_repeat_button"
             style="@style/Widget.FamilyHub.FloatingCompact.Action"
-            android:layout_width="0dp" android:layout_height="38dp"
-            android:layout_marginStart="4dp" android:layout_weight="1"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:minHeight="38dp" android:singleLine="true" android:ellipsize="none"
+            android:layout_marginStart="4dp"
             android:text="@string/task_repeat_none" android:textSize="10sp"
             android:textColor="@color/fh_info" />
-    </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <FrameLayout android:id="@+id/task_quick_reminder_host"
         android:layout_width="0dp" android:layout_height="wrap_content"

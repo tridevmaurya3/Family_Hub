@@ -377,15 +377,15 @@ public final class FamilyTaskOverlayService extends Service {
                 Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
         Button sort = compactAction(sortLabel() + "  ▾", Color.rgb(15, 108, 189),
                 Color.argb(220, 232, 243, 252));
-        listFilters.addView(day, new LinearLayout.LayoutParams(0, dp(38), 1f));
+        listFilters.addView(day, new LinearLayout.LayoutParams(-2, -2));
         LinearLayout.LayoutParams filterPriorityParams =
-                new LinearLayout.LayoutParams(0, dp(38), 1f);
+                new LinearLayout.LayoutParams(-2, -2);
         filterPriorityParams.setMarginStart(dp(4));
         listFilters.addView(priorityFilter, filterPriorityParams);
-        LinearLayout.LayoutParams sortParams = new LinearLayout.LayoutParams(0, dp(38), 1f);
+        LinearLayout.LayoutParams sortParams = new LinearLayout.LayoutParams(-2, -2);
         sortParams.setMarginStart(dp(4));
         listFilters.addView(sort, sortParams);
-        root.addView(listFilters, new LinearLayout.LayoutParams(-1, dp(42)));
+        addScrollableOptions(root, listFilters);
         day.setOnClickListener(v -> showDayPopup(day));
         priorityFilter.setOnClickListener(v -> showPriorityFilterPopup(priorityFilter));
         sort.setOnClickListener(v -> showSortPopup(sort));
@@ -460,20 +460,20 @@ public final class FamilyTaskOverlayService extends Service {
                 Color.rgb(106, 75, 150), Color.argb(220, 244, 237, 252));
         Button quickRepeatButton = compactAction("Once  ▾",
                 Color.rgb(28, 91, 130), Color.argb(220, 232, 243, 250));
-        addOptions.addView(quickDate, new LinearLayout.LayoutParams(0, dp(38), 1f));
+        addOptions.addView(quickDate, new LinearLayout.LayoutParams(-2, -2));
         LinearLayout.LayoutParams quickTimeParams =
-                new LinearLayout.LayoutParams(0, dp(38), 1f);
+                new LinearLayout.LayoutParams(-2, -2);
         quickTimeParams.setMarginStart(dp(4));
         addOptions.addView(quickTimeButton, quickTimeParams);
         LinearLayout.LayoutParams quickPriorityParams =
-                new LinearLayout.LayoutParams(0, dp(38), 1f);
+                new LinearLayout.LayoutParams(-2, -2);
         quickPriorityParams.setMarginStart(dp(4));
         addOptions.addView(quickPriorityButton, quickPriorityParams);
         LinearLayout.LayoutParams quickRepeatParams =
-                new LinearLayout.LayoutParams(0, dp(38), 1f);
+                new LinearLayout.LayoutParams(-2, -2);
         quickRepeatParams.setMarginStart(dp(4));
         addOptions.addView(quickRepeatButton, quickRepeatParams);
-        root.addView(addOptions, new LinearLayout.LayoutParams(-1, dp(42)));
+        addScrollableOptions(root, addOptions);
         updateQuickTimeButton(quickTimeButton, quickDateMode[0], customQuickDateAt[0],
                 quickTimeMode[0], customQuickTime);
 
@@ -1423,6 +1423,17 @@ public final class FamilyTaskOverlayService extends Service {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(widthDp), dp(34));
         params.setMarginStart(dp(3));
         return params;
+    }
+
+    private void addScrollableOptions(LinearLayout root, LinearLayout options) {
+        for (int i = 0; i < options.getChildCount(); i++) {
+            options.getChildAt(i).setMinimumHeight(dp(38));
+        }
+        android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setHorizontalScrollBarEnabled(true);
+        scroll.addView(options, new android.widget.HorizontalScrollView.LayoutParams(-2, -2));
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, -2));
     }
 
     @NonNull

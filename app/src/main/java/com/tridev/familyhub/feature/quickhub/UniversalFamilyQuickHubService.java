@@ -123,9 +123,10 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), opacity=choice("◐  More");
+        Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), opacity=choice("More");
         coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
         coloredIcon(tasks, R.drawable.ic_family_task, R.color.fh_primary);
+        coloredIcon(opacity, R.drawable.ic_more, R.color.fh_primary);
         coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
         selectorAnchor = anchor;
         selectorContent = box;
