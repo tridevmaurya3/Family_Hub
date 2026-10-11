@@ -78,6 +78,9 @@ public class DashboardFragment extends Fragment {
     private int dashboardRequest;
     @Nullable private FamilyTaskRepository taskRepository;
     @Nullable private DashboardData latestDashboardData;
+    private boolean dashboardLoadInFlight;
+    private boolean dashboardReloadPending;
+    private final Runnable dashboardBackgroundReload = this::loadDashboardData;
     private int taskPendingCount;
     @Nullable private com.tridev.familyhub.data.repository.NotesRepository notesSummaryRepository;
     @Nullable private com.tridev.familyhub.data.local.FamilyHubDatabase notesSummaryDatabase;
@@ -308,6 +311,9 @@ public class DashboardFragment extends Fragment {
     public void onStop() {
         if (dashboardRealtimeSync != null) dashboardRealtimeSync.stop();
         dashboardRequest++;
+        dashboardLoadInFlight = false;
+        dashboardReloadPending = false;
+        headerClockHandler.removeCallbacks(dashboardBackgroundReload);
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).removeListener(profileListener);
         headerClockHandler.removeCallbacks(headerClockTick);
         super.onStop();
@@ -798,8 +804,17 @@ public class DashboardFragment extends Fragment {
         if (binding == null) {
             return;
         }
-        binding.dashboardLoading.setVisibility(View.VISIBLE);
-        binding.dashboardErrorCard.setVisibility(View.GONE);
+        if (dashboardLoadInFlight) {
+            dashboardReloadPending = true;
+            return;
+        }
+        headerClockHandler.removeCallbacks(dashboardBackgroundReload);
+        dashboardLoadInFlight = true;
+        // Background updates retain the rendered page and its scroll position.
+        if (latestDashboardData == null) {
+            binding.dashboardLoading.setVisibility(View.VISIBLE);
+            binding.dashboardErrorCard.setVisibility(View.GONE);
+        }
 
         int request = ++dashboardRequest;
         dashboardRepository.loadDashboardData(
@@ -821,6 +836,7 @@ public class DashboardFragment extends Fragment {
                     renderBill(data);
                     renderRecentActivity(data);
                     binding.dashboardSmartSections.setDashboardData(data);
+                    finishDashboardRefresh();
                 },
                 error -> {
                     if (request != dashboardRequest) return;
@@ -828,9 +844,18 @@ public class DashboardFragment extends Fragment {
                         return;
                     }
                     binding.dashboardLoading.setVisibility(View.GONE);
-                    binding.dashboardErrorCard.setVisibility(View.VISIBLE);
+                    if (latestDashboardData == null) binding.dashboardErrorCard.setVisibility(View.VISIBLE);
+                    finishDashboardRefresh();
                 }
         );
+    }
+
+    private void finishDashboardRefresh() {
+        dashboardLoadInFlight = false;
+        if (dashboardReloadPending) {
+            dashboardReloadPending = false;
+            headerClockHandler.postDelayed(dashboardBackgroundReload,400L);
+        }
     }
 
     private void renderPrioritySummary(@NonNull DashboardData data) {
@@ -1217,6 +1242,9 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onDestroyView() {
         headerClockHandler.removeCallbacks(headerClockTick);
+        headerClockHandler.removeCallbacks(dashboardBackgroundReload);
+        dashboardLoadInFlight = false;
+        dashboardReloadPending = false;
         if (dashboardRealtimeSync != null) { dashboardRealtimeSync.stop(); dashboardRealtimeSync = null; }
         dashboardRequest++;
         if (dashboardRepository != null) {
