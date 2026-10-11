@@ -98,14 +98,13 @@ public class ReminderReceiver extends BroadcastReceiver {
 
         boolean urgent = "URGENT".equalsIgnoreCase(priority);
         createNotificationChannels(context);
-        Intent openAppIntent = new Intent(context, MainActivity.class)
-                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent contentIntent = PendingIntent.getActivity(
-                context,
-                (int) (reminderId & 0x7fffffff),
-                openAppIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+        Intent openAppIntent = new Intent(context, ReminderAlarmActivity.class)
+                .putExtra(EXTRA_REMINDER_ID,reminderId).putExtra("title",title).putExtra("notes",note).putExtra("time",System.currentTimeMillis()).putExtra("stage",preAlert?0:1)
+                .setData(android.net.Uri.parse("familyhub://reminder-notification/"+reminderId))
+                .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent contentIntent = PendingIntent.getActivity(context,(int)(reminderId&0x7fffffff),openAppIntent,PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Intent chooser=new Intent(openAppIntent).setClass(context,ReminderSnoozeActivity.class).putExtra("snooze_only",true).setData(android.net.Uri.parse("familyhub://reminder-notification-snooze/"+reminderId));
+        PendingIntent choose=PendingIntent.getActivity(context,(int)(reminderId&0x7fffffff),chooser,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context,
                 urgent ? URGENT_CHANNEL_ID : CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_reminder)
@@ -120,10 +119,9 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setOnlyAlertOnce(preAlert)
                 .setAutoCancel(true)
                 .setContentIntent(contentIntent)
-                .addAction(0, "Snooze 10 min", snoozeIntent(context, reminderId,
-                        title, note, repeatType, 10))
-                .addAction(0, "Snooze 1 hour", snoozeIntent(context, reminderId,
-                        title, note, repeatType, 60));
+                .addAction(0,"Snooze",choose)
+                .addAction(0,"Stop alarm",ReminderAlarmService.action(context,reminderId,ACTION_DISMISS,0))
+                .addAction(0,"Complete",ReminderAlarmService.action(context,reminderId,ACTION_COMPLETE,0));
         NotificationManagerCompat.from(context).notify((int) (reminderId & 0x7fffffff), builder.build());
     }
 

@@ -183,7 +183,7 @@ public final class PlannerOverlayService extends Service {
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new PlannerWorkspace(themed, true, () -> startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
-        workspace.setSyncStatusListener(value -> state.setText(value + " • Mini"));
+        workspace.setSyncStatusListener(value -> {state.setText(value + " • Mini");state.setTextColor(value.contains("Live")?Color.rgb(30,125,92):Color.rgb(91,101,113));});
         body.addView(workspace.getView(), new FrameLayout.LayoutParams(-1, -1));
         drag(titleStack, false);
         TextView grip = new TextView(themed); grip.setText("◢"); grip.setTextColor(Color.rgb(32, 87, 140));
