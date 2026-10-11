@@ -214,7 +214,8 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     }
 
     private boolean isEntryOrLockActivity(@NonNull Activity activity) {
-        return activity instanceof AppLockActivity
+        return activity instanceof com.tridev.familyhub.core.reminders.ReminderAlarmActivity
+                || activity instanceof AppLockActivity
                 || activity instanceof AuthActivity
                 || activity instanceof SplashActivity;
     }

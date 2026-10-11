@@ -10,6 +10,8 @@ public class ScrollableWorkspaceLayout extends LinearLayout {
     private ControlsScroll controls;
     public ScrollableWorkspaceLayout(Context context) { super(context); setOrientation(VERTICAL); }
 
+    public ScrollableWorkspaceLayout(Context context, android.util.AttributeSet attrs) { super(context, attrs); setOrientation(VERTICAL); }
+
     /** Wrap only controls; keep the header and weighted item list outside this scroll region. */
     public void makeControlsScrollable(int first, int end) {
         LinearLayout fields = new LinearLayout(getContext());
