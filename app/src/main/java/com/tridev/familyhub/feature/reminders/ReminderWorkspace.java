@@ -84,8 +84,9 @@ public final class ReminderWorkspace {
         binding = FragmentRemindersBinding.inflate(LayoutInflater.from(context));
         binding.remindersOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
                 R.string.feature_menu_title, clickedView -> menu.run());
-        if (floating) binding.remindersOverview.setVisibility(View.GONE);
+        if (floating) { binding.remindersOverview.setVisibility(View.GONE); binding.reminderDashboardSummary.setVisibility(View.GONE); }
         initialize();
+        if (floating) com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.reminderFilterScroll);
     }
     public View getView() { return binding.getRoot(); }
     private Context requireContext() { return context; }

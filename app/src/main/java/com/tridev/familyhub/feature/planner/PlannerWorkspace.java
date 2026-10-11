@@ -73,8 +73,9 @@ public final class PlannerWorkspace {
         this.context=context;this.floating=floating;
         binding=FragmentPlannerBinding.inflate(LayoutInflater.from(context));
         binding.plannerOverview.setNavigationAction(R.drawable.ic_menu_hamburger,R.string.feature_menu_title,v->menu.run());
-        if(floating)binding.plannerOverview.setVisibility(View.GONE);
+        if(floating){binding.plannerOverview.setVisibility(View.GONE);binding.plannerSummary.setVisibility(View.GONE);}
         initialize();
+        if (floating) com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.plannerFilterScroll);
     }
     public View getView(){return binding.getRoot();}
     private android.content.Context requireContext(){return context;}
