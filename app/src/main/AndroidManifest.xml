@@ -230,6 +230,7 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name=".feature.profile.ProfilePhotoCropActivity" android:exported="false" />
         <activity
             android:name=".feature.profile.ProfileSettingsActivity"
             android:exported="false"

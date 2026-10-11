@@ -930,6 +930,7 @@ public class GroceryOverlayService extends Service {
         panelParams.x = clamp(panelParams.x, 0, Math.max(0, screenWidth - resolvedPanelWidth));
         panelParams.y = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("panel_y", dp(74));
         panelParams.y = clamp(panelParams.y, 0, Math.max(0, screenHeight - resolvedPanelHeight));
+        com.tridev.familyhub.core.ui.FormTextEditing.observe(panelView);
         windowManager.addView(panelView, panelParams);
         startOverlayConnectionStatus();
         root.requestFocus();
@@ -2710,6 +2711,7 @@ public class GroceryOverlayService extends Service {
             return;
         }
         try {
+            com.tridev.familyhub.core.ui.FormTextEditing.observe(panelView);
             windowManager.addView(panelView, panelParams);
         } catch (RuntimeException ignored) {
             panelView = null;

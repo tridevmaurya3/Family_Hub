@@ -627,6 +627,7 @@ public final class FamilyTaskOverlayService extends Service {
                 0, Math.max(0, screenWidth - panelWidth));
         panelParams.y = clamp(prefs.getInt("panel_y", dp(74)),
                 0, Math.max(0, screenHeight - panelHeight));
+        com.tridev.familyhub.core.ui.FormTextEditing.observe(panelView);
         windowManager.addView(panelView, panelParams);
         shell.setFocusableInTouchMode(true);
         shell.requestFocus();

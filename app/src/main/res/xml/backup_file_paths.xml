@@ -9,4 +9,5 @@
     <cache-path name="grocery_reports" path="grocery_reports/" />
     <cache-path name="document_reports" path="document_reports/" />
     <cache-path name="finance_reports" path="finance_reports/" />
+    <cache-path name="profile_crops" path="profile_crops/" />
 </paths>

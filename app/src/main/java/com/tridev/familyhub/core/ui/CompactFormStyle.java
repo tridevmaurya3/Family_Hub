@@ -25,6 +25,7 @@ public final class CompactFormStyle {
     private CompactFormStyle() { }
 
     public static void applyInputs(View root) {
+        FormTextEditing.apply(root);
         if (root instanceof TextInputLayout) {
             apply(root);
         } else if (root instanceof ViewGroup) {
@@ -53,6 +54,7 @@ public final class CompactFormStyle {
         }
         if (root instanceof EditText) {
             EditText input = (EditText) root;
+            FormTextEditing.apply(input);
             input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
             input.setIncludeFontPadding(false);
             input.setMinimumHeight(dp(root, 44));

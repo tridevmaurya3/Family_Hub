@@ -191,6 +191,7 @@ public final class PlannerOverlayService extends Service {
         grip.setContentDescription("Resize floating Planner"); grip.setGravity(Gravity.BOTTOM | Gravity.END);
         panel.addView(grip, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.BOTTOM | Gravity.END));
         drag(grip, true);
+        com.tridev.familyhub.core.ui.FormTextEditing.observe(panel);
         manager.addView(panel, params);
         panel.requestFocus();
         panel.post(() -> {

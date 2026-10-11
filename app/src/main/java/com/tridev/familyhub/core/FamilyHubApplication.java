@@ -55,6 +55,7 @@ public class FamilyHubApplication extends Application {
         // does not pause/stop providers, workers, location, SOS or sync services.
         FamilyHubAppLockManager.register(this);
         ProfileAppSecurityInjector.register(this);
+        com.tridev.familyhub.core.ui.FormTextEditing.register(this);
 
         enableFirebaseOfflinePersistence();
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(this);

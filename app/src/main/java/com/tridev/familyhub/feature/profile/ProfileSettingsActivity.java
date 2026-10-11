@@ -75,13 +75,25 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
                         if (uri == null) {
                             return;
                         }
-                        AccountProfileSync.get(this).savePhoto(uri, (success, message) -> {
-                            if (isFinishing() || isDestroyed()) return;
-                            Toast.makeText(this,message,Toast.LENGTH_LONG).show();
-                            renderSyncedProfile();
-                        });
+                        this.photoCrop.launch(new Intent(this, ProfilePhotoCropActivity.class).setData(uri)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
                     }
             );
+
+    private final ActivityResultLauncher<Intent> photoCrop = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() != RESULT_OK || result.getData() == null
+                        || result.getData().getData() == null) return;
+                android.net.Uri uri=result.getData().getData();
+                AccountProfileSync.get(this).savePhoto(uri, (success, message) -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                    renderSyncedProfile();
+                    try { java.io.File file=new java.io.File(getCacheDir(),"profile_crops/"+uri.getLastPathSegment());
+                        if(file.getCanonicalFile().getParentFile().equals(new java.io.File(getCacheDir(),"profile_crops").getCanonicalFile()))file.delete();
+                    } catch(java.io.IOException ignored) { }
+                });
+            });
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

@@ -25,6 +25,7 @@
         <item name="materialButtonStyle">@style/Widget.FamilyHub.Button.Primary</item>
         <item name="textInputStyle">@style/Widget.FamilyHub.TextInputLayout</item>
         <item name="editTextStyle">@style/Widget.FamilyHub.FormInputText</item>
+        <item name="viewInflaterClass">com.tridev.familyhub.core.ui.FormViewInflater</item>
         <item name="android:autoCompleteTextViewStyle">@style/Widget.FamilyHub.FormDropdownText</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.FamilyHub.FormDialog</item>
         <item name="android:navigationBarColor">@color/fh_background</item>
@@ -125,6 +126,7 @@
         <item name="colorOutline">@color/fh_form_outline</item>
         <item name="textInputStyle">@style/Widget.FamilyHub.TextInputLayout</item>
         <item name="editTextStyle">@style/Widget.FamilyHub.FormInputText</item>
+        <item name="viewInflaterClass">com.tridev.familyhub.core.ui.FormViewInflater</item>
         <item name="android:autoCompleteTextViewStyle">@style/Widget.FamilyHub.FormDropdownText</item>
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlayFamilyHubFormDialog</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.FamilyHub.Button.FormPrimary</item>
