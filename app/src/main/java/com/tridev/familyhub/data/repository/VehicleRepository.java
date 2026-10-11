@@ -74,11 +74,26 @@ public class VehicleRepository {
                                                     @NonNull DataSnapshot snapshot) {
                         mergeRemote(familyId, snapshot, onChanged);
                     }
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (Vehicle local : vehicleDao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"vehicles",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             Vehicle local = vehicleDao.getByCloudId(cloudId);
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"vehicles",cloudId)) return;
                             if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             VehicleReminderScheduler.cancelAll(appContext, local.id);
                             vehicleDao.delete(local);
@@ -247,7 +262,7 @@ public class VehicleRepository {
             if (cloudId.isEmpty()) return;
             long updatedAt = number(snapshot, "updatedAt");
             Vehicle vehicle = vehicleDao.getByCloudId(cloudId);
-            if (vehicle != null && vehicle.updatedAt > updatedAt) return;
+            if (!FamilySyncVersions.shouldApply(scopeUid,"vehicles",cloudId,snapshot,vehicle == null,vehicle == null ? 0L : vehicle.updatedAt)) return;
             boolean insert = vehicle == null;
             if (insert) vehicle = new Vehicle();
             FamilyMember owner = FamilySharedRecordSupport.resolveMember(
@@ -275,6 +290,7 @@ public class VehicleRepository {
             try {
                 if (insert) vehicle.id = vehicleDao.insert(vehicle);
                 else vehicleDao.update(vehicle);
+            FamilySyncVersions.applied(scopeUid,"vehicles",cloudId,snapshot);
                 VehicleReminderScheduler.sync(appContext, vehicle);
                 mainHandler.post(onChanged);
             } catch (RuntimeException ignored) { }

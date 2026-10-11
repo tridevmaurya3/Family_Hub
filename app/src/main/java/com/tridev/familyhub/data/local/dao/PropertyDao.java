@@ -14,6 +14,9 @@ import java.util.List;
 
 @Dao
 public interface PropertyDao {
+    @Query("SELECT * FROM properties WHERE isShared = 1 AND familyId = :familyId")
+    List<PropertyEntry> getSharedForFamily(String familyId);
+
 
     @Query("SELECT properties.*, family_members.name AS ownerName "
             + "FROM properties INNER JOIN family_members "

@@ -69,11 +69,26 @@ public class PropertyRepository {
                             @NonNull DataSnapshot snapshot) {
                         mergeRemote(familyId, snapshot, changed);
                     }
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (PropertyEntry local : propertyDao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"properties",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                             @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             PropertyEntry local = propertyDao.getByCloudId(cloudId);
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"properties",cloudId)) return;
                             if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             propertyDao.delete(local); mainHandler.post(changed);
                         });
@@ -221,7 +236,7 @@ public class PropertyRepository {
             if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId=text(s,"cloudId"); if(cloudId.isEmpty()) return;
             long updated=number(s,"updatedAt"); PropertyEntry p=propertyDao.getByCloudId(cloudId);
-            if(p!=null && p.updatedAt>updated) return; boolean insert=p==null;
+            if(!FamilySyncVersions.shouldApply(scopeUid,"properties",cloudId,s,p == null,p == null ? 0L : p.updatedAt)) return; boolean insert=p==null;
             if(insert) p=new PropertyEntry();
             FamilyMember owner = FamilySharedRecordSupport.resolveMember(
                     familyMemberDao, familyId, text(s, "assignedMemberId"), text(s, "ownerName"));
@@ -236,7 +251,8 @@ public class PropertyRepository {
             p.timelineNote=text(s,"timelineNote"); p.isShared=true; p.updatedAt=updated;
             p.updatedByUid=text(s,"updatedByUid"); p.createdAt=number(s,"createdAt");
             if(p.createdAt==0L) p.createdAt=updated;
-            if(insert) p.id=propertyDao.insert(p); else propertyDao.update(p); mainHandler.post(changed);
+            if(insert) p.id=propertyDao.insert(p); else propertyDao.update(p);
+            FamilySyncVersions.applied(scopeUid,"properties",cloudId,s); mainHandler.post(changed);
         });
     }
 

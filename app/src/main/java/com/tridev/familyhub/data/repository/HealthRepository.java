@@ -92,11 +92,26 @@ public class HealthRepository {
                         mergeRemote(familyId, snapshot, callback);
                     }
 
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (HealthRecord local : healthRecordDao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"health",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             HealthRecord local = healthRecordDao.getByCloudId(cloudId);
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"health",cloudId)) return;
                             if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             long localId = local.id;
                             HealthReminderScheduler.cancel(appContext, local.id);
@@ -398,7 +413,7 @@ public class HealthRepository {
             if (cloudId.isEmpty()) return;
             long remoteUpdatedAt = number(snapshot, "updatedAt");
             HealthRecord record = healthRecordDao.getByCloudId(cloudId);
-            if (record != null && record.updatedAt > remoteUpdatedAt) return;
+            if (!FamilySyncVersions.shouldApply(scopeUid,"health",cloudId,snapshot,record == null,record == null ? 0L : record.updatedAt)) return;
             boolean insert = record == null;
             if (insert) record = new HealthRecord();
 
@@ -427,6 +442,7 @@ public class HealthRepository {
             record.updatedByUid = text(snapshot, "updatedByUid");
             if (insert) record.id = healthRecordDao.insert(record);
             else healthRecordDao.update(record);
+            FamilySyncVersions.applied(scopeUid,"health",cloudId,snapshot);
             HealthReminderScheduler.sync(appContext, record);
             HealthRecord changed = record;
             mainHandler.post(() -> callback.onChanged(changed));

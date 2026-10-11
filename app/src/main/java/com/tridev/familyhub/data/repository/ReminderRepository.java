@@ -68,11 +68,26 @@ public class ReminderRepository {
                                                     @NonNull DataSnapshot snapshot) {
                         mergeRemote(familyId, snapshot, callback);
                     }
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (Reminder local : reminderDao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"reminders",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             Reminder local = reminderDao.getByCloudId(cloudId);
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"reminders",cloudId)) return;
                             if (local == null) return;
                             long id = local.id;
                             reminderDao.delete(local);
@@ -202,7 +217,7 @@ public class ReminderRepository {
             if (cloudId.isEmpty()) return;
             long updatedAt = number(s, "updatedAt");
             Reminder reminder = reminderDao.getByCloudId(cloudId);
-            if (reminder != null && reminder.updatedAt > updatedAt) return;
+            if (!FamilySyncVersions.shouldApply(scopeUid,"reminders",cloudId,s,reminder == null,reminder == null ? 0L : reminder.updatedAt)) return;
             boolean insert = reminder == null;
             if (insert) reminder = new Reminder();
             reminder.cloudId=cloudId; reminder.familyId=familyId;
@@ -226,6 +241,7 @@ public class ReminderRepository {
             if(reminder.createdAt==0L) reminder.createdAt=updatedAt;
             reminder.updatedAt=updatedAt; reminder.updatedByUid=text(s,"updatedByUid");
             if(insert) reminder.id=reminderDao.insert(reminder); else reminderDao.update(reminder);
+            FamilySyncVersions.applied(scopeUid,"reminders",cloudId,s);
             Reminder changed=reminder;
             mainHandler.post(() -> callback.onChanged(changed));
         });

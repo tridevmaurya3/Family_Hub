@@ -44,6 +44,14 @@ import java.util.concurrent.Executors;
 /** Data boundary for the offline finance feature. */
 public class FinanceRepository {
     private final String scopeUid = AccountDataScope.uid();
+    private final FamilySyncOutbox.AcknowledgedListener acknowledged = this::refreshAcknowledged;
+    private void refreshAcknowledged(String uid, String module, String family, String id) {
+        if (!scopeUid.equals(uid) || !"finance".equals(module) || !currentAccount() || sharedEntriesReference == null || !family.equals(sharedEntriesReference.getParent().getKey())) return;
+        int request = sharedSyncGeneration;
+        sharedEntriesReference.get().addOnSuccessListener(snapshot -> {
+            if (currentAccount() && request == sharedSyncGeneration && sharedEntriesListener != null) sharedEntriesListener.onDataChange(snapshot);
+        });
+    }
     private boolean currentAccount() { return !scopeUid.isEmpty() && scopeUid.equals(AccountDataScope.uid()); }
 
     public interface EntriesCallback {
@@ -281,6 +289,7 @@ public class FinanceRepository {
     /** Starts family-scoped realtime reconciliation. Private entries are never uploaded. */
     public void startSharedSync(@NonNull ActionCallback onChanged) {
         stopSharedSync();
+        FamilySyncOutbox.addListener(acknowledged);
         int requestGeneration = sharedSyncGeneration;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
@@ -297,6 +306,7 @@ public class FinanceRepository {
     }
 
     public void stopSharedSync() {
+        FamilySyncOutbox.removeListener(acknowledged);
         sharedSyncGeneration++;
         if (sharedEntriesReference != null && sharedEntriesListener != null) {
             sharedEntriesReference.removeEventListener(sharedEntriesListener);
@@ -353,15 +363,17 @@ public class FinanceRepository {
                         }
                         remoteIds.add(remote.cloudId);
                         FinanceEntry local = financeEntryDao.getByCloudId(remote.cloudId);
+                        if (!FamilySyncVersions.shouldApply(scopeUid,"finance",remote.cloudId,child,local == null,local == null ? 0L : local.updatedAt)) continue;
                         if (local == null) {
                             financeEntryDao.insert(remote);
                             changed = true;
-                        } else if (remote.updatedAt > local.updatedAt) {
+                        } else {
                             remote.id = local.id;
                             remote.createdAt = local.createdAt == 0 ? remote.createdAt : local.createdAt;
                             financeEntryDao.update(remote);
                             changed = true;
                         }
+                        FamilySyncVersions.applied(scopeUid,"finance",remote.cloudId,child);
                     }
                     for (FinanceEntry local : financeEntryDao.getSharedForFamily(familyId)) {
                         if (local.cloudId.isEmpty()) continue;
@@ -371,6 +383,7 @@ public class FinanceRepository {
                             continue;
                         }
                         if (!remoteIds.contains(local.cloudId)
+                                && !FamilySyncOutbox.pending(scopeUid,"finance",local.cloudId)
                                 && System.currentTimeMillis() - local.updatedAt > 30_000L) {
                             if (isDurableExternalProjection(local)) {
                                 // A trusted external projection can arrive locally before its

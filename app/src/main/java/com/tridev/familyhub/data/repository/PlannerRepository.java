@@ -69,11 +69,26 @@ public class PlannerRepository {
                                                     @NonNull DataSnapshot snapshot) {
                         mergeRemote(familyId, snapshot, callback);
                     }
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (PlannerItem local : plannerItemDao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"planner",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             PlannerItem local = plannerItemDao.getByCloudId(cloudId);
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"planner",cloudId)) return;
                             if (local == null) return;
                             long id = local.id;
                             plannerItemDao.delete(local);
@@ -231,7 +246,7 @@ public class PlannerRepository {
             if (cloudId.isEmpty()) return;
             long updatedAt = number(s, "updatedAt");
             PlannerItem item = plannerItemDao.getByCloudId(cloudId);
-            if (item != null && item.updatedAt > updatedAt) return;
+            if (!FamilySyncVersions.shouldApply(scopeUid,"planner",cloudId,s,item == null,item == null ? 0L : item.updatedAt)) return;
             boolean insert = item == null;
             if (insert) item = new PlannerItem();
             item.cloudId = cloudId; item.familyId = familyId;
@@ -254,6 +269,7 @@ public class PlannerRepository {
             if (item.createdAt == 0L) item.createdAt = updatedAt;
             item.updatedAt = updatedAt; item.updatedByUid = text(s, "updatedByUid");
             if (insert) item.id = plannerItemDao.insert(item); else plannerItemDao.update(item);
+            FamilySyncVersions.applied(scopeUid,"planner",cloudId,s);
             PlannerItem changed = item;
             mainHandler.post(() -> callback.onChanged(changed));
         });

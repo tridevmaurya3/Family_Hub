@@ -22,6 +22,10 @@ public final class FamilySyncOutbox {
     private static final Map<String, Map<String,String>> rejected = new HashMap<>();
     private static final Map<String, Exception> failures = new HashMap<>();
     private static final Map<String, FamilyCollaborationPublisher.PublishedCallback> callbacks = new HashMap<>();
+    interface AcknowledgedListener { void onAcknowledged(String uid, String module, String familyId, String cloudId); }
+    private static final Set<AcknowledgedListener> listeners = new HashSet<>();
+    static synchronized void addListener(AcknowledgedListener listener) { listeners.add(listener); }
+    static synchronized void removeListener(AcknowledgedListener listener) { listeners.remove(listener); }
     private FamilySyncOutbox() { }
 
     public static synchronized void initialize(Context app) {
@@ -83,6 +87,10 @@ public final class FamilySyncOutbox {
         if (context == null || uid.isEmpty()) return false;
         try { return new JSONObject(preferences(uid).getString("pending:" + module + "/" + cloudId,"{}")).optBoolean("delete"); }
         catch (JSONException error) { return false; }
+    }
+
+    static synchronized boolean pending(String uid, String module, String cloudId) {
+        return context != null && !uid.isEmpty() && preferences(uid).contains("pending:" + module + "/" + cloudId);
     }
 
     private static void schedule(String uid) {
@@ -157,7 +165,8 @@ public final class FamilySyncOutbox {
         payload.put("cloudId", id); payload.put("familyId", family); payload.put("updatedByUid", uid);
         payload.put("updatedAt", record.optLong("updatedAt")); payload.put("serverUpdatedAt", ServerValue.TIMESTAMP);
         Task<Void> write = record.optBoolean("delete") ? reference.removeValue() : reference.updateChildren(payload);
-        write.addOnSuccessListener(unused -> {
+        write.onSuccessTask(unused -> record.optBoolean("delete") ? Tasks.<Void>forResult(null)
+                : FamilySyncAcknowledgements.apply(context,uid,module,id,family)).addOnSuccessListener(unused -> {
             synchronized (FamilySyncOutbox.class) {
                 SharedPreferences prefs = preferences(uid);
                 try {
@@ -166,6 +175,7 @@ public final class FamilySyncOutbox {
                         if (!prefs.edit().remove(key).commit()) { finish(uid, completion, new IllegalStateException("Acknowledgement could not be saved")); return; }
                         FamilyCollaborationPublisher.PublishedCallback callback = callbacks.remove(uid + "/" + key.substring(8));
                         if (callback != null && !record.optBoolean("delete") && uid.equals(AccountDataScope.uid())) callback.onPublished(id, family, uid);
+                        if (uid.equals(AccountDataScope.uid())) for (AcknowledgedListener listener : new ArrayList<>(listeners)) listener.onAcknowledged(uid,module,family,id);
                     }
                     next(uid, completion);
                 } catch (JSONException error) { finish(uid, completion, error); }

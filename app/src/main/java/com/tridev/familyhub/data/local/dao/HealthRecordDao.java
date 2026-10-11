@@ -14,6 +14,9 @@ import java.util.List;
 
 @Dao
 public interface HealthRecordDao {
+    @Query("SELECT * FROM health_records WHERE isShared = 1 AND familyId = :familyId")
+    List<HealthRecord> getSharedForFamily(String familyId);
+
 
     @Query("SELECT health_records.*, family_members.name AS memberName "
             + "FROM health_records "

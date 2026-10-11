@@ -12,6 +12,9 @@ import java.util.List;
 
 @Dao
 public interface FamilyTaskDao {
+    @Query("SELECT * FROM family_tasks WHERE shared = 1 AND familyId = :familyId")
+    List<FamilyTask> getSharedForFamily(String familyId);
+
     @Query("SELECT * FROM family_tasks WHERE id = :id LIMIT 1")
     FamilyTask getById(long id);
 

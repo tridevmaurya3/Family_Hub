@@ -13,6 +13,9 @@ import java.util.List;
 
 @Dao
 public interface ReminderDao {
+    @Query("SELECT * FROM reminders WHERE isShared = 1 AND familyId = :familyId")
+    List<Reminder> getSharedForFamily(String familyId);
+
 
     @Query("SELECT * FROM reminders ORDER BY isEnabled DESC, reminderAt ASC, id DESC")
     List<Reminder> getAll();

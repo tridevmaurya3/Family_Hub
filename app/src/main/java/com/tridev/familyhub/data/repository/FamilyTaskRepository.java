@@ -70,11 +70,26 @@ public final class FamilyTaskRepository {
                                                     @NonNull DataSnapshot snapshot) {
                         mergeRemote(familyId, snapshot, callback);
                     }
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (FamilyTask local : dao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.shared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"tasks",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             FamilyTask local = dao.getByCloudId(cloudId);
+                            if (local == null || !local.shared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"tasks",cloudId)) return;
                             if (local == null) return;
                             long id = local.id;
                             activityRepository.recordRemoteAt(local,
@@ -366,7 +381,7 @@ public final class FamilyTaskRepository {
 
             long remoteUpdatedAt = number(s, "updatedAt");
             FamilyTask task = dao.getByCloudId(cloudId);
-            if (task != null && task.updatedAt > remoteUpdatedAt) return;
+            if (!FamilySyncVersions.shouldApply(scopeUid,"tasks",cloudId,s,task == null,task == null ? 0L : task.updatedAt)) return;
             boolean insert = task == null;
             FamilyTask previous = insert ? null : auditCopy(task);
             if (insert) task = new FamilyTask();
@@ -400,6 +415,7 @@ public final class FamilyTaskRepository {
             linkRepository.mergeRemote(task, s);
 
             if (insert) task.id = dao.insert(task); else dao.update(task);
+            FamilySyncVersions.applied(scopeUid,"tasks",cloudId,s);
 
             if (insert) {
                 activityRepository.recordRemoteAt(task,

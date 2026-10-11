@@ -14,6 +14,9 @@ import java.util.List;
 
 @Dao
 public interface VehicleDao {
+    @Query("SELECT * FROM vehicles WHERE isShared = 1 AND familyId = :familyId")
+    List<Vehicle> getSharedForFamily(String familyId);
+
 
     @Query("SELECT vehicles.*, family_members.name AS ownerName "
             + "FROM vehicles INNER JOIN family_members "

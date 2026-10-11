@@ -13,6 +13,9 @@ import java.util.List;
 
 @Dao
 public interface NoteDao {
+    @Query("SELECT * FROM notes WHERE isShared = 1 AND familyId = :familyId")
+    List<NoteEntry> getSharedForFamily(String familyId);
+
 
     @Query("SELECT * FROM notes WHERE isArchived = 0 "
             + "ORDER BY isPinned DESC, updatedAt DESC")

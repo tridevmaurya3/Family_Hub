@@ -903,7 +903,12 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
     };
 
     public static synchronized FamilyHubDatabase getInstance(Context context) {
-        String databaseName = AccountDataScope.databaseName(context);
+        return getForAccount(context, AccountDataScope.uid());
+    }
+
+    public static synchronized FamilyHubDatabase getForAccount(Context context, String uid) {
+        String databaseName = com.tridev.familyhub.core.security.AccountScopePolicy.databaseName(uid,
+                AccountDataScope.legacyOwner(context));
         FamilyHubDatabase instance = INSTANCES.get(databaseName);
         if (instance == null) {
                     instance = Room.databaseBuilder(

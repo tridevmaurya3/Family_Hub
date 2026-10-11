@@ -18,6 +18,7 @@ final class FamilyCollaborationSubscriber {
     interface Callback {
         void onChanged(@NonNull String familyId, @NonNull DataSnapshot snapshot);
         void onRemoved(@NonNull String familyId, @NonNull String cloudId);
+        default void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> cloudIds) { }
     }
 
     interface SyncStatusCallback { void onStateChanged(boolean live, boolean connecting); }
@@ -30,6 +31,12 @@ final class FamilyCollaborationSubscriber {
     @NonNull private final Callback callback;
     @Nullable private DatabaseReference reference;
     @Nullable private ChildEventListener listener;
+    @Nullable private ValueEventListener snapshotListener;
+    private String listeningFamily = "";
+    private final java.util.Set<String> remoteIds = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    boolean hasRemoteId(String cloudId) { return remoteIds.contains(cloudId); }
+    private final FamilySyncOutbox.AcknowledgedListener acknowledged;
     private int generation;
     private final String scopeUid;
     @Nullable private com.google.firebase.auth.FirebaseAuth.AuthStateListener authListener;
@@ -45,6 +52,15 @@ final class FamilyCollaborationSubscriber {
         this.syncStatus = syncStatus;
         this.module = module;
         this.callback = callback;
+        acknowledged = (uid, changedModule, family, id) -> {
+            if (!scopeUid.equals(uid) || !module.equals(changedModule) || !listeningFamily.equals(family) || reference == null) return;
+            int request = generation;
+            reference.child(id).get().addOnSuccessListener(snapshot -> {
+                if (!current(request)) return;
+                if (snapshot.exists()) { remoteIds.add(id); callback.onChanged(family,snapshot); }
+                else { remoteIds.remove(id); callback.onRemoved(family,id); }
+            });
+        };
     }
 
     void start() {
@@ -52,6 +68,7 @@ final class FamilyCollaborationSubscriber {
             reportState(false, false); return;
         }
         int requestGeneration = ++generation;
+        FamilySyncOutbox.addListener(acknowledged);
         authListener = auth -> {
             if (!scopeUid.equals(AccountDataScope.uid())) stop();
         };
@@ -77,6 +94,7 @@ final class FamilyCollaborationSubscriber {
 
     void stop() {
         generation++;
+        FamilySyncOutbox.removeListener(acknowledged);
         if (authListener != null) com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(authListener);
         authListener = null;
         stopListenerOnly();
@@ -85,6 +103,7 @@ final class FamilyCollaborationSubscriber {
 
     private void attach(@NonNull String familyId) {
         stopListenerOnly();
+        listeningFamily = familyId;
         reference = FirebaseDatabase.getInstance().getReference()
                 .child("sharedModules").child(familyId).child(module);
         reference.keepSynced(true);
@@ -93,17 +112,21 @@ final class FamilyCollaborationSubscriber {
             @Override public void onChildAdded(@NonNull DataSnapshot snapshot,
                                                @Nullable String previousChildName) {
                 if (!current(request) || FamilySyncOutbox.pendingDelete(scopeUid,module,snapshot.getKey() == null ? "" : snapshot.getKey())) return;
+                if (snapshot.getKey() != null) remoteIds.add(snapshot.getKey());
                 callback.onChanged(familyId, snapshot);
             }
 
             @Override public void onChildChanged(@NonNull DataSnapshot snapshot,
                                                  @Nullable String previousChildName) {
                 if (!current(request) || FamilySyncOutbox.pendingDelete(scopeUid,module,snapshot.getKey() == null ? "" : snapshot.getKey())) return;
+                if (snapshot.getKey() != null) remoteIds.add(snapshot.getKey());
                 callback.onChanged(familyId, snapshot);
             }
 
             @Override public void onChildRemoved(@NonNull DataSnapshot snapshot) {
                 if (!current(request)) return;
+                if (snapshot.getKey() != null) remoteIds.remove(snapshot.getKey());
+                if (FamilySyncOutbox.pending(scopeUid,module,snapshot.getKey() == null ? "" : snapshot.getKey())) return;
                 callback.onRemoved(familyId, snapshot.getKey() == null
                         ? "" : snapshot.getKey());
             }
@@ -119,7 +142,21 @@ final class FamilyCollaborationSubscriber {
             }
         };
         reference.addChildEventListener(listener);
-        if (syncStatus != null) observeConnection();
+        snapshotListener = new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (current(request) && connected) reconcile(snapshot);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { }
+        };
+        reference.addValueEventListener(snapshotListener);
+        observeConnection();
+    }
+
+    private void reconcile(DataSnapshot snapshot) {
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (DataSnapshot child : snapshot.getChildren()) if (child.getKey() != null) ids.add(child.getKey());
+        remoteIds.retainAll(ids); remoteIds.addAll(ids);
+        callback.onSnapshot(listeningFamily,ids);
     }
 
     private void reportState(boolean live, boolean connecting) {
@@ -139,6 +176,9 @@ final class FamilyCollaborationSubscriber {
             @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (request != generation || reference == null) return;
                 connected = Boolean.TRUE.equals(snapshot.getValue(Boolean.class));
+                if (connected) reference.get().addOnSuccessListener(full -> {
+                    if (current(request) && connected && reference != null) reconcile(full);
+                });
                 reportState(connected && ready && !cancelled, connected && !ready && !cancelled);
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {
@@ -168,6 +208,9 @@ final class FamilyCollaborationSubscriber {
         if (reference != null && listener != null) {
             reference.removeEventListener(listener);
         }
+        if (reference != null && snapshotListener != null) reference.removeEventListener(snapshotListener);
+        snapshotListener = null; listeningFamily = "";
+        remoteIds.clear();
         reference = null;
         listener = null;
     }

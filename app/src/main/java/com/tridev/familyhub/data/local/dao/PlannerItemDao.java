@@ -13,6 +13,9 @@ import java.util.List;
 
 @Dao
 public interface PlannerItemDao {
+    @Query("SELECT * FROM planner_items WHERE isShared = 1 AND familyId = :familyId")
+    List<PlannerItem> getSharedForFamily(String familyId);
+
 
     @Query("SELECT * FROM planner_items WHERE id = :itemId LIMIT 1")
     PlannerItem getById(long itemId);

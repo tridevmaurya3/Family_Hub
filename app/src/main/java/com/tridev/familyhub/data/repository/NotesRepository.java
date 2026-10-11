@@ -69,11 +69,26 @@ public class NotesRepository {
                         mergeRemoteNote(familyId, snapshot, onChanged);
                     }
 
+                    @Override public void onSnapshot(@NonNull String familyId, @NonNull java.util.Set<String> ids) {
+                        DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            for (NoteEntry local : noteDao.getSharedForFamily(familyId)) {
+                                if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
+                                        FamilySyncOutbox.pending(scopeUid,"notes",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                    onRemoved(familyId,local.cloudId);
+                                }
+                            }
+                        });
+                    }
+
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
+                            if (subscriber != null && subscriber.hasRemoteId(cloudId)) return;
                             NoteEntry local = noteDao.getByCloudId(cloudId);
+                            if (local == null || !local.isShared || !familyId.equals(local.familyId)
+                                    || FamilySyncOutbox.pending(scopeUid,"notes",cloudId)) return;
                             if (local != null && local.isShared) {
                                 noteDao.delete(local);
                             }
@@ -198,7 +213,7 @@ public class NotesRepository {
             if (cloudId.isEmpty()) return;
             long remoteUpdatedAt = longValue(snapshot, "updatedAt");
             NoteEntry note = noteDao.getByCloudId(cloudId);
-            if (note != null && note.updatedAt > remoteUpdatedAt) return;
+            if (!FamilySyncVersions.shouldApply(scopeUid,"notes",cloudId,snapshot,note == null,note == null ? 0L : note.updatedAt)) return;
             boolean insert = note == null;
             if (insert) note = new NoteEntry();
             note.cloudId = cloudId;
@@ -222,6 +237,7 @@ public class NotesRepository {
             note.updatedAt = remoteUpdatedAt;
             note.updatedByUid = stringValue(snapshot, "updatedByUid");
             if (insert) note.id = noteDao.insert(note); else noteDao.update(note);
+            FamilySyncVersions.applied(scopeUid,"notes",cloudId,snapshot);
             com.tridev.familyhub.feature.notes.NoteReminderScheduler.sync(appContext, note);
             mainHandler.post(onChanged::onComplete);
         });
