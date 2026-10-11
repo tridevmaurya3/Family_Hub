@@ -6,6 +6,6 @@ final class FamilySyncMergePolicy {
     static boolean shouldApply(boolean pending, boolean missing, long serverVersion, long seenVersion, long remoteTime, long localTime) {
         if (pending) return false;
         if (missing) return true;
-        return serverVersion > 0L ? serverVersion > seenVersion : remoteTime >= localTime;
+        return serverVersion > 0L ? (serverVersion > seenVersion || (serverVersion == seenVersion && remoteTime != localTime)) : remoteTime >= localTime;
     }
 }

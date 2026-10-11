@@ -9,6 +9,9 @@ public class SharedCachePolicyTest {
         assertTrue(SharedCachePolicy.canRemove(true,"A","A","deleted",Set.of("remaining"),false,60_000));
         assertFalse(SharedCachePolicy.canRemove(true,"A","A","remaining",Set.of("remaining"),false,60_000));
     }
+    @Test public void incorrectFuturePhoneClockCannotKeepADeletedSharedCopyForever() {
+        assertTrue(SharedCachePolicy.canRemove(true,"A","A","deleted",Set.of(),false,-9_000_000));
+    }
     @Test public void reconnectKeepsOfflineEditAndNotYetAcknowledgedCreation() {
         assertFalse(SharedCachePolicy.canRemove(true,"A","A","edit",Set.of(),true,60_000));
         assertFalse(SharedCachePolicy.canRemove(true,"A","","new",Set.of(),false,60_000));

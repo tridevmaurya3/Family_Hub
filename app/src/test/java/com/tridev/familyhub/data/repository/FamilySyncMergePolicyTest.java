@@ -9,11 +9,14 @@ public class FamilySyncMergePolicyTest {
     }
     @Test public void olderServerEditCannotWinBecauseItsPhoneClockWasAhead() {
         assertFalse(FamilySyncMergePolicy.shouldApply(false,false,100,200,9_000_000,1_000));
-        assertFalse(FamilySyncMergePolicy.shouldApply(false,false,200,200,9_000_000,1_000));
+        assertFalse(FamilySyncMergePolicy.shouldApply(false,false,200,200,1_000,1_000));
     }
     @Test public void pendingOfflineEditIsProtectedUntilItsAcknowledgement() {
         assertFalse(FamilySyncMergePolicy.shouldApply(true,false,300,100,9_000,1_000));
         assertTrue(FamilySyncMergePolicy.shouldApply(false,false,300,100,9_000,1_000));
+    }
+    @Test public void restoredOlderBackupCanRefreshFromAnAlreadySeenServerRevision() {
+        assertTrue(FamilySyncMergePolicy.shouldApply(false,false,200,200,2_000,1_000));
     }
     @Test public void missingCopyCanBeRestoredAndLegacyPayloadKeepsCompatibleOrdering() {
         assertTrue(FamilySyncMergePolicy.shouldApply(false,true,100,200,100,200));
