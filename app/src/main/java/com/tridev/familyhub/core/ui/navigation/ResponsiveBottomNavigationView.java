@@ -56,7 +56,7 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
         addItem(R.id.nav_home, R.drawable.ic_nav_home_color, "Home");
         addItem(R.id.nav_family, R.drawable.ic_nav_family_color, "Family");
         addItem(R.id.nav_tasks, R.drawable.ic_family_task,
-                getResources().getString(R.string.feature_menu_family_tasks));
+                getResources().getString(R.string.dashboard_nav_tasks));
         addItem(R.id.nav_finance, R.drawable.ic_nav_finance_color, "Finance");
         addItem(R.id.nav_more, R.drawable.ic_nav_settings_color,
                 getResources().getString(R.string.nav_menu_title));
@@ -79,7 +79,7 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
             navItem.container.setSelected(selected);
             navItem.icon.setSelected(selected);
             navItem.label.setSelected(selected);
-            navItem.label.setVisibility(selected ? VISIBLE : GONE);
+            navItem.label.setVisibility(VISIBLE);
         }
     }
 
@@ -123,7 +123,7 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
         label.setGravity(Gravity.CENTER);
         label.setIncludeFontPadding(false);
         label.setMaxLines(1);
-        label.setVisibility(GONE);
+        label.setVisibility(VISIBLE);
         LayoutParams labelParams = new LayoutParams(
                 LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT
         );

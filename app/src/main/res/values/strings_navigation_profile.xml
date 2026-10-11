@@ -83,4 +83,15 @@
 
     <string name="more_profile_title">Profile &amp; Settings</string>
     <string name="more_profile_detail">Photo, account, notifications and appearance</string>
+    <string name="dashboard_category_planning">Family &amp; Planning</string>
+    <string name="dashboard_category_location">Family &amp; Location</string>
+    <string name="dashboard_category_assets">Records &amp; Assets</string>
+    <string name="dashboard_nav_tasks">To-Do</string>
+    <string name="dashboard_live_map_value">Live map</string>
+    <string name="dashboard_live_map_detail">Member locations</string>
+    <string name="dashboard_sos_value">Emergency help</string>
+    <string name="dashboard_sos_detail">Send an alert</string>
+    <string name="dashboard_places_value">Places · Alerts</string>
+    <string name="dashboard_places_detail">Saved safe zones</string>
+    <string name="dashboard_category_count">%1$d modules</string>
 </resources>

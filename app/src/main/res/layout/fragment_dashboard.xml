@@ -288,161 +288,175 @@
             android:text="@string/dashboard_action_center_detail"
             android:textSize="11sp" />
 
-        <LinearLayout
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/dashboard_category_tabs"
             android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_todo"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:checkedButton="@id/dashboard_category_planning">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_category_planning"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_grocery"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textAllCaps="false"
+                android:maxLines="2"
+                android:textSize="11sp"
+                android:text="@string/dashboard_category_planning" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_category_location"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_planner"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textAllCaps="false"
+                android:maxLines="2"
+                android:textSize="11sp"
+                android:text="@string/dashboard_category_location" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dashboard_category_assets"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_note_entries"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_documents"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_vehicles"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_notes"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_family_live"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/card_finance_status"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/card_health_status"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:minWidth="0dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textAllCaps="false"
+                android:maxLines="2"
+                android:textSize="11sp"
+                android:text="@string/dashboard_category_assets" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_12" android:gravity="center_vertical" android:orientation="horizontal">
+            <TextView android:id="@+id/dashboard_category_title"
+                style="@style/TextAppearance.FamilyHub.SectionTitle"
+                android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="@string/dashboard_category_planning" />
+            <TextView android:id="@+id/dashboard_category_count"
+                style="@style/TextAppearance.FamilyHub.Caption"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/space_8" />
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/dashboard_cards_planning"
             android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/card_family_status"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/card_document_status"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="visible">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_todo" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_grocery" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_planner" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_note_entries" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/card_family_status" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_reminder_entries" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/card_finance_status" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1"  />
+            </LinearLayout>
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/dashboard_cards_location"
             android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_reminder_entries"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_vehicle_records"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_live_map" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_documents" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_sos_entries" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_safe_places" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_vehicles" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_notes" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_family_live" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1"  />
+            </LinearLayout>
         </LinearLayout>
         <LinearLayout
+            android:id="@+id/dashboard_cards_assets"
             android:layout_width="match_parent"
-            android:layout_height="96dp"
-            android:layout_marginTop="@dimen/space_8"
-            android:orientation="horizontal">
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_property_records"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="@dimen/space_4"
-                android:layout_weight="1" />
-            <com.tridev.familyhub.core.ui.cards.ActionCardView
-                android:id="@+id/action_password_records"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="@dimen/space_4"
-                android:layout_weight="1" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/card_document_status" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/card_health_status" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_vehicle_records" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_property_records" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_password_records" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1"  />
+            </LinearLayout>
         </LinearLayout>
 
         </LinearLayout>

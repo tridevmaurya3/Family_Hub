@@ -39,6 +39,7 @@ import com.tridev.familyhub.databinding.FragmentDashboardBinding;
 import com.tridev.familyhub.feature.automation.FamilyAutomationActivity;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.familylive.FamilyLiveFragment;
+import com.tridev.familyhub.feature.familylive.SafePlacesActivity;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
 import com.tridev.familyhub.feature.insights.FamilyLocationReportsActivity;
@@ -70,6 +71,7 @@ public class DashboardFragment extends Fragment {
             "action_center_expanded";
 
     private FragmentDashboardBinding binding;
+    private int selectedCategory = R.id.dashboard_category_planning;
     private DashboardRepository dashboardRepository;
     @Nullable private FamilyTaskRepository taskRepository;
     @Nullable private DashboardData latestDashboardData;
@@ -133,6 +135,7 @@ public class DashboardFragment extends Fragment {
         setupHeroCard();
         setupStatusCards();
         setupActionCards();
+        setupCategoryTabs(savedInstanceState);
         startTaskRealtimeSummary();
         observeNotesSummary();
         setupNotificationAction();
@@ -140,6 +143,31 @@ public class DashboardFragment extends Fragment {
         setupDashboardSectionPreferences();
         renderHeader();
         loadDashboardData();
+    }
+
+    private void setupCategoryTabs(@Nullable Bundle state) {
+        if (state != null) selectedCategory = state.getInt("dashboard_category", R.id.dashboard_category_planning);
+        binding.dashboardCategoryTabs.addOnButtonCheckedListener((group, checkedId, checked) -> {
+            if (checked) { selectedCategory = checkedId; renderCategory(); }
+        });
+        binding.dashboardCategoryTabs.check(selectedCategory);
+        renderCategory();
+    }
+
+    private void renderCategory() {
+        boolean location = selectedCategory == R.id.dashboard_category_location;
+        boolean assets = selectedCategory == R.id.dashboard_category_assets;
+        binding.dashboardCardsPlanning.setVisibility(!location && !assets ? View.VISIBLE : View.GONE);
+        binding.dashboardCardsLocation.setVisibility(location ? View.VISIBLE : View.GONE);
+        binding.dashboardCardsAssets.setVisibility(assets ? View.VISIBLE : View.GONE);
+        binding.dashboardCategoryCount.setText(getString(R.string.dashboard_category_count, assets ? 5 : 7));
+        binding.dashboardCategoryTitle.setText(assets ? R.string.dashboard_category_assets
+                : location ? R.string.dashboard_category_location : R.string.dashboard_category_planning);
+    }
+
+    @Override public void onSaveInstanceState(@NonNull Bundle state) {
+        state.putInt("dashboard_category", selectedCategory);
+        super.onSaveInstanceState(state);
     }
 
     private void setupDashboardSectionPreferences() {
@@ -499,6 +527,25 @@ public class DashboardFragment extends Fragment {
 
     /** Dashboard shortcuts preserve existing destinations and add Notes. */
     private void setupActionCards() {
+        binding.actionLiveMap.setOnClickListener(v -> openFamilyLive());
+        binding.actionSosEntries.setOnClickListener(v -> openActivity(FamilySosActivity.class));
+        binding.actionSafePlaces.setOnClickListener(v -> openActivity(SafePlacesActivity.class));
+        binding.actionLiveMap.setValueTextCentered(true);
+        binding.actionSosEntries.setValueTextCentered(true);
+        binding.actionSafePlaces.setValueTextCentered(true);
+        binding.actionLiveMap.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_family_live), getString(R.string.dashboard_live_map_value),
+                getString(R.string.dashboard_live_map_detail), R.drawable.ic_family,
+                R.color.fh_module_family, R.color.fh_module_family_container));
+        binding.actionSosEntries.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_sos), getString(R.string.dashboard_sos_value),
+                getString(R.string.dashboard_sos_detail), R.drawable.ic_family_sos,
+                R.color.fh_error, R.color.fh_error_container));
+        binding.actionSafePlaces.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_safe_places), getString(R.string.dashboard_places_value),
+                getString(R.string.dashboard_places_detail), R.drawable.ic_safe_place_pin,
+                R.color.fh_success, R.color.fh_success_container));
+
         binding.actionReminderEntries.setOnClickListener(v -> openTab(R.id.nav_reminders));
         binding.actionVehicleRecords.setOnClickListener(v -> openFeature(new VehicleFragment()));
         binding.actionPropertyRecords.setOnClickListener(v -> openFeature(new PropertyFragment()));
