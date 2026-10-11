@@ -1726,7 +1726,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
     }
 
     private void showBudgetAmount(@Nullable String category) {
-        android.widget.EditText input = new android.widget.EditText(requireContext());
+        android.widget.EditText input = com.tridev.familyhub.core.ui.FormTextEditing.track(new android.widget.EditText(requireContext()));
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
                 | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         input.setHint(R.string.grocery_budget_hint);

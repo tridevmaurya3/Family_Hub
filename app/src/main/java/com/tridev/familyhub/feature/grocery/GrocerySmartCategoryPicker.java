@@ -158,7 +158,7 @@ public final class GrocerySmartCategoryPicker {
         root.addView(header, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
 
-        EditText search = new EditText(context);
+        EditText search = com.tridev.familyhub.core.ui.FormTextEditing.track(new EditText(context));
         search.setSingleLine(true);
         search.setTextSize(12f);
         search.setHint("Search category");
@@ -360,7 +360,7 @@ public final class GrocerySmartCategoryPicker {
         root.addView(title, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 34)));
 
-        EditText input = new EditText(context);
+        EditText input = com.tridev.familyhub.core.ui.FormTextEditing.track(new EditText(context));
         input.setSingleLine(true);
         input.setTextSize(12f);
         input.setHint("Category name");

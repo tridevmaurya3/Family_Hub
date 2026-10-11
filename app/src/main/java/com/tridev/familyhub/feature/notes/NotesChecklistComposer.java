@@ -33,7 +33,7 @@ final class NotesChecklistComposer extends LinearLayout {
         setOrientation(VERTICAL);
         LinearLayout entry = new LinearLayout(context); entry.setGravity(Gravity.CENTER_VERTICAL);
         TextInputLayout field = new TextInputLayout(context);
-        draft = new TextInputEditText(context);
+        draft = com.tridev.familyhub.core.ui.FormTextEditing.track(new TextInputEditText(context));
         draft.setHint(R.string.notes_checklist_add_hint);
         draft.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -102,7 +102,7 @@ final class NotesChecklistComposer extends LinearLayout {
             row.addView(check, new LayoutParams(dp(44), dp(48)));
             TextView number = new TextView(getContext()); number.setText((i + 1) + "."); number.setTextSize(12);
             number.setPadding(0, 0, dp(4), 0); row.addView(number, new LayoutParams(-2, -2));
-            TextInputEditText title = new TextInputEditText(getContext());
+            TextInputEditText title = com.tridev.familyhub.core.ui.FormTextEditing.track(new TextInputEditText(getContext()));
             title.setText(item.text); title.setTextSize(12); title.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
             title.setContentDescription(getResources().getString(R.string.notes_checklist_item));
             if (item.checked) title.setPaintFlags(title.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);

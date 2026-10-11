@@ -246,9 +246,9 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         int padding = (int) (20 * getResources().getDisplayMetrics().density);
         LinearLayout form = new LinearLayout(requireContext());
         form.setOrientation(LinearLayout.VERTICAL); form.setPadding(padding, padding / 2, padding, 0);
-        EditText name = new EditText(requireContext()); name.setHint(R.string.finance_account_name);
-        EditText type = new EditText(requireContext()); type.setHint(R.string.finance_account_type);
-        EditText opening = new EditText(requireContext()); opening.setHint(R.string.finance_opening_balance);
+        EditText name = com.tridev.familyhub.core.ui.FormTextEditing.track(new EditText(requireContext())); name.setHint(R.string.finance_account_name);
+        EditText type = com.tridev.familyhub.core.ui.FormTextEditing.track(new EditText(requireContext())); type.setHint(R.string.finance_account_type);
+        EditText opening = com.tridev.familyhub.core.ui.FormTextEditing.track(new EditText(requireContext())); opening.setHint(R.string.finance_opening_balance);
         opening.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL
                 | InputType.TYPE_NUMBER_FLAG_SIGNED);
         form.addView(com.tridev.familyhub.core.ui.CompactFormStyle.field(name));
@@ -943,7 +943,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     }
 
     private void showBudgetEditor() {
-        EditText input = new EditText(requireContext());
+        EditText input = com.tridev.familyhub.core.ui.FormTextEditing.track(new EditText(requireContext()));
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER
                 | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         double budget = monthlyBudget();

@@ -362,7 +362,7 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         com.google.android.material.textfield.TextInputLayout field =
                 new com.google.android.material.textfield.TextInputLayout(this);
         field.setHint(getString(R.string.profile_family));
-        TextInputEditText input = new TextInputEditText(this);
+        TextInputEditText input = com.tridev.familyhub.core.ui.FormTextEditing.track(new TextInputEditText(this));
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         input.setSingleLine(true);

@@ -24,6 +24,14 @@ public final class FormTextEditing {
         public void onActivitySaveInstanceState(Activity a,Bundle b){}
         public void onActivityDestroyed(Activity a){}
     });}
+    /** Track native fields created for dialog forms, including rows added after opening. */
+    public static <T extends EditText> T track(T field){
+        field.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener(){
+            public void onViewAttachedToWindow(View view){observe(view.getRootView());}
+            public void onViewDetachedFromWindow(View view){}
+        });
+        return field;
+    }
     public static void observe(View root){
         apply(root);
         if(!roots.add(root))return;
