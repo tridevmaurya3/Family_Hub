@@ -14,14 +14,14 @@ final class FamilySyncVersions {
     }
     static boolean shouldApply(String uid, String module, String id, DataSnapshot snapshot, boolean missing, long localTime) {
         SharedPreferences prefs = store(uid);
-        Number server = snapshot.child("serverUpdatedAt").getValue(Number.class);
-        Number updated = snapshot.child("updatedAt").getValue(Number.class);
+        Number server = FirebaseNumbers.read(snapshot.child("serverUpdatedAt"));
+        Number updated = FirebaseNumbers.read(snapshot.child("updatedAt"));
         return FamilySyncMergePolicy.shouldApply(FamilySyncOutbox.pending(uid,module,id),missing,
                 server == null ? 0L : server.longValue(),prefs == null ? 0L : prefs.getLong(module + "/" + id,0L),
                 updated == null ? 0L : updated.longValue(),localTime);
     }
     static void applied(String uid, String module, String id, DataSnapshot snapshot) {
-        Number server = snapshot.child("serverUpdatedAt").getValue(Number.class);
+        Number server = FirebaseNumbers.read(snapshot.child("serverUpdatedAt"));
         SharedPreferences prefs = store(uid);
         if (prefs != null && server != null && server.longValue() > 0L) prefs.edit().putLong(module + "/" + id,server.longValue()).apply();
     }

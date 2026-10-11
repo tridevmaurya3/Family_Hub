@@ -248,7 +248,7 @@ public class ReminderRepository {
     }
 
     @NonNull private static String text(DataSnapshot s,String key){String v=s.child(key).getValue(String.class);return v==null?"":v;}
-    private static long number(DataSnapshot s,String key){Number v=s.child(key).getValue(Number.class);return v==null?0L:v.longValue();}
+    private static long number(DataSnapshot s,String key){Number v=FirebaseNumbers.read(s.child(key));return v==null?0L:v.longValue();}
     private static boolean bool(DataSnapshot s,String key){Boolean v=s.child(key).getValue(Boolean.class);return v!=null&&v;}
     private static long parseLong(String v){try{return Long.parseLong(v);}catch(NumberFormatException e){return 0L;}}
     @NonNull private static String fallback(String v,String fallback){return v.isEmpty()?fallback:v;}

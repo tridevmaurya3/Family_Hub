@@ -257,8 +257,8 @@ public class PropertyRepository {
     }
 
     @NonNull private static String text(DataSnapshot s,String k){String v=s.child(k).getValue(String.class);return v==null?"":v;}
-    private static long number(DataSnapshot s,String k){Number v=s.child(k).getValue(Number.class);return v==null?0L:v.longValue();}
-    private static double decimal(DataSnapshot s,String k){Number v=s.child(k).getValue(Number.class);return v==null?0d:v.doubleValue();}
+    private static long number(DataSnapshot s,String k){Number v=FirebaseNumbers.read(s.child(k));return v==null?0L:v.longValue();}
+    private static double decimal(DataSnapshot s,String k){Number v=FirebaseNumbers.read(s.child(k));return v==null?0d:v.doubleValue();}
     @NonNull private static String fallback(String v,String f){return v.isEmpty()?f:v;}
 
     public void delete(

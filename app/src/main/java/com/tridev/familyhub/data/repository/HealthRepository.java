@@ -455,7 +455,7 @@ public class HealthRepository {
     }
 
     private static long number(DataSnapshot snapshot, String key) {
-        Number value = snapshot.child(key).getValue(Number.class);
+        Number value = FirebaseNumbers.read(snapshot.child(key));
         return value == null ? 0L : value.longValue();
     }
 
