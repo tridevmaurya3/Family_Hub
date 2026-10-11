@@ -34,7 +34,7 @@ public final class AccountProfileSync {
     private int pendingWrites;
     private String uid = "", name = "", appliedPhoto;
     private String state = "Syncing profile…";
-    private long generation;
+    private long generation, photoOperation;
     private boolean migrationStarted;
     private String familyId = "", lastMembershipAttempt = "";
     private boolean membershipRetry;
@@ -175,8 +175,13 @@ public final class AccountProfileSync {
         reference.updateChildren(changes).addOnCompleteListener(task -> {
             if(!current(account,token))return;
             if(!task.isSuccessful()){pendingWrites=Math.max(0,pendingWrites-1);state="Profile save failed";notifyChanged();callback.complete(false,"Profile could not be synced");return;}
+            if(!value.equals(name)){finishName(callback,true,true);return;}
             user.updateProfile(new UserProfileChangeRequest.Builder().setDisplayName(value).build()).addOnCompleteListener(authTask -> {
                 if(!current(account,token))return;
+                if(!value.equals(name)){
+                    user.updateProfile(new UserProfileChangeRequest.Builder().setDisplayName(name).build());
+                    finishName(callback,true,true);return;
+                }
                 if(familyId.isEmpty()){finishName(callback,authTask.isSuccessful(),true);return;}
                 FirebaseDatabase.getInstance().getReference("memberships").child(familyId).child(account).child("displayName").setValue(value)
                     .addOnCompleteListener(memberTask -> {if(current(account,token))finishName(callback,authTask.isSuccessful(),memberTask.isSuccessful());});
@@ -189,7 +194,7 @@ public final class AccountProfileSync {
         notifyChanged(); callback.complete(true,authSaved&&membershipSaved?"Profile synced across devices":"Account name saved. Family name sync needs updated database rules or a retry.");
     }
     public void savePhoto(Uri uri, Result callback) {
-        final String account=uid;final long token=generation;
+        final String account=uid;final long token=generation, operation=++photoOperation;
         if(account.isEmpty()){callback.complete(false,"Sign in again");return;}
         state="Preparing profile photo…";notifyChanged();
         io.execute(() -> {
@@ -201,10 +206,10 @@ public final class AccountProfileSync {
                     try(InputStream in=context.getContentResolver().openInputStream(uri)){Bitmap bitmap=BitmapFactory.decodeStream(in,null,opts);if(bitmap!=null)data=encode(bitmap);}}
             }catch(Exception ignored){ }
             final String encoded=data;
-            main.post(() -> {if(!current(account,token))return;if(encoded==null){state="Photo could not be read";notifyChanged();callback.complete(false,state);return;}writePhoto(encoded,callback);});
+            main.post(() -> {if(!current(account,token))return;if(operation!=photoOperation){callback.complete(false,"A newer photo choice was kept");return;}if(encoded==null){state="Photo could not be read";notifyChanged();callback.complete(false,state);return;}writePhoto(encoded,callback);});
         });
     }
-    public void removePhoto(Result callback) { if(uid.isEmpty()){callback.complete(false,"Sign in again");return;}writePhoto("",callback); }
+    public void removePhoto(Result callback) { photoOperation++;if(uid.isEmpty()){callback.complete(false,"Sign in again");return;}writePhoto("",callback); }
     private void writePhoto(String encoded,Result callback) {
         final String account=uid;final long token=generation;
         pendingWrites++;state="Syncing profile photo…";notifyChanged();
