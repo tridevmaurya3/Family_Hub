@@ -369,6 +369,7 @@ public class DashboardRepository {
     ) {
 
         long now = System.currentTimeMillis();
+        if(!reminder.isEnabled || "COMPLETED".equalsIgnoreCase(reminder.collaborationStatus))return -1L;
 
         if (Reminder.REPEAT_ONCE.equals(
                 reminder.repeatType
@@ -386,8 +387,9 @@ public class DashboardRepository {
                 reminder.reminderAt
         );
 
+        int field=Reminder.REPEAT_WEEKLY.equals(reminder.repeatType)?Calendar.WEEK_OF_YEAR:Reminder.REPEAT_MONTHLY.equals(reminder.repeatType)?Calendar.MONTH:Reminder.REPEAT_YEARLY.equals(reminder.repeatType)?Calendar.YEAR:Calendar.DATE;
         while (calendar.getTimeInMillis() <= now) {
-            calendar.add(Calendar.DATE, 1);
+            calendar.add(field, 1);
         }
 
         return calendar.getTimeInMillis();

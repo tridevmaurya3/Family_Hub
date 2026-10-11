@@ -645,6 +645,9 @@
 
         </LinearLayout>
 
+        <com.tridev.familyhub.feature.dashboard.DashboardSmartSectionsView
+            android:id="@+id/dashboard_smart_sections" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
         <!-- Today overview heading -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -955,6 +958,7 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        </LinearLayout>
         <com.google.android.material.button.MaterialButton
             android:id="@+id/dashboard_sos_button"
             style="@style/Widget.FamilyHub.Button.Outlined"

@@ -59,13 +59,13 @@ public final class UniversalFamilyQuickHubService extends Service {
     private View selectorAnchor;
     private LinearLayout selectorContent;
     private FamilyHubDatabase database;
-    private Button groceryChoice, taskChoice, notesChoice;
+    private Button groceryChoice, taskChoice, notesChoice, remindersChoice, plannerChoice;
     private final Handler countHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService countExecutor = Executors.newSingleThreadExecutor();
     private volatile boolean destroyed;
     private int countGeneration;
     private final InvalidationTracker.Observer countObserver =
-            new InvalidationTracker.Observer("grocery_items", "family_tasks", "notes") {
+            new InvalidationTracker.Observer("grocery_items", "family_tasks", "notes", "reminders", "planner_items") {
                 @Override public void onInvalidated(@androidx.annotation.NonNull Set<String> tables) {
                     countHandler.post(UniversalFamilyQuickHubService.this::refreshPendingCounts);
                 }
@@ -155,13 +155,14 @@ public final class UniversalFamilyQuickHubService extends Service {
                     com.tridev.familyhub.feature.planner.overlay.PlannerOverlayService.ACTION_OPEN_PANEL, GroceryOverlayService.class);
             stopService(new Intent(this, FamilyTaskOverlayService.class)); selector.dismiss();
         });
+        remindersChoice=reminders;plannerChoice=planner;
         notesChoice = notes;
         groceryChoice = grocery;
         taskChoice = tasks;
         countGeneration++;
         selector.setOnDismissListener(() -> {
             database.getInvalidationTracker().removeObserver(countObserver);
-            notesChoice = null;
+            notesChoice = null;remindersChoice=null;plannerChoice=null;
             groceryChoice = null;
             taskChoice = null;
             selectorAnchor = null;
@@ -200,6 +201,8 @@ public final class UniversalFamilyQuickHubService extends Service {
             com.tridev.familyhub.data.model.DashboardStats notesStats = new com.tridev.familyhub.data.model.DashboardStats();
             com.tridev.familyhub.data.model.NotesDashboardSummary.from(database.noteDao().getActive()).applyTo(notesStats);
             final int pendingNotes = notesStats.getPendingNotes();
+            int reminders=0,plans=0;for(com.tridev.familyhub.data.local.entity.Reminder r:database.reminderDao().getAll())if(!"COMPLETED".equalsIgnoreCase(r.collaborationStatus))reminders++;for(com.tridev.familyhub.data.local.entity.PlannerItem p:database.plannerItemDao().getAll())if(!p.isCompleted)plans++;
+            final int pendingReminders=reminders,pendingPlanner=plans;
             final int pendingGroceries = groceryCount;
             final int pendingTasks = taskCount;
             countHandler.post(() -> {
@@ -211,6 +214,8 @@ public final class UniversalFamilyQuickHubService extends Service {
                     notesChoice.setText("Notes" + (pendingNotes > 0 ? " (" + pendingNotes + ")" : ""));
                     notesChoice.setContentDescription("Notes, " + pendingNotes + " pending");
                 }
+                if(remindersChoice!=null){remindersChoice.setText("Reminders"+(pendingReminders>0?" ("+pendingReminders+")":""));remindersChoice.setContentDescription("Reminders, "+pendingReminders+" pending");}
+                if(plannerChoice!=null){plannerChoice.setText("Planner"+(pendingPlanner>0?" ("+pendingPlanner+")":""));plannerChoice.setContentDescription("Planner, "+pendingPlanner+" pending");}
                 groceryChoice.setContentDescription("Grocery, " + pendingGroceries + " pending");
                 taskChoice.setContentDescription("To-Do, " + pendingTasks + " pending");
                 if (selector != null && selector.isShowing() && selectorContent != null

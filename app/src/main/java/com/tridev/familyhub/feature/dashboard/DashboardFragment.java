@@ -799,6 +799,7 @@ public class DashboardFragment extends Fragment {
                     renderBirthday(data);
                     renderBill(data);
                     renderRecentActivity(data);
+                    binding.dashboardSmartSections.setDashboardData(data);
                 },
                 error -> {
                     if (binding == null) {
