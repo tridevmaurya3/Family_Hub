@@ -438,19 +438,340 @@ public final class ReminderWorkspace {
         dialogBinding.reminderRelatedModuleInput.setAdapter(new android.widget.ArrayAdapter<>(
                 requireContext(), R.layout.item_form_dropdown, relatedModules));
         final List<FamilyMember> memberChoices = new ArrayList<>();
-        L…11282 tokens truncated…iew card=new MaterialCardView(c);card.setRadius(dp(14));card.setCardElevation(0);card.setStrokeWidth(dp(1));card.setStrokeColor(ContextCompat.getColor(c,R.color.fh_outline));card.setCardBackgroundColor(ContextCompat.getColor(c,fills[i]));card.setClickable(true);card.setFocusable(true);card.setContentDescription(labels[i]);
-            LayoutParams params=new LayoutParams(0,-2,1);params.setMargins(i==0?0:dp(3),dp(4),i==3?0:dp(3),dp(4));addView(card,params);
-            LinearLayout body=new LinearLayout(c);body.setOrientation(VERTICAL);body.setGravity(Gravity.CENTER);body.setPadding(dp(4),dp(6),dp(4),dp(6));body.setMinimumHeight(dp(64));card.addView(body);
-            LinearLayout top=new LinearLayout(c);top.setGravity(Gravity.CENTER);ImageView icon=new ImageView(c);icon.setImageResource(icons[i]);icon.setColorFilter(ContextCompat.getColor(c,accents[i]));top.addView(icon,new LayoutParams(dp(14),dp(14)));
-            values[i]=new TextView(c);values[i].setText("0");values[i].setTextSize(17);values[i].setTextColor(ContextCompat.getColor(c,accents[i]));values[i].setTypeface(null,1);LayoutParams number=new LayoutParams(-2,-2);number.leftMargin=dp(4);top.addView(values[i],number);body.addView(top);
-            TextView label=new TextView(c);label.setText(labels[i]);label.setTextSize(10);label.setGravity(Gravity.CENTER);label.setTextColor(ContextCompat.getColor(c,R.color.fh_on_surface));body.addView(label);
-            card.setOnClickListener(v->{if(selection!=null)selection.accept(index);});
+        List<String> memberLabels = new ArrayList<>();
+        memberLabels.add("Unassigned");
+        dialogBinding.reminderAssigneeInput.setAdapter(new android.widget.ArrayAdapter<>(
+                requireContext(), R.layout.item_form_dropdown, memberLabels));
+        repository.loadFamilyMembers(members -> {
+            if (binding == null || !isAdded()) return;
+            memberChoices.clear();
+            memberChoices.addAll(members);
+            memberLabels.clear();
+            memberLabels.add("Unassigned");
+            for (FamilyMember member : members) memberLabels.add(member.name);
+            dialogBinding.reminderAssigneeInput.setAdapter(new android.widget.ArrayAdapter<>(
+                    requireContext(), R.layout.item_form_dropdown, memberLabels));
+        });
+        boolean isNewReminder = existingReminder == null || existingReminder.id == 0;
+        final boolean quickDraft = existingReminder != null && existingReminder.id == 0;
+        Calendar selectedTime = Calendar.getInstance();
+        selectedTime.add(Calendar.HOUR_OF_DAY, 1);
+        selectedTime.set(Calendar.SECOND, 0);
+        selectedTime.set(Calendar.MILLISECOND, 0);
+
+        dialogBinding.reminderEditorTitle.setText(isNewReminder
+                ? R.string.add_reminder_title
+                : R.string.edit_reminder_title);
+        if (existingReminder != null) {
+            selectedTime.setTimeInMillis(existingReminder.reminderAt);
+            dialogBinding.reminderTitleInput.setText(existingReminder.title);
+            dialogBinding.reminderNoteInput.setText(existingReminder.note);
+            dialogBinding.reminderPriorityInput.setText(existingReminder.priority, false);
+            dialogBinding.reminderCategoryInput.setText(existingReminder.category, false);
+            dialogBinding.reminderAssigneeInput.setText(
+                    existingReminder.assignedMemberName.isEmpty()
+                            ? "Unassigned" : existingReminder.assignedMemberName, false);
+            int preAlertIndex = 0;
+            for (int i = 0; i < preAlertValues.length; i++) {
+                if (preAlertValues[i] == existingReminder.preAlertMinutes) preAlertIndex = i;
+            }
+            dialogBinding.reminderPreAlertInput.setText(preAlertLabels[preAlertIndex], false);
+            dialogBinding.reminderRelatedModuleInput.setText(
+                    existingReminder.relatedModule.isEmpty()
+                            ? "None" : existingReminder.relatedModule, false);
+            dialogBinding.reminderRelatedItemInput.setText(existingReminder.relatedItemTitle);
+            dialogBinding.reminderRepeatGroup.check(repeatButtonId(existingReminder.repeatType));
+            dialogBinding.reminderEnabledSwitch.setChecked(existingReminder.isEnabled);
+            dialogBinding.reminderSharedSwitch.setChecked(existingReminder.isShared);
+            dialogBinding.reminderCollaborationStatusInput.setText(
+                    existingReminder.collaborationStatus, false
+            );
+        } else {
+            dialogBinding.reminderCollaborationStatusInput.setText(collaborationLabels[0], false);
+            dialogBinding.reminderPriorityInput.setText("MEDIUM", false);
+            dialogBinding.reminderCategoryInput.setText("GENERAL", false);
+            dialogBinding.reminderAssigneeInput.setText("Unassigned", false);
+            dialogBinding.reminderPreAlertInput.setText(preAlertLabels[0], false);
+            dialogBinding.reminderRelatedModuleInput.setText("None", false);
+        }
+        updateDateTimeInputs(dialogBinding, selectedTime);
+
+        final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogBinding.getRoot())
+                .create();
+
+        dialogBinding.reminderDateInput.setOnClickListener(v -> showDatePicker(dialogBinding, selectedTime));
+        dialogBinding.reminderDateLayout.setEndIconOnClickListener(v -> showDatePicker(
+                dialogBinding, selectedTime
+        ));
+        dialogBinding.reminderTimeInput.setOnClickListener(v -> showTimePicker(dialogBinding, selectedTime));
+        dialogBinding.reminderTimeLayout.setEndIconOnClickListener(v -> showTimePicker(
+                dialogBinding, selectedTime
+        ));
+        dialogBinding.cancelReminderButton.setOnClickListener(v -> dialog.dismiss());
+        dialogBinding.saveReminderButton.setOnClickListener(v -> {
+            String title = dialogBinding.reminderTitleInput.getText().toString().trim();
+            String repeatType = selectedRepeatType(
+                    dialogBinding.reminderRepeatGroup.getCheckedRadioButtonId());
+            boolean repeating = !Reminder.REPEAT_ONCE.equals(repeatType);
+            if (!validateEditor(dialogBinding.reminderTitleLayout, title, selectedTime, repeating)) {
+                return;
+            }
+
+            Reminder reminder = existingReminder == null ? new Reminder() : existingReminder;
+            reminder.title = title;
+            reminder.note = dialogBinding.reminderNoteInput.getText().toString().trim();
+            reminder.reminderAt = selectedTime.getTimeInMillis();
+            reminder.repeatType = repeatType;
+            reminder.priority = dialogBinding.reminderPriorityInput.getText().toString().trim();
+            reminder.category = dialogBinding.reminderCategoryInput.getText().toString().trim();
+            reminder.preAlertMinutes = 0;
+            String selectedPreAlert = dialogBinding.reminderPreAlertInput.getText().toString();
+            for (int i = 0; i < preAlertLabels.length; i++) {
+                if (preAlertLabels[i].equals(selectedPreAlert)) reminder.preAlertMinutes = preAlertValues[i];
+            }
+            String relatedModule = dialogBinding.reminderRelatedModuleInput
+                    .getText().toString().trim();
+            reminder.relatedModule = "None".equalsIgnoreCase(relatedModule)
+                    ? "" : relatedModule;
+            reminder.relatedItemTitle = dialogBinding.reminderRelatedItemInput
+                    .getText().toString().trim();
+            String assignee = dialogBinding.reminderAssigneeInput.getText().toString().trim();
+            reminder.assignedMemberName = "Unassigned".equals(assignee) ? "" : assignee;
+            reminder.assignedMemberId = 0L;
+            for (FamilyMember member : memberChoices) {
+                if (member.name.equalsIgnoreCase(reminder.assignedMemberName)) {
+                    reminder.assignedMemberId = member.id;
+                    break;
+                }
+            }
+            reminder.isEnabled = dialogBinding.reminderEnabledSwitch.isChecked();
+            reminder.isShared = dialogBinding.reminderSharedSwitch.isChecked();
+            reminder.collaborationStatus = dialogBinding.reminderCollaborationStatusInput
+                    .getText().toString().trim();
+            stampCollaborationStatus(reminder, reminder.collaborationStatus);
+
+            dialogBinding.saveReminderButton.setEnabled(false);
+            repository.save(reminder, savedReminder -> {
+                if (savedReminder.isEnabled) {
+                    if (binding != null) requestNotificationPermissionIfNeeded();
+                    ReminderScheduler.schedule(requireContext(), savedReminder);
+                } else {
+                    ReminderScheduler.cancel(requireContext(), savedReminder.id);
+                }
+                if (binding == null) return;
+                if (quickDraft) quick.saved();
+                dialog.dismiss();
+                loadReminders(binding.reminderSearchInput.getText().toString());
+                Snackbar.make(
+                        binding.getRoot(),
+                        isNewReminder ? R.string.reminder_added : R.string.reminder_updated,
+                        Snackbar.LENGTH_SHORT
+                ).show();
+            });
+        });
+        voice.bind(dialogBinding.getRoot());
+        showDialog(dialog);
+    }
+
+    private boolean validateEditor(TextInputLayout titleLayout, String title, Calendar selectedTime,
+                                   boolean repeating) {
+        if (TextUtils.isEmpty(title)) {
+            titleLayout.setError(getString(R.string.reminder_title_required));
+            return false;
+        }
+        titleLayout.setError(null);
+        if (!repeating && selectedTime.getTimeInMillis() <= System.currentTimeMillis()) {
+            Snackbar.make(binding.getRoot(), R.string.reminder_future_time_required,
+                    Snackbar.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
+    }
+
+    private int repeatButtonId(@NonNull String repeatType) {
+        if (Reminder.REPEAT_DAILY.equals(repeatType)) return R.id.repeat_daily_button;
+        if (Reminder.REPEAT_WEEKLY.equals(repeatType)) return R.id.repeat_weekly_button;
+        if (Reminder.REPEAT_MONTHLY.equals(repeatType)) return R.id.repeat_monthly_button;
+        if (Reminder.REPEAT_YEARLY.equals(repeatType)) return R.id.repeat_yearly_button;
+        return R.id.repeat_once_button;
+    }
+
+    @NonNull
+    private String selectedRepeatType(int buttonId) {
+        if (buttonId == R.id.repeat_daily_button) return Reminder.REPEAT_DAILY;
+        if (buttonId == R.id.repeat_weekly_button) return Reminder.REPEAT_WEEKLY;
+        if (buttonId == R.id.repeat_monthly_button) return Reminder.REPEAT_MONTHLY;
+        if (buttonId == R.id.repeat_yearly_button) return Reminder.REPEAT_YEARLY;
+        return Reminder.REPEAT_ONCE;
+    }
+
+    private void updateDateTimeInputs(DialogReminderBinding dialogBinding, Calendar selectedTime) {
+        dialogBinding.reminderDateInput.setText(dateFormat.format(selectedTime.getTime()));
+        dialogBinding.reminderTimeInput.setText(timeFormat.format(selectedTime.getTime()));
+    }
+
+    private void showDatePicker(DialogReminderBinding dialogBinding, Calendar selectedTime) {
+        showDialog(new DatePickerDialog(
+                requireContext(),
+                (view, year, month, dayOfMonth) -> {
+                    selectedTime.set(Calendar.YEAR, year);
+                    selectedTime.set(Calendar.MONTH, month);
+                    selectedTime.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+                    updateDateTimeInputs(dialogBinding, selectedTime);
+                },
+                selectedTime.get(Calendar.YEAR),
+                selectedTime.get(Calendar.MONTH),
+                selectedTime.get(Calendar.DAY_OF_MONTH)
+        ));
+    }
+
+    private void showTimePicker(DialogReminderBinding dialogBinding, Calendar selectedTime) {
+        showDialog(new TimePickerDialog(
+                requireContext(),
+                (view, hourOfDay, minute) -> {
+                    selectedTime.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                    selectedTime.set(Calendar.MINUTE, minute);
+                    selectedTime.set(Calendar.SECOND, 0);
+                    selectedTime.set(Calendar.MILLISECOND, 0);
+                    updateDateTimeInputs(dialogBinding, selectedTime);
+                },
+                selectedTime.get(Calendar.HOUR_OF_DAY),
+                selectedTime.get(Calendar.MINUTE),
+                false
+        ));
+    }
+
+    private void updateEnabledState(Reminder reminder, boolean isEnabled) {
+        reminder.isEnabled = isEnabled;
+        repository.save(reminder, savedReminder -> {
+            if (savedReminder.isEnabled) {
+                requestNotificationPermissionIfNeeded();
+                ReminderScheduler.schedule(requireContext(), savedReminder);
+            } else {
+                ReminderScheduler.cancel(requireContext(), savedReminder.id);
+            }
+            if (binding != null) {
+                Snackbar.make(
+                        binding.getRoot(),
+                        savedReminder.isEnabled ? R.string.reminder_enabled : R.string.reminder_disabled,
+                        Snackbar.LENGTH_SHORT
+                ).show();
+            }
+        });
+    }
+
+    private void showStatusSelector(@NonNull Reminder reminder) {
+        String[] statuses = getResources().getStringArray(R.array.collaboration_status_labels);
+        int selected = 0;
+        for (int i = 0; i < statuses.length; i++) {
+            if (statuses[i].equalsIgnoreCase(reminder.collaborationStatus)) selected = i;
+        }
+        showDialog(new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Update reminder status")
+                .setSingleChoiceItems(statuses, selected, (dialog, which) -> {
+                    applyCollaborationStatus(reminder, statuses[which]);
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .create());
+    }
+
+    private void applyCollaborationStatus(@NonNull Reminder reminder,
+                                          @NonNull String status) {
+        reminder.collaborationStatus = status;
+        stampCollaborationStatus(reminder, status);
+        repository.save(reminder, saved -> {
+            if (binding == null) return;
+            loadReminders(binding.reminderSearchInput.getText().toString());
+            Snackbar.make(binding.getRoot(), "Reminder status updated",
+                    Snackbar.LENGTH_SHORT).show();
+        });
+    }
+
+    private void stampCollaborationStatus(@NonNull Reminder reminder,
+                                          @NonNull String status) {
+        long now = System.currentTimeMillis();
+        if (reminder.seenAt == 0L) reminder.seenAt = now;
+        if ("ACCEPTED".equals(status) && reminder.acceptedAt == 0L) {
+            reminder.acceptedAt = now;
+        } else if ("IN_PROGRESS".equals(status)) {
+            if (reminder.acceptedAt == 0L) reminder.acceptedAt = now;
+            if (reminder.startedAt == 0L) reminder.startedAt = now;
+        } else if ("COMPLETED".equals(status)) {
+            if (reminder.acceptedAt == 0L) reminder.acceptedAt = now;
+            if (reminder.startedAt == 0L) reminder.startedAt = now;
+            reminder.completedAt = now;
+            reminder.completedByName = reminder.assignedMemberName.trim().isEmpty()
+                    ? "Family member" : reminder.assignedMemberName.trim();
         }
     }
-    public void setSelection(Consumer<Integer> listener){selection=listener;}
-    public void setReminders(List<Reminder> items){int[] counts=new int[4];long now=System.currentTimeMillis();long[] day=today();for(Reminder r:items){boolean done="COMPLETED".equalsIgnoreCase(r.collaborationStatus);counts[done?1:0]++;long at=r.reminderAt;if(!Reminder.REPEAT_ONCE.equals(r.repeatType)){Calendar next=Calendar.getInstance();next.setTimeInMillis(at);int field=Reminder.REPEAT_WEEKLY.equals(r.repeatType)?Calendar.WEEK_OF_YEAR:Reminder.REPEAT_MONTHLY.equals(r.repeatType)?Calendar.MONTH:Reminder.REPEAT_YEARLY.equals(r.repeatType)?Calendar.YEAR:Calendar.DATE;while(next.getTimeInMillis()<now)next.add(field,1);at=next.getTimeInMillis();}if(!done&&at>=day[0]&&at<day[1])counts[2]++;if(!done&&r.isEnabled&&Reminder.REPEAT_ONCE.equals(r.repeatType)&&at<now)counts[3]++;}update(counts);}
-    public void setPlanner(List<PlannerItem> items){int[] counts=new int[4];long now=System.currentTimeMillis();long[] day=today();for(PlannerItem p:items){counts[p.isCompleted?1:0]++;if(!p.isCompleted&&p.startAt>=day[0]&&p.startAt<day[1])counts[2]++;if(!p.isCompleted&&p.startAt<now)counts[3]++;}update(counts);}
-    private void update(int[] counts){for(int i=0;i<4;i++)values[i].setText(String.valueOf(counts[i]));}
-    private long[] today(){Calendar c=Calendar.getInstance();c.set(Calendar.HOUR_OF_DAY,0);c.set(Calendar.MINUTE,0);c.set(Calendar.SECOND,0);c.set(Calendar.MILLISECOND,0);long start=c.getTimeInMillis();c.add(Calendar.DATE,1);return new long[]{start,c.getTimeInMillis()};}
-    private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
+
+    private void openRelatedModule(@Nullable String module) {
+        if (module == null || module.trim().isEmpty()) return;
+        String route = "FINANCE".equalsIgnoreCase(module) ? MainActivity.ROUTE_FINANCE
+                : "GROCERY".equalsIgnoreCase(module) ? MainActivity.ROUTE_GROCERY
+                : "HEALTH".equalsIgnoreCase(module) ? MainActivity.ROUTE_HEALTH
+                : "VEHICLE".equalsIgnoreCase(module) ? MainActivity.ROUTE_VEHICLES
+                : "DOCUMENTS".equalsIgnoreCase(module) ? MainActivity.ROUTE_DOCUMENTS
+                : "PROPERTY".equalsIgnoreCase(module) ? MainActivity.ROUTE_PROPERTY : null;
+        if (route != null) {
+            startActivity(new Intent(context, MainActivity.class).putExtra(MainActivity.EXTRA_OPEN_ROUTE, route));
+            if (floating) context.stopService(new Intent(context, com.tridev.familyhub.feature.reminders.overlay.RemindersOverlayService.class));
+        }
+
+    }
+
+    private void confirmDelete(Reminder reminder) {
+        showDialog(new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.delete_reminder_title)
+                .setMessage(getString(R.string.delete_reminder_message, reminder.title))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.confirm_delete, (dialog, which) -> {
+                    ReminderScheduler.cancel(requireContext(), reminder.id);
+                    repository.delete(reminder, deletedReminder -> {
+                        if (binding == null) {
+                            return;
+                        }
+                        loadReminders(binding.reminderSearchInput.getText().toString());
+                        Snackbar.make(binding.getRoot(), R.string.reminder_deleted,
+                                Snackbar.LENGTH_SHORT).show();
+                    });
+                })
+                .create());
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            startActivity(new Intent(context, com.tridev.familyhub.feature.notes.overlay.NotesNotificationPermissionActivity.class));
+            Snackbar.make(binding.getRoot(), R.string.notification_permission_explanation,
+                    Snackbar.LENGTH_LONG).show();
+        }
+    }
+
+    private int priorityRank(String value) { return "URGENT".equals(value) ? 3 : "HIGH".equals(value) ? 2 : "MEDIUM".equals(value) ? 1 : 0; }
+    private void showDialog(android.app.Dialog dialog) {
+        if (binding == null) return;
+        if (floating && dialog.getWindow() != null) dialog.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+        dialogs.add(dialog); dialog.setOnDismissListener(d -> { dialogs.remove(dialog); if (voice != null) voice.stop(); });
+        dialog.show();
+    }
+    private void saveQuick(Reminder reminder) {
+        repository.save(reminder, saved -> {
+            if (saved.isEnabled) { if (binding != null) requestNotificationPermissionIfNeeded(); ReminderScheduler.schedule(context, saved); }
+            if (binding == null) return;
+            quick.saved(); reload();
+            Snackbar.make(binding.getRoot(), R.string.reminder_added, Snackbar.LENGTH_SHORT).show();
+        });
+    }
+    public void dispose() {
+        repository.stopRealtimeSync();
+        if (voice != null) voice.stop();
+        if (quick != null) quick.dispose();
+        for (android.widget.PopupWindow popup : new ArrayList<>(popups)) popup.dismiss();
+        for (android.app.Dialog dialog : new ArrayList<>(dialogs)) dialog.dismiss();
+        handler.removeCallbacksAndMessages(null); binding = null;
+    }
 }
