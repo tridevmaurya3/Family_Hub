@@ -78,8 +78,8 @@ public interface FamilyMemberDao {
     int countOtherMembersWithEmail(String email, long memberId);
 
     @Query("UPDATE family_members SET syncPending = 0 "
-            + "WHERE cloudProfileId = :cloudProfileId")
-    int markSynced(String cloudProfileId);
+            + "WHERE cloudProfileId = :cloudProfileId AND updatedAt = :submittedAt")
+    int markSynced(String cloudProfileId, long submittedAt);
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     long insert(FamilyMember member);

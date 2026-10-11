@@ -202,6 +202,7 @@ public class PlannerRepository {
         values.put("startAt", item.startAt);
         values.put("endAt", item.endAt);
         values.put("assignedMemberId", item.assignedMemberId == null ? "" : String.valueOf(item.assignedMemberId));
+        values.put("assignedMemberProfileId",FamilySharedRecordSupport.assignmentProfileId(familyMemberDao,item.assignedMemberId == null ? 0L : item.assignedMemberId));
         values.put("assignedMemberName", item.assignedMemberName);
         values.put("collaborationStatus", item.collaborationStatus);
         values.put("allDay", item.isAllDay);
@@ -241,8 +242,9 @@ public class PlannerRepository {
             item.startAt = number(s, "startAt"); item.endAt = number(s, "endAt");
             item.isAllDay = bool(s, "allDay");
             item.assignedMemberName = text(s, "assignedMemberName");
-            item.assignedMemberId = resolveLocalMemberId(
-                    item.assignedMemberName);
+            long assignedId = FamilySharedRecordSupport.assignedLocalId(familyMemberDao,familyId,
+                    text(s,"assignedMemberProfileId"),text(s,"assignedMemberId"),item.assignedMemberName);
+            item.assignedMemberId = assignedId == 0L ? null : assignedId;
             item.collaborationStatus = fallback(text(s, "collaborationStatus"), "PENDING");
             item.repeatType = fallback(text(s, "repeatType"), PlannerItem.REPEAT_NONE);
             item.isCompleted = bool(s, "completed");

@@ -170,6 +170,7 @@ public class NotesRepository {
         values.put("noteType", note.noteType);
         values.put("colorKey", note.colorKey);
         values.put("assignedMemberId", note.assignedMemberId == 0 ? "" : String.valueOf(note.assignedMemberId));
+        values.put("assignedMemberProfileId",FamilySharedRecordSupport.assignmentProfileId(familyMemberDao,note.assignedMemberId));
         values.put("assignedMemberName", note.assignedMemberName);
         values.put("collaborationStatus", note.collaborationStatus);
         values.put("reminderAt", note.reminderAt);
@@ -208,9 +209,8 @@ public class NotesRepository {
             note.noteType = fallback(stringValue(snapshot, "noteType"), NoteEntry.TYPE_TEXT);
             note.colorKey = fallback(stringValue(snapshot, "colorKey"), "BLUE");
             note.assignedMemberName = stringValue(snapshot, "assignedMemberName");
-            FamilyMember assigned = note.assignedMemberName.isEmpty()
-                    ? null : familyMemberDao.getByName(note.assignedMemberName);
-            note.assignedMemberId = assigned == null ? 0L : assigned.id;
+            note.assignedMemberId = FamilySharedRecordSupport.assignedLocalId(familyMemberDao,familyId,
+                    stringValue(snapshot,"assignedMemberProfileId"),stringValue(snapshot,"assignedMemberId"),note.assignedMemberName);
             note.collaborationStatus = fallback(
                     stringValue(snapshot, "collaborationStatus"), "DRAFT");
             note.reminderAt = longValue(snapshot, "reminderAt");

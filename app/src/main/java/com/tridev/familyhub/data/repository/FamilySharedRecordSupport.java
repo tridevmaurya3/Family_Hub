@@ -39,6 +39,24 @@ final class FamilySharedRecordSupport {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
+    @NonNull static String assignmentProfileId(FamilyMemberDao dao, long localId) {
+        FamilyMember member = dao.getById(localId);
+        return member == null ? "" : member.cloudProfileId;
+    }
+
+    static long assignedLocalId(FamilyMemberDao dao, String familyId, String profileId, String legacyId, String name) {
+        String stable = profileId.isEmpty() && !legacyId.matches("[0-9]+") ? legacyId : profileId;
+        if (!stable.isEmpty()) return resolveMember(dao,familyId,stable,name).id;
+        if (name.trim().isEmpty()) return 0L;
+        FamilyMember match = null;
+        for (FamilyMember member : dao.getForFamily(familyId)) {
+            if (!name.trim().equalsIgnoreCase(member.name)) continue;
+            if (match != null) return 0L;
+            match = member;
+        }
+        return match == null ? 0L : match.id;
+    }
+
     @NonNull static synchronized FamilyMember resolveMember(@NonNull FamilyMemberDao dao,
             @NonNull String familyId, @NonNull String profileId, @NonNull String name) {
         List<FamilyMember> scoped = dao.getForFamily(familyId);

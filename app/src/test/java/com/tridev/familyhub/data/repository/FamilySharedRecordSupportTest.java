@@ -105,4 +105,21 @@ public class FamilySharedRecordSupportTest {
         assertFalse(FamilySharedRecordSupport.canRetry(false, "", "alice", "alice"));
         assertFalse(FamilySharedRecordSupport.canRetry(true, "familyA", "alice", "alice"));
     }
+    @Test public void assignmentUsesPortableProfileDespiteSameNamesAndDifferentRoomIds() {
+        add("B","outside","Same");
+        add("A","profile1","Same");
+        FamilyMember intended = add("A","profile2","Same");
+        assertEquals(intended.id,FamilySharedRecordSupport.assignedLocalId(dao,"A","profile2","1","Same"));
+    }
+    @Test public void numericLegacyAssignmentCannotChooseAnAmbiguousName() {
+        add("A","profile1","Same"); add("A","profile2","Same");
+        assertEquals(0L,FamilySharedRecordSupport.assignedLocalId(dao,"A","","1","Same"));
+        assertEquals(2,rows.size());
+    }
+    @Test public void legacyAssignmentUsesOnlyUnambiguousCurrentFamilyMember() {
+        add("B","outside","Same"); FamilyMember intended=add("A","profile1","Same");
+        assertEquals(intended.id,FamilySharedRecordSupport.assignedLocalId(dao,"A","","99","Same"));
+        assertEquals(0L,FamilySharedRecordSupport.assignedLocalId(dao,"A","","",""));
+    }
+
 }

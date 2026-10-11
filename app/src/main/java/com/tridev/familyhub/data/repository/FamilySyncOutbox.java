@@ -29,7 +29,11 @@ public final class FamilySyncOutbox {
         context = app.getApplicationContext();
         com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(auth -> {
             String uid = AccountDataScope.uid();
-            if (!uid.isEmpty()) schedule(uid);
+            if (!uid.isEmpty()) {
+                schedule(uid);
+                com.tridev.familyhub.core.security.AccountReminderRestore.restore(context,uid);
+                com.tridev.familyhub.backup.BackupScheduler.sync(context);
+            }
         });
     }
 

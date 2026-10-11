@@ -74,6 +74,8 @@ public class DashboardFragment extends Fragment {
     private final com.tridev.familyhub.feature.profile.AccountProfileSync.Listener profileListener = () -> { if(binding!=null && isAdded()) renderHeader(); };
     private int selectedCategory = R.id.dashboard_category_planning;
     private DashboardRepository dashboardRepository;
+    private com.tridev.familyhub.data.repository.DashboardRealtimeSync dashboardRealtimeSync;
+    private int dashboardRequest;
     @Nullable private FamilyTaskRepository taskRepository;
     @Nullable private DashboardData latestDashboardData;
     private int taskPendingCount;
@@ -128,6 +130,7 @@ public class DashboardFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         dashboardRepository = new DashboardRepository(requireContext());
+        dashboardRealtimeSync = new com.tridev.familyhub.data.repository.DashboardRealtimeSync(requireContext());
         taskRepository = new FamilyTaskRepository(requireContext());
 
         bindStatusCards();
@@ -295,6 +298,7 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        if (dashboardRealtimeSync != null) dashboardRealtimeSync.start(this::loadDashboardData);
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).addListener(profileListener);
         headerClockHandler.removeCallbacks(headerClockTick);
         headerClockHandler.post(headerClockTick);
@@ -302,6 +306,8 @@ public class DashboardFragment extends Fragment {
 
     @Override
     public void onStop() {
+        if (dashboardRealtimeSync != null) dashboardRealtimeSync.stop();
+        dashboardRequest++;
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).removeListener(profileListener);
         headerClockHandler.removeCallbacks(headerClockTick);
         super.onStop();
@@ -795,8 +801,10 @@ public class DashboardFragment extends Fragment {
         binding.dashboardLoading.setVisibility(View.VISIBLE);
         binding.dashboardErrorCard.setVisibility(View.GONE);
 
+        int request = ++dashboardRequest;
         dashboardRepository.loadDashboardData(
                 data -> {
+                    if (request != dashboardRequest) return;
                     if (binding == null) {
                         return;
                     }
@@ -815,6 +823,7 @@ public class DashboardFragment extends Fragment {
                     binding.dashboardSmartSections.setDashboardData(data);
                 },
                 error -> {
+                    if (request != dashboardRequest) return;
                     if (binding == null) {
                         return;
                     }
@@ -1208,6 +1217,8 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onDestroyView() {
         headerClockHandler.removeCallbacks(headerClockTick);
+        if (dashboardRealtimeSync != null) { dashboardRealtimeSync.stop(); dashboardRealtimeSync = null; }
+        dashboardRequest++;
         if (dashboardRepository != null) {
             dashboardRepository.close();
             dashboardRepository = null;

@@ -25,6 +25,8 @@ import java.util.concurrent.Executors;
 
 /** Offline-first Room repository with authorised family-scoped Firebase sync. */
 public class FamilyMemberRepository {
+    private final String scopeUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+    private boolean currentAccount() { return scopeUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid()); }
 
     public interface MembersCallback {
         void onMembersLoaded(List<FamilyMember> members);
@@ -47,9 +49,46 @@ public class FamilyMemberRepository {
             new FamilyAccountRepository();
     private final DatabaseReference firebaseRoot =
             FirebaseDatabase.getInstance().getReference();
+    private DatabaseReference profilesWatch, membershipsWatch;
+    private com.google.firebase.database.ValueEventListener watchListener;
+    private Runnable watchRefresh;
+    private int watchGeneration;
 
     public FamilyMemberRepository(Context context) {
         memberDao = FamilyHubDatabase.getInstance(context).familyMemberDao();
+    }
+
+    public void startRealtimeSync(@NonNull Runnable changed) {
+        stopRealtimeSync();
+        if (scopeUid.isEmpty() || !currentAccount()) return;
+        int request = watchGeneration;
+        accountRepository.loadSession(new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
+            @Override public void onSuccess(@Nullable FamilyAccountRepository.SessionState state) {
+                if (!currentAccount() || request != watchGeneration || state == null || !state.isActive() || state.familyId == null) return;
+                watchRefresh = () -> { if (currentAccount() && request == watchGeneration) changed.run(); };
+                watchListener = new com.google.firebase.database.ValueEventListener() {
+                    @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (!currentAccount() || request != watchGeneration) return;
+                        mainHandler.removeCallbacks(watchRefresh); mainHandler.postDelayed(watchRefresh,250L);
+                    }
+                    @Override public void onCancelled(@NonNull com.google.firebase.database.DatabaseError error) { }
+                };
+                profilesWatch = firebaseRoot.child("familyProfiles").child(state.familyId);
+                membershipsWatch = firebaseRoot.child("memberships").child(state.familyId);
+                profilesWatch.addValueEventListener(watchListener); membershipsWatch.addValueEventListener(watchListener);
+            }
+            @Override public void onError(@NonNull Exception error) { }
+        });
+    }
+
+    public void stopRealtimeSync() {
+        watchGeneration++;
+        if (watchRefresh != null) mainHandler.removeCallbacks(watchRefresh);
+        if (watchListener != null) {
+            if (profilesWatch != null) profilesWatch.removeEventListener(watchListener);
+            if (membershipsWatch != null) membershipsWatch.removeEventListener(watchListener);
+        }
+        profilesWatch = null; membershipsWatch = null; watchListener = null; watchRefresh = null;
     }
 
     public void loadMembers(
@@ -62,6 +101,7 @@ public class FamilyMemberRepository {
                     public void onSuccess(
                             @Nullable FamilyAccountRepository.SessionState session
                     ) {
+                        if (!currentAccount()) return;
                         if (session == null
                                 || !session.isActive()
                                 || session.familyId == null) {
@@ -93,9 +133,11 @@ public class FamilyMemberRepository {
                 .child(familyId);
         profiles.get()
                 .addOnSuccessListener(snapshot -> {
+                    if (!currentAccount()) return;
                     List<FamilyMember> remoteMembers =
                             parseRemoteMembers(snapshot, familyId);
                     DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
                         long now = System.currentTimeMillis();
                         for (FamilyMember legacy : memberDao.getUnscoped()) {
                             legacy.ownerFamilyId = familyId;
@@ -160,6 +202,7 @@ public class FamilyMemberRepository {
                         List<FamilyMember> visible =
                                 queryFamily(familyId, searchQuery);
                         mainHandler.post(() -> {
+                if (!currentAccount()) return;
                             uploadProfiles(familyId, pendingUploads);
                             callback.onMembersLoaded(visible);
                         });
@@ -179,6 +222,7 @@ public class FamilyMemberRepository {
                     public void onSuccess(
                             @Nullable FamilyAccountRepository.SessionState session
                     ) {
+                        if (!currentAccount()) return;
                         String familyId = session != null
                                 && session.isActive()
                                 ? session.familyId
@@ -200,6 +244,7 @@ public class FamilyMemberRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             long now = System.currentTimeMillis();
             if (member.createdAt == 0L) {
                 member.createdAt = now;
@@ -227,8 +272,11 @@ public class FamilyMemberRepository {
             }
 
             mainHandler.post(() -> {
+                if (!currentAccount()) return;
                 if (familyId != null
                         && !member.cloudProfileId.isEmpty()) {
+                    long submittedAt = member.updatedAt;
+                    String submittedProfileId = member.cloudProfileId;
                     firebaseRoot.child("familyProfiles")
                             .child(familyId)
                             .child(member.cloudProfileId)
@@ -237,7 +285,7 @@ public class FamilyMemberRepository {
                                     member
                             ))
                             .addOnSuccessListener(unused ->
-                                    markSynced(member.cloudProfileId));
+                                    markSynced(submittedProfileId, submittedAt));
                 }
                 callback.onComplete();
             });
@@ -249,8 +297,10 @@ public class FamilyMemberRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             memberDao.delete(member);
             mainHandler.post(() -> {
+                if (!currentAccount()) return;
                 if (!member.ownerFamilyId.isEmpty()
                         && !member.cloudProfileId.isEmpty()) {
                     firebaseRoot.child("familyProfiles")
@@ -270,6 +320,7 @@ public class FamilyMemberRepository {
             @NonNull UniquenessCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             boolean phoneAvailable = phone.trim().isEmpty()
                     || memberDao.countOtherMembersWithPhone(
                     phone.trim(), memberId
@@ -290,12 +341,15 @@ public class FamilyMemberRepository {
             @NonNull List<FamilyMember> members
     ) {
         for (FamilyMember member : members) {
+            if (!currentAccount()) return;
+            long submittedAt = member.updatedAt;
+            String submittedProfileId = member.cloudProfileId;
             firebaseRoot.child("familyProfiles")
                     .child(familyId)
                     .child(member.cloudProfileId)
                     .updateChildren(toCloudValues(familyId, member))
                     .addOnSuccessListener(unused ->
-                            markSynced(member.cloudProfileId));
+                            markSynced(submittedProfileId, submittedAt));
         }
     }
 
@@ -402,9 +456,9 @@ public class FamilyMemberRepository {
         target.syncPending = false;
     }
 
-    private void markSynced(@NonNull String cloudProfileId) {
+    private void markSynced(@NonNull String cloudProfileId, long submittedAt) {
         DATABASE_EXECUTOR.execute(() ->
-                memberDao.markSynced(cloudProfileId));
+                memberDao.markSynced(cloudProfileId,submittedAt));
     }
 
     private void loadLegacyMembers(
@@ -412,6 +466,7 @@ public class FamilyMemberRepository {
             @NonNull MembersCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             List<FamilyMember> members = searchQuery.trim().isEmpty()
                     ? memberDao.getAll()
                     : memberDao.search(searchQuery.trim());
@@ -425,6 +480,7 @@ public class FamilyMemberRepository {
             @NonNull MembersCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             List<FamilyMember> members =
                     queryFamily(familyId, searchQuery);
             mainHandler.post(() -> callback.onMembersLoaded(members));

@@ -36,7 +36,7 @@ public final class BackupPreferences {
 
     public BackupPreferences(@NonNull Context context) {
         preferences = context.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                .getSharedPreferences(com.tridev.familyhub.core.security.AccountDataScope.preferencesName(context,PREFS), Context.MODE_PRIVATE);
     }
 
     public void setDestination(

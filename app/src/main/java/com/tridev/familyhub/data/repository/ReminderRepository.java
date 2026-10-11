@@ -178,6 +178,7 @@ public class ReminderRepository {
         values.put("relatedItemTitle", reminder.relatedItemTitle);
         values.put("enabled", reminder.isEnabled);
         values.put("assignedMemberId", reminder.assignedMemberId == 0 ? "" : String.valueOf(reminder.assignedMemberId));
+        values.put("assignedMemberProfileId",FamilySharedRecordSupport.assignmentProfileId(familyMemberDao,reminder.assignedMemberId));
         values.put("assignedMemberName", reminder.assignedMemberName);
         values.put("collaborationStatus", reminder.collaborationStatus);
         values.put("shared", true);
@@ -218,8 +219,8 @@ public class ReminderRepository {
             reminder.relatedItemTitle=text(s,"relatedItemTitle");
             reminder.isEnabled=bool(s,"enabled");
             reminder.assignedMemberName=text(s,"assignedMemberName");
-            reminder.assignedMemberId=resolveLocalMemberId(
-                    reminder.assignedMemberName);
+            reminder.assignedMemberId=FamilySharedRecordSupport.assignedLocalId(familyMemberDao,familyId,
+                    text(s,"assignedMemberProfileId"),text(s,"assignedMemberId"),reminder.assignedMemberName);
             reminder.collaborationStatus=fallback(text(s,"collaborationStatus"),"PENDING");
             reminder.isShared=true; reminder.createdAt=number(s,"createdAt");
             if(reminder.createdAt==0L) reminder.createdAt=updatedAt;

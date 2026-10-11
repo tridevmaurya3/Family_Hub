@@ -42,6 +42,8 @@ public final class DocumentExpiryWorker extends Worker {
     @Override
     public Result doWork() {
         Context context = getApplicationContext();
+        String account = com.tridev.familyhub.core.security.AccountDataScope.uid();
+        if (account.isEmpty()) return Result.success();
         DocumentVaultPreferences preferences =
                 new DocumentVaultPreferences(context);
         if (!preferences.expiryAlertsEnabled()) {
@@ -56,11 +58,12 @@ public final class DocumentExpiryWorker extends Worker {
         long now = System.currentTimeMillis();
         int reminderDays = preferences.reminderDays();
         SharedPreferences alertState = context.getSharedPreferences(
-                ALERT_STATE,
+                com.tridev.familyhub.core.security.AccountDataScope.preferencesName(context,ALERT_STATE,account),
                 Context.MODE_PRIVATE
         );
 
         for (DocumentEntry document : documents) {
+            if (!account.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return Result.success();
             String status = DocumentExpiryPolicy.status(
                     document.expiryAt,
                     now,

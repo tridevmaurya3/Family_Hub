@@ -47,6 +47,7 @@ public final class BackupScheduler {
                 intervalDays,
                 TimeUnit.DAYS
         )
+                .setInputData(new androidx.work.Data.Builder().putString(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID,com.tridev.familyhub.core.security.AccountDataScope.uid()).build())
                 .setConstraints(constraints)
                 .addTag(UNIQUE_WORK)
                 .build();

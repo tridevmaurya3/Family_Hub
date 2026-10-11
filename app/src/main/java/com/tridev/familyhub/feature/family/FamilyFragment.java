@@ -615,11 +615,13 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
     private final com.tridev.familyhub.feature.profile.FamilyAvatarStore.Listener avatarListener=()->{
         if(binding!=null && memberAdapter!=null)memberAdapter.notifyDataSetChanged();
     };
-    @Override public void onStart(){super.onStart();com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).addListener(avatarListener);}
-    @Override public void onStop(){com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).removeListener(avatarListener);super.onStop();}
+    @Override public void onStart(){super.onStart();if(repository!=null)repository.startRealtimeSync(()->{if(binding!=null)loadMembers(binding.memberSearchInput.getText().toString());});com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).addListener(avatarListener);}
+    @Override public void onStop(){if(repository!=null)repository.stopRealtimeSync();memberLoadGeneration++;com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).removeListener(avatarListener);super.onStop();}
 
     @Override
     public void onDestroyView() {
+        if (repository != null) repository.stopRealtimeSync();
+        memberLoadGeneration++;
         activeEditor = null;
         selectedPhotoUri = "";
         binding.memberRecyclerView.setAdapter(null);

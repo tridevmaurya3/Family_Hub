@@ -31,6 +31,7 @@ public final class EncryptedBackupWorker extends Worker {
     @Override
     public Result doWork() {
         Context context = getApplicationContext();
+        if (!com.tridev.familyhub.core.security.AccountDataScope.canDeliver(context,getInputData().getString(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID))) return Result.success();
         BackupPreferences preferences = new BackupPreferences(context);
         if (!preferences.isReadyForAutomaticBackup()) {
             return Result.success();
