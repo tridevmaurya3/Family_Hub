@@ -88,7 +88,7 @@ public final class FamilyTaskAlarmService extends Service {
         ringingId = id;
         ensureChannel(this);
         Intent screen = new Intent(this, FamilyTaskAlarmActivity.class).putExtras(intent)
-                .setData(Uri.parse("familyhub://task-alarm/" + id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                .setData(Uri.parse("familyhub://task-alarm/" + id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         Bundle launchOptions = null;
         if (Build.VERSION.SDK_INT >= 34) {
             // Only this explicit, immutable alarm intent may launch while the phone is locked.

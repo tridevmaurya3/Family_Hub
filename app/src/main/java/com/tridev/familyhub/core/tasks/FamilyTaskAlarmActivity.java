@@ -42,22 +42,68 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
             return;
         }
         LinearLayout root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER_VERTICAL); root.setPadding(dp(24), dp(32), dp(24), dp(24));
-        root.setBackgroundColor(android.graphics.Color.rgb(247, 250, 255));
-        text(root, getString(R.string.task_alarm_heading), 20);
+        root.setGravity(Gravity.CENTER_VERTICAL); root.setPadding(dp(20), dp(24), dp(20), dp(24));
+        root.setBackgroundColor(android.graphics.Color.rgb(19, 40, 61));
+        TextView heading = text(root, getString(R.string.task_alarm_heading), 16);
+        heading.setGravity(Gravity.CENTER); heading.setTextColor(android.graphics.Color.rgb(167, 210, 240));
         long time = getIntent().getLongExtra("time", System.currentTimeMillis());
-        text(root, java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(time)), 40);
-        text(root, java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(new java.util.Date(time)), 14);
-        text(root, getIntent().getStringExtra("title"), 24);
-        text(root, getString(getIntent().getIntExtra("stage", 1) == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due), 14);
+        TextView clock = text(root, java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(time)), 48);
+        clock.setGravity(Gravity.CENTER); clock.setTypeface(null, android.graphics.Typeface.BOLD);
+        TextView date = text(root, java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(new java.util.Date(time)), 15);
+        date.setGravity(Gravity.CENTER);
+        LinearLayout details = new LinearLayout(this); details.setOrientation(LinearLayout.VERTICAL);
+        details.setPadding(dp(18), dp(14), dp(18), dp(14));
+        android.graphics.drawable.GradientDrawable card = new android.graphics.drawable.GradientDrawable();
+        card.setColor(android.graphics.Color.rgb(32, 58, 81)); card.setCornerRadius(dp(24)); details.setBackground(card);
+        LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
+        cardParams.setMargins(0, dp(18), 0, dp(18)); root.addView(details, cardParams);
+        TextView title = text(details, getIntent().getStringExtra("title"), 24);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        text(details, getString(getIntent().getIntExtra("stage", 1) == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due), 14);
         String notes = getIntent().getStringExtra("notes");
-        if (notes != null && !notes.trim().isEmpty()) text(root, notes, 14);
-        snoozeControls(root);
-        button(root, R.string.task_alarm_dismiss, () -> action(FamilyTaskReceiver.ACTION_DISMISS, 0));
-        button(root, R.string.family_tasks_notification_complete, () -> action(FamilyTaskReceiver.ACTION_COMPLETE, 0));
+        if (notes != null && !notes.trim().isEmpty()) text(details, notes, 16);
+        text(root, getString(R.string.task_alarm_snooze_tap), 16);
+        snoozeButtons(root);
+        MaterialButton complete = alarmButton(getString(R.string.family_tasks_notification_complete),
+                () -> action(FamilyTaskReceiver.ACTION_COMPLETE, 0), true);
+        LinearLayout.LayoutParams completeParams = new LinearLayout.LayoutParams(-1, -2);
+        completeParams.setMargins(0, dp(14), 0, dp(4)); root.addView(complete, completeParams);
+        root.addView(alarmButton(getString(R.string.task_alarm_dismiss),
+                () -> action(FamilyTaskReceiver.ACTION_DISMISS, 0), false), new LinearLayout.LayoutParams(-1, -2));
         text(root, getString(R.string.task_alarm_dismiss_detail), 12);
-        ScrollView scroll = (ScrollView) getLayoutInflater().inflate(R.layout.task_alarm_scroll, null, false); scroll.addView(root);
+        ScrollView scroll = (ScrollView) getLayoutInflater().inflate(R.layout.task_alarm_scroll, null, false);
+        scroll.setBackgroundColor(android.graphics.Color.rgb(19, 40, 61)); scroll.addView(root);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(scroll, (view, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom); return insets;
+        });
         setContentView(scroll);
+        androidx.core.view.WindowInsetsControllerCompat bars = new androidx.core.view.WindowInsetsControllerCompat(getWindow(), scroll);
+        bars.setAppearanceLightStatusBars(false); bars.setAppearanceLightNavigationBars(false);
+        androidx.core.view.ViewCompat.requestApplyInsets(scroll);
+    }
+    private void snoozeButtons(LinearLayout root) {
+        int[] minutes = {5, 10, 15, 30, 60, 300, 1440};
+        String[] labels = getResources().getStringArray(R.array.task_alarm_snooze_buttons);
+        for (int i = 0; i < minutes.length; i += 2) {
+            LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
+            for (int j = i; j < Math.min(i + 2, minutes.length); j++) {
+                final int delay = minutes[j];
+                MaterialButton button = alarmButton(labels[j], () -> action(FamilyTaskReceiver.ACTION_SNOOZE, delay), false);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1);
+                params.setMargins(j == i ? 0 : dp(4), dp(2), j == i && i + 1 < minutes.length ? dp(4) : 0, dp(2));
+                row.addView(button, params);
+            }
+            root.addView(row, new LinearLayout.LayoutParams(-1, -2));
+        }
+    }
+    private MaterialButton alarmButton(String label, Runnable action, boolean primary) {
+        MaterialButton button = new MaterialButton(this); button.setText(label); button.setAllCaps(false);
+        button.setTextSize(16); button.setMinHeight(dp(56)); button.setCornerRadius(dp(18));
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primary
+                ? android.graphics.Color.rgb(118, 218, 188) : android.graphics.Color.rgb(39, 68, 94)));
+        button.setTextColor(primary ? android.graphics.Color.rgb(19, 40, 61) : android.graphics.Color.WHITE);
+        button.setOnClickListener(v -> { button.setEnabled(false); action.run(); }); return button;
     }
     private void snoozeControls(LinearLayout root) {
         final int[] minutes = {5, 10, 15, 30, 60, 300, 1440};
@@ -75,10 +121,11 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
         root.addView(field, new LinearLayout.LayoutParams(-1, -2));
         button(root, R.string.task_alarm_snooze_apply, () -> action(FamilyTaskReceiver.ACTION_SNOOZE, minutes[choice[0]]));
     }
-    private void text(LinearLayout root, String value, int size) {
+    private TextView text(LinearLayout root, String value, int size) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size);
-        view.setTextColor(android.graphics.Color.rgb(37, 66, 91)); view.setPadding(0, dp(6), 0, dp(6));
-        root.addView(view, new LinearLayout.LayoutParams(-1, -2));
+        view.setTextColor(getIntent().getBooleanExtra("snooze_only", false)
+                ? android.graphics.Color.rgb(37, 66, 91) : android.graphics.Color.rgb(229, 239, 248)); view.setPadding(0, dp(6), 0, dp(6));
+        root.addView(view, new LinearLayout.LayoutParams(-1, -2)); return view;
     }
     private void button(LinearLayout root, int title, Runnable action) {
         MaterialButton view = new MaterialButton(this); view.setText(title); view.setAllCaps(false);
