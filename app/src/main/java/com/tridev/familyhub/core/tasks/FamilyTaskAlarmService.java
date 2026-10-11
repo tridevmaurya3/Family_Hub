@@ -89,8 +89,17 @@ public final class FamilyTaskAlarmService extends Service {
         ensureChannel(this);
         Intent screen = new Intent(this, FamilyTaskAlarmActivity.class).putExtras(intent)
                 .setData(Uri.parse("familyhub://task-alarm/" + id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        Bundle launchOptions = null;
+        if (Build.VERSION.SDK_INT >= 34) {
+            // Only this explicit, immutable alarm intent may launch while the phone is locked.
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setPendingIntentCreatorBackgroundActivityStartMode(Build.VERSION.SDK_INT >= 36
+                    ? ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
+                    : ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+            launchOptions = options.toBundle();
+        }
         PendingIntent open = PendingIntent.getActivity(this, FamilyTaskScheduler.notificationId(id), screen,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE, launchOptions);
         Intent chooser = new Intent(screen).setClass(this, FamilyTaskSnoozeActivity.class).putExtra("snooze_only", true)
                 .setData(Uri.parse("familyhub://task-snooze/" + id));
         PendingIntent choose = PendingIntent.getActivity(this, FamilyTaskScheduler.notificationId(id) ^ 0x116611,
