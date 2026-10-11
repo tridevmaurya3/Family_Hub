@@ -74,9 +74,20 @@ public final class PlannerWorkspace {
         binding=FragmentPlannerBinding.inflate(LayoutInflater.from(context));
         binding.plannerOverview.setNavigationAction(R.drawable.ic_menu_hamburger,R.string.feature_menu_title,v->menu.run());
         if(floating){binding.plannerOverview.setVisibility(View.GONE);binding.plannerSummary.setVisibility(View.GONE);}
+        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.plannerRecyclerView));
         initialize();
+        observedDatabase=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(context);observedDatabase.getInvalidationTracker().addObserver(localObserver);
         com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.plannerFilterScroll);
     }
+    private String syncState="● Syncing…";
+    private java.util.function.Consumer<String> syncListener;
+    public void setSyncStatusListener(java.util.function.Consumer<String> listener){syncListener=listener;listener.accept(syncState);}
+    private void syncStatus(boolean live,boolean connecting){if(binding==null)return;syncState=live?"● Live · Family sync":connecting?"● Syncing…":"● Offline · Local data";binding.plannerOverview.setDetail(syncState);if(syncListener!=null)syncListener.accept(syncState);}
+    private com.tridev.familyhub.data.local.FamilyHubDatabase observedDatabase;
+    private final android.os.Handler observerHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final androidx.room.InvalidationTracker.Observer localObserver=new androidx.room.InvalidationTracker.Observer("planner_items"){
+        @Override public void onInvalidated(@NonNull java.util.Set<String> tables){observerHandler.post(()->{if(binding!=null)reload();});}
+    };
     public View getView(){return binding.getRoot();}
     private android.content.Context requireContext(){return context;}
     private android.content.res.Resources getResources(){return context.getResources();}
@@ -117,6 +128,7 @@ public final class PlannerWorkspace {
         );
         binding.plannerRecyclerView.setAdapter(adapter);
         repository.startRealtimeSync(new PlannerRepository.RealtimeCallback() {
+            @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull PlannerItem item) {
                 if (binding == null || !isAdded()) return;
                 if (item.isReminderEnabled && !item.isCompleted) {
@@ -484,5 +496,5 @@ public final class PlannerWorkspace {
     private void saveQuick(PlannerItem item){repository.save(item,()->{if(item.isReminderEnabled){PlannerScheduler.schedule(context,item);if(binding!=null)ensureNotificationPermission();}if(binding!=null){quick.saved();reload();Snackbar.make(binding.getRoot(),R.string.planner_added,Snackbar.LENGTH_SHORT).show();}});}
     public void toggleSearch(){if(binding!=null)binding.plannerSearchLayout.setVisibility(binding.plannerSearchLayout.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);}
     public void setQuickControlsCollapsed(boolean collapsed){if(binding!=null){binding.plannerQuickHost.setVisibility(collapsed?View.GONE:View.VISIBLE);binding.plannerFilterScroll.setVisibility(collapsed?View.GONE:View.VISIBLE);}}
-    public void dispose(){repository.stopRealtimeSync();voice.stop();quick.dispose();for(android.app.Dialog dialog:new ArrayList<>(dialogs))dialog.dismiss();for(android.widget.PopupWindow popup:new ArrayList<>(popups))popup.dismiss();binding.plannerRecyclerView.setAdapter(null);binding=null;}
+    public void dispose(){observedDatabase.getInvalidationTracker().removeObserver(localObserver);observerHandler.removeCallbacksAndMessages(null);repository.stopRealtimeSync();voice.stop();quick.dispose();for(android.app.Dialog dialog:new ArrayList<>(dialogs))dialog.dismiss();for(android.widget.PopupWindow popup:new ArrayList<>(popups))popup.dismiss();binding.plannerRecyclerView.setAdapter(null);binding=null;}
 }

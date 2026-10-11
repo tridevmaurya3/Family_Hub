@@ -38,6 +38,7 @@ public class PlannerRepository {
     }
 
     public interface RealtimeCallback {
+        default void onSyncStateChanged(boolean live, boolean connecting) { }
         void onChanged(@NonNull PlannerItem item);
         void onRemoved(long localId);
     }
@@ -75,7 +76,7 @@ public class PlannerRepository {
                             mainHandler.post(() -> callback.onRemoved(id));
                         });
                     }
-                });
+                }, callback::onSyncStateChanged);
         subscriber.start();
     }
 

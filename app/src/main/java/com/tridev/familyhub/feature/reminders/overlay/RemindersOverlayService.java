@@ -48,7 +48,8 @@ public final class RemindersOverlayService extends Service {
             new android.app.Application.ActivityLifecycleCallbacks() {
         private boolean inputActivity(android.app.Activity activity) {
             return activity instanceof com.tridev.familyhub.core.ui.FormVoiceCaptureActivity
-                    || activity instanceof NotesNotificationPermissionActivity;
+                    || activity instanceof NotesNotificationPermissionActivity
+                    || activity instanceof com.tridev.familyhub.core.reminders.ReminderAlarmAccessActivity;
         }
         public void onActivityCreated(android.app.Activity activity, android.os.Bundle state) {
             if (inputActivity(activity)) {
@@ -183,6 +184,7 @@ public final class RemindersOverlayService extends Service {
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new ReminderWorkspace(themed, true, () -> startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
+        workspace.setSyncStatusListener(value -> state.setText(value + " • Mini"));
         body.addView(workspace.getView(), new FrameLayout.LayoutParams(-1, -1));
         drag(titleStack, false);
         TextView grip = new TextView(themed); grip.setText("◢"); grip.setTextColor(Color.rgb(32, 87, 140));

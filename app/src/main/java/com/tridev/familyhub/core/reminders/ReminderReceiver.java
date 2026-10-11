@@ -21,6 +21,9 @@ import com.tridev.familyhub.feature.main.MainActivity;
 /** Displays the reminder notification and continues daily schedules. */
 public class ReminderReceiver extends BroadcastReceiver {
 
+    public static final String ACTION_DISMISS="com.tridev.familyhub.action.DISMISS_REMINDER_ALARM";
+    public static final String ACTION_COMPLETE="com.tridev.familyhub.action.COMPLETE_REMINDER_ALARM";
+    private static final java.util.concurrent.ExecutorService ACTIONS=java.util.concurrent.Executors.newSingleThreadExecutor();
     public static final String ACTION_FIRE = "com.tridev.familyhub.action.FIRE_REMINDER";
     public static final String ACTION_SNOOZE = "com.tridev.familyhub.action.SNOOZE_REMINDER";
     public static final String EXTRA_REMINDER_ID = "reminder_id";
@@ -36,19 +39,34 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (ACTION_SNOOZE.equals(intent.getAction())) {
-            ReminderScheduler.scheduleSnooze(context,
-                    intent.getLongExtra(EXTRA_REMINDER_ID, 0L),
-                    intent.getStringExtra(EXTRA_TITLE), intent.getStringExtra(EXTRA_NOTE),
-                    intent.getStringExtra(EXTRA_REPEAT_TYPE),
-                    intent.getIntExtra(EXTRA_SNOOZE_MINUTES, 10));
-            NotificationManagerCompat.from(context).cancel((int)
-                    (intent.getLongExtra(EXTRA_REMINDER_ID, 0L) & 0x7fffffff));
+        if (ACTION_SNOOZE.equals(intent.getAction()) || ACTION_COMPLETE.equals(intent.getAction()) || ACTION_DISMISS.equals(intent.getAction())) {
+            long id=intent.getLongExtra(EXTRA_REMINDER_ID,0);if(id<=0)return;
+            ReminderAlarmService.stopAlarm(context,id);
+            NotificationManagerCompat.from(context).cancel(ReminderAlarmService.notificationId(id));
+            NotificationManagerCompat.from(context).cancel((int)(id&0x7fffffff));
+            if(ACTION_DISMISS.equals(intent.getAction()))return;
+            PendingResult result=goAsync();Context app=context.getApplicationContext();
+            ACTIONS.execute(()->{try{
+                Reminder r=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(app).reminderDao().getById(id);
+                if(r==null || "COMPLETED".equalsIgnoreCase(r.collaborationStatus)) {result.finish();return;}
+                if(ACTION_COMPLETE.equals(intent.getAction())){
+                    r.collaborationStatus="COMPLETED";r.isEnabled=false;ReminderScheduler.cancel(app,id);
+                    new com.tridev.familyhub.data.repository.ReminderRepository(app).save(r,saved->result.finish());
+                }else{ReminderScheduler.scheduleSnooze(app,id,r.title,r.note,r.repeatType,intent.getIntExtra(EXTRA_SNOOZE_MINUTES,10));result.finish();}
+            }catch(RuntimeException error){result.finish();}});
             return;
         }
         if (!ACTION_FIRE.equals(intent.getAction())) {
             return;
         }
+        PendingResult result=goAsync();Context app=context.getApplicationContext();
+        ACTIONS.execute(()->{try{
+            Reminder current=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(app).reminderDao().getById(intent.getLongExtra(EXTRA_REMINDER_ID,0));
+            if(!ReminderAlarmPolicy.canDeliver(current,intent.getBooleanExtra(EXTRA_SNOOZE_DELIVERY,false))){result.finish();return;}
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{try{deliver(app,intent);}finally{result.finish();}});
+        }catch(RuntimeException error){result.finish();}});
+    }
+    private void deliver(Context context,Intent intent){
         long reminderId = intent.getLongExtra(EXTRA_REMINDER_ID, 0L);
         String title = intent.getStringExtra(EXTRA_TITLE);
         String note = intent.getStringExtra(EXTRA_NOTE);
@@ -56,15 +74,17 @@ public class ReminderReceiver extends BroadcastReceiver {
         String priority = intent.getStringExtra(EXTRA_PRIORITY);
         boolean preAlert = intent.getBooleanExtra(EXTRA_PRE_ALERT, false);
 
-        showNotification(context, reminderId, title, note, repeatType, priority, preAlert);
+        boolean started=false;
+        if(ContextCompat.checkSelfPermission(context,Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT<33){
+            try {if(ReminderAlarmService.canRing(context)){ContextCompat.startForegroundService(context,ReminderAlarmService.alarmIntent(context,intent));started=true;}}catch(RuntimeException denied){ }
+        }
+        if(!started)showNotification(context, reminderId, title, note, repeatType, priority, preAlert);
         if (preAlert) return;
         if (intent.getBooleanExtra(EXTRA_SNOOZE_DELIVERY, false)) return;
         if (!Reminder.REPEAT_ONCE.equals(repeatType)) {
-            PendingResult pendingResult = goAsync();
-            ReminderScheduler.rescheduleRepeatingIfEnabled(context, reminderId, pendingResult::finish);
+            ReminderScheduler.rescheduleRepeatingIfEnabled(context, reminderId, ()->{});
         } else {
-            PendingResult pendingResult = goAsync();
-            ReminderScheduler.disableOneTimeIfPresent(context, reminderId, pendingResult::finish);
+            ReminderScheduler.disableOneTimeIfPresent(context, reminderId, ()->{});
         }
     }
 

@@ -23,7 +23,7 @@ public final class ReminderScheduler {
     }
 
     public static void schedule(Context context, Reminder reminder) {
-        if (!reminder.isEnabled) {
+        if (!reminder.isEnabled || "COMPLETED".equalsIgnoreCase(reminder.collaborationStatus)) {
             cancel(context, reminder.id);
             return;
         }
@@ -43,6 +43,8 @@ public final class ReminderScheduler {
     }
 
     public static void cancel(Context context, long reminderId) {
+        ReminderAlarmService.stopAlarm(context,reminderId);
+        androidx.core.app.NotificationManagerCompat.from(context).cancel(ReminderAlarmService.notificationId(reminderId));
         AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
         if (alarmManager == null) {
             return;
@@ -55,6 +57,8 @@ public final class ReminderScheduler {
                 null, null, null, null, true);
         alarmManager.cancel(preAlert);
         preAlert.cancel();
+        PendingIntent snooze=PendingIntent.getBroadcast(context,((int)(reminderId&0x7fffffff))^0x2f2f2f2f,new Intent(context,ReminderReceiver.class).setAction(ReminderReceiver.ACTION_FIRE),PendingIntent.FLAG_NO_CREATE|PendingIntent.FLAG_IMMUTABLE);
+        if(snooze!=null){alarmManager.cancel(snooze);snooze.cancel();}
     }
 
     public static void rescheduleRepeatingIfEnabled(Context context, long reminderId, Runnable onComplete) {
@@ -138,7 +142,7 @@ public final class ReminderScheduler {
                 ((int) (reminderId & 0x7fffffff)) ^ 0x2f2f2f2f, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         try {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
+            if(Build.VERSION.SDK_INT<31 || alarmManager.canScheduleExactAlarms())alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,triggerAt,pendingIntent);else alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
         } catch (SecurityException ignored) {
             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
         }
@@ -154,7 +158,7 @@ public final class ReminderScheduler {
         PendingIntent pendingIntent = reminderPendingIntent(context, reminderId, title, note,
                 repeatType, priority, preAlert);
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
             } else {
                 alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);

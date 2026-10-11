@@ -85,9 +85,20 @@ public final class ReminderWorkspace {
         binding.remindersOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
                 R.string.feature_menu_title, clickedView -> menu.run());
         if (floating) { binding.remindersOverview.setVisibility(View.GONE); binding.reminderDashboardSummary.setVisibility(View.GONE); }
+        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.reminderRecyclerView));
         initialize();
+        observedDatabase=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(context);observedDatabase.getInvalidationTracker().addObserver(localObserver);
         com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.reminderFilterScroll);
     }
+    private String syncState="● Syncing…";
+    private java.util.function.Consumer<String> syncListener;
+    public void setSyncStatusListener(java.util.function.Consumer<String> listener){syncListener=listener;listener.accept(syncState);}
+    private void syncStatus(boolean live,boolean connecting){if(binding==null)return;syncState=live?"● Live · Family sync":connecting?"● Syncing…":"● Offline · Local data";binding.remindersOverview.setDetail(syncState);if(syncListener!=null)syncListener.accept(syncState);}
+    private com.tridev.familyhub.data.local.FamilyHubDatabase observedDatabase;
+    private final android.os.Handler observerHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final androidx.room.InvalidationTracker.Observer localObserver=new androidx.room.InvalidationTracker.Observer("reminders"){
+        @Override public void onInvalidated(@NonNull java.util.Set<String> tables){observerHandler.post(()->{if(binding!=null)reload();});}
+    };
     public View getView() { return binding.getRoot(); }
     private Context requireContext() { return context; }
     private android.content.res.Resources getResources() { return context.getResources(); }
@@ -142,6 +153,7 @@ public final class ReminderWorkspace {
         binding.reminderRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.reminderRecyclerView.setAdapter(reminderAdapter);
         repository.startRealtimeSync(new ReminderRepository.RealtimeCallback() {
+            @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull Reminder reminder) {
                 if (binding == null || !isAdded()) return;
                 if (reminder.isEnabled) {
@@ -199,6 +211,7 @@ public final class ReminderWorkspace {
         quick = new ReminderQuickAddView(context, floating, this::saveQuick, () -> showReminderEditor(quick.draft()));
         binding.reminderQuickHost.addView(quick);
         voice.bind(quick);
+        com.google.android.material.button.MaterialButton alarmAccess=new com.google.android.material.button.MaterialButton(context);alarmAccess.setText("Alarm access / settings");alarmAccess.setAllCaps(false);alarmAccess.setTextSize(11);alarmAccess.setOnClickListener(v->context.startActivity(new Intent(context,com.tridev.familyhub.core.reminders.ReminderAlarmAccessActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));quick.addView(alarmAccess,new android.widget.LinearLayout.LayoutParams(-1,-2));
         loadReminders("");
     }
 
@@ -768,6 +781,7 @@ public final class ReminderWorkspace {
         });
     }
     public void dispose() {
+        observedDatabase.getInvalidationTracker().removeObserver(localObserver);observerHandler.removeCallbacksAndMessages(null);
         repository.stopRealtimeSync();
         if (voice != null) voice.stop();
         if (quick != null) quick.dispose();

@@ -38,6 +38,7 @@ public class ReminderRepository {
     }
 
     public interface RealtimeCallback {
+        default void onSyncStateChanged(boolean live, boolean connecting) { }
         void onChanged(@NonNull Reminder reminder);
         void onRemoved(long localId);
     }
@@ -74,7 +75,7 @@ public class ReminderRepository {
                             mainHandler.post(() -> callback.onRemoved(id));
                         });
                     }
-                });
+                }, callback::onSyncStateChanged);
         subscriber.start();
     }
 

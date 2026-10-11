@@ -186,6 +186,8 @@ public final class ModuleOverviewView extends FrameLayout {
     }
 
     /** Optional search action; hidden on other module headers. */
+    public void setDetail(@NonNull String detail) { detailView.setText(detail); }
+
     public void setSearchAction(@NonNull View.OnClickListener listener) {
         View search = findViewById(R.id.module_overview_search);
         search.setVisibility(View.VISIBLE);

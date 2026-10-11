@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+<com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
     android:background="@drawable/bg_page_three_tone" android:padding="@dimen/space_8">
     <com.tridev.familyhub.core.ui.cards.ModuleOverviewView android:id="@+id/reminders_overview"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         app:overviewAccentColor="@color/fh_module_reminders" app:overviewContainerColor="@color/fh_module_reminders_container"
         app:overviewDetail="@string/reminders_subtitle" app:overviewIcon="@drawable/ic_reminder" app:overviewTitle="@string/reminders_title" />
-    <androidx.core.widget.NestedScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
-        android:fillViewport="true" android:clipToPadding="false">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingBottom="80dp">
         <com.tridev.familyhub.core.ui.cards.ScheduleSummaryView android:id="@+id/reminder_dashboard_summary"
             android:layout_width="match_parent" android:layout_height="wrap_content" />
         <HorizontalScrollView android:id="@+id/reminder_filter_scroll" android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -46,12 +43,11 @@
         <TextView android:id="@+id/reminder_results" style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="6dp" />
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/reminder_recycler_view"
-            android:layout_width="match_parent" android:layout_height="wrap_content" android:nestedScrollingEnabled="false" />
+            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:nestedScrollingEnabled="true" android:scrollbars="vertical" android:fadeScrollbars="false" android:paddingBottom="80dp" android:clipToPadding="false" />
         <LinearLayout android:id="@+id/reminders_empty_state" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical" android:gravity="center" android:padding="12dp" android:visibility="gone">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/no_reminders_title" />
             <com.google.android.material.button.MaterialButton android:id="@+id/empty_add_reminder_button"
                 android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/add_reminder_short" />
         </LinearLayout>
-    </LinearLayout></androidx.core.widget.NestedScrollView>
-</LinearLayout>
+</com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout>
