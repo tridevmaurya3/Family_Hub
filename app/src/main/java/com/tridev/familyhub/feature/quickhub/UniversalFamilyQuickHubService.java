@@ -123,15 +123,16 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void showSelector(View anchor) {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
-        Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), opacity=choice("More");
+        Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), reminders=choice("Reminders"), opacity=choice("More");
         coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
         coloredIcon(tasks, R.drawable.ic_family_task, R.color.fh_primary);
         coloredIcon(opacity, R.drawable.ic_transparency, R.color.fh_primary);
-        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
+        coloredIcon(reminders, R.drawable.ic_reminder, R.color.fh_module_reminders);
+        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
         selectorAnchor = anchor;
         selectorContent = box;
         int width = selectorWidth(box);
-        selector=new PopupWindow(box,width,dp(156),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        selector=new PopupWindow(box,width,dp(192),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
@@ -141,6 +142,12 @@ public final class UniversalFamilyQuickHubService extends Service {
                     GroceryOverlayService.class);
             stopService(new Intent(this, FamilyTaskOverlayService.class));
             selector.dismiss();
+        });
+        reminders.setOnClickListener(v -> {
+            open(com.tridev.familyhub.feature.reminders.overlay.RemindersOverlayService.class,
+                    com.tridev.familyhub.feature.reminders.overlay.RemindersOverlayService.ACTION_OPEN_PANEL,
+                    GroceryOverlayService.class);
+            stopService(new Intent(this, FamilyTaskOverlayService.class)); selector.dismiss();
         });
         notesChoice = notes;
         groceryChoice = grocery;
@@ -233,7 +240,7 @@ public final class UniversalFamilyQuickHubService extends Service {
         return Math.min(widest + content.getPaddingLeft() + content.getPaddingRight() + dp(4),
                 getResources().getDisplayMetrics().widthPixels - dp(16));
     }
-    private void open(Class<?> selected,String action,Class<?> other){if (selected != com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class) stopService(new Intent(this,com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class));stopService(new Intent(this,other));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}
+    private void open(Class<?> selected,String action,Class<?> other){if (selected != com.tridev.familyhub.feature.reminders.overlay.RemindersOverlayService.class) stopService(new Intent(this,com.tridev.familyhub.feature.reminders.overlay.RemindersOverlayService.class));if (selected != com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class) stopService(new Intent(this,com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class));stopService(new Intent(this,other));ContextCompat.startForegroundService(this,new Intent(this,selected).setAction(action));}
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return Math.round(v*getResources().getDisplayMetrics().density);} private int clamp(int v,int a,int b){return Math.max(a,Math.min(b,v));}

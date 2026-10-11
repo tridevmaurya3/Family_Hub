@@ -94,4 +94,5 @@
     <string name="dashboard_places_value">Places · Alerts</string>
     <string name="dashboard_places_detail">Saved safe zones</string>
     <string name="dashboard_category_count">%1$d modules</string>
+    <string name="reminders_smart_results">%1$d shown · %2$d total reminders</string>
 </resources>
