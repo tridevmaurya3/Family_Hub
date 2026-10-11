@@ -113,6 +113,11 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="User-enabled floating Notes quick-add and checklist workspace" />
         </service>
+        <service android:name=".feature.planner.overlay.PlannerOverlayService"
+            android:exported="false" android:foregroundServiceType="specialUse|microphone" android:stopWithTask="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User-enabled floating Planner quick-add and scheduling workspace" />
+        </service>
         <service android:name=".feature.reminders.overlay.RemindersOverlayService"
             android:exported="false" android:foregroundServiceType="specialUse|microphone" android:stopWithTask="false">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
