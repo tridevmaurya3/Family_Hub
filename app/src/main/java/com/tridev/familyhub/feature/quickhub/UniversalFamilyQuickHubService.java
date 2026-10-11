@@ -59,6 +59,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private View selectorAnchor;
     private LinearLayout selectorContent;
     private FamilyHubDatabase database;
+    private com.google.firebase.auth.FirebaseAuth.AuthStateListener countAuthListener;
     private Button groceryChoice, taskChoice, notesChoice, remindersChoice, plannerChoice;
     private final Handler countHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService countExecutor = Executors.newSingleThreadExecutor();
@@ -74,6 +75,19 @@ public final class UniversalFamilyQuickHubService extends Service {
     @Override public void onCreate() {
         super.onCreate();
         database = FamilyHubDatabase.getInstance(this);
+        countAuthListener = auth -> {
+            if (destroyed) return;
+            FamilyHubDatabase current = FamilyHubDatabase.getInstance(this);
+            if (current == database) return;
+            database.getInvalidationTracker().removeObserver(countObserver);
+            database = current;
+            countGeneration++;
+            if (selector != null && selector.isShowing()) {
+                database.getInvalidationTracker().addObserver(countObserver);
+                refreshPendingCounts();
+            }
+        };
+        com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(countAuthListener);
         createChannel();
         startForeground(NOTIFICATION_ID, new NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle("Family Quick Hub")
@@ -177,9 +191,10 @@ public final class UniversalFamilyQuickHubService extends Service {
     private void refreshPendingCounts() {
         if (destroyed || groceryChoice == null || taskChoice == null) return;
         final int generation = countGeneration;
+        final FamilyHubDatabase countDatabase = database;
         countExecutor.execute(() -> {
             // Read existing Room state only; do not start sync or repository maintenance.
-            List<GroceryItem> groceries = database.groceryItemDao().getAll();
+            List<GroceryItem> groceries = countDatabase.groceryItemDao().getAll();
             long now = System.currentTimeMillis();
             GroceryRepository.annotateRecurrence(groceries, groceries, now);
             int groceryCount = 0;
@@ -195,13 +210,13 @@ public final class UniversalFamilyQuickHubService extends Service {
                 }
             }
             int taskCount = 0;
-            for (FamilyTask task : database.familyTaskDao().getAll()) {
+            for (FamilyTask task : countDatabase.familyTaskDao().getAll()) {
                 if (FamilyTask.STATUS_PENDING.equals(task.status)) taskCount++;
             }
             com.tridev.familyhub.data.model.DashboardStats notesStats = new com.tridev.familyhub.data.model.DashboardStats();
-            com.tridev.familyhub.data.model.NotesDashboardSummary.from(database.noteDao().getActive()).applyTo(notesStats);
+            com.tridev.familyhub.data.model.NotesDashboardSummary.from(countDatabase.noteDao().getActive()).applyTo(notesStats);
             final int pendingNotes = notesStats.getPendingNotes();
-            int reminders=0,plans=0;for(com.tridev.familyhub.data.local.entity.Reminder r:database.reminderDao().getAll())if(!"COMPLETED".equalsIgnoreCase(r.collaborationStatus))reminders++;for(com.tridev.familyhub.data.local.entity.PlannerItem p:database.plannerItemDao().getAll())if(!p.isCompleted)plans++;
+            int reminders=0,plans=0;for(com.tridev.familyhub.data.local.entity.Reminder r:countDatabase.reminderDao().getAll())if(!"COMPLETED".equalsIgnoreCase(r.collaborationStatus))reminders++;for(com.tridev.familyhub.data.local.entity.PlannerItem p:countDatabase.plannerItemDao().getAll())if(!p.isCompleted)plans++;
             final int pendingReminders=reminders,pendingPlanner=plans;
             final int pendingGroceries = groceryCount;
             final int pendingTasks = taskCount;
@@ -255,7 +270,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return Math.round(v*getResources().getDisplayMetrics().density);} private int clamp(int v,int a,int b){return Math.max(a,Math.min(b,v));}
-    @Override public void onDestroy(){destroyed=true;countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
+    @Override public void onDestroy(){destroyed=true;if(countAuthListener!=null)com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(countAuthListener);countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
     @Nullable @Override public IBinder onBind(Intent intent){return null;}
     private void createChannel(){if(Build.VERSION.SDK_INT>=26){NotificationManager n=getSystemService(NotificationManager.class);if(n!=null)n.createNotificationChannel(new NotificationChannel(CHANNEL,"Family Quick Hub",NotificationManager.IMPORTANCE_LOW));}}
 }
