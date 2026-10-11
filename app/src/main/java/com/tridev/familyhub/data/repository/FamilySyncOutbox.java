@@ -34,18 +34,38 @@ public final class FamilySyncOutbox {
         String[] previousAccount = {AccountDataScope.uid()};
         com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(auth -> {
             String uid = AccountDataScope.uid();
-            if (!uid.equals(previousAccount[0])) com.tridev.familyhub.core.security.AccountReminderRestore.clearNotifications(context);
+            if (!uid.equals(previousAccount[0])) {
+                com.tridev.familyhub.core.security.AccountReminderRestore.clearNotifications(context);
+                com.tridev.familyhub.feature.documents.DocumentVaultPreferences.lockSessions();
+            }
             previousAccount[0] = uid;
             if (!uid.isEmpty()) {
                 schedule(uid);
                 com.tridev.familyhub.core.security.AccountReminderRestore.restore(context,uid);
                 com.tridev.familyhub.backup.BackupScheduler.sync(context);
+                com.tridev.familyhub.feature.documents.DocumentExpiryScheduler.sync(context);
             }
         });
     }
 
     private static SharedPreferences preferences(String uid) {
         return context.getSharedPreferences("family_sync_outbox_" + AccountScopePolicy.key(uid), Context.MODE_PRIVATE);
+    }
+
+    public static synchronized SharedPreferences statusPreferences(String uid) {
+        return preferences(uid);
+    }
+
+    /** Counts only durable mutations that still need a server acknowledgement. */
+    public static synchronized int[] status(String uid) {
+        int pending = 0, failed = 0;
+        if (context == null || uid.isEmpty()) return new int[]{0,0};
+        SharedPreferences prefs = preferences(uid);
+        for (String key : prefs.getAll().keySet()) if (key.startsWith("pending:")) {
+            pending++;
+            if (prefs.contains("error:" + key.substring(8))) failed++;
+        }
+        return new int[]{pending,failed};
     }
 
     static synchronized void enqueue(String uid, String module, String cloudId, Map<String,Object> values,
@@ -56,11 +76,13 @@ public final class FamilySyncOutbox {
         try {
             JSONObject old = new JSONObject(prefs.getString("pending:" + key, "{}"));
             Map<String,Object> merged = FamilyMutationPolicy.merge(decode(old.optJSONObject("values")),old.optBoolean("delete"),values);
+            Object profileFamily = values.get("familyId");
+            String initialFamily = "familyProfiles".equals(module) && profileFamily instanceof String ? (String)profileFamily : "";
             JSONObject record = new JSONObject().put("module", module).put("cloudId", cloudId)
                     .put("revision", UUID.randomUUID().toString()).put("delete", false)
-                    .put("familyId", old.optString("familyId", prefs.getString("family:" + key, "")))
+                    .put("familyId", old.optString("familyId", prefs.getString("family:" + key, initialFamily)))
                     .put("updatedAt", System.currentTimeMillis()).put("values", new JSONObject(merged));
-            if (!prefs.edit().putString("pending:" + key, record.toString()).commit())
+            if (!prefs.edit().putString("pending:" + key, record.toString()).remove("error:" + key).commit())
                 throw new IllegalStateException("Pending change could not be saved");
             callbacks.put(uid + "/" + key, callback);
             schedule(uid);
@@ -76,6 +98,7 @@ public final class FamilySyncOutbox {
             JSONObject old = new JSONObject(prefs.getString("pending:" + key, "{}"));
             String family = familyId.isEmpty() ? old.optString("familyId", prefs.getString("family:" + key, "")) : familyId;
             SharedPreferences.Editor edit = prefs.edit();
+            edit.remove("error:" + key);
             if (family.isEmpty()) edit.remove("pending:" + key);
             else edit.putString("pending:" + key, new JSONObject().put("module", module).put("cloudId", cloudId)
                     .put("revision", UUID.randomUUID().toString()).put("delete", true).put("familyId", family).toString());
@@ -162,20 +185,26 @@ public final class FamilySyncOutbox {
     private static synchronized void send(String uid, String key, JSONObject record, TaskCompletionSource<Void> completion) {
         if (!uid.equals(AccountDataScope.uid())) { finish(uid, completion, new IllegalStateException("Account changed")); return; }
         String family = record.optString("familyId"), module = record.optString("module"), id = record.optString("cloudId");
-        com.google.firebase.database.DatabaseReference reference = FirebaseDatabase.getInstance().getReference()
-                .child("sharedModules").child(family).child(module).child(id);
+        boolean profile = "familyProfiles".equals(module);
+        com.google.firebase.database.DatabaseReference root = FirebaseDatabase.getInstance().getReference();
+        com.google.firebase.database.DatabaseReference reference = profile
+                ? root.child("familyProfiles").child(family).child(id)
+                : root.child("sharedModules").child(family).child(module).child(id);
         Map<String,Object> payload = decode(record.optJSONObject("values"));
-        payload.put("cloudId", id); payload.put("familyId", family); payload.put("updatedByUid", uid);
-        payload.put("updatedAt", record.optLong("updatedAt")); payload.put("serverUpdatedAt", ServerValue.TIMESTAMP);
+        payload.put(profile ? "profileId" : "cloudId", id); payload.put("familyId", family);
+        payload.put(profile ? "updatedBy" : "updatedByUid", uid);
+        if (!profile) payload.put("updatedAt", record.optLong("updatedAt"));
+        payload.put("serverUpdatedAt", ServerValue.TIMESTAMP);
         Task<Void> write = record.optBoolean("delete") ? reference.removeValue() : reference.updateChildren(payload);
         write.onSuccessTask(unused -> record.optBoolean("delete") ? Tasks.<Void>forResult(null)
-                : FamilySyncAcknowledgements.apply(context,uid,module,id,family)).addOnSuccessListener(unused -> {
+                : FamilySyncAcknowledgements.apply(context,uid,module,id,family,
+                        record.optJSONObject("values") == null ? 0L : record.optJSONObject("values").optLong("updatedAt"))).addOnSuccessListener(unused -> {
             synchronized (FamilySyncOutbox.class) {
                 SharedPreferences prefs = preferences(uid);
                 try {
                     JSONObject latest = new JSONObject(prefs.getString(key, "{}"));
                     if (FamilyMutationPolicy.acknowledged(record.optString("revision"),latest.optString("revision"))) {
-                        if (!prefs.edit().remove(key).commit()) { finish(uid, completion, new IllegalStateException("Acknowledgement could not be saved")); return; }
+                        if (!prefs.edit().remove(key).remove("error:" + key.substring(8)).commit()) { finish(uid, completion, new IllegalStateException("Acknowledgement could not be saved")); return; }
                         FamilyCollaborationPublisher.PublishedCallback callback = callbacks.remove(uid + "/" + key.substring(8));
                         if (callback != null && !record.optBoolean("delete") && uid.equals(AccountDataScope.uid())) callback.onPublished(id, family, uid);
                         if (uid.equals(AccountDataScope.uid())) for (AcknowledgedListener listener : new ArrayList<>(listeners)) listener.onAcknowledged(uid,module,family,id);
@@ -186,6 +215,11 @@ public final class FamilySyncOutbox {
         }).addOnFailureListener(error -> {
             synchronized (FamilySyncOutbox.class) {
                 rejected.get(uid).put(key,record.optString("revision"));
+                try {
+                    JSONObject latest = new JSONObject(preferences(uid).getString(key,"{}"));
+                    if (FamilyMutationPolicy.acknowledged(record.optString("revision"),latest.optString("revision")))
+                        preferences(uid).edit().putString("error:" + key.substring(8),"Upload needs retry").apply();
+                } catch (JSONException ignored) { }
                 failures.put(uid,error);
                 next(uid,completion);
             }
@@ -193,6 +227,13 @@ public final class FamilySyncOutbox {
     }
 
     private static synchronized void finish(String uid, TaskCompletionSource<Void> completion, Exception error) {
+        if (error != null && uid.equals(AccountDataScope.uid()) && "Active family unavailable".equals(error.getMessage())) {
+            SharedPreferences prefs = preferences(uid);
+            SharedPreferences.Editor edit = prefs.edit();
+            for (String key : prefs.getAll().keySet()) if (key.startsWith("pending:"))
+                edit.putString("error:" + key.substring(8),"Family access needs checking");
+            edit.apply();
+        }
         running.remove(uid);
         rejected.remove(uid);
         failures.remove(uid);

@@ -1,0 +1,9 @@
+<resources>
+    <string name="shared_sync_connected">Family connection: online</string>
+    <string name="shared_sync_offline">Family connection: offline</string>
+    <string name="shared_sync_offline_pending">Offline · %1$d shared changes waiting</string>
+    <string name="shared_sync_pending">%1$d shared changes syncing…</string>
+    <string name="shared_sync_failed">%1$d pending · %2$d need retry · Tap to retry</string>
+    <string name="shared_sync_offline_help">Changes stay saved. Sync resumes when the connection returns.</string>
+    <string name="shared_sync_retry_help">Retrying pending shared changes. If they remain, check family access.</string>
+</resources>

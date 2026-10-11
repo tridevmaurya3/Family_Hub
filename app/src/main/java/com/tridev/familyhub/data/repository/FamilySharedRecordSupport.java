@@ -61,6 +61,8 @@ final class FamilySharedRecordSupport {
             @NonNull String familyId, @NonNull String profileId, @NonNull String name) {
         List<FamilyMember> scoped = dao.getForFamily(familyId);
         if (!profileId.isEmpty()) {
+            FamilyMember retained = dao.getByCloudProfileId(profileId);
+            if (retained != null && familyId.equals(retained.ownerFamilyId)) return retained;
             for (FamilyMember member : scoped) {
                 if (profileId.equals(member.cloudProfileId)) return member;
             }

@@ -26,6 +26,8 @@ before(async () => {
       familyA: {
         [writer]: { status: 'ACTIVE', role: 'ADULT_MEMBER' },
         [reader]: { status: 'ACTIVE', role: 'ADULT_MEMBER' },
+        'profile-owner': { status: 'ACTIVE', role: 'OWNER_ADMIN' },
+        'profile-guardian': { status: 'ACTIVE', role: 'GUARDIAN' },
         inactive: { status: 'INACTIVE', role: 'ADULT_MEMBER' }
       },
       familyB: { [outsider]: { status: 'ACTIVE', role: 'ADULT_MEMBER' } }
@@ -33,6 +35,42 @@ before(async () => {
   });
 });
 after(async () => { if (env) await env.cleanup(); });
+
+test('family profiles: retried payload remains realtime and preserves existing write roles', { timeout: 45000 }, async t => {
+  const path = 'familyProfiles/familyA/retry-profile';
+  const owner = env.authenticatedContext('profile-owner').database().ref(path);
+  const guardian = env.authenticatedContext('profile-guardian').database().ref(path);
+  const adult = env.authenticatedContext(reader).database().ref(path);
+  const feed = stream(adult);
+  const profile = {
+    profileId: 'retry-profile', familyId: 'familyA', name: 'Member', relation: '',
+    phone: '', email: '', dateOfBirth: '', note: '', gender: '', bloodGroup: '',
+    address: '', emergencyContactName: '', emergencyContactPhone: '',
+    familyRole: 'ADULT', isGuardian: false, createdAt: 900, updatedAt: 1000,
+    updatedBy: 'profile-owner', serverUpdatedAt: { '.sv': 'timestamp' }
+  };
+  try {
+    await feed.until(snapshot => !snapshot.exists());
+    await t.test('owner create and server revision reach another member', async () => {
+      await assertSucceeds(owner.update(profile));
+      const received = await feed.until(snapshot => snapshot.val()?.updatedAt === 1000);
+      assert.equal(typeof received.val().serverUpdatedAt, 'number');
+    });
+    await t.test('guardian edit reaches the same existing profile', async () => {
+      await assertSucceeds(guardian.update({ name: 'Updated member', updatedAt: 2000, updatedBy: 'profile-guardian', serverUpdatedAt: { '.sv': 'timestamp' } }));
+      assert.equal((await feed.until(snapshot => snapshot.val()?.updatedAt === 2000)).val().name, 'Updated member');
+    });
+    await t.test('adult, outside family and forged identity cannot gain profile write access', async () => {
+      await assertFails(adult.update({ name: 'Denied', updatedBy: reader }));
+      await assertFails(env.authenticatedContext(outsider).database().ref(path).once('value'));
+      await assertFails(owner.update({ updatedBy: reader }));
+    });
+    await t.test('owner delete reaches another device', async () => {
+      await assertSucceeds(owner.remove());
+      await feed.until(snapshot => !snapshot.exists());
+    });
+  } finally { feed.close(); }
+});
 
 function item(module) {
   const common = { cloudId: 'record', familyId: 'familyA', updatedByUid: writer, updatedAt: 1000 };

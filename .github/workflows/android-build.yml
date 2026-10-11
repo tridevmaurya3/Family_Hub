@@ -75,6 +75,9 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
+      - name: Verify member migration preserves linked records
+        run: python3 tests/local/test_member_cache_migration.py
+
       - name: Run unit tests and assemble debug APK
         id: android_build
         continue-on-error: true

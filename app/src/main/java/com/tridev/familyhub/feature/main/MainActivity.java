@@ -230,6 +230,9 @@ public class MainActivity extends AppCompatActivity {
         if (binding == null || intent == null) {
             return false;
         }
+        if (intent.hasExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID)
+                && !com.tridev.familyhub.core.security.AccountDataScope.canDeliver(this,
+                    intent.getStringExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID))) return false;
         String route = intent.getStringExtra(EXTRA_OPEN_ROUTE);
         if (route != null && !route.isEmpty()) {
             boolean openTaskEditor = intent.getBooleanExtra(EXTRA_OPEN_TASK_EDITOR, false);

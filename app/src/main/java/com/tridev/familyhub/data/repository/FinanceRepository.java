@@ -80,6 +80,10 @@ public class FinanceRepository {
     @Nullable private DatabaseReference sharedEntriesReference;
     @Nullable private ValueEventListener sharedEntriesListener;
     private int sharedSyncGeneration;
+    private DatabaseReference connectionReference;
+    private ValueEventListener connectionListener;
+    private volatile boolean sharedOnline;
+    private volatile long sharedSnapshotRevision;
 
     public FinanceRepository(Context context) {
         appContext = context.getApplicationContext();
@@ -308,6 +312,9 @@ public class FinanceRepository {
     public void stopSharedSync() {
         FamilySyncOutbox.removeListener(acknowledged);
         sharedSyncGeneration++;
+        sharedOnline = false;
+        if (connectionReference != null && connectionListener != null) connectionReference.removeEventListener(connectionListener);
+        connectionReference = null; connectionListener = null;
         if (sharedEntriesReference != null && sharedEntriesListener != null) {
             sharedEntriesReference.removeEventListener(sharedEntriesListener);
         }
@@ -337,15 +344,18 @@ public class FinanceRepository {
         sharedEntriesReference = FirebaseDatabase.getInstance().getReference()
                 .child("sharedModules").child(familyId).child("finance");
         sharedEntriesReference.keepSynced(true);
+        int generation = sharedSyncGeneration;
         sharedEntriesListener = new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (!currentAccount()) return;
+                if (!currentAccount() || generation != sharedSyncGeneration) return;
+                long revision = ++sharedSnapshotRevision;
                 DATABASE_EXECUTOR.execute(() -> {
-                    if (!scopeUid.equals(AccountDataScope.uid())) return;
+                    if (!scopeUid.equals(AccountDataScope.uid()) || generation != sharedSyncGeneration || revision != sharedSnapshotRevision) return;
                     boolean changed = false;
                     if (!currentAccount()) return;
                     Set<String> remoteIds = new HashSet<>();
                     for (DataSnapshot child : snapshot.getChildren()) {
+                        if (child.getKey() != null) remoteIds.add(child.getKey());
                         if (FamilySyncOutbox.pendingDelete(scopeUid,"finance",child.getKey() == null ? "" : child.getKey())) continue;
                         FinanceEntry remote = fromSnapshot(child, familyId);
                         if (remote == null) continue;
@@ -382,9 +392,9 @@ public class FinanceRepository {
                             changed = true;
                             continue;
                         }
-                        if (!remoteIds.contains(local.cloudId)
-                                && !FamilySyncOutbox.pending(scopeUid,"finance",local.cloudId)
-                                && System.currentTimeMillis() - local.updatedAt > 30_000L) {
+                        if (sharedOnline && revision == sharedSnapshotRevision && generation == sharedSyncGeneration
+                                && !remoteIds.contains(local.cloudId)
+                                && !FamilySyncOutbox.pending(scopeUid,"finance",local.cloudId)) {
                             if (isDurableExternalProjection(local)) {
                                 // A trusted external projection can arrive locally before its
                                 // asynchronous cloud write. Retry only when the user has not
@@ -403,6 +413,22 @@ public class FinanceRepository {
             }
             @Override public void onCancelled(@NonNull DatabaseError error) { }
         };
+        connectionReference = FirebaseDatabase.getInstance().getReference(".info/connected");
+        connectionListener = new ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!currentAccount() || generation != sharedSyncGeneration) return;
+                sharedOnline = Boolean.TRUE.equals(snapshot.getValue(Boolean.class));
+                DatabaseReference reference = sharedEntriesReference;
+                long revision = sharedSnapshotRevision;
+                if (sharedOnline && reference != null) reference.get().addOnSuccessListener(full -> {
+                    if (sharedOnline && currentAccount() && generation == sharedSyncGeneration
+                            && revision == sharedSnapshotRevision && sharedEntriesListener != null)
+                        sharedEntriesListener.onDataChange(full);
+                });
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { sharedOnline = false; }
+        };
+        connectionReference.addValueEventListener(connectionListener);
         sharedEntriesReference.addValueEventListener(sharedEntriesListener);
     }
 

@@ -16,9 +16,12 @@ public class FamilySharedRecordSupportTest {
                 switch (method.getName()) {
                     case "getForFamily": {
                         List<FamilyMember> scoped = new ArrayList<>();
-                        for (FamilyMember row : rows) if (row.ownerFamilyId.equals(args[0])) scoped.add(row);
+                        for (FamilyMember row : rows) if (!row.cloudRemoved && row.ownerFamilyId.equals(args[0])) scoped.add(row);
                         return scoped;
                     }
+                    case "getByCloudProfileId":
+                        for (FamilyMember row : rows) if (row.cloudProfileId.equals(args[0])) return row;
+                        return null;
                     case "getById":
                         for (FamilyMember row : rows) if (row.id == (Long) args[0]) return row;
                         return null;
@@ -53,6 +56,18 @@ public class FamilySharedRecordSupportTest {
         FamilyMember existing = add("A", "profile1", "New name");
         assertSame(existing, FamilySharedRecordSupport.resolveMember(dao, "A", "profile1", "Old name"));
         assertEquals("New name", existing.name);
+    }
+    @Test public void removedProfileKeepsTheOriginalForeignKeyForExistingSharedRecords() {
+        FamilyMember retained = add("A","profile1","Removed member");
+        retained.cloudRemoved = true;
+        assertSame(retained,FamilySharedRecordSupport.resolveMember(dao,"A","profile1","Removed member"));
+        assertEquals(1,rows.size());
+        assertTrue(retained.cloudRemoved);
+    }
+    @Test public void removedSameNameProfileIsNeverOfferedForLegacyAssignment() {
+        FamilyMember removed = add("A","old","Same"); removed.cloudRemoved = true;
+        FamilyMember active = add("A","new","Same");
+        assertEquals(active.id,FamilySharedRecordSupport.assignedLocalId(dao,"A","","99","Same"));
     }
     @Test public void sameNamesUseStableIdentity() {
         add("A", "profile1", "Same");

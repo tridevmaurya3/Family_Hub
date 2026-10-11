@@ -294,7 +294,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
         }
         boolean lockEnabled = preferences.lockEnabled();
         boolean unlocked = preferences.isUnlocked();
-        boolean locked = lockEnabled && !unlocked;
+        boolean locked = !unlocked;
 
         updatingLockSwitch = true;
         binding.switchDocumentVaultLock.setChecked(lockEnabled);
@@ -314,6 +314,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     }
 
     private void runProtected(@NonNull Runnable action) {
+        if (!preferences.currentAccount()) return;
         if (preferences.isUnlocked()) {
             action.run();
             return;
@@ -327,6 +328,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
     }
 
     private void authenticate(@NonNull Runnable onSuccess) {
+        if (!preferences.currentAccount()) return;
         int authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
                 | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
         int availability = BiometricManager.from(requireContext())
@@ -349,7 +351,7 @@ public class DocumentsFragment extends Fragment implements AddActionHost {
                         super.onAuthenticationSucceeded(result);
                         Runnable success = authenticationSuccessAction;
                         authenticationSuccessAction = null;
-                        if (success != null) {
+                        if (success != null && binding != null && preferences.currentAccount()) {
                             success.run();
                         }
                     }

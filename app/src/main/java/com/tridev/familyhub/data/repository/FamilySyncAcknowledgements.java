@@ -12,11 +12,12 @@ import java.util.concurrent.Executors;
 final class FamilySyncAcknowledgements {
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private FamilySyncAcknowledgements() { }
-    static Task<Void> apply(Context context, String uid, String module, String id, String family) {
+    static Task<Void> apply(Context context, String uid, String module, String id, String family, long submittedAt) {
         return Tasks.call(executor, () -> {
             FamilyHubDatabase db = FamilyHubDatabase.getForAccount(context,uid);
             db.runInTransaction(() -> {
                 switch (module) {
+                    case "familyProfiles": { db.familyMemberDao().markSynced(id,submittedAt); break; }
                     case "notes": { NoteEntry row=db.noteDao().getByCloudId(id); if(row!=null && row.isShared){row.familyId=family;row.updatedByUid=uid;db.noteDao().update(row);} break; }
                     case "planner": { PlannerItem row=db.plannerItemDao().getByCloudId(id); if(row!=null && row.isShared){row.familyId=family;row.updatedByUid=uid;db.plannerItemDao().update(row);} break; }
                     case "reminders": { Reminder row=db.reminderDao().getByCloudId(id); if(row!=null && row.isShared){row.familyId=family;row.updatedByUid=uid;db.reminderDao().update(row);} break; }

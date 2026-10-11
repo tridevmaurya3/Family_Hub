@@ -74,12 +74,18 @@ import com.tridev.familyhub.data.local.entity.FamilyTask;
                 SafePlaceAlert.class,
                 FamilyTask.class
         },
-        version = 38,
+        version = 39,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
 
     private static final java.util.Map<String, FamilyHubDatabase> INSTANCES = new java.util.HashMap<>();
+
+    private static final Migration MIGRATION_38_39 = new Migration(38, 39) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE `family_members` ADD COLUMN `cloudRemoved` INTEGER NOT NULL DEFAULT 0");
+        }
+    };
 
     public abstract FamilyMemberDao familyMemberDao();
 
@@ -953,7 +959,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_34_35,
                                     MIGRATION_35_36,
                                     MIGRATION_36_37,
-                                    MIGRATION_37_38
+                                    MIGRATION_37_38,
+                                    MIGRATION_38_39
                             )
                             .build();
             INSTANCES.put(databaseName, instance);

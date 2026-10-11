@@ -92,6 +92,10 @@ public class FamilyMember {
     @ColumnInfo(defaultValue = "1")
     public boolean syncPending = true;
 
+    /** Hide removed cloud profiles while retaining records that reference their local id. */
+    @ColumnInfo(defaultValue = "0")
+    public boolean cloudRemoved;
+
     /** Runtime-only marker for an authorised Firebase account row. */
     @Ignore
     public boolean cloudManaged;

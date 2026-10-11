@@ -62,14 +62,17 @@ public class DocumentRepository {
             Executors.newSingleThreadExecutor();
 
     private final Context appContext;
+    private final String scopeUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+    private final FamilyHubDatabase accountDatabase;
+    private boolean currentAccount() { return scopeUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid()); }
+    private void postToAccount(Runnable callback) { mainHandler.post(() -> { if (currentAccount()) callback.run(); }); }
     private final DocumentDao documentDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public DocumentRepository(@NonNull Context context) {
         appContext = context.getApplicationContext();
-        documentDao = FamilyHubDatabase
-                .getInstance(appContext)
-                .documentDao();
+        accountDatabase = FamilyHubDatabase.getForAccount(appContext,scopeUid);
+        documentDao = accountDatabase.documentDao();
     }
 
     public void loadDocuments(
@@ -77,18 +80,20 @@ public class DocumentRepository {
             @NonNull DocumentsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             String trimmedQuery = query.trim();
             List<DocumentEntry> documents = trimmedQuery.isEmpty()
                     ? documentDao.getAll()
                     : documentDao.search(trimmedQuery);
-            mainHandler.post(() -> callback.onDocumentsLoaded(documents));
+            postToAccount(() -> callback.onDocumentsLoaded(documents));
         });
     }
 
     public void loadTrash(@NonNull DocumentsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             List<DocumentEntry> documents = documentDao.getTrash();
-            mainHandler.post(() -> callback.onDocumentsLoaded(documents));
+            postToAccount(() -> callback.onDocumentsLoaded(documents));
         });
     }
 
@@ -97,6 +102,7 @@ public class DocumentRepository {
             @NonNull StatsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             long now = System.currentTimeMillis();
             long startOfToday = DocumentExpiryPolicy.startOfDay(now);
             long deadline = startOfToday
@@ -109,7 +115,7 @@ public class DocumentRepository {
             );
             int expired = documentDao.countExpired(startOfToday);
             int trash = documentDao.countTrash();
-            mainHandler.post(() -> callback.onLoaded(
+            postToAccount(() -> callback.onLoaded(
                     total,
                     expiring,
                     expired,
@@ -124,13 +130,14 @@ public class DocumentRepository {
             @NonNull DuplicateCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             int count = excludedDocumentId <= 0L
                     ? documentDao.countByContentUri(contentUri)
                     : documentDao.countOtherByContentUri(
                             contentUri,
                             excludedDocumentId
                     );
-            mainHandler.post(() -> callback.onChecked(count > 0));
+            postToAccount(() -> callback.onChecked(count > 0));
         });
     }
 
@@ -139,6 +146,7 @@ public class DocumentRepository {
             @NonNull SaveCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             try {
                 if (document.createdAt == 0L) {
                     document.createdAt = System.currentTimeMillis();
@@ -153,6 +161,7 @@ public class DocumentRepository {
                     throw new IllegalStateException("Duplicate document content");
                 }
 
+                if (!currentAccount()) return;
                 long documentId;
                 if (document.id == 0L) {
                     documentId = documentDao.insert(document);
@@ -169,9 +178,9 @@ public class DocumentRepository {
 
                 DocumentExpiryScheduler.sync(appContext);
                 long savedId = documentId;
-                mainHandler.post(() -> callback.onSaved(savedId));
+                postToAccount(() -> callback.onSaved(savedId));
             } catch (Exception error) {
-                mainHandler.post(() -> callback.onError(error));
+                postToAccount(() -> callback.onError(error));
             }
         });
     }
@@ -182,6 +191,7 @@ public class DocumentRepository {
             @NonNull SaveCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             try {
                 DocumentEntry version = copy(previous);
                 version.id = 0L;
@@ -199,11 +209,12 @@ public class DocumentRepository {
                     throw new IllegalStateException("Duplicate document content");
                 }
                 renewed.updatedAt = System.currentTimeMillis();
+                if (!currentAccount()) return;
                 documentDao.renewWithVersion(version, renewed);
                 DocumentExpiryScheduler.sync(appContext);
-                mainHandler.post(() -> callback.onSaved(renewed.id));
+                postToAccount(() -> callback.onSaved(renewed.id));
             } catch (Exception error) {
-                mainHandler.post(() -> callback.onError(error));
+                postToAccount(() -> callback.onError(error));
             }
         });
     }
@@ -213,6 +224,7 @@ public class DocumentRepository {
             @NonNull DocumentsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             List<DocumentEntry> history = new ArrayList<>();
             DocumentEntry current = document;
             int guard = 0;
@@ -221,14 +233,14 @@ public class DocumentRepository {
                 if (current.previousVersionId <= 0L) break;
                 current = documentDao.getVersionById(current.previousVersionId);
             }
-            mainHandler.post(() -> callback.onDocumentsLoaded(history));
+            postToAccount(() -> callback.onDocumentsLoaded(history));
         });
     }
 
     public void loadMissingChecklist(@NonNull ChecklistCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
-            List<FamilyMember> members = FamilyHubDatabase.getInstance(appContext)
-                    .familyMemberDao().getAll();
+            if (!currentAccount()) return;
+            List<FamilyMember> members = accountDatabase.familyMemberDao().getAll();
             List<DocumentEntry> documents = documentDao.getAll();
             List<String> missing = new ArrayList<>();
             for (FamilyMember member : members) {
@@ -247,12 +259,13 @@ public class DocumentRepository {
                     }
                 }
             }
-            mainHandler.post(() -> callback.onLoaded(missing, !members.isEmpty()));
+            postToAccount(() -> callback.onLoaded(missing, !members.isEmpty()));
         });
     }
 
     public void verifyIntegrity(@NonNull IntegrityCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             List<DocumentEntry> documents = documentDao.getAll();
             List<String> issues = new ArrayList<>();
             int verified = 0, changed = 0, missing = 0, notIndexed = 0;
@@ -273,7 +286,7 @@ public class DocumentRepository {
             }
             int safeVerified = verified, safeChanged = changed;
             int safeMissing = missing, safeNotIndexed = notIndexed;
-            mainHandler.post(() -> callback.onLoaded(safeVerified, safeChanged,
+            postToAccount(() -> callback.onLoaded(safeVerified, safeChanged,
                     safeMissing, safeNotIndexed, issues));
         });
     }
@@ -311,6 +324,7 @@ public class DocumentRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             try {
                 int deleted = documentDao.moveToTrash(
                         document.id, System.currentTimeMillis());
@@ -320,9 +334,9 @@ public class DocumentRepository {
                     );
                 }
                 DocumentExpiryScheduler.sync(appContext);
-                mainHandler.post(callback::onComplete);
+                postToAccount(callback::onComplete);
             } catch (Exception error) {
-                mainHandler.post(() -> callback.onError(error));
+                postToAccount(() -> callback.onError(error));
             }
         });
     }
@@ -332,6 +346,7 @@ public class DocumentRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             try {
                 int restored = documentDao.restore(
                         document.id, System.currentTimeMillis());
@@ -339,9 +354,9 @@ public class DocumentRepository {
                     throw new IllegalStateException("Document could not be restored");
                 }
                 DocumentExpiryScheduler.sync(appContext);
-                mainHandler.post(callback::onComplete);
+                postToAccount(callback::onComplete);
             } catch (Exception error) {
-                mainHandler.post(() -> callback.onError(error));
+                postToAccount(() -> callback.onError(error));
             }
         });
     }
@@ -351,15 +366,16 @@ public class DocumentRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
             try {
                 int deleted = documentDao.delete(document);
                 if (deleted != 1) {
                     throw new IllegalStateException("Document could not be permanently deleted");
                 }
                 DocumentCaptureStorage.deleteIfOwned(appContext, document.contentUri);
-                mainHandler.post(callback::onComplete);
+                postToAccount(callback::onComplete);
             } catch (Exception error) {
-                mainHandler.post(() -> callback.onError(error));
+                postToAccount(() -> callback.onError(error));
             }
         });
     }

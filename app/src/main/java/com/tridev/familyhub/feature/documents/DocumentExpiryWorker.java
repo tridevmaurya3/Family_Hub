@@ -43,7 +43,8 @@ public final class DocumentExpiryWorker extends Worker {
     public Result doWork() {
         Context context = getApplicationContext();
         String account = com.tridev.familyhub.core.security.AccountDataScope.uid();
-        if (account.isEmpty()) return Result.success();
+        if (!com.tridev.familyhub.core.security.AccountDataScope.canDeliver(context,
+                getInputData().getString(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID))) return Result.success();
         DocumentVaultPreferences preferences =
                 new DocumentVaultPreferences(context);
         if (!preferences.expiryAlertsEnabled()) {
@@ -52,7 +53,7 @@ public final class DocumentExpiryWorker extends Worker {
 
         createChannel(context);
         List<DocumentEntry> documents = FamilyHubDatabase
-                .getInstance(context)
+                .getForAccount(context,account)
                 .documentDao()
                 .getExpiryCandidates();
         long now = System.currentTimeMillis();
@@ -110,6 +111,8 @@ public final class DocumentExpiryWorker extends Worker {
                 .putExtra("open_documents_vault", true)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        com.tridev.familyhub.core.security.AccountDataScope.stamp(context,openApp);
+        com.tridev.familyhub.core.security.AccountDataScope.isolate(context,openApp);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context,
                 Math.max(1, (int) (document.id % Integer.MAX_VALUE)),

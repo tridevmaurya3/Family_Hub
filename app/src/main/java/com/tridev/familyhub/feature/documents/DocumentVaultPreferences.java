@@ -20,13 +20,16 @@ public final class DocumentVaultPreferences {
     private static final String KEY_REMINDER_DAYS = "reminder_days";
     private static final String KEY_FAVORITES = "favorite_document_ids";
 
-    private static volatile long unlockedUntilElapsedRealtime;
+    private static final java.util.Map<String,Long> unlockedSessions = new java.util.concurrent.ConcurrentHashMap<>();
+    private final String scopeUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+    public boolean currentAccount() { return scopeUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid()); }
+    public static void lockSessions() { unlockedSessions.clear(); }
 
     private final SharedPreferences preferences;
 
     public DocumentVaultPreferences(@NonNull Context context) {
         preferences = context.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                .getSharedPreferences(com.tridev.familyhub.core.security.AccountDataScope.preferencesName(context,PREFS,scopeUid), Context.MODE_PRIVATE);
     }
 
     public boolean lockEnabled() {
@@ -36,27 +39,28 @@ public final class DocumentVaultPreferences {
     public void setLockEnabled(boolean enabled) {
         preferences.edit().putBoolean(KEY_LOCK_ENABLED, enabled).apply();
         if (!enabled) {
-            unlockedUntilElapsedRealtime = Long.MAX_VALUE;
+            unlockedSessions.put(scopeUid,Long.MAX_VALUE);
         } else {
             lockNow();
         }
     }
 
     public boolean isUnlocked() {
+        if (!currentAccount() || scopeUid.isEmpty()) return false;
         if (!lockEnabled()) {
             return true;
         }
         return android.os.SystemClock.elapsedRealtime()
-                < unlockedUntilElapsedRealtime;
+                < unlockedSessions.getOrDefault(scopeUid,0L);
     }
 
     public void markUnlocked() {
-        unlockedUntilElapsedRealtime = android.os.SystemClock.elapsedRealtime()
-                + UNLOCK_SESSION_MILLIS;
+        if (currentAccount() && !scopeUid.isEmpty()) unlockedSessions.put(scopeUid,android.os.SystemClock.elapsedRealtime()
+                + UNLOCK_SESSION_MILLIS);
     }
 
     public void lockNow() {
-        unlockedUntilElapsedRealtime = 0L;
+        unlockedSessions.remove(scopeUid);
     }
 
     public boolean expiryAlertsEnabled() {

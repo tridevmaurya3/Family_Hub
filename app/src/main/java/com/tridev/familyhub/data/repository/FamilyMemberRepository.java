@@ -53,6 +53,11 @@ public class FamilyMemberRepository {
     private com.google.firebase.database.ValueEventListener watchListener;
     private Runnable watchRefresh;
     private int watchGeneration;
+    private DatabaseReference connectionWatch;
+    private com.google.firebase.database.ValueEventListener connectionListener;
+    private volatile boolean online;
+    private volatile int reconcileRevision;
+    private long profileSnapshotRevision;
 
     public FamilyMemberRepository(Context context) {
         memberDao = FamilyHubDatabase.getInstance(context).familyMemberDao();
@@ -69,12 +74,32 @@ public class FamilyMemberRepository {
                 watchListener = new com.google.firebase.database.ValueEventListener() {
                     @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if (!currentAccount() || request != watchGeneration) return;
+                        if (profilesWatch != null && snapshot.getRef().equals(profilesWatch)) {
+                            profileSnapshotRevision++;
+                            if (online) reconcileRemovedProfiles(state.familyId, snapshot, request);
+                        }
                         mainHandler.removeCallbacks(watchRefresh); mainHandler.postDelayed(watchRefresh,250L);
                     }
                     @Override public void onCancelled(@NonNull com.google.firebase.database.DatabaseError error) { }
                 };
                 profilesWatch = firebaseRoot.child("familyProfiles").child(state.familyId);
                 membershipsWatch = firebaseRoot.child("memberships").child(state.familyId);
+                connectionWatch = firebaseRoot.child(".info/connected");
+                connectionListener = new com.google.firebase.database.ValueEventListener() {
+                    @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (!currentAccount() || request != watchGeneration) return;
+                        online = Boolean.TRUE.equals(snapshot.getValue(Boolean.class));
+                        long revision = profileSnapshotRevision;
+                        if (online && profilesWatch != null) profilesWatch.get().addOnSuccessListener(profiles -> {
+                            if (online && currentAccount() && request == watchGeneration && revision == profileSnapshotRevision) {
+                                reconcileRemovedProfiles(state.familyId, profiles, request);
+                                changed.run();
+                            }
+                        });
+                    }
+                    @Override public void onCancelled(@NonNull com.google.firebase.database.DatabaseError error) { online = false; }
+                };
+                connectionWatch.addValueEventListener(connectionListener);
                 profilesWatch.addValueEventListener(watchListener); membershipsWatch.addValueEventListener(watchListener);
             }
             @Override public void onError(@NonNull Exception error) { }
@@ -83,6 +108,9 @@ public class FamilyMemberRepository {
 
     public void stopRealtimeSync() {
         watchGeneration++;
+        online = false;
+        if (connectionWatch != null && connectionListener != null) connectionWatch.removeEventListener(connectionListener);
+        connectionWatch = null; connectionListener = null;
         if (watchRefresh != null) mainHandler.removeCallbacks(watchRefresh);
         if (watchListener != null) {
             if (profilesWatch != null) profilesWatch.removeEventListener(watchListener);
@@ -155,6 +183,7 @@ public class FamilyMemberRepository {
 
                         Map<String, Long> remoteUpdatedAt = new HashMap<>();
                         for (FamilyMember remote : remoteMembers) {
+                            if (FamilySyncOutbox.pendingDelete(scopeUid,"familyProfiles",remote.cloudProfileId)) continue;
                             remoteUpdatedAt.put(
                                     remote.cloudProfileId,
                                     remote.updatedAt
@@ -164,8 +193,9 @@ public class FamilyMemberRepository {
                             );
                             if (local == null) {
                                 memberDao.insert(remote);
-                            } else if (!local.syncPending
-                                    && remote.updatedAt > local.updatedAt) {
+                            } else if (!local.syncPending && !FamilySyncOutbox.pending(scopeUid,"familyProfiles",remote.cloudProfileId)
+                                    && FamilySyncVersions.shouldApply(scopeUid,"familyProfiles",remote.cloudProfileId,
+                                            snapshot.child(remote.cloudProfileId),local.cloudRemoved,local.updatedAt)) {
                                 long localId = local.id;
                                 String localPhoto = local.profilePhotoUri;
                                 copyProfile(remote, local);
@@ -173,6 +203,8 @@ public class FamilyMemberRepository {
                                 local.profilePhotoUri = localPhoto;
                                 memberDao.update(local);
                             }
+                            if (!FamilySyncOutbox.pending(scopeUid,"familyProfiles",remote.cloudProfileId))
+                                FamilySyncVersions.applied(scopeUid,"familyProfiles",remote.cloudProfileId,snapshot.child(remote.cloudProfileId));
                         }
 
                         List<FamilyMember> current =
@@ -251,6 +283,7 @@ public class FamilyMemberRepository {
             }
             member.updatedAt = now;
             member.syncPending = true;
+            member.cloudRemoved = false;
             if (familyId != null) {
                 member.ownerFamilyId = familyId;
                 if (member.cloudProfileId.isEmpty()) {
@@ -275,17 +308,8 @@ public class FamilyMemberRepository {
                 if (!currentAccount()) return;
                 if (familyId != null
                         && !member.cloudProfileId.isEmpty()) {
-                    long submittedAt = member.updatedAt;
-                    String submittedProfileId = member.cloudProfileId;
-                    firebaseRoot.child("familyProfiles")
-                            .child(familyId)
-                            .child(member.cloudProfileId)
-                            .updateChildren(toCloudValues(
-                                    familyId,
-                                    member
-                            ))
-                            .addOnSuccessListener(unused ->
-                                    markSynced(submittedProfileId, submittedAt));
+                    FamilySyncOutbox.enqueue(scopeUid,"familyProfiles",member.cloudProfileId,
+                            toCloudValues(familyId,member),null);
                 }
                 callback.onComplete();
             });
@@ -303,10 +327,7 @@ public class FamilyMemberRepository {
                 if (!currentAccount()) return;
                 if (!member.ownerFamilyId.isEmpty()
                         && !member.cloudProfileId.isEmpty()) {
-                    firebaseRoot.child("familyProfiles")
-                            .child(member.ownerFamilyId)
-                            .child(member.cloudProfileId)
-                            .removeValue();
+                    FamilySyncOutbox.remove(scopeUid,"familyProfiles",member.ownerFamilyId,member.cloudProfileId);
                 }
                 callback.onComplete();
             });
@@ -342,14 +363,9 @@ public class FamilyMemberRepository {
     ) {
         for (FamilyMember member : members) {
             if (!currentAccount()) return;
-            long submittedAt = member.updatedAt;
-            String submittedProfileId = member.cloudProfileId;
-            firebaseRoot.child("familyProfiles")
-                    .child(familyId)
-                    .child(member.cloudProfileId)
-                    .updateChildren(toCloudValues(familyId, member))
-                    .addOnSuccessListener(unused ->
-                            markSynced(submittedProfileId, submittedAt));
+            if (!FamilySyncOutbox.pending(scopeUid,"familyProfiles",member.cloudProfileId))
+                FamilySyncOutbox.enqueue(scopeUid,"familyProfiles",member.cloudProfileId,
+                        toCloudValues(familyId,member),null);
         }
     }
 
@@ -454,6 +470,25 @@ public class FamilyMemberRepository {
         target.createdAt = source.createdAt;
         target.updatedAt = source.updatedAt;
         target.syncPending = false;
+        target.cloudRemoved = false;
+    }
+
+    private void reconcileRemovedProfiles(String familyId, DataSnapshot snapshot, int request) {
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (DataSnapshot child : snapshot.getChildren()) if (child.getKey() != null) ids.add(child.getKey());
+        int revision = ++reconcileRevision;
+        DATABASE_EXECUTOR.execute(() -> {
+            if (!online || !currentAccount() || request != watchGeneration || revision != reconcileRevision) return;
+            for (FamilyMember local : memberDao.getIncludingRemovedForFamily(familyId)) {
+                if (local.syncPending || local.cloudProfileId.isEmpty()
+                        || FamilySyncOutbox.pending(scopeUid,"familyProfiles",local.cloudProfileId)) continue;
+                boolean removed = !ids.contains(local.cloudProfileId);
+                if (local.cloudRemoved != removed) {
+                    local.cloudRemoved = removed;
+                    memberDao.update(local);
+                }
+            }
+        });
     }
 
     private void markSynced(@NonNull String cloudProfileId, long submittedAt) {

@@ -26,12 +26,14 @@ public final class DocumentExpiryScheduler {
 
     public static void sync(@NonNull Context context) {
         Context appContext = context.getApplicationContext();
+        String uid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+        if (uid.isEmpty()) return;
         DocumentVaultPreferences preferences =
                 new DocumentVaultPreferences(appContext);
         WorkManager manager = WorkManager.getInstance(appContext);
         if (!preferences.expiryAlertsEnabled()) {
-            manager.cancelUniqueWork(UNIQUE_PERIODIC_WORK);
-            manager.cancelUniqueWork(UNIQUE_IMMEDIATE_WORK);
+            manager.cancelUniqueWork(com.tridev.familyhub.core.security.AccountDataScope.localName(context,UNIQUE_PERIODIC_WORK));
+            manager.cancelUniqueWork(com.tridev.familyhub.core.security.AccountDataScope.localName(context,UNIQUE_IMMEDIATE_WORK));
             return;
         }
 
@@ -47,12 +49,13 @@ public final class DocumentExpiryScheduler {
                 TimeUnit.DAYS
         )
                 .setInitialDelay(delayUntilMorning(), TimeUnit.MILLISECONDS)
+                .setInputData(new androidx.work.Data.Builder().putString(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID,uid).build())
                 .setConstraints(constraints)
                 .addTag(UNIQUE_PERIODIC_WORK)
                 .build();
 
         manager.enqueueUniquePeriodicWork(
-                UNIQUE_PERIODIC_WORK,
+                com.tridev.familyhub.core.security.AccountDataScope.localName(context,UNIQUE_PERIODIC_WORK),
                 ExistingPeriodicWorkPolicy.UPDATE,
                 request
         );
@@ -60,15 +63,18 @@ public final class DocumentExpiryScheduler {
 
     public static void runNow(@NonNull Context context) {
         Context appContext = context.getApplicationContext();
+        String uid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+        if (uid.isEmpty()) return;
         if (!new DocumentVaultPreferences(appContext)
                 .expiryAlertsEnabled()) {
             return;
         }
         OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(
                 DocumentExpiryWorker.class
-        ).addTag(UNIQUE_IMMEDIATE_WORK).build();
+        ).setInputData(new androidx.work.Data.Builder().putString(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID,uid).build())
+                .addTag(UNIQUE_IMMEDIATE_WORK).build();
         WorkManager.getInstance(appContext).enqueueUniqueWork(
-                UNIQUE_IMMEDIATE_WORK,
+                com.tridev.familyhub.core.security.AccountDataScope.localName(context,UNIQUE_IMMEDIATE_WORK),
                 androidx.work.ExistingWorkPolicy.REPLACE,
                 request
         );
