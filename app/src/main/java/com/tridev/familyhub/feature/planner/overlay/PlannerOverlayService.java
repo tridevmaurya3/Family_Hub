@@ -170,13 +170,13 @@ public final class PlannerOverlayService extends Service {
         searchToggle.setPadding(dp(10), dp(10), dp(10), dp(10));
         header.addView(searchToggle, new LinearLayout.LayoutParams(dp(40), dp(44)));
         searchToggle.setOnClickListener(v -> { if (workspace != null) workspace.toggleSearch(); });
-        MaterialButton collapse = button("Collapse"); header.addView(collapse, new LinearLayout.LayoutParams(dp(72), dp(44)));
+        MaterialButton collapse = button("Less details ▴"); header.addView(collapse, new LinearLayout.LayoutParams(dp(96), dp(44)));
         MaterialButton close = button("×"); close.setContentDescription("Close floating Planner");
         header.addView(close, new LinearLayout.LayoutParams(dp(42), dp(44)));
         collapse.setOnClickListener(v -> {
             collapsed = !collapsed;
             if (workspace != null) workspace.setQuickControlsCollapsed(collapsed);
-            collapse.setText(collapsed ? "Expand" : "Collapse");
+            collapse.setText(collapsed ? "More details ▾" : "Less details ▴");
             manager.updateViewLayout(panel, params);
         });
         close.setOnClickListener(v -> dismissPanel());

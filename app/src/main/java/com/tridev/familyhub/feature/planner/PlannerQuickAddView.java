@@ -53,6 +53,11 @@ final class PlannerQuickAddView extends LinearLayout {
     private MaterialButton button(String label,Runnable action){MaterialButton b=new MaterialButton(getContext());b.setText(label);b.setAllCaps(false);b.setMinWidth(0);b.setMinimumWidth(0);b.setPadding(0,0,0,0);b.setTextSize(11);b.setCornerRadius(PlannerPanels.dp(getContext(),16));b.setOnClickListener(v->action.run());return b;}
     private void refreshTime(){date.setText(android.text.format.DateFormat.format("dd MMM ▾",when));time.setText(android.text.format.DateFormat.format("h:mm a ▾",when));}
     PlannerItem draft(){PlannerItem r=new PlannerItem();r.title=title.getText().toString().trim();r.notes=note.getText().toString().trim();r.startAt=when.getTimeInMillis();r.itemType=repeat.getText().toString().toUpperCase(Locale.US);r.repeatType=category.getText().toString();r.priority=priority.getText().toString();r.isShared="Shared".equals(sharing.getText().toString());r.assignedMemberName=getResources().getString(R.string.planner_whole_family);r.isReminderEnabled=alert.isChecked();return r;}
+    /** Match Grocery: fold extra fields while keeping the quick-add row available. */
+    void setDetailsCollapsed(boolean collapsed) {
+        for (int i = 1; i < getChildCount(); i++)
+            getChildAt(i).setVisibility(collapsed ? View.GONE : View.VISIBLE);
+    }
     void saved(){saving=false;add.setEnabled(true);title.setText("");note.setText("");}
     void dispose(){for(android.app.Dialog dialog:new ArrayList<>(dialogs))dialog.dismiss();}
 }

@@ -74,7 +74,7 @@ public final class PlannerWorkspace {
         binding=FragmentPlannerBinding.inflate(LayoutInflater.from(context));
         binding.plannerOverview.setNavigationAction(R.drawable.ic_menu_hamburger,R.string.feature_menu_title,v->menu.run());
         if(floating){binding.plannerOverview.setVisibility(View.GONE);binding.plannerSummary.setVisibility(View.GONE);}
-        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.plannerRecyclerView));
+        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.plannerListHost));
         initialize();
         observedDatabase=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(context);observedDatabase.getInvalidationTracker().addObserver(localObserver);
         com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.plannerFilterScroll);
@@ -495,6 +495,6 @@ public final class PlannerWorkspace {
     private void showDialog(android.app.Dialog dialog){if(binding==null)return;if(floating&&dialog.getWindow()!=null)dialog.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);dialogs.add(dialog);dialog.setOnDismissListener(d->{dialogs.remove(dialog);voice.stop();});dialog.show();}
     private void saveQuick(PlannerItem item){repository.save(item,()->{if(item.isReminderEnabled){PlannerScheduler.schedule(context,item);if(binding!=null)ensureNotificationPermission();}if(binding!=null){quick.saved();reload();Snackbar.make(binding.getRoot(),R.string.planner_added,Snackbar.LENGTH_SHORT).show();}});}
     public void toggleSearch(){if(binding!=null)binding.plannerSearchLayout.setVisibility(binding.plannerSearchLayout.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);}
-    public void setQuickControlsCollapsed(boolean collapsed){if(binding!=null){binding.plannerQuickHost.setVisibility(collapsed?View.GONE:View.VISIBLE);binding.plannerFilterScroll.setVisibility(collapsed?View.GONE:View.VISIBLE);}}
+    public void setQuickControlsCollapsed(boolean collapsed) { if (binding != null && quick != null) quick.setDetailsCollapsed(collapsed); }
     public void dispose(){observedDatabase.getInvalidationTracker().removeObserver(localObserver);observerHandler.removeCallbacksAndMessages(null);repository.stopRealtimeSync();voice.stop();quick.dispose();for(android.app.Dialog dialog:new ArrayList<>(dialogs))dialog.dismiss();for(android.widget.PopupWindow popup:new ArrayList<>(popups))popup.dismiss();binding.plannerRecyclerView.setAdapter(null);binding=null;}
 }

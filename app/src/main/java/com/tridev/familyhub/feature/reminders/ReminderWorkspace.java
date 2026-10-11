@@ -85,7 +85,7 @@ public final class ReminderWorkspace {
         binding.remindersOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
                 R.string.feature_menu_title, clickedView -> menu.run());
         if (floating) { binding.remindersOverview.setVisibility(View.GONE); binding.reminderDashboardSummary.setVisibility(View.GONE); }
-        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.reminderRecyclerView));
+        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.reminderListHost));
         initialize();
         observedDatabase=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(context);observedDatabase.getInvalidationTracker().addObserver(localObserver);
         com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.reminderFilterScroll);
@@ -219,10 +219,7 @@ public final class ReminderWorkspace {
     public void reload() { if (binding != null) loadReminders(binding.reminderSearchInput.getText().toString()); }
     public void toggleSearch() { if (binding != null) binding.reminderSearchLayout.setVisibility(
             binding.reminderSearchLayout.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE); }
-    public void setQuickControlsCollapsed(boolean collapsed) {
-        if (binding != null) { binding.reminderQuickHost.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-            binding.reminderFilterScroll.setVisibility(collapsed ? View.GONE : View.VISIBLE); }
-    }
+    public void setQuickControlsCollapsed(boolean collapsed) { if (binding != null && quick != null) quick.setDetailsCollapsed(collapsed); }
 
     private void loadReminders(String query) {
         repository.loadReminders(query, reminders -> {

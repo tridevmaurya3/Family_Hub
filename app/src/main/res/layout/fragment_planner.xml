@@ -36,12 +36,16 @@
         <FrameLayout android:id="@+id/planner_quick_host" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" />
         <TextView android:id="@+id/planner_results" style="@style/TextAppearance.FamilyHub.Caption"
             android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="6dp" />
+        <!-- Keep elevated list cards within the viewport below the controls. -->
+        <FrameLayout android:id="@+id/planner_list_host" android:layout_width="match_parent"
+            android:layout_height="0dp" android:layout_weight="1" android:clipChildren="true" android:clipToPadding="true">
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/planner_recycler_view"
-            android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:nestedScrollingEnabled="true" android:scrollbars="vertical" android:fadeScrollbars="false" android:paddingBottom="80dp" android:clipToPadding="false" />
-        <LinearLayout android:id="@+id/planner_empty_state" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_width="match_parent" android:layout_height="match_parent" android:nestedScrollingEnabled="false" android:scrollbars="vertical" android:fadeScrollbars="false" android:paddingBottom="80dp" android:clipToPadding="true" android:clipChildren="true" />
+        <LinearLayout android:id="@+id/planner_empty_state" android:layout_width="match_parent" android:layout_height="match_parent"
             android:orientation="vertical" android:gravity="center" android:padding="12dp" android:visibility="gone">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/planner_empty_title" />
             <com.google.android.material.button.MaterialButton android:id="@+id/empty_add_planner_button"
                 android:layout_width="wrap_content" android:layout_height="48dp" android:text="@string/planner_add" />
         </LinearLayout>
+        </FrameLayout>
 </com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout>
