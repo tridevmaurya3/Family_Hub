@@ -87,6 +87,15 @@ public class FamilyMemberAdapter extends RecyclerView.Adapter<FamilyMemberAdapte
         }
 
         private void showPhoto(@NonNull FamilyMember member) {
+            binding.memberPhoto.setImageDrawable(null);
+            com.tridev.familyhub.feature.profile.FamilyAvatarStore avatars=com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(binding.getRoot().getContext());
+            if (!member.cloudUid.isEmpty()) {
+                android.graphics.Bitmap photo=avatars.photo(member.cloudUid);
+                if(photo!=null){binding.memberPhoto.setImageBitmap(photo);binding.memberPhoto.setVisibility(View.VISIBLE);binding.memberInitials.setVisibility(View.GONE);return;}
+                if(member.cloudManaged || avatars.hasRecord(member.cloudUid)){
+                    binding.memberPhoto.setVisibility(View.GONE);binding.memberInitials.setVisibility(View.VISIBLE);return;
+                }
+            }
             if (member.profilePhotoUri.isEmpty()) {
                 binding.memberPhoto.setVisibility(View.GONE);
                 binding.memberInitials.setVisibility(View.VISIBLE);

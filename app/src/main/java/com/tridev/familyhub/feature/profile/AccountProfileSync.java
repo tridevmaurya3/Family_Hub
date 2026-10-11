@@ -49,6 +49,7 @@ public final class AccountProfileSync {
     public void addListener(Listener listener) { listeners.add(listener); listener.onProfileChanged(); if(membershipRetry)lastMembershipAttempt=""; reconcileMembership(); }
     public void removeListener(Listener listener) { listeners.remove(listener); }
     public String displayName() { return name; }
+    public String familyId() { return familyId; }
     public String status() { return state; }
     private void updateConnectionStatus() {
         state=pendingWrites>0?(connected?"Syncing profile changes…":"Offline · changes waiting to sync"):

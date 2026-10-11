@@ -278,7 +278,7 @@ public final class FamilyMapComparePanelView extends MaterialCardView {
         statusView.setText(FamilyLiveAvailability.labelRes(availabilityReason));
         styleStatus(availabilityReason);
 
-        Bitmap photo = photos.get(primaryName.trim().toLowerCase(Locale.ROOT));
+        Bitmap photo = photos.get(primary.uid);
         if (photo != null) {
             avatar.clearColorFilter();
             avatar.setImageBitmap(photo);

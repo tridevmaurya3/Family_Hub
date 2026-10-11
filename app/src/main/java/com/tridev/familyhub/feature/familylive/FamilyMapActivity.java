@@ -392,11 +392,13 @@ public final class FamilyMapActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(this).addListener(avatarListener);
         restartMemberStream();
     }
 
     @Override
     protected void onStop() {
+        com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(this).removeListener(avatarListener);
         if (familyRepository != null) {
             familyRepository.stopObservingCloudMembers();
         }
@@ -426,7 +428,7 @@ public final class FamilyMapActivity extends AppCompatActivity {
         familyRepository.observeCloudMembers(received -> {
             dataReady = true;
             members = new ArrayList<>(received);
-            renderMarkers();
+            loadMemberPhotos();
         }, error -> {
             dataReady = true;
             showState(isNetworkAvailable()
@@ -1330,30 +1332,15 @@ public final class FamilyMapActivity extends AppCompatActivity {
                 : current ? R.color.fh_info
                 : stale ? R.color.fh_warning : R.color.fh_success);
         return FamilyMemberMarkerFactory.create(displayName(member),
-                memberPhotos.get(member.displayName.trim().toLowerCase(Locale.ROOT)), color);
+                memberPhotos.get(member.uid), color);
     }
 
+    private final com.tridev.familyhub.feature.profile.FamilyAvatarStore.Listener avatarListener=this::loadMemberPhotos;
     private void loadMemberPhotos() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            Map<String, Bitmap> loaded = new HashMap<>();
-            for (FamilyMember member : FamilyHubDatabase.getInstance(this)
-                    .familyMemberDao().getAll()) {
-                if (member.profilePhotoUri.trim().isEmpty()) continue;
-                try (InputStream stream = getContentResolver().openInputStream(
-                        Uri.parse(member.profilePhotoUri))) {
-                    Bitmap bitmap = BitmapFactory.decodeStream(stream);
-                    if (bitmap != null) loaded.put(
-                            member.name.trim().toLowerCase(Locale.ROOT), bitmap);
-                } catch (Exception ignored) {
-                    // Initials remain available when a legacy photo URI cannot be opened.
-                }
-            }
-            runOnUiThread(() -> {
-                memberPhotos.clear();
-                memberPhotos.putAll(loaded);
-                renderMarkers();
-            });
-        });
+        memberPhotos.clear();
+        com.tridev.familyhub.feature.profile.FamilyAvatarStore avatars=com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(this);
+        for(FamilyLiveCloudMember member:members){Bitmap photo=avatars.photo(member.uid);if(photo!=null)memberPhotos.put(member.uid,photo);}
+        renderMarkers();
     }
 
     @Nullable

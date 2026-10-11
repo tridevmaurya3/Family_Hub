@@ -166,3 +166,38 @@ test('own membership name can change without granting role or other-member edits
   await assertFails(db.ref(`memberships/${family}/${member}/displayName`).set(''));
   await assertFails(db.ref(`memberships/${family}/${member}/email`).set('changed@example.com'));
 });
+
+test('family avatars: photo-only realtime reads, isolation and revocation', { timeout: 45000 }, async () => {
+  const family='avatarFamily', owner='avatarOwner', member='avatarMember', external='avatarExternal';
+  await env.withSecurityRulesDisabled(async context => {
+    const db=context.database();
+    await db.ref(`families/${family}`).set({familyId:family,name:'Avatar family',ownerUid:owner});
+    await db.ref(`memberships/${family}`).set({
+      [owner]:{uid:owner,displayName:'Same name',role:'OWNER_ADMIN',status:'ACTIVE'},
+      [member]:{uid:member,displayName:'Same name',role:'ADULT_MEMBER',status:'ACTIVE'}
+    });
+    await db.ref(`users/${owner}`).set({uid:owner,familyId:family,accountPhoto:'first-photo',privateDetail:'private'});
+    await db.ref(`users/${member}`).set({uid:member,familyId:family,accountPhoto:'member-photo'});
+    await db.ref(`users/${external}`).set({uid:external,familyId:'otherAvatarFamily',accountPhoto:'other-photo'});
+  });
+  const author=env.authenticatedContext(owner).database().ref(`users/${owner}/accountPhoto`);
+  const viewer=env.authenticatedContext(member).database();
+  const feed=stream(viewer.ref(`users/${owner}/accountPhoto`));
+  try {
+    await feed.until(s=>s.val()==='first-photo');
+    await assertSucceeds(author.set('updated-photo'));
+    await feed.until(s=>s.val()==='updated-photo');
+    await assertFails(viewer.ref(`users/${owner}`).once('value'));
+    await assertFails(viewer.ref(`users/${owner}/privateDetail`).once('value'));
+    await assertFails(viewer.ref(`users/${owner}/accountPhoto`).set('forged-photo'));
+    await assertFails(env.authenticatedContext(external).database().ref(`users/${owner}/accountPhoto`).once('value'));
+    await assertFails(env.unauthenticatedContext().database().ref(`users/${owner}/accountPhoto`).once('value'));
+    await assertFails(viewer.ref(`users/${external}/accountPhoto`).once('value'));
+    await assertSucceeds(author.set(''));
+    await feed.until(s=>s.val()==='');
+  } finally {feed.close();}
+  await env.withSecurityRulesDisabled(async context => {
+    await context.database().ref(`memberships/${family}/${member}/status`).set('INACTIVE');
+  });
+  await assertFails(viewer.ref(`users/${owner}/accountPhoto`).once('value'));
+});

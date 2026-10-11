@@ -347,9 +347,14 @@ public class FamilyLiveFragment extends Fragment {
         super.onPause();
     }
 
+    private final com.tridev.familyhub.feature.profile.FamilyAvatarStore.Listener avatarListener=()->{
+        if(binding==null)return;renderMapMarkers();if(familyLiveAdapter!=null)familyLiveAdapter.notifyDataSetChanged();
+    };
+
     @Override
     public void onStart() {
         super.onStart();
+        com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).addListener(avatarListener);
         cloudErrorShown = false;
         cloudDataReceived = false;
         observeCloudMembers();
@@ -357,6 +362,7 @@ public class FamilyLiveFragment extends Fragment {
 
     @Override
     public void onStop() {
+        com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).removeListener(avatarListener);
         if (repository != null) {
             repository.stopObservingCloudMembers();
         }
@@ -978,7 +984,7 @@ public class FamilyLiveFragment extends Fragment {
                             ? R.string.family_live_map_marker_stale
                             : R.string.family_live_map_marker_live))
                     .icon(FamilyMemberMarkerFactory.create(displayName,
-                            null, ContextCompat.getColor(requireContext(), stale
+                            com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).photo(member.uid), ContextCompat.getColor(requireContext(), stale
                                     ? R.color.fh_warning : R.color.fh_success)))
                     .alpha(stale ? 0.72F : 1F);
             googleMap.addMarker(marker);

@@ -59,6 +59,7 @@ public class FamilyHubApplication extends Application {
 
         enableFirebaseOfflinePersistence();
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(this);
+        com.tridev.familyhub.feature.profile.ProfileHeaderAvatarBinder.register(this);
         GroceryRecurrenceEngine.register(this);
         GroceryProfessionalUiBinder.register(this);
         GroceryListCalendarUiBinder.register(this);

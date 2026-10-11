@@ -216,6 +216,7 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
                 continue;
             }
             if (!cloudEmail.isEmpty() && localEmails.contains(cloudEmail)) {
+                for(FamilyMember local:localMembers)if(cloudEmail.equals(local.email.trim().toLowerCase(Locale.ROOT)))local.cloudUid=cloud.uid;
                 continue;
             }
 
@@ -610,6 +611,12 @@ public class FamilyFragment extends Fragment implements com.tridev.familyhub.fea
                 }))
                 .show();
     }
+
+    private final com.tridev.familyhub.feature.profile.FamilyAvatarStore.Listener avatarListener=()->{
+        if(binding!=null && memberAdapter!=null)memberAdapter.notifyDataSetChanged();
+    };
+    @Override public void onStart(){super.onStart();com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).addListener(avatarListener);}
+    @Override public void onStop(){com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(requireContext()).removeListener(avatarListener);super.onStop();}
 
     @Override
     public void onDestroyView() {

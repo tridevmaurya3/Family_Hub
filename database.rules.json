@@ -6,7 +6,10 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && (auth.uid === $uid || (data.child('pendingFamilyId').isString() && root.child('families').child(data.child('pendingFamilyId').val()).child('ownerUid').val() === auth.uid) || (newData.child('familyId').isString() && root.child('families').child(newData.child('familyId').val()).child('ownerUid').val() === auth.uid && root.child('memberships').child(newData.child('familyId').val()).child($uid).child('status').val() === 'ACTIVE'))",
-        "accountPhoto": { ".validate": "newData.isString() && newData.val().length <= 64000" }
+        "accountPhoto": {
+          ".read": "auth != null && root.child('users').child($uid).child('familyId').isString() && root.child('memberships').child(root.child('users').child($uid).child('familyId').val()).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('memberships').child(root.child('users').child($uid).child('familyId').val()).child($uid).child('status').val() === 'ACTIVE'",
+          ".validate": "newData.isString() && newData.val().length <= 64000"
+        }
       }
     },
     "families": {

@@ -91,6 +91,9 @@ public class FamilyLiveAdapter
 
         holder.memberName.setText(member.getMemberName());
         holder.avatar.setText(createInitials(member.getMemberName()));
+        android.widget.ImageView photoView=holder.itemView.findViewById(R.id.family_live_photo);
+        android.graphics.Bitmap photo=com.tridev.familyhub.feature.profile.FamilyAvatarStore.get(context).photo(member.getCloudMemberUid());
+        photoView.setImageBitmap(photo);photoView.setVisibility(photo==null?View.GONE:View.VISIBLE);holder.avatar.setVisibility(photo==null?View.VISIBLE:View.GONE);
 
         holder.location.setText(
                 emptyFallback(
