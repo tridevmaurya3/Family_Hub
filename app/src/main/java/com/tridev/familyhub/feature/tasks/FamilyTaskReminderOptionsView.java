@@ -27,6 +27,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
     private final MaterialSwitch follow;
     private final MaterialButton notificationAccess;
     private final MaterialButton exactAccess;
+    private MaterialButton fullScreenAccess;
     private int leadIndex = 3;
     private int modeIndex;
     private static final int[] MINUTES = {-1, 0, 5, 15, 30, 60, 1440};
@@ -89,9 +90,24 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
                 notificationAccess(true);
             }
         });
+        fullScreenAccess = new MaterialButton(themed);
+        fullScreenAccess.setAllCaps(false); fullScreenAccess.setCornerRadius((int)(16 * getResources().getDisplayMetrics().density));
+        LinearLayout detailBody = (LinearLayout) findViewById(R.id.reminder_permission_detail).getParent();
+        detailBody.addView(fullScreenAccess, new LayoutParams(-1, -2));
+        android.widget.TextView alarmHelp = new android.widget.TextView(themed);
+        alarmHelp.setText(R.string.task_alarm_access_detail); alarmHelp.setTextSize(11); detailBody.addView(alarmHelp);
+        fullScreenAccess.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= 34) openSettings(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                    Uri.parse("package:" + themed.getPackageName())));
+        });
         refreshAccess();
     }
     private void refreshAccess() {
+        if (fullScreenAccess != null) {
+            boolean allowed = com.tridev.familyhub.core.tasks.FamilyTaskAlarmService.fullScreenAllowed(getContext());
+            fullScreenAccess.setText(allowed ? R.string.task_alarm_access_ready : R.string.task_alarm_access);
+            fullScreenAccess.setEnabled(Build.VERSION.SDK_INT >= 34);
+        }
         notificationAccess.setVisibility(FamilyTaskReceiver.canNotify(getContext(), modeIndex == 1) ? GONE : VISIBLE);
         AlarmManager manager = getContext().getSystemService(AlarmManager.class);
         exactAccess.setVisibility(Build.VERSION.SDK_INT >= 31 && manager != null && !manager.canScheduleExactAlarms() ? VISIBLE : GONE);

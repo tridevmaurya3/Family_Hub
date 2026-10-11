@@ -26,17 +26,23 @@ import java.util.Date;
 /** Validates the current local task before delivering a reminder or handling an action. */
 public final class FamilyTaskReceiver extends BroadcastReceiver {
     static final String ACTION_FIRE = "com.tridev.familyhub.action.FIRE_FAMILY_TASK";
-    private static final String ACTION_COMPLETE = "com.tridev.familyhub.action.COMPLETE_FAMILY_TASK";
-    private static final String ACTION_SNOOZE = "com.tridev.familyhub.action.SNOOZE_FAMILY_TASK";
+    static final String ACTION_COMPLETE = "com.tridev.familyhub.action.COMPLETE_FAMILY_TASK";
+    static final String ACTION_SNOOZE = "com.tridev.familyhub.action.SNOOZE_FAMILY_TASK";
+    static final String ACTION_DISMISS = "com.tridev.familyhub.action.DISMISS_TASK_ALARM";
     static final String EXTRA_ID = "family_task_id";
     private static final Object DELIVERY_LOCK = new Object();
     private static final String CHANNEL = "family_hub_tasks";
     private static final String IMPORTANT_CHANNEL = "family_hub_tasks_important";
     @Override public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (!ACTION_FIRE.equals(action) && !ACTION_COMPLETE.equals(action) && !ACTION_SNOOZE.equals(action)) return;
+        if (!ACTION_FIRE.equals(action) && !ACTION_COMPLETE.equals(action) && !ACTION_SNOOZE.equals(action) && !ACTION_DISMISS.equals(action)) return;
         long id = intent.getLongExtra(EXTRA_ID, 0);
         if (id <= 0) return;
+        if (!ACTION_FIRE.equals(action)) {
+            FamilyTaskAlarmService.stopAlarm(context, id);
+            NotificationManagerCompat.from(context).cancel(FamilyTaskScheduler.notificationId(id));
+            if (ACTION_DISMISS.equals(action)) return;
+        }
         PendingResult result = goAsync();
         Context app = context.getApplicationContext();
         new Thread(() -> {
@@ -56,7 +62,7 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 }
                 if (ACTION_SNOOZE.equals(action)) {
                     NotificationManagerCompat.from(app).cancel(FamilyTaskScheduler.notificationId(id));
-                    FamilyTaskScheduler.snooze(app, task, 10L * 60000L); return;
+                    FamilyTaskScheduler.snooze(app, task, Math.max(1, Math.min(60, intent.getIntExtra("minutes", 10))) * 60000L); return;
                 }
                 synchronized (DELIVERY_LOCK) {
                     if (!task.reminderEnabled) { FamilyTaskScheduler.cancel(app, id); return; }
@@ -124,6 +130,15 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
     private boolean show(Context context, FamilyTask task, int stage, long occurrence) {
         boolean important = FamilyTaskReminderPreferences.important(context, task);
         if (!canNotify(context, important)) return false;
+        if ((stage == 1 || stage == 3) && FamilyTaskAlarmService.canRing(context)) {
+            Intent alarm = FamilyTaskAlarmService.alarmIntent(context, task, stage, occurrence);
+            try {
+                ContextCompat.startForegroundService(context, alarm);
+                return true;
+            } catch (RuntimeException denied) {
+                // Keep the existing notification path if Android refuses a background service.
+            }
+        }
         String channelId = channelId(important);
         long id = task.id;
         PendingIntent open = PendingIntent.getActivity(context, FamilyTaskScheduler.notificationId(id),

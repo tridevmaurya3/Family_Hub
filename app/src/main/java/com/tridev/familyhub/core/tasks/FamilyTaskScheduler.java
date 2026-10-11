@@ -48,6 +48,7 @@ public final class FamilyTaskScheduler {
         if (snoozeTrigger > 0 && (snooze > now || notificationsReady)) set(context, snoozeTrigger, pendingIntent(context, task, 3, snooze));
     }
     public static synchronized void cancel(@NonNull Context context, long id) {
+        FamilyTaskAlarmService.stopAlarm(context, id);
         clearAlarms(context, id);
         FamilyTaskReminderPreferences.clearSnooze(context, id);
         FamilyTaskReminderPreferences.clearDelivery(context, id);

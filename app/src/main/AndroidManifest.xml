@@ -21,6 +21,11 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <queries>
         <package android:name="com.example.moneymanagerpro" />
         <package android:name="com.tridev.loanmanagerpro" />
@@ -316,6 +321,12 @@
 
         <activity android:name=".core.tasks.FamilyTaskReminderPermissionActivity"
             android:exported="false" android:theme="@style/Theme.FamilyHub" />
+        <activity android:name=".core.tasks.FamilyTaskAlarmActivity"
+            android:exported="false" android:excludeFromRecents="true"
+            android:showWhenLocked="true" android:turnScreenOn="true"
+            android:launchMode="singleTask" android:theme="@style/Theme.FamilyHub" />
+        <service android:name=".core.tasks.FamilyTaskAlarmService"
+            android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <receiver
             android:name=".core.tasks.FamilyTaskReceiver"
             android:exported="false" />

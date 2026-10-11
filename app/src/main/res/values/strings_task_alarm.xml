@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="task_alarm_heading">To-Do alarm</string>
+    <string name="task_alarm_due">Your To-Do is due now. This alarm is for its scheduled reminder.</string>
+    <string name="task_alarm_snoozed">Your snoozed To-Do reminder is due now.</string>
+    <string name="task_alarm_snooze10">Snooze 10 minutes</string>
+    <string name="task_alarm_snooze30">30 minutes</string>
+    <string name="task_alarm_snooze60">1 hour</string>
+    <string name="task_alarm_dismiss">Stop alarm</string>
+    <string name="task_alarm_dismiss_detail">Stop silences this alarm only. The task stays pending and future repeats remain scheduled. Sound stops automatically after 2 minutes.</string>
+    <string name="task_alarm_access">Enable full-screen To-Do alarms</string>
+    <string name="task_alarm_access_ready">Full-screen alarms enabled</string>
+    <string name="task_alarm_access_detail">At the due time, To-Do alarms ring with Snooze and Stop controls. Allow full-screen access and exact alarms for timely alerts. Android may show a banner while you are using the phone.</string>
+</resources>
