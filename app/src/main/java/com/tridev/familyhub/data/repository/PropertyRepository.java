@@ -74,7 +74,7 @@ public class PropertyRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (PropertyEntry local : propertyDao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"properties",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"properties",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }

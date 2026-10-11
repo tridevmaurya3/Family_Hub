@@ -75,7 +75,7 @@ public final class FamilyTaskRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (FamilyTask local : dao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.shared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"tasks",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"tasks",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }

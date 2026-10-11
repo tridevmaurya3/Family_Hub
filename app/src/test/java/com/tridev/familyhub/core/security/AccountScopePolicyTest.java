@@ -31,4 +31,11 @@ public class AccountScopePolicyTest {
         assertTrue(name.matches("family_hub_[0-9a-f]{64}\\.db"));
         assertNotEquals(AccountScopePolicy.key("abc"), AccountScopePolicy.key("ABC"));
     }
+    @Test public void accountChangeClearsPersonalAlertsAndPreservesLiveSafetyChannels() {
+        assertTrue(AccountScopePolicy.accountNotificationChannel("family_reminder_alarm_screen_v1"));
+        assertTrue(AccountScopePolicy.accountNotificationChannel("family_hub_document_expiry"));
+        assertFalse(AccountScopePolicy.accountNotificationChannel("family_sos_alerts"));
+        assertFalse(AccountScopePolicy.accountNotificationChannel("family_live_location"));
+        assertFalse(AccountScopePolicy.accountNotificationChannel(null));
+    }
 }

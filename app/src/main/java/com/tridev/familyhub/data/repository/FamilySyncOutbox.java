@@ -31,8 +31,11 @@ public final class FamilySyncOutbox {
     public static synchronized void initialize(Context app) {
         if (context != null) return;
         context = app.getApplicationContext();
+        String[] previousAccount = {AccountDataScope.uid()};
         com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(auth -> {
             String uid = AccountDataScope.uid();
+            if (!uid.equals(previousAccount[0])) com.tridev.familyhub.core.security.AccountReminderRestore.clearNotifications(context);
+            previousAccount[0] = uid;
             if (!uid.isEmpty()) {
                 schedule(uid);
                 com.tridev.familyhub.core.security.AccountReminderRestore.restore(context,uid);

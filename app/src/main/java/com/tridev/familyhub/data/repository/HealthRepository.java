@@ -97,7 +97,7 @@ public class HealthRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (HealthRecord local : healthRecordDao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"health",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"health",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }

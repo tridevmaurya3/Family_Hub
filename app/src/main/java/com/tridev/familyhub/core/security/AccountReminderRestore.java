@@ -10,6 +10,14 @@ import java.util.concurrent.Executors;
 public final class AccountReminderRestore {
     private static final ExecutorService executor = Executors.newSingleThreadExecutor();
     private AccountReminderRestore() { }
+    public static void clearNotifications(Context context) {
+        android.app.NotificationManager manager = context.getSystemService(android.app.NotificationManager.class);
+        if (manager == null) return;
+        for (android.service.notification.StatusBarNotification notification : manager.getActiveNotifications()) {
+            if (AccountScopePolicy.accountNotificationChannel(notification.getNotification().getChannelId()))
+                manager.cancel(notification.getTag(),notification.getId());
+        }
+    }
     public static void restore(Context context, String uid) {
         if (uid.isEmpty()) return;
         Context app = context.getApplicationContext();

@@ -79,7 +79,7 @@ public class VehicleRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (Vehicle local : vehicleDao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"vehicles",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"vehicles",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }

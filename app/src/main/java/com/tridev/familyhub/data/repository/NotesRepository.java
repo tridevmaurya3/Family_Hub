@@ -74,7 +74,7 @@ public class NotesRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (NoteEntry local : noteDao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"notes",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"notes",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }

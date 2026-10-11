@@ -25,4 +25,16 @@ public final class AccountScopePolicy {
         if (uid == null || uid.isEmpty()) return false;
         return expectedUid == null ? uid.equals(legacyOwner) : uid.equals(expectedUid);
     }
+
+    public static boolean accountNotificationChannel(String channel) {
+        if (channel == null) return false;
+        switch (channel) {
+            case "family_hub_planner": case "family_hub_reminders": case "family_hub_urgent_reminders":
+            case "family_reminder_alarm_screen_v1": case "family_hub_tasks": case "family_hub_tasks_important":
+            case "family_task_alarm_screen_v2": case "note_reminders": case "family_hub_document_expiry":
+            case "family_hub_health_reminders": case "family_hub_vehicle_reminders": case "family_grocery_updates":
+                return true;
+            default: return false;
+        }
+    }
 }

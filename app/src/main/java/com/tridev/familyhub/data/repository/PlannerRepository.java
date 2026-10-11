@@ -74,7 +74,7 @@ public class PlannerRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (PlannerItem local : plannerItemDao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"planner",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"planner",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }

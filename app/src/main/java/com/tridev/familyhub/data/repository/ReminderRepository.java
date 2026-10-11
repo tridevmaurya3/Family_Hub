@@ -73,7 +73,7 @@ public class ReminderRepository {
                             if (!scopeUid.equals(AccountDataScope.uid())) return;
                             for (Reminder local : reminderDao.getSharedForFamily(familyId)) {
                                 if (SharedCachePolicy.canRemove(local.isShared,familyId,local.familyId,local.cloudId,ids,
-                                        FamilySyncOutbox.pending(scopeUid,"reminders",local.cloudId),System.currentTimeMillis()-local.updatedAt)) {
+                                        FamilySyncOutbox.pending(scopeUid,"reminders",local.cloudId))) {
                                     onRemoved(familyId,local.cloudId);
                                 }
                             }
