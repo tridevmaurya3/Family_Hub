@@ -377,7 +377,7 @@ public final class PlannerWorkspace {
                             calendar.get(Calendar.HOUR_OF_DAY),
                             calendar.get(Calendar.MINUTE),
                             false
-                    ).show();
+                    ));
                 },
                 calendar.get(Calendar.YEAR),
                 calendar.get(Calendar.MONTH),
