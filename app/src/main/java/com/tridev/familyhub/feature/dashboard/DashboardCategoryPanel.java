@@ -15,6 +15,13 @@ import com.tridev.familyhub.R;
 public final class DashboardCategoryPanel extends LinearLayout {
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
     public DashboardCategoryPanel(Context context,AttributeSet attrs){super(context,attrs);setWillNotDraw(false);}
+    @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
+        super.onLayout(changed,left,top,right,bottom);
+        MaterialButtonToggleGroup tabs=findViewById(R.id.dashboard_category_tabs);
+        com.google.android.material.button.MaterialButton selected=tabs==null?null:tabs.findViewById(tabs.getCheckedButtonId());
+        if(selected!=null)selected.setShapeAppearanceModel(selected.getShapeAppearanceModel().toBuilder()
+            .setBottomLeftCornerSize(0).setBottomRightCornerSize(0).build());
+    }
     @Override protected void dispatchDraw(Canvas canvas) {
         MaterialButtonToggleGroup tabs=findViewById(R.id.dashboard_category_tabs);
         View selected=tabs==null?null:tabs.findViewById(tabs.getCheckedButtonId());

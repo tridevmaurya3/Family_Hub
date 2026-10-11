@@ -169,6 +169,7 @@ public class DashboardFragment extends Fragment {
             tab.setTypeface(null,selected?android.graphics.Typeface.BOLD:android.graphics.Typeface.NORMAL);
             tab.setInsetTop(0); tab.setInsetBottom(0);
         }
+        ((View)binding.dashboardCategoryTabs.getParent()).requestLayout();
         ((View)binding.dashboardCategoryTabs.getParent()).invalidate();
         binding.dashboardCategoryCount.setText(getString(R.string.dashboard_category_count, assets ? 5 : 7));
         binding.dashboardCategoryTitle.setText(assets ? R.string.dashboard_category_assets

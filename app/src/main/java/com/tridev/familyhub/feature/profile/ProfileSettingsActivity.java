@@ -260,6 +260,8 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
                 .child(user.getUid())
                 .get()
                 .addOnSuccessListener(userSnapshot -> {
+                    if (isFinishing() || isDestroyed() || !getLifecycle().getCurrentState()
+                            .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return;
                     String familyId = stringValue(
                             userSnapshot.child("familyId")
                     );
@@ -285,6 +287,9 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
             @NonNull FirebaseUser user,
             @NonNull String familyId
     ) {
+        if (isFinishing() || isDestroyed() || !getLifecycle().getCurrentState()
+                .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) return;
+        detachMembershipListener();
         membershipReference=FirebaseDatabase.getInstance().getReference()
                 .child("memberships").child(familyId).child(user.getUid());
         membershipListener=new com.google.firebase.database.ValueEventListener() {
