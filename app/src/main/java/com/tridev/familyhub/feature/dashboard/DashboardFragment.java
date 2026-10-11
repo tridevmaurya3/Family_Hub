@@ -26,8 +26,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.cards.ActionCardModel;
 import com.tridev.familyhub.core.ui.cards.HeroCardModel;
-import com.tridev.familyhub.core.ui.cards.StatusCardModel;
-import com.tridev.familyhub.core.ui.cards.StatusCardView;
+import com.tridev.familyhub.core.ui.cards.ActionCardView;
 import com.tridev.familyhub.core.ui.search.SearchBarModel;
 import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
@@ -79,10 +78,10 @@ public class DashboardFragment extends Fragment {
     @Nullable private com.tridev.familyhub.data.local.FamilyHubDatabase notesSummaryDatabase;
     @Nullable private androidx.room.InvalidationTracker.Observer notesSummaryObserver;
 
-    private StatusCardView financeStatusCard;
-    private StatusCardView healthStatusCard;
-    private StatusCardView familyStatusCard;
-    private StatusCardView documentStatusCard;
+    private ActionCardView financeStatusCard;
+    private ActionCardView healthStatusCard;
+    private ActionCardView familyStatusCard;
+    private ActionCardView documentStatusCard;
     @Nullable private ImageView profileAvatar;
 
     private final Handler headerClockHandler = new Handler(Looper.getMainLooper());
@@ -446,26 +445,44 @@ public class DashboardFragment extends Fragment {
         );
     }
 
+    /** Reuse dashboard summaries and destinations with the Action center card style. */
+    private ActionCardModel overviewModel(String title, String value, String detail, int icon) {
+        int accent = R.color.fh_module_finance;
+        int container = R.color.fh_module_finance_container;
+        if (icon == R.drawable.ic_health) {
+            accent = R.color.fh_module_health; container = R.color.fh_module_health_container;
+        } else if (icon == R.drawable.ic_family) {
+            accent = R.color.fh_module_family; container = R.color.fh_module_family_container;
+        } else if (icon == R.drawable.ic_document) {
+            accent = R.color.fh_module_documents; container = R.color.fh_module_documents_container;
+        }
+        return new ActionCardModel(title, value, detail, icon, accent, container);
+    }
+
     private void setupStatusCards() {
-        financeStatusCard.setModel(new StatusCardModel(
+        financeStatusCard.setValueTextCentered(true);
+        healthStatusCard.setValueTextCentered(true);
+        familyStatusCard.setValueTextCentered(true);
+        documentStatusCard.setValueTextCentered(true);
+        financeStatusCard.setModel(overviewModel(
                 getString(R.string.status_finance),
                 currencyFormatter.format(0),
                 getString(R.string.status_balance_available),
                 R.drawable.ic_wallet
         ));
-        healthStatusCard.setModel(new StatusCardModel(
+        healthStatusCard.setModel(overviewModel(
                 getString(R.string.status_health),
                 getString(R.string.status_no_health_data),
                 getString(R.string.status_health_update),
                 R.drawable.ic_health
         ));
-        familyStatusCard.setModel(new StatusCardModel(
+        familyStatusCard.setModel(overviewModel(
                 getString(R.string.status_family),
                 getString(R.string.status_zero_members),
                 getString(R.string.status_family_ready),
                 R.drawable.ic_family
         ));
-        documentStatusCard.setModel(new StatusCardModel(
+        documentStatusCard.setModel(overviewModel(
                 getString(R.string.status_documents),
                 getString(R.string.status_zero_files),
                 getString(R.string.status_documents_ready),
@@ -482,6 +499,16 @@ public class DashboardFragment extends Fragment {
 
     /** Dashboard shortcuts preserve existing destinations and add Notes. */
     private void setupActionCards() {
+        binding.actionReminderEntries.setOnClickListener(v -> openTab(R.id.nav_reminders));
+        binding.actionVehicleRecords.setOnClickListener(v -> openFeature(new VehicleFragment()));
+        binding.actionPropertyRecords.setOnClickListener(v -> openFeature(new PropertyFragment()));
+        binding.actionPasswordRecords.setOnClickListener(v -> openFeature(new PasswordVaultFragment()));
+        binding.actionReminderEntries.setValueTextCentered(true);
+        binding.actionVehicleRecords.setValueTextCentered(true);
+        binding.actionPropertyRecords.setValueTextCentered(true);
+        binding.actionPasswordRecords.setValueTextCentered(true);
+        renderRecordActions(new DashboardStats());
+
         binding.actionNoteEntries.setOnClickListener(v -> openFeature(new NotesFragment()));
         binding.actionNoteEntries.setValueTextCentered(true);
         renderNotesAction(new DashboardStats());
@@ -940,7 +967,29 @@ public class DashboardFragment extends Fragment {
         });
     }
 
+    private void renderRecordActions(@NonNull DashboardStats stats) {
+        binding.actionReminderEntries.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_reminders),
+                getString(R.string.dashboard_action_reminder_count, stats.getUpcomingReminders()),
+                getString(R.string.dashboard_action_reminder_detail), R.drawable.ic_reminder,
+                R.color.fh_module_reminders, R.color.fh_module_reminders_container));
+        binding.actionVehicleRecords.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_vehicle),
+                getString(R.string.dashboard_action_vehicle_count, stats.getVehiclesDueSoon()),
+                getString(R.string.dashboard_action_vehicle_detail), R.drawable.ic_vehicle,
+                R.color.fh_module_vehicle, R.color.fh_module_vehicle_container));
+        binding.actionPropertyRecords.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_property), getString(R.string.dashboard_action_property_value),
+                getString(R.string.dashboard_action_property_detail), R.drawable.ic_property,
+                R.color.fh_module_property, R.color.fh_module_property_container));
+        binding.actionPasswordRecords.setModel(new ActionCardModel(
+                getString(R.string.feature_menu_vault), getString(R.string.dashboard_action_vault_value),
+                getString(R.string.dashboard_action_vault_detail), R.drawable.ic_lock,
+                R.color.fh_module_vault, R.color.fh_module_vault_container));
+    }
+
     private void renderActionCards(@NonNull DashboardStats stats) {
+        renderRecordActions(stats);
         renderNotesAction(stats);
         binding.actionPlanner.setModel(new ActionCardModel(
                 getString(R.string.action_planner_title),
@@ -1013,13 +1062,14 @@ public class DashboardFragment extends Fragment {
                 currencyFormatter.format(stats.getBalance())
         );
         binding.dashboardMonthlyExpenseDetail.setText(detail);
-        financeStatusCard.setModel(new StatusCardModel(
+        financeStatusCard.setModel(overviewModel(
                 getString(R.string.status_finance),
                 currencyFormatter.format(stats.getBalance()),
                 detail,
                 R.drawable.ic_wallet
         ));
-        financeStatusCard.setValueColorBySign(stats.getBalance());
+        com.tridev.familyhub.core.ui.SemanticValueStyler.apply(
+                financeStatusCard.findViewById(R.id.action_card_primary), stats.getBalance());
     }
 
     private void renderCounts(@NonNull DashboardStats stats) {
@@ -1027,7 +1077,7 @@ public class DashboardFragment extends Fragment {
         int documents = stats.getDocuments();
         int healthRecords = stats.getHealthAlerts();
 
-        familyStatusCard.setModel(new StatusCardModel(
+        familyStatusCard.setModel(overviewModel(
                 getString(R.string.status_family),
                 getResources().getQuantityString(
                         R.plurals.dashboard_family_member_count,
@@ -1037,7 +1087,7 @@ public class DashboardFragment extends Fragment {
                 getString(R.string.status_family_ready),
                 R.drawable.ic_family
         ));
-        documentStatusCard.setModel(new StatusCardModel(
+        documentStatusCard.setModel(overviewModel(
                 getString(R.string.status_documents),
                 getResources().getQuantityString(
                         R.plurals.dashboard_document_count,
@@ -1047,7 +1097,7 @@ public class DashboardFragment extends Fragment {
                 getString(R.string.dashboard_documents_local_detail),
                 R.drawable.ic_document
         ));
-        healthStatusCard.setModel(new StatusCardModel(
+        healthStatusCard.setModel(overviewModel(
                 getString(R.string.status_health),
                 getResources().getQuantityString(
                         R.plurals.health_record_count,

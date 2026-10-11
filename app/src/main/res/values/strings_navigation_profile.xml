@@ -27,6 +27,14 @@
     <string name="feature_menu_vehicle">Vehicle</string>
     <string name="feature_menu_property">Property</string>
     <string name="feature_menu_vault">Password Vault</string>
+    <string name="dashboard_action_reminder_count">%1$d upcoming</string>
+    <string name="dashboard_action_reminder_detail">View scheduled reminders</string>
+    <string name="dashboard_action_vehicle_count">%1$d due soon</string>
+    <string name="dashboard_action_vehicle_detail">Insurance · PUC · Service</string>
+    <string name="dashboard_action_property_value">Property records</string>
+    <string name="dashboard_action_property_detail">Open property details</string>
+    <string name="dashboard_action_vault_value">Secure access</string>
+    <string name="dashboard_action_vault_detail">Open password vault</string>
     <string name="feature_menu_profile">Profile &amp; Settings</string>
     <string name="feature_menu_family_settings">Family Settings</string>
 

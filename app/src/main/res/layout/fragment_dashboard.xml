@@ -372,6 +372,79 @@
                 android:layout_weight="1" />
         </LinearLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="horizontal">
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/card_finance_status"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/card_health_status"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="horizontal">
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/card_family_status"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/card_document_status"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="horizontal">
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_reminder_entries"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_vehicle_records"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_marginTop="@dimen/space_8"
+            android:orientation="horizontal">
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_property_records"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="@dimen/space_4"
+                android:layout_weight="1" />
+            <com.tridev.familyhub.core.ui.cards.ActionCardView
+                android:id="@+id/action_password_records"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="@dimen/space_4"
+                android:layout_weight="1" />
+        </LinearLayout>
+
         </LinearLayout>
 
         <!-- Retained IDs are hidden for ViewBinding compatibility. -->
@@ -557,41 +630,6 @@
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-
-        <!-- Overview heading -->
-        <TextView
-            style="@style/TextAppearance.FamilyHub.SectionTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_20"
-            android:text="@string/dashboard_overview"
-            android:textColor="@color/fh_on_surface"
-            android:textSize="16sp" />
-
-        <!-- Reusable overview status cards -->
-        <com.tridev.familyhub.core.ui.cards.StatusCardView
-            android:id="@+id/card_finance_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8" />
-
-        <com.tridev.familyhub.core.ui.cards.StatusCardView
-            android:id="@+id/card_health_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_6" />
-
-        <com.tridev.familyhub.core.ui.cards.StatusCardView
-            android:id="@+id/card_family_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_6" />
-
-        <com.tridev.familyhub.core.ui.cards.StatusCardView
-            android:id="@+id/card_document_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_6" />
 
         <!-- Today overview heading -->
         <LinearLayout
