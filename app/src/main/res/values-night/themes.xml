@@ -25,6 +25,7 @@
         <item name="android:fontFamily">sans</item>
         <item name="materialButtonStyle">@style/Widget.FamilyHub.Button.Primary</item>
         <item name="textInputStyle">@style/Widget.FamilyHub.TextInputLayout</item>
+        <item name="viewInflaterClass">com.tridev.familyhub.core.ui.FormViewInflater</item>
         <item name="android:navigationBarColor">@color/fh_surface</item>
         <item name="android:statusBarColor">@color/fh_background</item>
         <item name="android:windowLightStatusBar">false</item>
