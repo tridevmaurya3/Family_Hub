@@ -12,6 +12,37 @@ public class ScrollableWorkspaceLayout extends LinearLayout {
 
     public ScrollableWorkspaceLayout(Context context, android.util.AttributeSet attrs) { super(context, attrs); setOrientation(VERTICAL); }
 
+    /** Notes-style single scroll stream; callers opt in after attaching their item adapter. */
+    public void makeWorkspaceScrollable(int first, android.view.ViewGroup listHost,
+            androidx.recyclerview.widget.RecyclerView list, View emptyState) {
+        LinearLayout fields = new LinearLayout(getContext());
+        fields.setOrientation(VERTICAL);
+        while (indexOfChild(listHost) > first) {
+            View child = getChildAt(first);
+            android.view.ViewGroup.LayoutParams params = child.getLayoutParams();
+            removeViewAt(first);
+            fields.addView(child, params);
+        }
+        // The empty message belongs to the same stream so an empty/filtered list
+        // never hides the quick-add controls or blocks scrolling back to them.
+        listHost.removeView(emptyState);
+        fields.addView(emptyState, new LinearLayout.LayoutParams(-1, -2));
+        androidx.recyclerview.widget.RecyclerView.Adapter<?> items = list.getAdapter();
+        if (items == null) throw new IllegalStateException("Attach the item adapter first");
+        androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder> header =
+                new androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+            @Override public androidx.recyclerview.widget.RecyclerView.ViewHolder onCreateViewHolder(
+                    android.view.ViewGroup parent, int viewType) {
+                fields.setLayoutParams(new androidx.recyclerview.widget.RecyclerView.LayoutParams(-1, -2));
+                return new androidx.recyclerview.widget.RecyclerView.ViewHolder(fields) {};
+            }
+            @Override public void onBindViewHolder(
+                    androidx.recyclerview.widget.RecyclerView.ViewHolder holder, int position) { }
+            @Override public int getItemCount() { return 1; }
+        };
+        list.setAdapter(new androidx.recyclerview.widget.ConcatAdapter(header, items));
+    }
+
     /** Wrap only controls; keep the header and weighted item list outside this scroll region. */
     public void makeControlsScrollable(int first, int end) {
         LinearLayout fields = new LinearLayout(getContext());

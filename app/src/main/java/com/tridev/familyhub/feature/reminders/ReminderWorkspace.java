@@ -85,7 +85,6 @@ public final class ReminderWorkspace {
         binding.remindersOverview.setNavigationAction(R.drawable.ic_menu_hamburger,
                 R.string.feature_menu_title, clickedView -> menu.run());
         if (floating) { binding.remindersOverview.setVisibility(View.GONE); binding.reminderDashboardSummary.setVisibility(View.GONE); }
-        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout)binding.getRoot()).makeControlsScrollable(1, ((android.view.ViewGroup)binding.getRoot()).indexOfChild(binding.reminderListHost));
         initialize();
         observedDatabase=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(context);observedDatabase.getInvalidationTracker().addObserver(localObserver);
         com.tridev.familyhub.core.ui.ScheduleDropdownView.styleFilters(binding.reminderFilterScroll);
@@ -152,6 +151,9 @@ public final class ReminderWorkspace {
 
         binding.reminderRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.reminderRecyclerView.setAdapter(reminderAdapter);
+        ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout) binding.getRoot())
+                .makeWorkspaceScrollable(1, binding.reminderListHost,
+                        binding.reminderRecyclerView, binding.remindersEmptyState);
         repository.startRealtimeSync(new ReminderRepository.RealtimeCallback() {
             @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull Reminder reminder) {
@@ -217,8 +219,15 @@ public final class ReminderWorkspace {
 
     public void add() { showReminderEditor(null); }
     public void reload() { if (binding != null) loadReminders(binding.reminderSearchInput.getText().toString()); }
-    public void toggleSearch() { if (binding != null) binding.reminderSearchLayout.setVisibility(
-            binding.reminderSearchLayout.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE); }
+    public void toggleSearch() {
+        if (binding == null) return;
+        boolean show = binding.reminderSearchLayout.getVisibility() != View.VISIBLE;
+        binding.reminderSearchLayout.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) {
+            binding.reminderRecyclerView.stopScroll();
+            ((LinearLayoutManager) binding.reminderRecyclerView.getLayoutManager()).scrollToPositionWithOffset(0, 0);
+        }
+    }
     public void setQuickControlsCollapsed(boolean collapsed) { if (binding != null && quick != null) quick.setDetailsCollapsed(collapsed); }
 
     private void loadReminders(String query) {
@@ -314,7 +323,6 @@ public final class ReminderWorkspace {
         visibleReminders.clear();
         visibleReminders.addAll(filtered);
         boolean empty = filtered.isEmpty();
-        binding.reminderRecyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
         binding.remindersEmptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         binding.reminderPeriodFilter.setText(filterLabel(periodFilter, "All dates"));
         binding.reminderPriorityFilter.setText(filterLabel(priorityFilter, "Priority"));
