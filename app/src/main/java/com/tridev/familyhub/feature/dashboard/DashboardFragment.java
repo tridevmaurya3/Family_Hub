@@ -71,6 +71,7 @@ public class DashboardFragment extends Fragment {
             "action_center_expanded";
 
     private FragmentDashboardBinding binding;
+    private final com.tridev.familyhub.feature.profile.AccountProfileSync.Listener profileListener = () -> { if(binding!=null && isAdded()) renderHeader(); };
     private int selectedCategory = R.id.dashboard_category_planning;
     private DashboardRepository dashboardRepository;
     @Nullable private FamilyTaskRepository taskRepository;
@@ -160,6 +161,15 @@ public class DashboardFragment extends Fragment {
         binding.dashboardCardsPlanning.setVisibility(!location && !assets ? View.VISIBLE : View.GONE);
         binding.dashboardCardsLocation.setVisibility(location ? View.VISIBLE : View.GONE);
         binding.dashboardCardsAssets.setVisibility(assets ? View.VISIBLE : View.GONE);
+        for (int id : new int[]{R.id.dashboard_category_planning,R.id.dashboard_category_location,R.id.dashboard_category_assets}) {
+            com.google.android.material.button.MaterialButton tab=binding.getRoot().findViewById(id);
+            boolean selected=id==selectedCategory;
+            tab.setBackgroundTintList(android.content.res.ColorStateList.valueOf(androidx.core.content.ContextCompat.getColor(requireContext(), selected?R.color.fh_surface_container:R.color.fh_surface)));
+            tab.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), selected?R.color.fh_primary:R.color.fh_on_surface));
+            tab.setTypeface(null,selected?android.graphics.Typeface.BOLD:android.graphics.Typeface.NORMAL);
+            tab.setInsetTop(0); tab.setInsetBottom(0);
+        }
+        ((View)binding.dashboardCategoryTabs.getParent()).invalidate();
         binding.dashboardCategoryCount.setText(getString(R.string.dashboard_category_count, assets ? 5 : 7));
         binding.dashboardCategoryTitle.setText(assets ? R.string.dashboard_category_assets
                 : location ? R.string.dashboard_category_location : R.string.dashboard_category_planning);
@@ -262,7 +272,7 @@ public class DashboardFragment extends Fragment {
 
         String greeting = getString(greetingResId);
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String name = user == null ? null : user.getDisplayName();
+        String name = com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).displayName();
         if (name != null && !name.trim().isEmpty()) {
             String firstName = name.trim().split("\\s+")[0];
             greeting = greeting + ", " + firstName;
@@ -284,12 +294,14 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
+        com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).addListener(profileListener);
         headerClockHandler.removeCallbacks(headerClockTick);
         headerClockHandler.post(headerClockTick);
     }
 
     @Override
     public void onStop() {
+        com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).removeListener(profileListener);
         headerClockHandler.removeCallbacks(headerClockTick);
         super.onStop();
     }

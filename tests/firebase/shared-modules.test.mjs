@@ -126,3 +126,43 @@ for (const module of ['planner', 'reminders', 'notes', 'finance', 'tasks', 'heal
 test('unknown module rejected', async () => {
   await assertFails(env.authenticatedContext(writer).database().ref('sharedModules/familyA/unknown/record').update(item('notes')));
 });
+
+test('account profile: same-account realtime photo/name and isolated access', { timeout: 45000 }, async () => {
+  const uid='profile-owner';
+  await env.withSecurityRulesDisabled(async context => {
+    await context.database().ref(`users/${uid}`).set({uid,displayName:'Before',familyId:'profileFamily',role:'OWNER_ADMIN'});
+  });
+  const first=env.authenticatedContext(uid).database().ref(`users/${uid}`);
+  const second=env.authenticatedContext(uid).database().ref(`users/${uid}`);
+  const feed=stream(second);
+  try {
+    await feed.until(s=>s.val()?.displayName==='Before');
+    await assertSucceeds(first.update({displayName:'Updated name',accountPhoto:'small-compressed-photo',profileSyncVersion:1}));
+    const snapshot=await feed.until(s=>s.val()?.displayName==='Updated name' && s.val()?.accountPhoto==='small-compressed-photo');
+    assert.equal(snapshot.val().familyId,'profileFamily');
+    await assertFails(env.authenticatedContext(reader).database().ref(`users/${uid}`).once('value'));
+    await assertFails(env.authenticatedContext(reader).database().ref(`users/${uid}/accountPhoto`).set('forged'));
+    await assertFails(first.child('accountPhoto').set('x'.repeat(64001)));
+    await assertSucceeds(first.child('accountPhoto').set(''));
+    await feed.until(s=>s.child('accountPhoto').val()==='');
+    const migration=await first.child('accountPhoto').transaction(value=>value===null?'old-device-photo':undefined);
+    assert.equal(migration.committed,false,'removed photo must not be restored by an older local cache');
+  } finally {feed.close();}
+});
+
+test('own membership name can change without granting role or other-member edits', async () => {
+  const family='profileFamily', owner='profile-owner', member='profile-member';
+  await env.withSecurityRulesDisabled(async context => {
+    await context.database().ref(`families/${family}`).set({familyId:family,name:'Profile family',ownerUid:owner});
+    await context.database().ref(`memberships/${family}`).set({
+      [owner]:{uid:owner,displayName:'Owner',role:'OWNER_ADMIN',status:'ACTIVE'},
+      [member]:{uid:member,displayName:'Member',role:'ADULT_MEMBER',status:'ACTIVE'}
+    });
+  });
+  const db=env.authenticatedContext(member).database();
+  await assertSucceeds(db.ref(`memberships/${family}/${member}/displayName`).set('New member name'));
+  await assertFails(db.ref(`memberships/${family}/${member}/role`).set('OWNER_ADMIN'));
+  await assertFails(db.ref(`memberships/${family}/${owner}/displayName`).set('Other name'));
+  await assertFails(db.ref(`memberships/${family}/${member}/displayName`).set(''));
+  await assertFails(db.ref(`memberships/${family}/${member}/email`).set('changed@example.com'));
+});

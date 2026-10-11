@@ -47,10 +47,26 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     private com.google.android.material.button.MaterialButton editFamilyButton;
     private com.google.firebase.database.DatabaseReference familyReference;
     private com.google.firebase.database.ValueEventListener familyListener;
+    private com.google.firebase.database.DatabaseReference membershipReference;
+    private com.google.firebase.database.ValueEventListener membershipListener;
     private String currentFamilyId = "";
     private String profileUid = "";
     private boolean canEditFamily;
-    private boolean nameInitialized;
+    private boolean nameInitialized, nameDirty, applyingCloudName;
+    private TextView syncStatus;
+    private final AccountProfileSync.Listener profileListener = () -> renderSyncedProfile();
+
+    private void renderSyncedProfile() {
+        if (nameInput == null || isFinishing() || isDestroyed()) return;
+        AccountProfileSync sync=AccountProfileSync.get(this);
+        if (!nameDirty && !sync.displayName().isEmpty()) {
+            applyingCloudName=true; nameInput.setText(sync.displayName()); applyingCloudName=false; nameInitialized=true;
+        }
+        FirebaseUser signedIn=FirebaseAuth.getInstance().getCurrentUser();
+        if (signedIn!=null && emailView!=null) emailView.setText(safeText(signedIn.getEmail()));
+        syncStatus.setText(sync.status());
+        renderProfilePhoto();
+    }
 
     private final ActivityResultLauncher<String> photoPicker =
             registerForActivityResult(
@@ -59,15 +75,11 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
                         if (uri == null) {
                             return;
                         }
-                        if (ProfilePhotoStore.save(this, uri)) {
-                            renderProfilePhoto();
-                        } else {
-                            Toast.makeText(
-                                    this,
-                                    R.string.profile_photo_error,
-                                    Toast.LENGTH_LONG
-                            ).show();
-                        }
+                        AccountProfileSync.get(this).savePhoto(uri, (success, message) -> {
+                            if (isFinishing() || isDestroyed()) return;
+                            Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                            renderSyncedProfile();
+                        });
                     }
             );
 
@@ -81,6 +93,12 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
 
         profilePhoto = findViewById(R.id.imageProfilePhoto);
         nameInput = findViewById(R.id.inputProfileName);
+        syncStatus = findViewById(R.id.textProfileSyncStatus);
+        nameInput.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s,int start,int count,int after) { }
+            public void onTextChanged(CharSequence s,int start,int before,int count) { if (!applyingCloudName && nameInput.hasFocus()) nameDirty=true; }
+            public void afterTextChanged(android.text.Editable s) { }
+        });
         emailView = findViewById(R.id.textProfileEmail);
         familyView = findViewById(R.id.textProfileFamily);
         roleView = findViewById(R.id.textProfileRole);
@@ -99,13 +117,9 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
         findViewById(R.id.buttonProfileChangePhoto).setOnClickListener(v ->
                 photoPicker.launch("image/*"));
         findViewById(R.id.buttonProfileRemovePhoto).setOnClickListener(v -> {
-            ProfilePhotoStore.remove(this);
-            renderProfilePhoto();
-            Toast.makeText(
-                    this,
-                    R.string.profile_photo_removed,
-                    Toast.LENGTH_SHORT
-            ).show();
+            AccountProfileSync.get(this).removePhoto((success,message) -> {
+                if (!isFinishing() && !isDestroyed()) Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+            });
         });
         findViewById(R.id.buttonProfileSave).setOnClickListener(v ->
                 saveProfile());
@@ -127,6 +141,7 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         attachStableThemeListener();
+        AccountProfileSync.get(this).addListener(profileListener);
         loadProfile();
     }
 
@@ -139,6 +154,8 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     }
 
     @Override protected void onStop() {
+        AccountProfileSync.get(this).removeListener(profileListener);
+        detachMembershipListener();
         detachFamilyListener();
         super.onStop();
     }
@@ -226,6 +243,7 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
             return;
         }
 
+        detachMembershipListener();
         detachFamilyListener();
         currentFamilyId = "";
         profileUid = user.getUid();
@@ -267,30 +285,29 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
             @NonNull FirebaseUser user,
             @NonNull String familyId
     ) {
-        FirebaseDatabase.getInstance().getReference()
-                .child("memberships")
-                .child(familyId)
-                .child(user.getUid())
-                .get()
-                .addOnSuccessListener(membership -> {
-                    String memberName = stringValue(
-                            membership.child("displayName")
-                    );
-                    if ((nameInput.getText() == null
-                            || nameInput.getText().toString().trim().isEmpty())
-                            && !memberName.isEmpty()) {
-                        nameInput.setText(memberName);
-                    }
-                    roleView.setText(readableRole(stringValue(
-                            membership.child("role")
-                    )));
-                    loadFamilyName(familyId);
-                })
-                .addOnFailureListener(error -> {
-                    progress.setVisibility(View.GONE);
-                    roleView.setText(R.string.profile_unknown);
-                    familyView.setText(familyId);
-                });
+        membershipReference=FirebaseDatabase.getInstance().getReference()
+                .child("memberships").child(familyId).child(user.getUid());
+        membershipListener=new com.google.firebase.database.ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot membership) {
+                if (isFinishing() || isDestroyed()) return;
+                String memberName=stringValue(membership.child("displayName"));
+                if (!nameDirty && (nameInput.getText()==null || nameInput.getText().toString().trim().isEmpty()) && !memberName.isEmpty()) {
+                    applyingCloudName=true;nameInput.setText(memberName);applyingCloudName=false;
+                }
+                roleView.setText(readableRole(stringValue(membership.child("role"))));
+                loadFamilyName(familyId);
+            }
+            @Override public void onCancelled(@NonNull com.google.firebase.database.DatabaseError error) {
+                if (isFinishing() || isDestroyed()) return;
+                progress.setVisibility(View.GONE); roleView.setText(R.string.profile_unknown);familyView.setText(familyId);
+            }
+        };
+        membershipReference.addValueEventListener(membershipListener);
+    }
+
+    private void detachMembershipListener() {
+        if(membershipReference!=null && membershipListener!=null)membershipReference.removeEventListener(membershipListener);
+        membershipReference=null;membershipListener=null;
     }
 
     private void loadFamilyName(@NonNull String familyId) {
@@ -381,28 +398,13 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
 
         progress.setVisibility(View.VISIBLE);
         findViewById(R.id.buttonProfileSave).setEnabled(false);
-        UserProfileChangeRequest request = new UserProfileChangeRequest.Builder()
-                .setDisplayName(displayName)
-                .build();
-        user.updateProfile(request)
-                .addOnSuccessListener(unused -> {
-                    progress.setVisibility(View.GONE);
-                    findViewById(R.id.buttonProfileSave).setEnabled(true);
-                    Toast.makeText(
-                            this,
-                            R.string.profile_saved,
-                            Toast.LENGTH_SHORT
-                    ).show();
-                })
-                .addOnFailureListener(error -> {
-                    progress.setVisibility(View.GONE);
-                    findViewById(R.id.buttonProfileSave).setEnabled(true);
-                    Toast.makeText(
-                            this,
-                            R.string.profile_save_error,
-                            Toast.LENGTH_LONG
-                    ).show();
-                });
+        AccountProfileSync.get(this).saveName(displayName, (success,message) -> {
+            if (isFinishing() || isDestroyed()) return;
+            progress.setVisibility(View.GONE);
+            findViewById(R.id.buttonProfileSave).setEnabled(true);
+            if (success) { nameDirty=false; renderSyncedProfile(); }
+            Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+        });
     }
 
     private void openNotificationSettings() {

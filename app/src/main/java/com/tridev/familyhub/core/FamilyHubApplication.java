@@ -57,6 +57,7 @@ public class FamilyHubApplication extends Application {
         ProfileAppSecurityInjector.register(this);
 
         enableFirebaseOfflinePersistence();
+        com.tridev.familyhub.feature.profile.AccountProfileSync.get(this);
         GroceryRecurrenceEngine.register(this);
         GroceryProfessionalUiBinder.register(this);
         GroceryListCalendarUiBinder.register(this);

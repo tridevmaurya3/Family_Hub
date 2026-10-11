@@ -48,7 +48,11 @@ public final class ProfilePhotoStore {
 
     @Nullable
     public static Bitmap load(@NonNull Context context) {
-        File file = photoFile(context);
+        return load(context, accountUid());
+    }
+
+    public static Bitmap load(Context context, String uid) {
+        File file = photoFile(context, uid);
         if (!file.exists()) {
             return null;
         }
@@ -61,8 +65,7 @@ public final class ProfilePhotoStore {
         }
 
         int sample = 1;
-        while (bounds.outWidth / (sample * 2) >= TARGET_SIZE
-                && bounds.outHeight / (sample * 2) >= TARGET_SIZE) {
+        while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= TARGET_SIZE) {
             sample *= 2;
         }
         BitmapFactory.Options options = new BitmapFactory.Options();
@@ -81,12 +84,33 @@ public final class ProfilePhotoStore {
 
     @NonNull
     private static File photoFile(@NonNull Context context) {
+        return photoFile(context, accountUid());
+    }
+
+    private static String accountUid() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String account = user == null ? "guest" : user.getUid();
+        return user == null ? "guest" : user.getUid();
+    }
+
+    private static File photoFile(Context context, String account) {
         String safeAccount = account.replaceAll("[^A-Za-z0-9_-]", "_");
-        return new File(
-                context.getFilesDir(),
-                "family_hub_profile_" + safeAccount + ".jpg"
-        );
+        return new File(context.getFilesDir(), "family_hub_profile_" + safeAccount + ".jpg");
+    }
+
+    /** Atomically replace only this account's local cache; an empty value is a removal. */
+    static boolean applyCloud(Context context, String uid, String encoded) {
+        File file = photoFile(context, uid);
+        if (encoded.isEmpty()) return !file.exists() || file.delete();
+        if (encoded.length() > 64000) return false;
+        File temp = new File(file.getPath() + ".tmp");
+        try {
+            byte[] bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT);
+            BitmapFactory.Options bounds = new BitmapFactory.Options(); bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0 || bounds.outWidth > 640 || bounds.outHeight > 640) return false;
+            try (FileOutputStream out = new FileOutputStream(temp)) { out.write(bytes); }
+            return temp.renameTo(file);
+        } catch (Exception error) { return false; }
+        finally { if (temp.exists()) temp.delete(); }
     }
 }
