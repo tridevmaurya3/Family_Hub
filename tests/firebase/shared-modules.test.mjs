@@ -36,6 +36,15 @@ before(async () => {
 });
 after(async () => { if (env) await env.cleanup(); });
 
+test('live tracking disconnect cleanup is registered after the owned session exists', { timeout: 45000 }, async () => {
+  const ref = env.authenticatedContext(reader).database().ref('liveTrackingSessions/familyA/disconnect-order');
+  await assertFails(ref.onDisconnect().remove());
+  await assertSucceeds(ref.set({ viewerUid: reader, active: true, requestedAt: 1000, ttlMs: 15000, mode: 'MAP_VISIBLE' }));
+  await assertSucceeds(ref.onDisconnect().remove());
+  await ref.onDisconnect().cancel();
+  await assertSucceeds(ref.remove());
+});
+
 test('family profiles: retried payload remains realtime and preserves existing write roles', { timeout: 45000 }, async t => {
   const path = 'familyProfiles/familyA/retry-profile';
   const owner = env.authenticatedContext('profile-owner').database().ref(path);

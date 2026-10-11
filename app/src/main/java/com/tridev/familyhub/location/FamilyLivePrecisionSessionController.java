@@ -35,6 +35,7 @@ public final class FamilyLivePrecisionSessionController {
     private DatabaseReference sessionReference;
     private boolean stopped;
     private int generation;
+    private boolean disconnectRegistered;
 
     private final Runnable heartbeatRunnable = new Runnable() {
         @Override
@@ -93,7 +94,6 @@ public final class FamilyLivePrecisionSessionController {
                             .child("liveTrackingSessions")
                             .child(familyId.trim())
                             .child(sessionId);
-                    sessionReference.onDisconnect().removeValue();
 
                     publishSession(
                             continuous
@@ -147,6 +147,7 @@ public final class FamilyLivePrecisionSessionController {
         mainHandler.removeCallbacksAndMessages(null);
         DatabaseReference reference = sessionReference;
         sessionReference = null;
+        disconnectRegistered = false;
         if (reference != null) {
             reference.onDisconnect().cancel();
             reference.removeValue();
@@ -172,7 +173,18 @@ public final class FamilyLivePrecisionSessionController {
                 "mode",
                 FamilyLivePrecisionPolicy.sanitizeMode(mode)
         );
-        reference.setValue(values);
+        int requestGeneration = generation;
+        String viewerUid = user.getUid();
+        reference.setValue(values).addOnSuccessListener(unused -> {
+            FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+            if (stopped || requestGeneration != generation || reference != sessionReference
+                    || current == null || !viewerUid.equals(current.getUid()) || disconnectRegistered) return;
+            // Deletion permission requires this viewer's session to exist first.
+            disconnectRegistered = true;
+            reference.onDisconnect().removeValue().addOnFailureListener(error -> {
+                if (requestGeneration == generation && reference == sessionReference) disconnectRegistered = false;
+            });
+        });
     }
 
     private void requestOwnFreshLocation() {
