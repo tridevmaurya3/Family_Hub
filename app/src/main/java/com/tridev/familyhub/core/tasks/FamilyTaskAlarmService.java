@@ -12,7 +12,7 @@ import com.tridev.familyhub.data.local.entity.FamilyTask;
 /** Bounded local ringing session; task scheduling and cloud data remain in their existing paths. */
 public final class FamilyTaskAlarmService extends Service {
     public static final String CLOSED = "com.tridev.familyhub.TASK_ALARM_CLOSED";
-    private static final String CHANNEL = "family_task_alarm_screen";
+    private static final String CHANNEL = "family_task_alarm_screen_v2";
     private static final String STOP = "stop";
     private static volatile long ringingId;
     private MediaPlayer player;
@@ -26,9 +26,27 @@ public final class FamilyTaskAlarmService extends Service {
     static Intent alarmIntent(Context context, FamilyTask task, int stage, long occurrence) {
         return new Intent(context, FamilyTaskAlarmService.class)
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, task.id).putExtra("title", task.title)
-                .putExtra("notes", com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks.decode(task.notes).notes)
+                .putExtra("notes", taskDetails(task))
                 .putExtra("time", occurrence).putExtra("stage", stage);
     }
+    private static String taskDetails(FamilyTask task) {
+        com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks.Content content =
+                com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks.decode(task.notes);
+        StringBuilder details = new StringBuilder(content.notes);
+        for (int i = 0; i < content.items.size(); i++) {
+            if (details.length() > 0) details.append("\n");
+            details.append(i + 1).append(". ").append((i < content.completed.size() && Boolean.TRUE.equals(content.completed.get(i))) ? "✓ " : "☐ ")
+                    .append(content.items.get(i));
+        }
+        return details.toString();
+    }
+    public static boolean fullScreenChannelReady(Context context) {
+        ensureChannel(context);
+        NotificationManager manager = context.getSystemService(NotificationManager.class);
+        NotificationChannel channel = manager == null ? null : manager.getNotificationChannel(CHANNEL);
+        return channel != null && channel.getImportance() >= NotificationManager.IMPORTANCE_HIGH;
+    }
+    public static String alarmChannel() { return CHANNEL; }
     static boolean canRing(Context context) {
         ensureChannel(context);
         NotificationManager manager = context.getSystemService(NotificationManager.class);
@@ -40,7 +58,10 @@ public final class FamilyTaskAlarmService extends Service {
         if (manager == null) return;
         NotificationChannel channel = new NotificationChannel(CHANNEL, "To-Do alarms", NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Ringing To-Do alarms with full-screen controls");
-        channel.setSound(null, null); manager.createNotificationChannel(channel);
+        channel.setSound(null, null);
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[]{0, 300, 150, 300});
+        manager.createNotificationChannel(channel);
     }
     public static boolean fullScreenAllowed(Context context) {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
@@ -70,13 +91,27 @@ public final class FamilyTaskAlarmService extends Service {
                 .setData(Uri.parse("familyhub://task-alarm/" + id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent open = PendingIntent.getActivity(this, FamilyTaskScheduler.notificationId(id), screen,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Intent chooser = new Intent(screen).setClass(this, FamilyTaskSnoozeActivity.class).putExtra("snooze_only", true)
+                .setData(Uri.parse("familyhub://task-snooze/" + id));
+        PendingIntent choose = PendingIntent.getActivity(this, FamilyTaskScheduler.notificationId(id) ^ 0x116611,
+                chooser, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+                .format(new java.util.Date(intent.getLongExtra("time", System.currentTimeMillis())));
+        String detail = getString(intent.getIntExtra("stage", 1) == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due)
+                + "\n" + when;
+        String notes = intent.getStringExtra("notes");
+        if (notes != null && !notes.isEmpty()) detail += "\n" + notes;
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle(intent.getStringExtra("title"))
-                .setContentText(getString(intent.getIntExtra("stage", 1) == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due)).setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setContentText(detail).setStyle(new NotificationCompat.BigTextStyle().bigText(detail)).setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX).setOngoing(true).setContentIntent(open)
-                .addAction(0, getString(R.string.task_alarm_snooze10), action(this, id, FamilyTaskReceiver.ACTION_SNOOZE, 10))
-                .addAction(0, getString(R.string.task_alarm_dismiss), action(this, id, FamilyTaskReceiver.ACTION_DISMISS, 0));
-        if (fullScreenAllowed(this)) builder.setFullScreenIntent(open, true);
+                .addAction(0, getString(R.string.task_alarm_snooze_choose), choose)
+                .addAction(0, getString(R.string.task_alarm_dismiss), action(this, id, FamilyTaskReceiver.ACTION_DISMISS, 0))
+                .addAction(0, getString(R.string.family_tasks_notification_complete), action(this, id, FamilyTaskReceiver.ACTION_COMPLETE, 0));
+        PowerManager power = getSystemService(PowerManager.class);
+        KeyguardManager keyguard = getSystemService(KeyguardManager.class);
+        boolean lockedOrOff = (power != null && !power.isInteractive()) || (keyguard != null && keyguard.isKeyguardLocked());
+        if (lockedOrOff && fullScreenAllowed(this) && fullScreenChannelReady(this)) builder.setFullScreenIntent(open, true);
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(FamilyTaskScheduler.notificationId(id), builder.build(),
                     android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);

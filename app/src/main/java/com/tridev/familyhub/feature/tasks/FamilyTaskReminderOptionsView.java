@@ -27,7 +27,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
     private final MaterialSwitch follow;
     private final MaterialButton notificationAccess;
     private final MaterialButton exactAccess;
-    private MaterialButton fullScreenAccess;
+    private MaterialButton fullScreenAccess, alarmChannelAccess;
     private int leadIndex = 3;
     private int modeIndex;
     private static final int[] MINUTES = {-1, 0, 5, 15, 30, 60, 1440};
@@ -94,6 +94,11 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         fullScreenAccess.setAllCaps(false); fullScreenAccess.setCornerRadius((int)(16 * getResources().getDisplayMetrics().density));
         LinearLayout detailBody = (LinearLayout) findViewById(R.id.reminder_permission_detail).getParent();
         detailBody.addView(fullScreenAccess, new LayoutParams(-1, -2));
+        alarmChannelAccess = new MaterialButton(themed); alarmChannelAccess.setAllCaps(false);
+        alarmChannelAccess.setText(R.string.task_alarm_channel_access); detailBody.addView(alarmChannelAccess, new LayoutParams(-1, -2));
+        alarmChannelAccess.setOnClickListener(v -> openSettings(new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, themed.getPackageName())
+                .putExtra(Settings.EXTRA_CHANNEL_ID, com.tridev.familyhub.core.tasks.FamilyTaskAlarmService.alarmChannel())));
         android.widget.TextView alarmHelp = new android.widget.TextView(themed);
         alarmHelp.setText(R.string.task_alarm_access_detail); alarmHelp.setTextSize(11); detailBody.addView(alarmHelp);
         fullScreenAccess.setOnClickListener(v -> {
@@ -103,6 +108,8 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         refreshAccess();
     }
     private void refreshAccess() {
+        if (alarmChannelAccess != null) alarmChannelAccess.setVisibility(
+                com.tridev.familyhub.core.tasks.FamilyTaskAlarmService.fullScreenChannelReady(getContext()) ? GONE : VISIBLE);
         if (fullScreenAccess != null) {
             boolean allowed = com.tridev.familyhub.core.tasks.FamilyTaskAlarmService.fullScreenAllowed(getContext());
             fullScreenAccess.setText(allowed ? R.string.task_alarm_access_ready : R.string.task_alarm_access);

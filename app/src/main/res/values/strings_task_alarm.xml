@@ -11,4 +11,16 @@
     <string name="task_alarm_access">Enable full-screen To-Do alarms</string>
     <string name="task_alarm_access_ready">Full-screen alarms enabled</string>
     <string name="task_alarm_access_detail">At the due time, To-Do alarms ring with Snooze and Stop controls. Allow full-screen access and exact alarms for timely alerts. Android may show a banner while you are using the phone.</string>
+    <string name="task_alarm_snooze_choose">Snooze ▾</string>
+    <string name="task_alarm_snooze_label">Snooze duration</string>
+    <string name="task_alarm_snooze_apply">Snooze</string>
+    <string name="task_alarm_channel_access">Allow pop-up / lock-screen To-Do alarms</string>
+    <string-array name="task_alarm_snooze_times">
+        <item>5 minutes</item><item>10 minutes</item><item>15 minutes</item><item>30 minutes</item>
+        <item>1 hour</item><item>5 hours</item><item>1 day (24 hours)</item>
+    </string-array>
+    <style name="Theme.FamilyHub.AlarmSnooze" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/fh_primary</item>
+        <item name="android:windowCloseOnTouchOutside">true</item>
+    </style>
 </resources>

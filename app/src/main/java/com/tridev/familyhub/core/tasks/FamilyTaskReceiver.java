@@ -62,7 +62,7 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 }
                 if (ACTION_SNOOZE.equals(action)) {
                     NotificationManagerCompat.from(app).cancel(FamilyTaskScheduler.notificationId(id));
-                    FamilyTaskScheduler.snooze(app, task, Math.max(1, Math.min(60, intent.getIntExtra("minutes", 10))) * 60000L); return;
+                    FamilyTaskScheduler.snooze(app, task, Math.max(1, Math.min(1440, intent.getIntExtra("minutes", 10))) * 60000L); return;
                 }
                 synchronized (DELIVERY_LOCK) {
                     if (!task.reminderEnabled) { FamilyTaskScheduler.cancel(app, id); return; }
