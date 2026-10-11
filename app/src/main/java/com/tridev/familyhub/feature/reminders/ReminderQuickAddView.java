@@ -35,6 +35,7 @@ final class ReminderQuickAddView extends LinearLayout {
             reminder.category=category.getText().toString();reminder.priority=priority.getText().toString();reminder.isShared="Shared".equals(sharing.getText().toString());
             saving=true;add.setEnabled(false);save.accept(reminder);
         }); add.setContentDescription("Quick add reminder"); top.addView(add,new LayoutParams(ReminderPanels.dp(c,48),ReminderPanels.dp(c,56)));
+        ScheduleDropdownView.alignQuickRow(titleField, repeatField, add, "Reminder title");
         TextInputLayout noteField=field("Notes / details",false);note=noteField.getEditText();addView(noteField,new LayoutParams(-1,-2));
         LinearLayout timing=row(); date=button("",()->{
             android.app.DatePickerDialog picker=new android.app.DatePickerDialog(c,(view,y,m,d)->{when.set(y,m,d);refreshTime();},when.get(Calendar.YEAR),when.get(Calendar.MONTH),when.get(Calendar.DAY_OF_MONTH));show(picker);

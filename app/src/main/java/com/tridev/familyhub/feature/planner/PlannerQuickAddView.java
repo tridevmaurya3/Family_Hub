@@ -33,6 +33,7 @@ final class PlannerQuickAddView extends LinearLayout {
             PlannerItem reminder=draft();
             saving=true;add.setEnabled(false);save.accept(reminder);
         }); add.setContentDescription("Quick add planner item"); top.addView(add,new LayoutParams(PlannerPanels.dp(c,48),PlannerPanels.dp(c,56)));
+        ScheduleDropdownView.alignQuickRow(titleField, repeatField, add, "Plan title");
         TextInputLayout noteField=field("Notes / details",false);note=noteField.getEditText();addView(noteField,new LayoutParams(-1,-2));
         LinearLayout timing=row(); date=button("",()->{
             android.app.DatePickerDialog picker=new android.app.DatePickerDialog(c,(view,y,m,d)->{when.set(y,m,d);refreshTime();},when.get(Calendar.YEAR),when.get(Calendar.MONTH),when.get(Calendar.DAY_OF_MONTH));show(picker);
