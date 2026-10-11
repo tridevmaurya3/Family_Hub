@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +28,7 @@ import java.util.concurrent.Executors;
 
 /** Offline-first, idempotent realtime boundary for Family To-Do. */
 public final class FamilyTaskRepository {
+    private final String scopeUid = AccountDataScope.uid();
     public interface ItemsCallback { void onLoaded(@NonNull List<FamilyTask> tasks); }
     public interface ActionCallback { void onComplete(); }
     public interface RealtimeCallback {
@@ -50,6 +53,7 @@ public final class FamilyTaskRepository {
 
     public void loadAll(@NonNull String query, @NonNull ItemsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String clean = query.trim();
             List<FamilyTask> tasks = clean.isEmpty() ? dao.getAll() : dao.search(clean);
             for (FamilyTask task : tasks) task.priority = normalizePriority(task.priority);
@@ -60,7 +64,7 @@ public final class FamilyTaskRepository {
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
         retryPending();
-        subscriber = new FamilyCollaborationSubscriber("tasks",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "tasks",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                                                     @NonNull DataSnapshot snapshot) {
@@ -69,6 +73,7 @@ public final class FamilyTaskRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             FamilyTask local = dao.getByCloudId(cloudId);
                             if (local == null) return;
                             long id = local.id;
@@ -91,6 +96,7 @@ public final class FamilyTaskRepository {
 
     public void save(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             // Preserve one canonical identity across Add/Edit and across devices.
             // Existing Room identity wins first; cloudId then makes detached/replayed saves idempotent.
             FamilyTask byId = task.id == 0L ? null : dao.getById(task.id);
@@ -138,6 +144,7 @@ public final class FamilyTaskRepository {
     public void setCompleted(@NonNull FamilyTask task, boolean completed,
                              @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             boolean wasCompleted = FamilyTask.STATUS_COMPLETED.equals(task.status);
             long now = System.currentTimeMillis();
             long previousCompletedAt = task.completedAt;
@@ -184,7 +191,7 @@ public final class FamilyTaskRepository {
                 } else if (next != null
                         && FamilyTask.STATUS_PENDING.equals(next.status)
                         && next.createdAt == previousCompletedAt) {
-                    FamilyCollaborationPublisher.remove(
+                    FamilyCollaborationPublisher.remove(scopeUid,
                             "tasks", next.familyId, next.cloudId);
                     dao.delete(next);
                 }
@@ -248,6 +255,7 @@ public final class FamilyTaskRepository {
 
     public void delete(@NonNull FamilyTask task, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
             String actorUid = user == null ? "" : user.getUid();
             String actorName = displayName();
@@ -281,12 +289,13 @@ public final class FamilyTaskRepository {
         values.put("deletedByName", actorName);
         values.put("collaborationStatus", "DELETED");
         values.put("updatedByName", actorName);
-        FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "tasks", task.cloudId, values,
                 (cloudId, familyId, uid) -> { });
     }
 
     private void retryPending() {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (FamilyTask task : dao.getPendingShared()) publish(task);
         });
     }
@@ -316,22 +325,25 @@ public final class FamilyTaskRepository {
         values.put("linkedGroceryCloudId", task.linkedGroceryCloudId);
         values.put("linkedGroceryItemId", task.linkedGroceryItemId);
         values.put("shared", true);
-        FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "tasks", task.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    task.cloudId = cloudId;
-                    task.familyId = familyId;
-                    task.updatedByUid = uid;
-                    dao.update(task);
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
+                    FamilyTask current = dao.getByCloudId(cloudId);
+                    if (current == null) return;
+                    current.familyId = familyId;
+                    current.updatedByUid = uid;
+                    dao.update(current);
                     // Link metadata is a separate partial write so ordinary task edits
                     // can never overwrite a newer Finance/Loan reference from another device.
-                    linkRepository.promoteIfNeeded(task);
-                    activityRepository.promoteLocalHistoryForTask(task);
+                    linkRepository.promoteIfNeeded(current);
+                    activityRepository.promoteLocalHistoryForTask(current);
                 }));
     }
 
     private void mergeRemote(@NonNull String familyId, @NonNull DataSnapshot s,
                              @NonNull RealtimeCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId = text(s, "cloudId");
             if (cloudId.isEmpty()) return;
 

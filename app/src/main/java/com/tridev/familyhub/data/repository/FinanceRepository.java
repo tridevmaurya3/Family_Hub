@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -41,6 +43,8 @@ import java.util.concurrent.Executors;
 
 /** Data boundary for the offline finance feature. */
 public class FinanceRepository {
+    private final String scopeUid = AccountDataScope.uid();
+    private boolean currentAccount() { return !scopeUid.isEmpty() && scopeUid.equals(AccountDataScope.uid()); }
 
     public interface EntriesCallback {
         void onEntriesLoaded(List<FinanceEntry> entries);
@@ -78,6 +82,7 @@ public class FinanceRepository {
 
     public void loadEntries(@NonNull String searchQuery, @NonNull EntriesCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             GroceryRepository.reconcileFinanceLinksNow(appContext);
             List<FinanceEntry> entries = searchQuery.trim().isEmpty()
                     ? financeEntryDao.getAll()
@@ -94,6 +99,7 @@ public class FinanceRepository {
     public void loadCurrentMonthSummary(@NonNull SummaryCallback callback) {
         String monthPrefix = new SimpleDateFormat("yyyy-MM", Locale.US).format(new Date());
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             MoneyManagerFinanceSummaryBridge.Summary master =
                     MoneyManagerFinanceSummaryBridge.loadCurrentMonth(appContext);
             FinanceSummary summary;
@@ -112,6 +118,7 @@ public class FinanceRepository {
 
     public void save(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             entry.updatedAt = System.currentTimeMillis();
             ensureAccount(entry.accountName);
             prepareRecurrenceMetadata(entry);
@@ -141,6 +148,7 @@ public class FinanceRepository {
 
     public void loadAccounts(@NonNull AccountsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<FinanceAccount> accounts = financeAccountDao.getActiveWithBalances();
             mainHandler.post(() -> callback.onLoaded(accounts));
         });
@@ -148,6 +156,7 @@ public class FinanceRepository {
 
     public void saveAccount(@NonNull FinanceAccount account, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             account.updatedAt = System.currentTimeMillis();
             FinanceAccount existing = financeAccountDao.getByName(account.name);
             if (existing == null) financeAccountDao.insert(account);
@@ -166,6 +175,7 @@ public class FinanceRepository {
     /** Creates exactly one occurrence per recurring series for the current month. */
     public void runRecurringAutomation(@NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             Calendar today = Calendar.getInstance();
             String currentMonth = new SimpleDateFormat("yyyy-MM", Locale.US)
                     .format(today.getTime());
@@ -208,6 +218,7 @@ public class FinanceRepository {
 
     public void delete(FinanceEntry entry, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             if (isDurableExternalProjection(entry) && !safe(entry.cloudId).isEmpty()) {
                 markExternalProjectionDeleted(entry.cloudId);
             }
@@ -276,6 +287,7 @@ public class FinanceRepository {
         new FamilyAccountRepository().loadSession(
                 new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
                     @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
+                        if (!currentAccount()) return;
                         if (requestGeneration != sharedSyncGeneration) return;
                         if (state == null || !state.isActive() || state.familyId == null) return;
                         attachSharedListener(state.familyId, onChanged);
@@ -294,37 +306,20 @@ public class FinanceRepository {
     }
 
     private void publishShared(@NonNull FinanceEntry entry) {
-        if (isDurableExternalProjection(entry)
-                && isExternalProjectionDeleted(entry.cloudId)) return;
+        if (!currentAccount() || (isDurableExternalProjection(entry) && isExternalProjectionDeleted(entry.cloudId))) return;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) return;
-        new FamilyAccountRepository().loadSession(
-                new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
-                    @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
-                        if (state == null || !state.isActive() || state.familyId == null) return;
-                        if (isDurableExternalProjection(entry)
-                                && isExternalProjectionDeleted(entry.cloudId)) return;
-                        entry.familyId = state.familyId;
-                        entry.updatedByUid = user.getUid();
-                        String displayName = user.getDisplayName();
-                        entry.updatedByName = displayName == null || displayName.trim().isEmpty()
-                                ? "Family member" : displayName.trim();
-                        Map<String, Object> values = toCloudValues(entry);
-                        FirebaseDatabase.getInstance().getReference()
-                                .child("sharedModules").child(state.familyId)
-                                .child("finance").child(entry.cloudId).setValue(values);
-                        DATABASE_EXECUTOR.execute(() -> {
-                            if (!isExternalProjectionDeleted(entry.cloudId)) {
-                                FinanceEntry current = financeEntryDao.getByCloudId(entry.cloudId);
-                                if (current != null) {
-                                    entry.id = current.id;
-                                    financeEntryDao.update(entry);
-                                }
-                            }
-                        });
-                    }
-                    @Override public void onError(@NonNull Exception error) { }
-                });
+        entry.updatedByUid = scopeUid;
+        String displayName = user.getDisplayName();
+        entry.updatedByName = displayName == null || displayName.trim().isEmpty() ? "Family member" : displayName.trim();
+        FamilyCollaborationPublisher.publish(scopeUid,"finance",entry.cloudId,toCloudValues(entry),
+                (cloudId,familyId,uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    if (!currentAccount() || isExternalProjectionDeleted(cloudId)) return;
+                    FinanceEntry current = financeEntryDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId; current.updatedByUid = uid;
+                    financeEntryDao.update(current);
+                }));
     }
 
     private void attachSharedListener(@NonNull String familyId,
@@ -334,10 +329,14 @@ public class FinanceRepository {
         sharedEntriesReference.keepSynced(true);
         sharedEntriesListener = new ValueEventListener() {
             @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!currentAccount()) return;
                 DATABASE_EXECUTOR.execute(() -> {
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
                     boolean changed = false;
+                    if (!currentAccount()) return;
                     Set<String> remoteIds = new HashSet<>();
                     for (DataSnapshot child : snapshot.getChildren()) {
+                        if (FamilySyncOutbox.pendingDelete(scopeUid,"finance",child.getKey() == null ? "" : child.getKey())) continue;
                         FinanceEntry remote = fromSnapshot(child, familyId);
                         if (remote == null) continue;
                         if (isExternalProjectionDeleted(remote.cloudId)) {
@@ -402,7 +401,7 @@ public class FinanceRepository {
         if (id.isEmpty()) return;
         synchronized (FinanceRepository.class) {
             SharedPreferences prefs = context.getApplicationContext()
-                    .getSharedPreferences(SYNC_PREFS, Context.MODE_PRIVATE);
+                    .getSharedPreferences(AccountDataScope.preferencesName(context,SYNC_PREFS), Context.MODE_PRIVATE);
             Set<String> ids = new HashSet<>(prefs.getStringSet(
                     KEY_DELETED_EXTERNAL_PROJECTIONS, new HashSet<>()));
             if (ids.remove(id)) {
@@ -416,7 +415,7 @@ public class FinanceRepository {
         if (id.isEmpty()) return;
         synchronized (FinanceRepository.class) {
             SharedPreferences prefs = appContext.getSharedPreferences(
-                    SYNC_PREFS, Context.MODE_PRIVATE);
+                    AccountDataScope.preferencesName(appContext,SYNC_PREFS,scopeUid), Context.MODE_PRIVATE);
             Set<String> ids = new HashSet<>(prefs.getStringSet(
                     KEY_DELETED_EXTERNAL_PROJECTIONS, new HashSet<>()));
             ids.add(id);
@@ -429,7 +428,7 @@ public class FinanceRepository {
         if (id.isEmpty()) return false;
         synchronized (FinanceRepository.class) {
             SharedPreferences prefs = appContext.getSharedPreferences(
-                    SYNC_PREFS, Context.MODE_PRIVATE);
+                    AccountDataScope.preferencesName(appContext,SYNC_PREFS,scopeUid), Context.MODE_PRIVATE);
             Set<String> ids = prefs.getStringSet(
                     KEY_DELETED_EXTERNAL_PROJECTIONS, new HashSet<>());
             return ids != null && ids.contains(id);
@@ -454,6 +453,7 @@ public class FinanceRepository {
         new FamilyAccountRepository().loadSession(
                 new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
                     @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
+                        if (!currentAccount()) return;
                         if (state == null || !state.isActive() || state.familyId == null) return;
                         removeShared(state.familyId, cloudId);
                     }
@@ -576,10 +576,8 @@ public class FinanceRepository {
         Long number = value.child(key).getValue(Long.class); return number == null ? 0 : number.intValue();
     }
 
-    private static void removeShared(String familyId, String cloudId) {
-        if (familyId.isEmpty() || cloudId.isEmpty()) return;
-        FirebaseDatabase.getInstance().getReference().child("sharedModules").child(familyId)
-                .child("finance").child(cloudId).removeValue();
+    private void removeShared(String familyId, String cloudId) {
+        FamilyCollaborationPublisher.remove(scopeUid,"finance",familyId,cloudId);
     }
 
     @NonNull

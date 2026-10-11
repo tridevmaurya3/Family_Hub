@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,6 +26,7 @@ import java.util.concurrent.Executors;
 
 /** Repository boundary for offline family events and tasks. */
 public class PlannerRepository {
+    private final String scopeUid = AccountDataScope.uid();
 
     public interface ItemsCallback {
         void onItemsLoaded(@NonNull List<PlannerItem> items);
@@ -60,7 +63,7 @@ public class PlannerRepository {
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
         retryPendingSharedPlannerItems();
-        subscriber = new FamilyCollaborationSubscriber("planner",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "planner",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                                                     @NonNull DataSnapshot snapshot) {
@@ -69,6 +72,7 @@ public class PlannerRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             PlannerItem local = plannerItemDao.getByCloudId(cloudId);
                             if (local == null) return;
                             long id = local.id;
@@ -83,6 +87,7 @@ public class PlannerRepository {
     /** Retries local-first Planner shares saved while Firebase was unavailable. */
     private void retryPendingSharedPlannerItems() {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (PlannerItem pending : plannerItemDao.getPendingShared()) {
                 if (pending.isShared && pending.familyId.isEmpty()) {
                     if (pending.cloudId.isEmpty()) {
@@ -105,6 +110,7 @@ public class PlannerRepository {
             @NonNull ItemsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String trimmedQuery = query.trim();
             List<PlannerItem> items = trimmedQuery.isEmpty()
                     ? plannerItemDao.getAll()
@@ -119,6 +125,7 @@ public class PlannerRepository {
             @NonNull ItemsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<PlannerItem> items =
                     plannerItemDao.getInRange(rangeStart, rangeEnd);
             mainHandler.post(() -> callback.onItemsLoaded(items));
@@ -130,6 +137,7 @@ public class PlannerRepository {
             @NonNull ItemsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<PlannerItem> items = plannerItemDao.getUpcoming(
                     System.currentTimeMillis(),
                     limit
@@ -140,6 +148,7 @@ public class PlannerRepository {
 
     public void loadUpcomingCount(@NonNull CountCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             int count = plannerItemDao.countUpcoming(
                     System.currentTimeMillis()
             );
@@ -152,6 +161,7 @@ public class PlannerRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             long now = System.currentTimeMillis();
             if (item.createdAt == 0L) {
                 item.createdAt = now;
@@ -175,7 +185,7 @@ public class PlannerRepository {
                 item.cloudId = "";
                 item.updatedByUid = "";
                 plannerItemDao.update(item);
-                FamilyCollaborationPublisher.remove(
+                FamilyCollaborationPublisher.remove(scopeUid,
                         "planner", previousFamilyId, previousCloudId);
             }
             mainHandler.post(callback::onComplete);
@@ -201,18 +211,21 @@ public class PlannerRepository {
         values.put("reminderMinutesBefore", item.reminderMinutesBefore);
         values.put("shared", true);
         values.put("createdAt", item.createdAt);
-        FamilyCollaborationPublisher.publish("planner", item.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "planner", item.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    item.cloudId = cloudId;
-                    item.familyId = familyId;
-                    item.updatedByUid = uid;
-                    plannerItemDao.update(item);
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
+                    PlannerItem current = plannerItemDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId;
+                    current.updatedByUid = uid;
+                    plannerItemDao.update(current);
                 }));
     }
 
     private void mergeRemote(@NonNull String familyId, @NonNull DataSnapshot s,
                              @NonNull RealtimeCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId = text(s, "cloudId");
             if (cloudId.isEmpty()) return;
             long updatedAt = number(s, "updatedAt");
@@ -271,7 +284,8 @@ public class PlannerRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
-            FamilyCollaborationPublisher.remove("planner", item.familyId, item.cloudId);
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            FamilyCollaborationPublisher.remove(scopeUid, "planner", item.familyId, item.cloudId);
             plannerItemDao.delete(item);
             mainHandler.post(callback::onComplete);
         });

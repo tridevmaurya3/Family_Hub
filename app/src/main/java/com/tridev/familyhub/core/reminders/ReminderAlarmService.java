@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.reminders;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.app.*;
 import android.content.*;
 import android.media.*;
@@ -14,6 +16,7 @@ public final class ReminderAlarmService extends Service {
     private static final String CHANNEL = "family_reminder_alarm_screen_v1";
     private static final String STOP = "stop";
     private static volatile long ringingId;
+    private com.google.firebase.auth.FirebaseAuth.AuthStateListener accountListener;
     private MediaPlayer player;
     private Vibrator vibrator;
     private PowerManager.WakeLock wakeLock;
@@ -23,7 +26,7 @@ public final class ReminderAlarmService extends Service {
     private final Runnable timeout = this::stopSelf;
 
     static Intent alarmIntent(Context context, Intent delivery) {
-        return new Intent(context, ReminderAlarmService.class).putExtra(ReminderReceiver.EXTRA_REMINDER_ID, delivery.getLongExtra(ReminderReceiver.EXTRA_REMINDER_ID,0))
+        return new Intent(context, ReminderAlarmService.class).putExtra(AccountDataScope.EXTRA_UID, delivery.getStringExtra(AccountDataScope.EXTRA_UID)).putExtra(ReminderReceiver.EXTRA_REMINDER_ID, delivery.getLongExtra(ReminderReceiver.EXTRA_REMINDER_ID,0))
                 .putExtra("title",delivery.getStringExtra(ReminderReceiver.EXTRA_TITLE)).putExtra("notes",delivery.getStringExtra(ReminderReceiver.EXTRA_NOTE))
                 .putExtra("time",System.currentTimeMillis()).putExtra("stage",delivery.getBooleanExtra(ReminderReceiver.EXTRA_PRE_ALERT,false)?0:delivery.getBooleanExtra(ReminderReceiver.EXTRA_SNOOZE_DELIVERY,false)?3:1);
     }
@@ -61,15 +64,21 @@ public final class ReminderAlarmService extends Service {
                 .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, id)); } catch (RuntimeException ignored) { }
     }
     static PendingIntent action(Context context, long id, String action, int minutes) {
-        Intent intent = new Intent(context, ReminderReceiver.class).setAction(action)
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class)).setAction(action)
                 .setData(Uri.parse("familyhub://reminder-alarm-action/" + id + "/" + action + "/" + minutes))
                 .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, id).putExtra(ReminderReceiver.EXTRA_SNOOZE_MINUTES, minutes);
-        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getBroadcast(context, 0, AccountDataScope.isolate(context,intent), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
         long id = intent.getLongExtra(ReminderReceiver.EXTRA_REMINDER_ID, 0);
         if (STOP.equals(intent.getAction())) { if (id == ringingId) stopSelf(); return START_NOT_STICKY; }
+        if (!AccountDataScope.canDeliver(this,intent.getStringExtra(AccountDataScope.EXTRA_UID))) { stopSelf(); return START_NOT_STICKY; }
+        if (accountListener == null) {
+            String account = AccountDataScope.uid();
+            accountListener = auth -> { if (!account.equals(AccountDataScope.uid())) stopSelf(); };
+            com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(accountListener);
+        }
         if (id <= 0) { stopSelf(); return START_NOT_STICKY; }
         releaseSound();
         if (ringingId != 0 && ringingId != id) closed(ringingId);
@@ -149,6 +158,7 @@ public final class ReminderAlarmService extends Service {
     }
     private void closed(long id) { sendBroadcast(new Intent(CLOSED).setPackage(getPackageName()).putExtra(ReminderReceiver.EXTRA_REMINDER_ID, id)); }
     @Override public void onDestroy() {
+        if (accountListener != null) com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(accountListener);
         handler.removeCallbacks(timeout); releaseSound();
         long old = ringingId; ringingId = 0; if (old != 0) closed(old);
         // Leave the reminder available after the two-minute ringing limit.

@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.reminders;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.*;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -31,6 +33,7 @@ public class ReminderAlarmActivity extends AppCompatActivity {
     }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); render(); }
     private void render() {
+        if (!AccountDataScope.canDeliver(this,getIntent().getStringExtra(AccountDataScope.EXTRA_UID))) { finish(); return; }
         id = getIntent().getLongExtra(ReminderReceiver.EXTRA_REMINDER_ID, 0);
         if (id <= 0) { finish(); return; }
         if (getIntent().getBooleanExtra("snooze_only", false)) {
@@ -134,7 +137,8 @@ public class ReminderAlarmActivity extends AppCompatActivity {
                 ? new LinearLayout.LayoutParams(0, -2, 1) : new LinearLayout.LayoutParams(-1, -2));
     }
     private void action(String action, int minutes) {
-        sendBroadcast(new Intent(this, ReminderReceiver.class).setAction(action)
+        sendBroadcast(AccountDataScope.stamp(this, new Intent(this, ReminderReceiver.class)).setAction(action)
+                .putExtra(AccountDataScope.EXTRA_UID, getIntent().getStringExtra(AccountDataScope.EXTRA_UID))
                 .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, id).putExtra(ReminderReceiver.EXTRA_SNOOZE_MINUTES, minutes)); finish();
     }
     @Override public void onBackPressed() { if (getIntent().getBooleanExtra("snooze_only", false)) finish(); else action(ReminderReceiver.ACTION_DISMISS, 0); }

@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.local;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 
 import androidx.room.Database;
@@ -77,7 +79,7 @@ import com.tridev.familyhub.data.local.entity.FamilyTask;
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
 
-    private static volatile FamilyHubDatabase instance;
+    private static final java.util.Map<String, FamilyHubDatabase> INSTANCES = new java.util.HashMap<>();
 
     public abstract FamilyMemberDao familyMemberDao();
 
@@ -900,14 +902,14 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
         }
     };
 
-    public static FamilyHubDatabase getInstance(Context context) {
+    public static synchronized FamilyHubDatabase getInstance(Context context) {
+        String databaseName = AccountDataScope.databaseName(context);
+        FamilyHubDatabase instance = INSTANCES.get(databaseName);
         if (instance == null) {
-            synchronized (FamilyHubDatabase.class) {
-                if (instance == null) {
                     instance = Room.databaseBuilder(
                                     context.getApplicationContext(),
                                     FamilyHubDatabase.class,
-                                    "family_hub.db"
+                                    databaseName
                             )
                             .addMigrations(
                                     MIGRATION_1_2,
@@ -949,8 +951,7 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_37_38
                             )
                             .build();
-                }
-            }
+            INSTANCES.put(databaseName, instance);
         }
 
         return instance;

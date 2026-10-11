@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -29,6 +31,7 @@ import java.util.concurrent.Executors;
 
 /** Repository boundary for private, member-linked health records. */
 public class HealthRepository {
+    private final String scopeUid = AccountDataScope.uid();
 
     public interface RecordsCallback {
         void onRecordsLoaded(@NonNull List<HealthRecordWithMember> records);
@@ -73,6 +76,7 @@ public class HealthRepository {
 
     public void loadDocuments(@NonNull DocumentsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<DocumentEntry> documents = documentDao.getAll();
             mainHandler.post(() -> callback.onDocumentsLoaded(documents));
         });
@@ -81,7 +85,7 @@ public class HealthRepository {
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
         retryPendingShared();
-        subscriber = new FamilyCollaborationSubscriber("health",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "health",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                                                     @NonNull DataSnapshot snapshot) {
@@ -91,6 +95,7 @@ public class HealthRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             HealthRecord local = healthRecordDao.getByCloudId(cloudId);
                             if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             long localId = local.id;
@@ -108,6 +113,7 @@ public class HealthRepository {
         String uid = FamilySharedRecordSupport.currentUid();
         if (uid.isEmpty()) return;
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (HealthRecord pending : healthRecordDao.getPendingShared(uid)) {
                 if (FamilySharedRecordSupport.canRetry(pending.isShared, pending.familyId,
                         pending.updatedByUid, FamilySharedRecordSupport.currentUid())) {
@@ -129,6 +135,7 @@ public class HealthRepository {
             @NonNull RecordsCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String trimmedQuery = query.trim();
             List<HealthRecordWithMember> records = trimmedQuery.isEmpty()
                     ? healthRecordDao.getAllWithMember()
@@ -218,6 +225,7 @@ public class HealthRepository {
             @NonNull MembersCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<FamilyMember> localMembers = familyMemberDao.getAll();
             long now = System.currentTimeMillis();
 
@@ -273,6 +281,7 @@ public class HealthRepository {
 
     private void loadLocalMembers(@NonNull MembersCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<FamilyMember> members = familyMemberDao.getAll();
             mainHandler.post(() ->
                     callback.onMembersLoaded(members));
@@ -316,6 +325,7 @@ public class HealthRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             if (record.recordedAt == 0L) {
                 record.recordedAt = System.currentTimeMillis();
             }
@@ -344,7 +354,7 @@ public class HealthRepository {
                 record.cloudId = "";
                 record.updatedByUid = "";
                 healthRecordDao.update(record);
-                FamilyCollaborationPublisher.remove("health", oldFamilyId, oldCloudId);
+                FamilyCollaborationPublisher.remove(scopeUid, "health", oldFamilyId, oldCloudId);
             }
             HealthReminderScheduler.sync(appContext, record);
             mainHandler.post(callback::onComplete);
@@ -368,8 +378,9 @@ public class HealthRepository {
                 familyMemberDao, record.familyMemberId, FamilySharedRecordSupport.currentUid()));
         values.put("assignedMemberName", record.assignedMemberName);
         values.put("collaborationStatus", "ACTIVE");
-        FamilyCollaborationPublisher.publish("health", record.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "health", record.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
                     HealthRecord current = healthRecordDao.getByCloudId(cloudId);
                     if (current == null || !current.isShared) return;
                     current.familyId = familyId;
@@ -382,6 +393,7 @@ public class HealthRepository {
                              @NonNull DataSnapshot snapshot,
                              @NonNull RealtimeCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId = text(snapshot, "cloudId");
             if (cloudId.isEmpty()) return;
             long remoteUpdatedAt = number(snapshot, "updatedAt");
@@ -440,7 +452,8 @@ public class HealthRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
-            FamilyCollaborationPublisher.remove("health", record.familyId, record.cloudId);
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            FamilyCollaborationPublisher.remove(scopeUid, "health", record.familyId, record.cloudId);
             HealthReminderScheduler.cancel(appContext, record.id);
             healthRecordDao.delete(record);
             mainHandler.post(callback::onComplete);

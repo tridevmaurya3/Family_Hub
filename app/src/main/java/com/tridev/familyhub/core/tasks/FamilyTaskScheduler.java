@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.tasks;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -60,7 +62,7 @@ public final class FamilyTaskScheduler {
         // Also cancel the legacy identity so installing the update cannot leave two alarms.
         for (int stage = -1; stage <= 3; stage++) {
             Intent intent = fireIntent(context, id, stage);
-            PendingIntent pi = PendingIntent.getBroadcast(context, notificationId(id), intent,
+            PendingIntent pi = PendingIntent.getBroadcast(context, notificationId(id), AccountDataScope.isolate(context,intent),
                     PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
             if (pi != null) { manager.cancel(pi); pi.cancel(); }
         }
@@ -82,14 +84,21 @@ public final class FamilyTaskScheduler {
     }
     public static void rescheduleAll(@NonNull Context context, @NonNull Runnable done) {
         Context app = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(app);
         EXECUTOR.execute(() -> {
-            try { for (FamilyTask task : FamilyHubDatabase.getInstance(app).familyTaskDao().getReminderEnabled()) schedule(app, task); }
+            try { if (!expectedUid.equals(AccountDataScope.uid())) return;
+                for (FamilyTask task : database.familyTaskDao().getReminderEnabled()) {
+                    if (!expectedUid.equals(AccountDataScope.uid())) return;
+                    schedule(app, task);
+                }
+            }
             finally { done.run(); }
         });
     }
     public static int notificationId(long id) { return 500000 + (int)(id & 0x0fffffff); }
     private static Intent fireIntent(Context context, long id, int stage) {
-        Intent intent = new Intent(context, FamilyTaskReceiver.class).setAction(FamilyTaskReceiver.ACTION_FIRE)
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, FamilyTaskReceiver.class)).setAction(FamilyTaskReceiver.ACTION_FIRE)
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, id);
         if (stage >= 0) intent.setData(Uri.parse("familyhub://task-reminder/" + id + "/" + stage));
         return intent;
@@ -97,7 +106,7 @@ public final class FamilyTaskScheduler {
     private static PendingIntent pendingIntent(Context context, FamilyTask task, int stage, long occurrence) {
         Intent intent = fireIntent(context, task.id, stage).putExtra("due", task.dueAt)
                 .putExtra("stage", stage).putExtra("occurrence", occurrence);
-        return PendingIntent.getBroadcast(context, notificationId(task.id), intent,
+        return PendingIntent.getBroadcast(context, notificationId(task.id), AccountDataScope.isolate(context,intent),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

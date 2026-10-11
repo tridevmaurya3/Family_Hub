@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.reminders;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -39,6 +41,7 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent == null || !AccountDataScope.canDeliver(context, intent.getStringExtra(AccountDataScope.EXTRA_UID))) return;
         if (ACTION_SNOOZE.equals(intent.getAction()) || ACTION_COMPLETE.equals(intent.getAction()) || ACTION_DISMISS.equals(intent.getAction())) {
             long id=intent.getLongExtra(EXTRA_REMINDER_ID,0);if(id<=0)return;
             ReminderAlarmService.stopAlarm(context,id);
@@ -47,6 +50,7 @@ public class ReminderReceiver extends BroadcastReceiver {
             if(ACTION_DISMISS.equals(intent.getAction()))return;
             PendingResult result=goAsync();Context app=context.getApplicationContext();
             ACTIONS.execute(()->{try{
+            if (!AccountDataScope.canDeliver(app,intent.getStringExtra(AccountDataScope.EXTRA_UID))) {result.finish();return;}
                 Reminder r=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(app).reminderDao().getById(id);
                 if(r==null || "COMPLETED".equalsIgnoreCase(r.collaborationStatus)) {result.finish();return;}
                 if(ACTION_COMPLETE.equals(intent.getAction())){
@@ -61,12 +65,14 @@ public class ReminderReceiver extends BroadcastReceiver {
         }
         PendingResult result=goAsync();Context app=context.getApplicationContext();
         ACTIONS.execute(()->{try{
+            if (!AccountDataScope.canDeliver(app,intent.getStringExtra(AccountDataScope.EXTRA_UID))) {result.finish();return;}
             Reminder current=com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(app).reminderDao().getById(intent.getLongExtra(EXTRA_REMINDER_ID,0));
             if(!ReminderAlarmPolicy.canDeliver(current,intent.getBooleanExtra(EXTRA_SNOOZE_DELIVERY,false))){result.finish();return;}
             new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{try{deliver(app,intent);}finally{result.finish();}});
         }catch(RuntimeException error){result.finish();}});
     }
     private void deliver(Context context,Intent intent){
+        if (!AccountDataScope.canDeliver(context,intent.getStringExtra(AccountDataScope.EXTRA_UID))) return;
         long reminderId = intent.getLongExtra(EXTRA_REMINDER_ID, 0L);
         String title = intent.getStringExtra(EXTRA_TITLE);
         String note = intent.getStringExtra(EXTRA_NOTE);
@@ -98,7 +104,7 @@ public class ReminderReceiver extends BroadcastReceiver {
 
         boolean urgent = "URGENT".equalsIgnoreCase(priority);
         createNotificationChannels(context);
-        Intent openAppIntent = new Intent(context, ReminderAlarmActivity.class)
+        Intent openAppIntent = AccountDataScope.stamp(context,new Intent(context, ReminderAlarmActivity.class))
                 .putExtra(EXTRA_REMINDER_ID,reminderId).putExtra("title",title).putExtra("notes",note).putExtra("time",System.currentTimeMillis()).putExtra("stage",preAlert?0:1)
                 .setData(android.net.Uri.parse("familyhub://reminder-notification/"+reminderId))
                 .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -127,7 +133,7 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     private PendingIntent snoozeIntent(Context context, long reminderId, String title,
                                        String note, String repeatType, int minutes) {
-        Intent snooze = new Intent(context, ReminderReceiver.class)
+        Intent snooze = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class))
                 .setAction(ACTION_SNOOZE)
                 .putExtra(EXTRA_REMINDER_ID, reminderId)
                 .putExtra(EXTRA_TITLE, title)

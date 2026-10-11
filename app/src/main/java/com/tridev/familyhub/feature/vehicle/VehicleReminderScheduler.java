@@ -1,5 +1,7 @@
 package com.tridev.familyhub.feature.vehicle;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.work.Data;
@@ -26,7 +28,7 @@ public final class VehicleReminderScheduler {
                                  @NonNull String dueType, long dueAt) {
         long delay = dueAt - ADVANCE - System.currentTimeMillis();
         if (vehicle.id <= 0L || dueAt <= 0L || delay < 0L) return;
-        Data data = new Data.Builder()
+        Data data = new Data.Builder().putString(AccountDataScope.EXTRA_UID, AccountDataScope.uid())
                 .putLong(VehicleReminderWorker.KEY_VEHICLE_ID, vehicle.id)
                 .putString(VehicleReminderWorker.KEY_VEHICLE, vehicle.displayName)
                 .putString(VehicleReminderWorker.KEY_DUE_TYPE, dueType)
@@ -35,16 +37,16 @@ public final class VehicleReminderScheduler {
                 VehicleReminderWorker.class).setInputData(data)
                 .setInitialDelay(delay, TimeUnit.MILLISECONDS).build();
         WorkManager.getInstance(context.getApplicationContext())
-                .enqueueUniqueWork(name(vehicle.id, dueType),
+                .enqueueUniqueWork(AccountDataScope.localName(context,name(vehicle.id, dueType)),
                         ExistingWorkPolicy.REPLACE, request);
     }
 
     public static void cancelAll(@NonNull Context context, long vehicleId) {
         if (vehicleId <= 0L) return;
         WorkManager manager = WorkManager.getInstance(context.getApplicationContext());
-        manager.cancelUniqueWork(name(vehicleId, "Insurance"));
-        manager.cancelUniqueWork(name(vehicleId, "Pollution certificate"));
-        manager.cancelUniqueWork(name(vehicleId, "Service"));
+        manager.cancelUniqueWork(AccountDataScope.localName(context,name(vehicleId, "Insurance")));
+        manager.cancelUniqueWork(AccountDataScope.localName(context,name(vehicleId, "Pollution certificate")));
+        manager.cancelUniqueWork(AccountDataScope.localName(context,name(vehicleId, "Service")));
     }
 
     @NonNull private static String name(long id, @NonNull String type) {

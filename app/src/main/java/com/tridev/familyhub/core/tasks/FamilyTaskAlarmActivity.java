@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.tasks;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.*;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -31,6 +33,7 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
     }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); render(); }
     private void render() {
+        if (!AccountDataScope.canDeliver(this,getIntent().getStringExtra(AccountDataScope.EXTRA_UID))) { finish(); return; }
         id = getIntent().getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0);
         if (id <= 0) { finish(); return; }
         if (getIntent().getBooleanExtra("snooze_only", false)) {
@@ -134,7 +137,8 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
                 ? new LinearLayout.LayoutParams(0, -2, 1) : new LinearLayout.LayoutParams(-1, -2));
     }
     private void action(String action, int minutes) {
-        sendBroadcast(new Intent(this, FamilyTaskReceiver.class).setAction(action)
+        sendBroadcast(AccountDataScope.stamp(this, new Intent(this, FamilyTaskReceiver.class)).setAction(action)
+                .putExtra(AccountDataScope.EXTRA_UID, getIntent().getStringExtra(AccountDataScope.EXTRA_UID))
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, id).putExtra("minutes", minutes)); finish();
     }
     @Override public void onBackPressed() { if (getIntent().getBooleanExtra("snooze_only", false)) finish(); else action(FamilyTaskReceiver.ACTION_DISMISS, 0); }

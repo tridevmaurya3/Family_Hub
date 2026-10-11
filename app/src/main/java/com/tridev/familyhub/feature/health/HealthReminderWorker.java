@@ -1,5 +1,7 @@
 package com.tridev.familyhub.feature.health;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -34,6 +36,7 @@ public final class HealthReminderWorker extends Worker {
     }
 
     @NonNull @Override public Result doWork() {
+        if (!AccountDataScope.canDeliver(getApplicationContext(), getInputData().getString(AccountDataScope.EXTRA_UID))) return Result.success();
         Context context = getApplicationContext();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && ContextCompat.checkSelfPermission(context,

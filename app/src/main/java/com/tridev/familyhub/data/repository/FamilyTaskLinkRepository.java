@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -22,6 +24,7 @@ import java.util.Map;
  * identifiers into the already-authorised Family Task cloud record.
  */
 public final class FamilyTaskLinkRepository {
+    private final String scopeUid = AccountDataScope.uid();
     private static final String PREFS = "family_task_optional_links";
     private static final String SYNC_PREFIX = "cloudSynced:";
 
@@ -48,7 +51,7 @@ public final class FamilyTaskLinkRepository {
 
     public FamilyTaskLinkRepository(@NonNull Context context) {
         preferences = context.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                .getSharedPreferences(AccountDataScope.preferencesName(context, PREFS), Context.MODE_PRIVATE);
     }
 
     @NonNull
@@ -104,7 +107,7 @@ public final class FamilyTaskLinkRepository {
         values.put("linkedLoanId", link.loanId);
         values.put("linkedLoanName", link.loanName);
         values.put("updatedByName", displayName());
-        FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "tasks", task.cloudId, values,
                 (cloudId, familyId, uid) -> markSynced(task, true));
     }
 

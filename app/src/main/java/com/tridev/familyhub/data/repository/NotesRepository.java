@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,6 +26,7 @@ import java.util.UUID;
 
 /** Repository boundary for local text notes and checklists. */
 public class NotesRepository {
+    private final String scopeUid = AccountDataScope.uid();
 
     public interface NotesCallback {
         void onNotesLoaded(@NonNull List<NoteEntry> notes);
@@ -59,7 +62,7 @@ public class NotesRepository {
     public void startRealtimeSync(@NonNull ActionCallback onChanged, @Nullable SyncStatusCallback status) {
         stopRealtimeSync();
         retryPendingSharedNotes();
-        subscriber = new FamilyCollaborationSubscriber("notes",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "notes",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                                                     @NonNull DataSnapshot snapshot) {
@@ -69,6 +72,7 @@ public class NotesRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             NoteEntry local = noteDao.getByCloudId(cloudId);
                             if (local != null && local.isShared) {
                                 noteDao.delete(local);
@@ -83,6 +87,7 @@ public class NotesRepository {
     /** Retries local-first shares that were saved while Firebase was unavailable. */
     private void retryPendingSharedNotes() {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (NoteEntry pending : noteDao.getPendingShared()) {
                 if (pending.isShared && pending.familyId.isEmpty()) {
                     publish(pending);
@@ -103,6 +108,7 @@ public class NotesRepository {
             @NonNull NotesCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String trimmedQuery = query.trim();
             List<NoteEntry> notes = trimmedQuery.isEmpty()
                     ? noteDao.getActive()
@@ -113,6 +119,7 @@ public class NotesRepository {
 
     public void loadArchived(@NonNull NotesCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<NoteEntry> notes = noteDao.getArchived();
             mainHandler.post(() -> callback.onNotesLoaded(notes));
         });
@@ -123,6 +130,7 @@ public class NotesRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             long now = System.currentTimeMillis();
             if (note.createdAt == 0L) {
                 note.createdAt = now;
@@ -146,7 +154,7 @@ public class NotesRepository {
                 note.cloudId = "";
                 note.updatedByUid = "";
                 noteDao.update(note);
-                FamilyCollaborationPublisher.remove(
+                FamilyCollaborationPublisher.remove(scopeUid,
                         "notes", previousFamilyId, previousCloudId);
             }
             com.tridev.familyhub.feature.notes.NoteReminderScheduler.sync(appContext, note);
@@ -169,12 +177,14 @@ public class NotesRepository {
         values.put("archived", note.isArchived);
         values.put("shared", true);
         values.put("createdAt", note.createdAt);
-        FamilyCollaborationPublisher.publish("notes", note.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "notes", note.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    note.cloudId = cloudId;
-                    note.familyId = familyId;
-                    note.updatedByUid = uid;
-                    noteDao.update(note);
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
+                    NoteEntry current = noteDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId;
+                    current.updatedByUid = uid;
+                    noteDao.update(current);
                 }));
     }
 
@@ -182,6 +192,7 @@ public class NotesRepository {
                                  @NonNull DataSnapshot snapshot,
                                  @NonNull ActionCallback onChanged) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId = stringValue(snapshot, "cloudId");
             if (cloudId.isEmpty()) return;
             long remoteUpdatedAt = longValue(snapshot, "updatedAt");
@@ -275,7 +286,8 @@ public class NotesRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
-            FamilyCollaborationPublisher.remove("notes", note.familyId, note.cloudId);
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            FamilyCollaborationPublisher.remove(scopeUid, "notes", note.familyId, note.cloudId);
             com.tridev.familyhub.feature.notes.NoteReminderScheduler.cancel(appContext, note.id);
             noteDao.delete(note);
             mainHandler.post(callback::onComplete);

@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.tasks;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.app.*;
 import android.content.*;
 import android.media.*;
@@ -15,6 +17,7 @@ public final class FamilyTaskAlarmService extends Service {
     private static final String CHANNEL = "family_task_alarm_screen_v2";
     private static final String STOP = "stop";
     private static volatile long ringingId;
+    private com.google.firebase.auth.FirebaseAuth.AuthStateListener accountListener;
     private MediaPlayer player;
     private Vibrator vibrator;
     private PowerManager.WakeLock wakeLock;
@@ -24,7 +27,7 @@ public final class FamilyTaskAlarmService extends Service {
     private final Runnable timeout = this::stopSelf;
 
     static Intent alarmIntent(Context context, FamilyTask task, int stage, long occurrence) {
-        return new Intent(context, FamilyTaskAlarmService.class)
+        return AccountDataScope.stamp(context,new Intent(context, FamilyTaskAlarmService.class))
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, task.id).putExtra("title", task.title)
                 .putExtra("notes", taskDetails(task))
                 .putExtra("time", occurrence).putExtra("stage", stage);
@@ -73,15 +76,21 @@ public final class FamilyTaskAlarmService extends Service {
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, id)); } catch (RuntimeException ignored) { }
     }
     static PendingIntent action(Context context, long id, String action, int minutes) {
-        Intent intent = new Intent(context, FamilyTaskReceiver.class).setAction(action)
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, FamilyTaskReceiver.class)).setAction(action)
                 .setData(Uri.parse("familyhub://alarm-action/" + id + "/" + action + "/" + minutes))
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, id).putExtra("minutes", minutes);
-        return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getBroadcast(context, 0, AccountDataScope.isolate(context,intent), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent == null) { stopSelf(); return START_NOT_STICKY; }
         long id = intent.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0);
         if (STOP.equals(intent.getAction())) { if (id == ringingId) stopSelf(); return START_NOT_STICKY; }
+        if (!AccountDataScope.canDeliver(this,intent.getStringExtra(AccountDataScope.EXTRA_UID))) { stopSelf(); return START_NOT_STICKY; }
+        if (accountListener == null) {
+            String account = AccountDataScope.uid();
+            accountListener = auth -> { if (!account.equals(AccountDataScope.uid())) stopSelf(); };
+            com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(accountListener);
+        }
         if (id <= 0) { stopSelf(); return START_NOT_STICKY; }
         releaseSound();
         if (ringingId != 0 && ringingId != id) closed(ringingId);
@@ -161,6 +170,7 @@ public final class FamilyTaskAlarmService extends Service {
     }
     private void closed(long id) { sendBroadcast(new Intent(CLOSED).setPackage(getPackageName()).putExtra(FamilyTaskReceiver.EXTRA_ID, id)); }
     @Override public void onDestroy() {
+        if (accountListener != null) com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(accountListener);
         handler.removeCallbacks(timeout); releaseSound();
         long old = ringingId; ringingId = 0; if (old != 0) closed(old);
         // Leave the reminder available after the two-minute ringing limit.

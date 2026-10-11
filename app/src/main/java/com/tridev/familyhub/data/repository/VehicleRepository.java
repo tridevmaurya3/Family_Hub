@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +28,7 @@ import java.util.concurrent.Executors;
 
 /** Repository boundary for private family vehicle profiles. */
 public class VehicleRepository {
+    private final String scopeUid = AccountDataScope.uid();
 
     public interface VehiclesCallback {
         void onVehiclesLoaded(@NonNull List<VehicleWithOwner> vehicles);
@@ -65,7 +68,7 @@ public class VehicleRepository {
     public void startRealtimeSync(@NonNull Runnable onChanged) {
         stopRealtimeSync();
         retryPendingShared();
-        subscriber = new FamilyCollaborationSubscriber("vehicles",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "vehicles",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                                                     @NonNull DataSnapshot snapshot) {
@@ -74,6 +77,7 @@ public class VehicleRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             Vehicle local = vehicleDao.getByCloudId(cloudId);
                             if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             VehicleReminderScheduler.cancelAll(appContext, local.id);
@@ -90,6 +94,7 @@ public class VehicleRepository {
         String uid = FamilySharedRecordSupport.currentUid();
         if (uid.isEmpty()) return;
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (Vehicle pending : vehicleDao.getPendingShared(uid)) {
                 if (FamilySharedRecordSupport.canRetry(pending.isShared, pending.familyId,
                         pending.updatedByUid, FamilySharedRecordSupport.currentUid())) {
@@ -108,6 +113,7 @@ public class VehicleRepository {
 
     public void loadDocuments(@NonNull DocumentsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<DocumentEntry> documents = documentDao.getAll();
             mainHandler.post(() -> callback.onDocumentsLoaded(documents));
         });
@@ -118,6 +124,7 @@ public class VehicleRepository {
             @NonNull VehiclesCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String trimmedQuery = query.trim();
             List<VehicleWithOwner> vehicles = trimmedQuery.isEmpty()
                     ? vehicleDao.getAllWithOwner()
@@ -161,6 +168,7 @@ public class VehicleRepository {
             @NonNull ResultCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             boolean successful = true;
             try {
                 if (vehicle.createdAt == 0L) {
@@ -186,7 +194,7 @@ public class VehicleRepository {
                     vehicle.cloudId = "";
                     vehicle.updatedByUid = "";
                     vehicleDao.update(vehicle);
-                    FamilyCollaborationPublisher.remove("vehicles", familyId, cloudId);
+                    FamilyCollaborationPublisher.remove(scopeUid, "vehicles", familyId, cloudId);
                 }
                 VehicleReminderScheduler.sync(appContext, vehicle);
             } catch (RuntimeException exception) {
@@ -219,8 +227,9 @@ public class VehicleRepository {
                 familyMemberDao, vehicle.ownerMemberId, FamilySharedRecordSupport.currentUid()));
         values.put("assignedMemberName", vehicle.assignedOwnerName);
         values.put("collaborationStatus", "ACTIVE");
-        FamilyCollaborationPublisher.publish("vehicles", vehicle.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "vehicles", vehicle.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
                     Vehicle current = vehicleDao.getByCloudId(cloudId);
                     if (current == null || !current.isShared) return;
                     current.familyId = familyId;
@@ -233,6 +242,7 @@ public class VehicleRepository {
                              @NonNull DataSnapshot snapshot,
                              @NonNull Runnable onChanged) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId = text(snapshot, "cloudId");
             if (cloudId.isEmpty()) return;
             long updatedAt = number(snapshot, "updatedAt");
@@ -288,9 +298,10 @@ public class VehicleRepository {
             @NonNull ResultCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             boolean successful = true;
             try {
-                FamilyCollaborationPublisher.remove("vehicles", vehicle.familyId, vehicle.cloudId);
+                FamilyCollaborationPublisher.remove(scopeUid, "vehicles", vehicle.familyId, vehicle.cloudId);
                 VehicleReminderScheduler.cancelAll(appContext, vehicle.id);
                 vehicleDao.delete(vehicle);
             } catch (RuntimeException exception) {

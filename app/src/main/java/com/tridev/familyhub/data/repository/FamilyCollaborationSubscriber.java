@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -29,27 +31,37 @@ final class FamilyCollaborationSubscriber {
     @Nullable private DatabaseReference reference;
     @Nullable private ChildEventListener listener;
     private int generation;
+    private final String scopeUid;
+    @Nullable private com.google.firebase.auth.FirebaseAuth.AuthStateListener authListener;
 
-    FamilyCollaborationSubscriber(@NonNull String module,
+    FamilyCollaborationSubscriber(@NonNull String expectedUid, @NonNull String module,
                                   @NonNull Callback callback) {
-        this(module, callback, null);
+        this(expectedUid, module, callback, null);
     }
 
-    FamilyCollaborationSubscriber(@NonNull String module, @NonNull Callback callback,
+    FamilyCollaborationSubscriber(@NonNull String expectedUid, @NonNull String module, @NonNull Callback callback,
                                   @Nullable SyncStatusCallback syncStatus) {
+        this.scopeUid = expectedUid;
         this.syncStatus = syncStatus;
         this.module = module;
         this.callback = callback;
     }
 
     void start() {
+        if (scopeUid.isEmpty() || !scopeUid.equals(AccountDataScope.uid())) {
+            reportState(false, false); return;
+        }
         int requestGeneration = ++generation;
+        authListener = auth -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) stop();
+        };
+        com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(authListener);
         reportState(false, true);
         new FamilyAccountRepository().loadSession(
                 new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
                     @Override public void onSuccess(
                             FamilyAccountRepository.SessionState state) {
-                        if (requestGeneration != generation) return;
+                        if (requestGeneration != generation || !scopeUid.equals(AccountDataScope.uid())) return;
                         if (state == null || !state.isActive() || state.familyId == null) {
                             reportState(false, false); return;
                         }
@@ -65,6 +77,8 @@ final class FamilyCollaborationSubscriber {
 
     void stop() {
         generation++;
+        if (authListener != null) com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(authListener);
+        authListener = null;
         stopListenerOnly();
         reportState(false, false);
     }
@@ -78,15 +92,18 @@ final class FamilyCollaborationSubscriber {
         listener = new ChildEventListener() {
             @Override public void onChildAdded(@NonNull DataSnapshot snapshot,
                                                @Nullable String previousChildName) {
+                if (!current(request) || FamilySyncOutbox.pendingDelete(scopeUid,module,snapshot.getKey() == null ? "" : snapshot.getKey())) return;
                 callback.onChanged(familyId, snapshot);
             }
 
             @Override public void onChildChanged(@NonNull DataSnapshot snapshot,
                                                  @Nullable String previousChildName) {
+                if (!current(request) || FamilySyncOutbox.pendingDelete(scopeUid,module,snapshot.getKey() == null ? "" : snapshot.getKey())) return;
                 callback.onChanged(familyId, snapshot);
             }
 
             @Override public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+                if (!current(request)) return;
                 callback.onRemoved(familyId, snapshot.getKey() == null
                         ? "" : snapshot.getKey());
             }
@@ -107,6 +124,10 @@ final class FamilyCollaborationSubscriber {
 
     private void reportState(boolean live, boolean connecting) {
         if (syncStatus != null) syncStatus.onStateChanged(live, connecting);
+    }
+
+    private boolean current(int request) {
+        return request == generation && scopeUid.equals(AccountDataScope.uid());
     }
 
     /** Read-only status observers, enabled only for Notes. Existing module subscriptions stay unchanged. */

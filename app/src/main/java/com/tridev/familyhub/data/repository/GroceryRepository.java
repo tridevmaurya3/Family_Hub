@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -41,6 +43,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Offline-first Room cache backed by the family's private Firebase list. */
 public class GroceryRepository {
+    private final String scopeUid = AccountDataScope.uid();
+    private boolean currentAccount() { return !scopeUid.isEmpty() && scopeUid.equals(AccountDataScope.uid()); }
 
     public interface ItemsCallback {
         void onItemsLoaded(@NonNull List<GroceryItem> items);
@@ -77,6 +81,7 @@ public class GroceryRepository {
     private static final ExecutorService PURCHASE_ACTION_EXECUTOR =
             Executors.newSingleThreadExecutor();
 
+    private final FamilyHubDatabase accountDatabase;
     private final GroceryItemDao groceryItemDao;
     private final FinanceEntryDao financeEntryDao;
     private final Context appContext;
@@ -96,9 +101,10 @@ public class GroceryRepository {
 
     public GroceryRepository(@NonNull Context context) {
         appContext = context.getApplicationContext();
-        groceryItemDao = FamilyHubDatabase.getInstance(appContext)
+        accountDatabase = FamilyHubDatabase.getInstance(appContext);
+        groceryItemDao = accountDatabase
                 .groceryItemDao();
-        financeEntryDao = FamilyHubDatabase.getInstance(appContext)
+        financeEntryDao = accountDatabase
                 .financeEntryDao();
         accountRepository = new FamilyAccountRepository();
         firebaseRoot = FirebaseDatabase.getInstance().getReference();
@@ -125,6 +131,7 @@ public class GroceryRepository {
                     public void onSuccess(
                             @Nullable FamilyAccountRepository.SessionState state
                     ) {
+                        if (!currentAccount()) return;
                         if (state == null || !state.isActive()
                                 || state.familyId == null) {
                             return;
@@ -207,6 +214,7 @@ public class GroceryRepository {
                     @Override
                     public void onSuccess(
                             @Nullable FamilyAccountRepository.SessionState state) {
+                        if (!currentAccount()) return;
                         if (state == null || !state.isActive()
                                 || state.familyId == null) return;
                         String familyId = state.familyId;
@@ -310,7 +318,7 @@ public class GroceryRepository {
             if (originalItemName != null && !item.isPurchased
                     && GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))) {
-                FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                accountDatabase.groceryPurchaseDao()
                         .renameForSourceItem(item.id, originalItemName, item.name);
                 removeRecoveredRecurringDuplicates(item, originalItemName);
             }
@@ -336,7 +344,7 @@ public class GroceryRepository {
         long normalizedPurchasedAt = normalizePurchaseTimestamp(selectedPurchasedAt);
         item.purchasedAt = normalizedPurchasedAt;
         saveEdit(item, () -> USER_ACTION_EXECUTOR.execute(() -> {
-            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+            accountDatabase.groceryPurchaseDao()
                     .updateMatchingPurchase(
                             originalItemName,
                             originalPurchasedAt,
@@ -356,7 +364,7 @@ public class GroceryRepository {
     private void refreshRecurringAnchorFromHistory(@NonNull String itemName) {
         GroceryItem master = groceryItemDao.findRecurringMaster(itemName);
         if (master == null) return;
-        GroceryPurchase latest = FamilyHubDatabase.getInstance(appContext)
+        GroceryPurchase latest = accountDatabase
                 .groceryPurchaseDao().getLatestForItem(itemName);
         if (latest == null || latest.purchasedAt <= 0L) return;
         master.createdAt = latest.purchasedAt;
@@ -434,7 +442,8 @@ public class GroceryRepository {
         }
         long completedAt = item.purchasedAt;
         DATABASE_EXECUTOR.execute(() -> {
-            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            accountDatabase.groceryPurchaseDao()
                     .deletePurchase(item.id, completedAt);
             item.isPurchased = false;
             item.purchasedAt = 0L;
@@ -468,6 +477,7 @@ public class GroceryRepository {
 
     public void loadSuggestions(@NonNull ItemsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<GroceryItem> items = groceryItemDao.getRecurringSuggestions(8);
             mainHandler.post(() -> callback.onItemsLoaded(items));
         });
@@ -478,7 +488,8 @@ public class GroceryRepository {
             @NonNull PurchaseHistoryCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
-            GroceryPurchase purchase = FamilyHubDatabase.getInstance(appContext)
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            GroceryPurchase purchase = accountDatabase
                     .groceryPurchaseDao().getLatestForItem(itemName.trim());
             mainHandler.post(() -> callback.onLoaded(purchase));
         });
@@ -490,8 +501,9 @@ public class GroceryRepository {
             @NonNull StoreComparisonCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             com.tridev.familyhub.data.local.dao.GroceryPurchaseDao dao =
-                    FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao();
+                    accountDatabase.groceryPurchaseDao();
             GroceryPurchase latest = dao.getLatestForItem(itemName.trim());
             String comparableQuantity = quantity.trim();
             if (comparableQuantity.isEmpty() && latest != null) {
@@ -509,6 +521,7 @@ public class GroceryRepository {
             @NonNull PriceCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             GroceryItem history = locationKey.isEmpty() ? null
                     : groceryItemDao.findLocalPrice(name.trim(), locationKey);
             int confidence = history == null ? 0 : 90;
@@ -530,26 +543,24 @@ public class GroceryRepository {
     }
 
     public double getMonthlyBudget() {
-        return Double.longBitsToDouble(appContext.getSharedPreferences(
-                "grocery_budget", Context.MODE_PRIVATE
+        return Double.longBitsToDouble(appContext.getSharedPreferences(AccountDataScope.preferencesName(appContext,"grocery_budget",scopeUid), Context.MODE_PRIVATE
         ).getLong(currentMonth(), Double.doubleToRawLongBits(0D)));
     }
 
     public void setMonthlyBudget(double budget) {
-        appContext.getSharedPreferences("grocery_budget", Context.MODE_PRIVATE)
+        appContext.getSharedPreferences(AccountDataScope.preferencesName(appContext,"grocery_budget",scopeUid), Context.MODE_PRIVATE)
                 .edit().putLong(currentMonth(),
                         Double.doubleToRawLongBits(Math.max(0D, budget))).apply();
     }
 
     public double getCategoryBudget(@NonNull String category) {
-        return Double.longBitsToDouble(appContext.getSharedPreferences(
-                "grocery_category_budgets", Context.MODE_PRIVATE)
+        return Double.longBitsToDouble(appContext.getSharedPreferences(AccountDataScope.preferencesName(appContext,"grocery_category_budgets",scopeUid), Context.MODE_PRIVATE)
                 .getLong(currentMonth() + "|" + category.toLowerCase(Locale.ENGLISH),
                         Double.doubleToRawLongBits(0D)));
     }
 
     public void setCategoryBudget(@NonNull String category, double budget) {
-        appContext.getSharedPreferences("grocery_category_budgets",
+        appContext.getSharedPreferences(AccountDataScope.preferencesName(appContext,"grocery_category_budgets",scopeUid),
                 Context.MODE_PRIVATE).edit().putLong(
                 currentMonth() + "|" + category.toLowerCase(Locale.ENGLISH),
                 Double.doubleToRawLongBits(Math.max(0D, budget))).apply();
@@ -557,6 +568,7 @@ public class GroceryRepository {
 
     public void loadCurrentMonthPurchases(@NonNull PurchasesCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             java.util.Calendar start = java.util.Calendar.getInstance();
             start.set(java.util.Calendar.DAY_OF_MONTH, 1);
             start.set(java.util.Calendar.HOUR_OF_DAY, 0);
@@ -582,7 +594,7 @@ public class GroceryRepository {
                 removeLinkedFinance(item);
                 long historyId = recoveredHistoryId(item);
                 if (historyId > 0L) {
-                    FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+                    accountDatabase.groceryPurchaseDao()
                             .deleteById(historyId);
                     recoveredHistoryPreferences().edit()
                             .remove("cycle_" + historyId).apply();
@@ -715,7 +727,10 @@ public class GroceryRepository {
         activeListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!currentAccount()) return;
                 DATABASE_EXECUTOR.execute(() -> {
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
+                    if (!currentAccount()) return;
                     Set<String> remoteIds = new HashSet<>();
                     for (DataSnapshot child : snapshot.getChildren()) {
                         String snapshotCloudId = stringValue(child.child("cloudId"));
@@ -815,6 +830,7 @@ public class GroceryRepository {
 
     private void uploadLocalOnlyItems(@NonNull String familyId) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (GroceryItem item : groceryItemDao.getAll()) {
                 if (!item.familyId.isEmpty() && !familyId.equals(item.familyId)) {
                     continue;
@@ -879,6 +895,7 @@ public class GroceryRepository {
         itemReference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!currentAccount()) return;
                 long remoteUpdatedAt = longValue(snapshot.child("updatedAt"));
                 if ((!snapshot.exists() && localOnly)
                         || (snapshot.exists() && item.updatedAt > remoteUpdatedAt)) {
@@ -904,6 +921,7 @@ public class GroceryRepository {
                     @Override
                     public void onSuccess(
                             @Nullable FamilyAccountRepository.SessionState state) {
+                        if (!currentAccount()) return;
                         if (state == null || !state.isActive()
                                 || state.familyId == null) return;
                         publishItem(item, state.familyId);
@@ -918,8 +936,9 @@ public class GroceryRepository {
 
     private void publishItem(@NonNull GroceryItem item,
                              @NonNull String familyId) {
+        if (!currentAccount()) return;
         item.familyId = familyId;
-        DATABASE_EXECUTOR.execute(() -> upsertLocal(item));
+        DATABASE_EXECUTOR.execute(() -> { if (currentAccount()) upsertLocal(item); });
         firebaseRoot.child("sharedShopping").child(familyId)
                 .child("items").child(item.cloudId)
                 .updateChildren(toCloudValues(item));
@@ -1122,7 +1141,7 @@ public class GroceryRepository {
             history.storeName = purchase.storeName;
             history.actualCost = purchase.actualCost;
             history.purchasedAt = purchasedAt;
-            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao().insert(history);
+            accountDatabase.groceryPurchaseDao().insert(history);
             linkFinance(purchase);
             upsertLocal(purchase);
             // The recurring master remains pending, so send the immutable
@@ -1165,6 +1184,7 @@ public class GroceryRepository {
     private void resetMasterAnchor(@NonNull String name, long purchasedAt,
                                    @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             GroceryItem master = groceryItemDao.findRecurringMaster(name);
             if (master != null) {
                 String originalCycle = GroceryRecurrenceEngine.originalCycle(master);
@@ -1209,7 +1229,7 @@ public class GroceryRepository {
         }
 
         List<GroceryItem> restored = new java.util.ArrayList<>();
-        List<GroceryPurchase> purchases = FamilyHubDatabase.getInstance(appContext)
+        List<GroceryPurchase> purchases = accountDatabase
                 .groceryPurchaseDao().getAll();
         for (GroceryPurchase history : purchases) {
             String historyKey = purchaseHistoryKey(
@@ -1327,7 +1347,7 @@ public class GroceryRepository {
         }
         writeExecutor.execute(() -> {
             item.purchasedAt = normalizePurchaseTimestamp(item.purchasedAt);
-            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+            accountDatabase.groceryPurchaseDao()
                     .updateRecovered(historyId, item.name, item.category,
                             item.quantity, item.storeName,
                             item.actualCost > 0D ? item.actualCost : item.estimatedCost,
@@ -1348,8 +1368,7 @@ public class GroceryRepository {
     }
 
     private android.content.SharedPreferences recoveredHistoryPreferences() {
-        return appContext.getSharedPreferences(
-                "grocery_recovered_history_v1", Context.MODE_PRIVATE);
+        return appContext.getSharedPreferences(AccountDataScope.preferencesName(appContext,"grocery_recovered_history_v1",scopeUid), Context.MODE_PRIVATE);
     }
 
     private void deleteMatchingPurchaseHistory(@NonNull GroceryItem item) {
@@ -1361,14 +1380,13 @@ public class GroceryRepository {
         start.set(java.util.Calendar.MILLISECOND, 0);
         java.util.Calendar end = (java.util.Calendar) start.clone();
         end.add(java.util.Calendar.DAY_OF_MONTH, 1);
-        FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+        accountDatabase.groceryPurchaseDao()
                 .deleteMatchingPurchaseDay(item.name,
                         start.getTimeInMillis(), end.getTimeInMillis());
     }
 
     private android.content.SharedPreferences deletedCloudPreferences() {
-        return appContext.getSharedPreferences(
-                "grocery_deleted_cloud_ids_v1", Context.MODE_PRIVATE);
+        return appContext.getSharedPreferences(AccountDataScope.preferencesName(appContext,"grocery_deleted_cloud_ids_v1",scopeUid), Context.MODE_PRIVATE);
     }
 
     private void markDeletedCloudId(@Nullable String cloudId) {
@@ -1405,6 +1423,7 @@ public class GroceryRepository {
                     @Override
                     public void onSuccess(
                             @Nullable FamilyAccountRepository.SessionState state) {
+                        if (!currentAccount()) return;
                         if (state == null || !state.isActive()
                                 || state.familyId == null) return;
                         firebaseRoot.child("sharedShopping")
@@ -1555,8 +1574,9 @@ public class GroceryRepository {
         String occurrenceCloudId = master.lastPurchaseOccurrenceCloudId;
         long completedAt = master.purchasedAt;
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             GroceryItem occurrence = groceryItemDao.getByCloudId(occurrenceCloudId);
-            FamilyHubDatabase.getInstance(appContext).groceryPurchaseDao()
+            accountDatabase.groceryPurchaseDao()
                     .deletePurchase(master.id, completedAt);
             if (occurrence != null) {
                 occurrence.isPurchased = false;

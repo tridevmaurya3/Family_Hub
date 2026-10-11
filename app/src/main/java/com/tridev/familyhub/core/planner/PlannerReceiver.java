@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.planner;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -29,6 +31,7 @@ public class PlannerReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent == null || !AccountDataScope.canDeliver(context, intent.getStringExtra(AccountDataScope.EXTRA_UID))) return;
         if (!ACTION_FIRE.equals(intent.getAction())) {
             return;
         }

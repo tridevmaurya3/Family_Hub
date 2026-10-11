@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,6 +26,7 @@ import java.util.concurrent.Executors;
 
 /** Thread-safe Room boundary for the reminder feature. */
 public class ReminderRepository {
+    private final String scopeUid = AccountDataScope.uid();
 
     public interface RemindersCallback {
         void onRemindersLoaded(List<Reminder> reminders);
@@ -59,7 +62,7 @@ public class ReminderRepository {
     public void startRealtimeSync(@NonNull RealtimeCallback callback) {
         stopRealtimeSync();
         retryPendingSharedReminders();
-        subscriber = new FamilyCollaborationSubscriber("reminders",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "reminders",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                                                     @NonNull DataSnapshot snapshot) {
@@ -68,6 +71,7 @@ public class ReminderRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                                                     @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             Reminder local = reminderDao.getByCloudId(cloudId);
                             if (local == null) return;
                             long id = local.id;
@@ -82,6 +86,7 @@ public class ReminderRepository {
     /** Retries local-first reminder shares saved while Firebase was unavailable. */
     private void retryPendingSharedReminders() {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (Reminder pending : reminderDao.getPendingShared()) {
                 if (pending.isShared && pending.familyId.isEmpty()) {
                     if (pending.cloudId.isEmpty()) {
@@ -101,6 +106,7 @@ public class ReminderRepository {
 
     public void loadReminders(@NonNull String searchQuery, @NonNull RemindersCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<Reminder> reminders = searchQuery.trim().isEmpty()
                     ? reminderDao.getAll()
                     : reminderDao.search(searchQuery.trim());
@@ -110,6 +116,7 @@ public class ReminderRepository {
 
     public void loadEnabledReminders(@NonNull RemindersCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<Reminder> reminders = reminderDao.getEnabled();
             mainHandler.post(() -> callback.onRemindersLoaded(reminders));
         });
@@ -117,6 +124,7 @@ public class ReminderRepository {
 
     public void loadFamilyMembers(@NonNull MembersCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<FamilyMember> members = familyMemberDao.getAll();
             mainHandler.post(() -> callback.onMembersLoaded(members));
         });
@@ -124,6 +132,7 @@ public class ReminderRepository {
 
     public void save(Reminder reminder, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             reminder.updatedAt = System.currentTimeMillis();
             if (reminder.id == 0) {
                 reminder.createdAt = reminder.updatedAt;
@@ -144,7 +153,7 @@ public class ReminderRepository {
                 reminder.cloudId = "";
                 reminder.updatedByUid = "";
                 reminderDao.update(reminder);
-                FamilyCollaborationPublisher.remove(
+                FamilyCollaborationPublisher.remove(scopeUid,
                         "reminders", previousFamilyId, previousCloudId);
             }
             mainHandler.post(() -> callback.onComplete(reminder));
@@ -173,18 +182,21 @@ public class ReminderRepository {
         values.put("collaborationStatus", reminder.collaborationStatus);
         values.put("shared", true);
         values.put("createdAt", reminder.createdAt);
-        FamilyCollaborationPublisher.publish("reminders", reminder.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "reminders", reminder.cloudId, values,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
-                    reminder.cloudId = cloudId;
-                    reminder.familyId = familyId;
-                    reminder.updatedByUid = uid;
-                    reminderDao.update(reminder);
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
+                    Reminder current = reminderDao.getByCloudId(cloudId);
+                    if (current == null || !current.isShared) return;
+                    current.familyId = familyId;
+                    current.updatedByUid = uid;
+                    reminderDao.update(current);
                 }));
     }
 
     private void mergeRemote(@NonNull String familyId, @NonNull DataSnapshot s,
                              @NonNull RealtimeCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId = text(s, "cloudId");
             if (cloudId.isEmpty()) return;
             long updatedAt = number(s, "updatedAt");
@@ -232,7 +244,8 @@ public class ReminderRepository {
 
     public void delete(Reminder reminder, @NonNull ActionCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
-            FamilyCollaborationPublisher.remove("reminders", reminder.familyId, reminder.cloudId);
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            FamilyCollaborationPublisher.remove(scopeUid, "reminders", reminder.familyId, reminder.cloudId);
             reminderDao.delete(reminder);
             mainHandler.post(() -> callback.onComplete(reminder));
         });

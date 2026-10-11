@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.tasks;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -34,6 +36,7 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
     private static final String CHANNEL = "family_hub_tasks";
     private static final String IMPORTANT_CHANNEL = "family_hub_tasks_important";
     @Override public void onReceive(Context context, Intent intent) {
+        if (intent == null || !AccountDataScope.canDeliver(context, intent.getStringExtra(AccountDataScope.EXTRA_UID))) return;
         String action = intent.getAction();
         if (!ACTION_FIRE.equals(action) && !ACTION_COMPLETE.equals(action) && !ACTION_SNOOZE.equals(action) && !ACTION_DISMISS.equals(action)) return;
         long id = intent.getLongExtra(EXTRA_ID, 0);
@@ -48,6 +51,7 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
         new Thread(() -> {
             boolean completing = false;
             try {
+                if (!AccountDataScope.canDeliver(app,intent.getStringExtra(AccountDataScope.EXTRA_UID))) return;
                 FamilyTask task = FamilyHubDatabase.getInstance(app).familyTaskDao().getById(id);
                 if (task == null || FamilyTask.STATUS_COMPLETED.equals(task.status)) {
                     FamilyTaskScheduler.cancel(app, id); return;
@@ -165,7 +169,7 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
     }
     private PendingIntent actionIntent(Context context, long id, String action, int base) {
         return PendingIntent.getBroadcast(context, base + (int)(id & 0x0fffffff),
-                new Intent(context, FamilyTaskReceiver.class).setAction(action).putExtra(EXTRA_ID, id),
+                AccountDataScope.stamp(context, new Intent(context, FamilyTaskReceiver.class)).setAction(action).putExtra(EXTRA_ID, id),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.reminders;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -57,14 +59,17 @@ public final class ReminderScheduler {
                 null, null, null, null, true);
         alarmManager.cancel(preAlert);
         preAlert.cancel();
-        PendingIntent snooze=PendingIntent.getBroadcast(context,((int)(reminderId&0x7fffffff))^0x2f2f2f2f,new Intent(context,ReminderReceiver.class).setAction(ReminderReceiver.ACTION_FIRE),PendingIntent.FLAG_NO_CREATE|PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent snooze=PendingIntent.getBroadcast(context,((int)(reminderId&0x7fffffff))^0x2f2f2f2f,AccountDataScope.isolate(context,new Intent(context,ReminderReceiver.class).setAction(ReminderReceiver.ACTION_FIRE)),PendingIntent.FLAG_NO_CREATE|PendingIntent.FLAG_IMMUTABLE);
         if(snooze!=null){alarmManager.cancel(snooze);snooze.cancel();}
     }
 
     public static void rescheduleRepeatingIfEnabled(Context context, long reminderId, Runnable onComplete) {
         Context appContext = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
         DATABASE_EXECUTOR.execute(() -> {
-            Reminder reminder = FamilyHubDatabase.getInstance(appContext)
+            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
+            Reminder reminder = accountDatabase
                     .reminderDao()
                     .getById(reminderId);
             if (reminder != null && reminder.isEnabled
@@ -79,13 +84,16 @@ public final class ReminderScheduler {
 
     public static void disableOneTimeIfPresent(Context context, long reminderId, Runnable onComplete) {
         Context appContext = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
         DATABASE_EXECUTOR.execute(() -> {
-            Reminder reminder = FamilyHubDatabase.getInstance(appContext)
+            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
+            Reminder reminder = accountDatabase
                     .reminderDao()
                     .getById(reminderId);
             if (reminder != null && Reminder.REPEAT_ONCE.equals(reminder.repeatType)) {
                 reminder.isEnabled = false;
-                FamilyHubDatabase.getInstance(appContext).reminderDao().update(reminder);
+                accountDatabase.reminderDao().update(reminder);
             }
             if (onComplete != null) {
                 onComplete.run();
@@ -95,8 +103,11 @@ public final class ReminderScheduler {
 
     public static void rescheduleAll(Context context, Runnable onComplete) {
         Context appContext = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
         DATABASE_EXECUTOR.execute(() -> {
-            List<Reminder> reminders = FamilyHubDatabase.getInstance(appContext)
+            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
+            List<Reminder> reminders = accountDatabase
                     .reminderDao()
                     .getEnabled();
             for (Reminder reminder : reminders) {
@@ -131,7 +142,7 @@ public final class ReminderScheduler {
         long triggerAt = System.currentTimeMillis() + Math.max(1, minutes) * 60_000L;
         AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
         if (alarmManager == null) return;
-        Intent intent = new Intent(context, ReminderReceiver.class)
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class))
                 .setAction(ReminderReceiver.ACTION_FIRE)
                 .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId)
                 .putExtra(ReminderReceiver.EXTRA_TITLE, title)
@@ -139,7 +150,7 @@ public final class ReminderScheduler {
                 .putExtra(ReminderReceiver.EXTRA_REPEAT_TYPE, repeatType)
                 .putExtra(ReminderReceiver.EXTRA_SNOOZE_DELIVERY, true);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(context,
-                ((int) (reminderId & 0x7fffffff)) ^ 0x2f2f2f2f, intent,
+                ((int) (reminderId & 0x7fffffff)) ^ 0x2f2f2f2f, AccountDataScope.isolate(context,intent),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         try {
             if(Build.VERSION.SDK_INT<31 || alarmManager.canScheduleExactAlarms())alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,triggerAt,pendingIntent);else alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
@@ -172,7 +183,7 @@ public final class ReminderScheduler {
     private static PendingIntent reminderPendingIntent(Context context, long reminderId, String title,
                                                         String note, String repeatType,
                                                         String priority, boolean preAlert) {
-        Intent intent = new Intent(context, ReminderReceiver.class)
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class))
                 .setAction(ReminderReceiver.ACTION_FIRE)
                 .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId)
                 .putExtra(ReminderReceiver.EXTRA_PRE_ALERT, preAlert);
@@ -189,7 +200,7 @@ public final class ReminderScheduler {
         return PendingIntent.getBroadcast(
                 context,
                 ((int) (reminderId & 0x7fffffff)) ^ (preAlert ? 0x15151515 : 0),
-                intent,
+                AccountDataScope.isolate(context,intent),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
     }

@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.app.Application;
 import android.content.Context;
 
@@ -58,6 +60,8 @@ public class FamilyHubApplication extends Application {
         com.tridev.familyhub.core.ui.FormTextEditing.register(this);
 
         enableFirebaseOfflinePersistence();
+        AccountDataScope.legacyOwner(this);
+        com.tridev.familyhub.data.repository.FamilySyncOutbox.initialize(this);
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(this);
         com.tridev.familyhub.feature.profile.ProfileHeaderAvatarBinder.register(this);
         GroceryRecurrenceEngine.register(this);

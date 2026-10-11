@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.tasks;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
@@ -8,7 +10,7 @@ import com.tridev.familyhub.data.local.entity.FamilyTask;
 public final class FamilyTaskReminderPreferences {
     private FamilyTaskReminderPreferences() { }
     private static SharedPreferences prefs(Context context) {
-        return context.getSharedPreferences("family_task_reminder_options", Context.MODE_PRIVATE);
+        return context.getSharedPreferences(AccountDataScope.preferencesName(context, "family_task_reminder_options"), Context.MODE_PRIVATE);
     }
     private static String key(FamilyTask task) {
         return "RECURRING_TASK".equals(task.sourceType) && !task.sourceRecordId.isEmpty()

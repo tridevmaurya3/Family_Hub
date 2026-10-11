@@ -1,5 +1,7 @@
 package com.tridev.familyhub.feature.health;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 
 import androidx.annotation.NonNull;
@@ -29,7 +31,7 @@ public final class HealthReminderScheduler {
                 - System.currentTimeMillis();
         if (delay < 0L) return;
 
-        Data input = new Data.Builder()
+        Data input = new Data.Builder().putString(AccountDataScope.EXTRA_UID, AccountDataScope.uid())
                 .putString(HealthReminderWorker.KEY_TITLE, record.title)
                 .putString(HealthReminderWorker.KEY_MEMBER,
                         record.assignedMemberName)
@@ -42,14 +44,14 @@ public final class HealthReminderScheduler {
                 .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                 .build();
         WorkManager.getInstance(context.getApplicationContext())
-                .enqueueUniqueWork(workName(record.id),
+                .enqueueUniqueWork(AccountDataScope.localName(context,workName(record.id)),
                         ExistingWorkPolicy.REPLACE, request);
     }
 
     public static void cancel(@NonNull Context context, long recordId) {
         if (recordId <= 0L) return;
         WorkManager.getInstance(context.getApplicationContext())
-                .cancelUniqueWork(workName(recordId));
+                .cancelUniqueWork(AccountDataScope.localName(context,workName(recordId)));
     }
 
     private static boolean supportsReminder(@NonNull String type) {

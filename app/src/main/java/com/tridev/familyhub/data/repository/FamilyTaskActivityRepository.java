@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -34,6 +36,7 @@ import java.util.concurrent.Executors;
  * details are never copied into activity history.
  */
 public final class FamilyTaskActivityRepository {
+    private final String scopeUid = AccountDataScope.uid();
     public static final String EVENT_CREATE = "CREATE";
     public static final String EVENT_EDIT = "EDIT";
     public static final String EVENT_ASSIGN = "ASSIGN";
@@ -71,7 +74,7 @@ public final class FamilyTaskActivityRepository {
 
     public FamilyTaskActivityRepository(@NonNull Context context) {
         preferences = context.getApplicationContext()
-                .getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                .getSharedPreferences(AccountDataScope.preferencesName(context, PREFS), Context.MODE_PRIVATE);
     }
 
     public void loadAll(@NonNull EventsCallback callback) {
@@ -247,7 +250,7 @@ public final class FamilyTaskActivityRepository {
         Map<String, Object> values = new HashMap<>();
         values.put("activity/" + event.eventId, eventPayload);
         values.put("updatedByName", displayName(FirebaseAuth.getInstance().getCurrentUser()));
-        FamilyCollaborationPublisher.publish("tasks", task.cloudId, values,
+        FamilyCollaborationPublisher.publish(scopeUid, "tasks", task.cloudId, values,
                 (cloudId, familyId, uid) -> preferences.edit()
                         .putBoolean(SYNC_PREFIX + event.eventId, true).apply());
     }

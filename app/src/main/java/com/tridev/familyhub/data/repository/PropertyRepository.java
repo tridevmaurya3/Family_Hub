@@ -1,5 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -25,6 +27,7 @@ import java.util.concurrent.Executors;
 
 /** Repository boundary for private family property profiles. */
 public class PropertyRepository {
+    private final String scopeUid = AccountDataScope.uid();
 
     public interface PropertiesCallback {
         void onPropertiesLoaded(@NonNull List<PropertyWithOwner> properties);
@@ -60,7 +63,7 @@ public class PropertyRepository {
     public void startRealtimeSync(@NonNull Runnable changed) {
         stopRealtimeSync();
         retryPendingShared();
-        subscriber = new FamilyCollaborationSubscriber("properties",
+        subscriber = new FamilyCollaborationSubscriber(scopeUid, "properties",
                 new FamilyCollaborationSubscriber.Callback() {
                     @Override public void onChanged(@NonNull String familyId,
                             @NonNull DataSnapshot snapshot) {
@@ -69,6 +72,7 @@ public class PropertyRepository {
                     @Override public void onRemoved(@NonNull String familyId,
                             @NonNull String cloudId) {
                         DATABASE_EXECUTOR.execute(() -> {
+                            if (!scopeUid.equals(AccountDataScope.uid())) return;
                             PropertyEntry local = propertyDao.getByCloudId(cloudId);
                             if (local == null || !local.isShared || !familyId.equals(local.familyId)) return;
                             propertyDao.delete(local); mainHandler.post(changed);
@@ -83,6 +87,7 @@ public class PropertyRepository {
         String uid = FamilySharedRecordSupport.currentUid();
         if (uid.isEmpty()) return;
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             for (PropertyEntry pending : propertyDao.getPendingShared(uid)) {
                 if (FamilySharedRecordSupport.canRetry(pending.isShared, pending.familyId,
                         pending.updatedByUid, FamilySharedRecordSupport.currentUid())) {
@@ -101,6 +106,7 @@ public class PropertyRepository {
 
     public void loadDocuments(@NonNull DocumentsCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<DocumentEntry> documents = documentDao.getAll();
             mainHandler.post(() -> callback.onDocumentsLoaded(documents));
         });
@@ -111,6 +117,7 @@ public class PropertyRepository {
             @NonNull PropertiesCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String trimmedQuery = query.trim();
             List<PropertyWithOwner> properties = trimmedQuery.isEmpty()
                     ? propertyDao.getAllWithOwner()
@@ -147,6 +154,7 @@ public class PropertyRepository {
 
     public void loadMembers(@NonNull MembersCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             List<FamilyMember> members = familyMemberDao.getAll();
             mainHandler.post(() -> callback.onMembersLoaded(members));
         });
@@ -157,6 +165,7 @@ public class PropertyRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             if (property.createdAt == 0L) {
                 property.createdAt = System.currentTimeMillis();
             }
@@ -177,7 +186,7 @@ public class PropertyRepository {
                 String familyId = property.familyId, cloudId = property.cloudId;
                 property.familyId = ""; property.cloudId = "";
                 property.updatedByUid = ""; propertyDao.update(property);
-                FamilyCollaborationPublisher.remove("properties", familyId, cloudId);
+                FamilyCollaborationPublisher.remove(scopeUid, "properties", familyId, cloudId);
             }
             mainHandler.post(callback::onComplete);
         });
@@ -196,8 +205,9 @@ public class PropertyRepository {
                 familyMemberDao, p.ownerMemberId, FamilySharedRecordSupport.currentUid()));
         v.put("assignedMemberName", p.assignedOwnerName);
         v.put("collaborationStatus", "ACTIVE");
-        FamilyCollaborationPublisher.publish("properties", p.cloudId, v,
+        FamilyCollaborationPublisher.publish(scopeUid, "properties", p.cloudId, v,
                 (cloudId, familyId, uid) -> DATABASE_EXECUTOR.execute(() -> {
+                    if (!scopeUid.equals(AccountDataScope.uid())) return;
                     PropertyEntry current = propertyDao.getByCloudId(cloudId);
                     if (current == null || !current.isShared) return;
                     current.familyId = familyId; current.updatedByUid = uid;
@@ -208,6 +218,7 @@ public class PropertyRepository {
     private void mergeRemote(@NonNull String familyId, @NonNull DataSnapshot s,
                              @NonNull Runnable changed) {
         DATABASE_EXECUTOR.execute(() -> {
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
             String cloudId=text(s,"cloudId"); if(cloudId.isEmpty()) return;
             long updated=number(s,"updatedAt"); PropertyEntry p=propertyDao.getByCloudId(cloudId);
             if(p!=null && p.updatedAt>updated) return; boolean insert=p==null;
@@ -239,7 +250,8 @@ public class PropertyRepository {
             @NonNull ActionCallback callback
     ) {
         DATABASE_EXECUTOR.execute(() -> {
-            FamilyCollaborationPublisher.remove("properties", property.familyId, property.cloudId);
+            if (!scopeUid.equals(AccountDataScope.uid())) return;
+            FamilyCollaborationPublisher.remove(scopeUid, "properties", property.familyId, property.cloudId);
             propertyDao.delete(property);
             mainHandler.post(callback::onComplete);
         });

@@ -1,5 +1,7 @@
 package com.tridev.familyhub.core.planner;
 
+import com.tridev.familyhub.core.security.AccountDataScope;
+
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -80,14 +82,17 @@ public final class PlannerScheduler {
             @Nullable Runnable onComplete
     ) {
         Context appContext = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
         DATABASE_EXECUTOR.execute(() -> {
-            PlannerItem item = FamilyHubDatabase.getInstance(appContext)
+            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
+            PlannerItem item = accountDatabase
                     .plannerItemDao().getById(itemId);
             if (item != null) {
                 if (PlannerItem.REPEAT_NONE.equals(item.repeatType)) {
                     item.isReminderEnabled = false;
                     item.updatedAt = System.currentTimeMillis();
-                    FamilyHubDatabase.getInstance(appContext)
+                    accountDatabase
                             .plannerItemDao().update(item);
                 } else {
                     schedule(appContext, item);
@@ -104,9 +109,12 @@ public final class PlannerScheduler {
             @Nullable Runnable onComplete
     ) {
         Context appContext = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
         DATABASE_EXECUTOR.execute(() -> {
+            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
             List<PlannerItem> items =
-                    FamilyHubDatabase.getInstance(appContext)
+                    accountDatabase
                             .plannerItemDao().getReminderEnabled();
             for (PlannerItem item : items) {
                 schedule(appContext, item);
@@ -149,7 +157,7 @@ public final class PlannerScheduler {
             @Nullable String title,
             @Nullable String notes
     ) {
-        Intent intent = new Intent(context, PlannerReceiver.class)
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, PlannerReceiver.class))
                 .setAction(PlannerReceiver.ACTION_FIRE)
                 .putExtra(PlannerReceiver.EXTRA_ITEM_ID, itemId);
         if (title != null) {
@@ -161,7 +169,7 @@ public final class PlannerScheduler {
         return PendingIntent.getBroadcast(
                 context,
                 (int) (itemId & 0x7fffffff),
-                intent,
+                AccountDataScope.isolate(context,intent),
                 PendingIntent.FLAG_UPDATE_CURRENT
                         | PendingIntent.FLAG_IMMUTABLE
         );

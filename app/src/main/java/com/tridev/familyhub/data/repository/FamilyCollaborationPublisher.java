@@ -1,21 +1,14 @@
 package com.tridev.familyhub.data.repository;
 
-import android.util.Log;
+import com.tridev.familyhub.core.security.AccountDataScope;
 
 import androidx.annotation.NonNull;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ServerValue;
-
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /** Privacy-gated publisher for opt-in family collaboration records. */
 final class FamilyCollaborationPublisher {
-    private static final String TAG = "FamilyCollabPublish";
 
     interface PublishedCallback {
         void onPublished(@NonNull String cloudId, @NonNull String familyId,
@@ -24,71 +17,18 @@ final class FamilyCollaborationPublisher {
 
     private FamilyCollaborationPublisher() { }
 
-    static void publish(@NonNull String module, @NonNull String existingCloudId,
+    static void publish(@NonNull String expectedUid, @NonNull String module, @NonNull String existingCloudId,
                         @NonNull Map<String, Object> values,
                         @NonNull PublishedCallback callback) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            return;
-        }
-        new FamilyAccountRepository().loadSession(
-                new FamilyAccountRepository.ResultCallback<FamilyAccountRepository.SessionState>() {
-                    @Override public void onSuccess(FamilyAccountRepository.SessionState state) {
-                        if (state == null || !state.isActive() || state.familyId == null) {
-                            return;
-                        }
-                        String cloudId = existingCloudId.trim().isEmpty()
-                                ? UUID.randomUUID().toString() : existingCloudId;
-                        Map<String, Object> payload = new HashMap<>(values);
-                        payload.put("cloudId", cloudId);
-                        payload.put("familyId", state.familyId);
-                        payload.put("updatedByUid", user.getUid());
-                        payload.put("updatedAt", System.currentTimeMillis());
-                        payload.put("serverUpdatedAt", ServerValue.TIMESTAMP);
-                        FirebaseDatabase.getInstance().getReference()
-                                .child("sharedModules").child(state.familyId)
-                                .child(module).child(cloudId)
-                                .updateChildren(payload)
-                                .addOnSuccessListener(unused -> callback.onPublished(
-                                        cloudId, state.familyId, user.getUid()
-                                ))
-                                .addOnFailureListener(error -> Log.e(TAG,
-                                        "write=" + writeKind(module, values)
-                                                + " module=" + module
-                                                + " path=sharedModules/{familyId}/"
-                                                + module + "/{itemId}"
-                                                + " session=ACTIVE failed: "
-                                                + error.getMessage()));
-                    }
-
-                    @Override public void onError(@NonNull Exception error) {
-                        // Local-first records remain available and can be shared later.
-                    }
-                }
-        );
+        if (expectedUid.isEmpty() || !expectedUid.equals(AccountDataScope.uid())) return;
+        String cloudId = existingCloudId.trim().isEmpty() ? UUID.randomUUID().toString() : existingCloudId;
+        FamilySyncOutbox.enqueue(expectedUid, module, cloudId, values, callback);
     }
 
-    static void remove(@NonNull String module, @NonNull String familyId,
+    static void remove(@NonNull String expectedUid, @NonNull String module, @NonNull String familyId,
                        @NonNull String cloudId) {
-        if (familyId.trim().isEmpty() || cloudId.trim().isEmpty()) {
-            return;
-        }
-        FirebaseDatabase.getInstance().getReference()
-                .child("sharedModules").child(familyId)
-                .child(module).child(cloudId).removeValue();
+        if (expectedUid.isEmpty() || !expectedUid.equals(AccountDataScope.uid())) return;
+        FamilySyncOutbox.remove(expectedUid,module,familyId,cloudId);
     }
 
-    @NonNull
-    private static String writeKind(@NonNull String module,
-                                    @NonNull Map<String, Object> values) {
-        if (!"tasks".equals(module)) return "MODULE_RECORD";
-        for (String key : values.keySet()) {
-            if (key.startsWith("activity/")) return "ACTIVITY_TIMELINE";
-        }
-        if (values.containsKey("linkedFinanceCloudId")
-                || values.containsKey("linkedLoanId")) {
-            return "FINANCE_LOAN_LINK";
-        }
-        return "MAIN_TASK";
-    }
 }
