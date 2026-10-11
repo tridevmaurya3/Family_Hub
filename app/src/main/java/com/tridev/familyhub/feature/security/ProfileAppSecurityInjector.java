@@ -55,7 +55,7 @@ public final class ProfileAppSecurityInjector implements Application.ActivityLif
         card.setTag(CARD_TAG);
         card.setClickable(true);
         card.setFocusable(true);
-        card.setRadius(dp(activity, 18));
+        card.setRadius(dp(activity, 14));
         card.setCardElevation(0f);
         card.setCardBackgroundColor(ContextCompat.getColor(activity,
                 R.color.fh_module_vault_container));
@@ -64,8 +64,8 @@ public final class ProfileAppSecurityInjector implements Application.ActivityLif
 
         LinearLayout row = new LinearLayout(activity);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(dp(activity, 14), dp(activity, 12),
-                dp(activity, 14), dp(activity, 12));
+        row.setPadding(dp(activity, 8), dp(activity, 8),
+                dp(activity, 8), dp(activity, 8));
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
 
         ImageView icon = new ImageView(activity);
@@ -83,7 +83,7 @@ public final class ProfileAppSecurityInjector implements Application.ActivityLif
 
         TextView title = new TextView(activity);
         title.setText("App Security");
-        title.setTextSize(14f);
+        title.setTextSize(13f);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setTextColor(ContextCompat.getColor(activity, R.color.fh_module_vault));
         textBlock.addView(title);
@@ -110,7 +110,7 @@ public final class ProfileAppSecurityInjector implements Application.ActivityLif
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.topMargin = dp(activity, 8);
+        params.topMargin = dp(activity, 6);
         container.addView(card, Math.max(0, index + 1), params);
     }
 

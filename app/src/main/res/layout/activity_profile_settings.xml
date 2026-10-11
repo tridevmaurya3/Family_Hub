@@ -15,7 +15,7 @@
         android:paddingStart="@dimen/screen_padding_horizontal"
         android:paddingTop="@dimen/compact_page_top_padding"
         android:paddingEnd="@dimen/screen_padding_horizontal"
-        android:paddingBottom="@dimen/space_32">
+        android:paddingBottom="16dp">
 
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Card.Flat"
@@ -31,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="@dimen/space_12">
+                android:padding="8dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonProfileBack"
@@ -49,7 +49,7 @@
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/space_12"
+                    android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:orientation="vertical">
 
@@ -57,14 +57,14 @@
                         style="@style/TextAppearance.FamilyHub.Heading"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/profile_title" />
+                        android:textSize="18sp" android:text="@string/profile_title" />
 
                     <TextView
                         style="@style/TextAppearance.FamilyHub.Caption"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="@string/profile_subtitle" />
+                        android:textSize="10sp" android:text="@string/profile_subtitle" />
                 </LinearLayout>
 
                 <ImageButton
@@ -97,89 +97,48 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Flat"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_12"
-            app:cardBackgroundColor="@color/fh_primary_container"
-            app:cardCornerRadius="@dimen/radius_20"
-            app:strokeColor="@color/fh_primary"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:orientation="vertical"
-                android:padding="@dimen/space_20">
-
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    app:cardBackgroundColor="@color/fh_surface"
-                    app:cardCornerRadius="40dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/fh_primary"
-                    app:strokeWidth="2dp">
-
-                    <ImageView
-                        android:id="@+id/imageProfilePhoto"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:contentDescription="@string/profile_photo_description"
-                        android:padding="18dp"
-                        android:scaleType="centerCrop"
-                        android:src="@drawable/ic_profile_person" />
-                </com.google.android.material.card.MaterialCardView>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_12"
-                    android:gravity="center"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonProfileChangePhoto"
+        <!-- One compact photo row; sync remains visible beside the photo actions. -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="56dp" android:layout_height="56dp"
+                app:cardBackgroundColor="@color/fh_surface" app:cardCornerRadius="28dp"
+                app:cardElevation="0dp" app:strokeColor="@color/fh_primary" app:strokeWidth="1dp">
+                <ImageView android:id="@+id/imageProfilePhoto"
+                    android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:contentDescription="@string/profile_photo_description"
+                    android:scaleType="centerCrop" android:src="@drawable/ic_profile_person" />
+            </com.google.android.material.card.MaterialCardView>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginStart="8dp" android:orientation="vertical">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton android:id="@+id/buttonProfileChangePhoto"
                         style="@style/Widget.FamilyHub.Button.Tonal"
-                        android:layout_width="wrap_content"
-                        android:layout_height="@dimen/touch_target_min"
-                        android:text="@string/profile_change_photo"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_add"
-                        app:iconTint="@color/fh_primary" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/buttonProfileRemovePhoto"
-                        style="@style/Widget.FamilyHub.Button.Tonal"
-                        android:layout_width="wrap_content"
-                        android:layout_height="@dimen/touch_target_min"
-                        android:layout_marginStart="@dimen/space_8"
-                        android:text="@string/profile_remove_photo"
-                        android:textAllCaps="false" />
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp"
+                        android:minWidth="0dp" android:textSize="12sp" android:textAllCaps="false"
+                        android:text="@string/profile_change_photo" android:insetTop="0dp" android:insetBottom="0dp" />
+                    <com.google.android.material.button.MaterialButton android:id="@+id/buttonProfileRemovePhoto"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="44dp" android:layout_height="44dp" android:minWidth="0dp"
+                        android:contentDescription="@string/profile_remove_photo" android:text=""
+                        app:icon="@drawable/ic_profile_photo_delete" app:iconTint="@color/fh_error"
+                        app:iconPadding="0dp" app:iconGravity="textStart" />
                 </LinearLayout>
+                <TextView android:id="@+id/textProfileSyncStatus"
+                    style="@style/TextAppearance.FamilyHub.Caption" android:textSize="10sp"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Syncing profile…" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
-        <TextView
-            style="@style/TextAppearance.FamilyHub.Overline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/compact_section_spacing"
-            android:text="@string/profile_personal_section"
-            android:textColor="@color/fh_primary" />
-
-        <TextView android:id="@+id/textProfileSyncStatus"
-            style="@style/TextAppearance.FamilyHub.Caption"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:paddingTop="4dp" android:text="Syncing profile…" />
-
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:gravity="center_vertical" android:orientation="horizontal">
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.FamilyHub.FloatingCompact.Field"
-            android:layout_width="match_parent"
+            android:layout_width="0dp" android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_10"
+            android:layout_marginTop="0dp"
             android:hint="@string/profile_display_name">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -191,88 +150,55 @@
                 android:maxLength="100"
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.button.MaterialButton android:id="@+id/buttonProfileSave"
+                style="@style/Widget.FamilyHub.Button.Tonal" android:layout_width="64dp" android:layout_height="44dp"
+                android:layout_marginStart="6dp" android:minWidth="0dp" android:paddingStart="4dp" android:paddingEnd="4dp"
+                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false"
+                android:textSize="12sp" android:text="@string/profile_save_short"
+                android:contentDescription="@string/profile_save" />
+        </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
-            style="@style/Widget.FamilyHub.Card.Flat"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_10"
-            app:cardBackgroundColor="@color/fh_surface"
-            app:strokeColor="@color/fh_outline_variant"
-            app:strokeWidth="1dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/space_14">
-
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/profile_email" />
-
-                <TextView
-                    android:id="@+id/textProfileEmail"
-                    style="@style/TextAppearance.FamilyHub.BodyStrong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/profile_unknown" />
-
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_10"
-                    android:text="@string/profile_family" />
-
-                <TextView
-                    android:id="@+id/textProfileFamily"
-                    style="@style/TextAppearance.FamilyHub.BodyStrong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/profile_unknown" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/buttonProfileEditFamily"
-                    style="@style/Widget.FamilyHub.Button.Action"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="@string/profile_edit_family_name" android:visibility="gone" />
-
-                <TextView
-                    style="@style/TextAppearance.FamilyHub.Caption"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/space_10"
-                    android:text="@string/profile_role" />
-
-                <TextView
-                    android:id="@+id/textProfileRole"
-                    style="@style/TextAppearance.FamilyHub.BodyStrong"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="@string/profile_unknown" />
+        <com.google.android.material.card.MaterialCardView style="@style/Widget.FamilyHub.Card.Flat"
+            android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"
+            app:cardBackgroundColor="@color/fh_surface" app:cardCornerRadius="14dp"
+            app:strokeColor="@color/fh_outline_variant" app:strokeWidth="1dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="10dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="52dp"
+                        android:layout_height="wrap_content" android:text="@string/profile_email" />
+                    <TextView android:id="@+id/textProfileEmail" style="@style/TextAppearance.FamilyHub.BodyStrong"
+                        android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                        android:textSize="12sp" android:text="@string/profile_unknown" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:gravity="center_vertical" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/profile_family" />
+                        <TextView android:id="@+id/textProfileFamily" style="@style/TextAppearance.FamilyHub.BodyStrong"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:text="@string/profile_unknown" />
+                    </LinearLayout>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/buttonProfileEditFamily"
+                        style="@style/Widget.Material3.Button.IconButton" android:layout_width="44dp" android:layout_height="44dp"
+                        android:minWidth="0dp" android:text="" android:visibility="gone"
+                        android:contentDescription="@string/profile_edit_family_name" app:icon="@drawable/ic_document_edit" app:iconPadding="0dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="0.6" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:orientation="vertical">
+                        <TextView style="@style/TextAppearance.FamilyHub.Caption" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/profile_role" />
+                        <TextView android:id="@+id/textProfileRole" style="@style/TextAppearance.FamilyHub.BodyStrong"
+                            android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="12sp" android:text="@string/profile_unknown" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonProfileSave"
-            style="@style/Widget.FamilyHub.Button.Action"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="@dimen/space_12"
-            android:text="@string/profile_save"
-            android:textAllCaps="false" />
 
         <TextView
             style="@style/TextAppearance.FamilyHub.Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/compact_section_spacing"
+            android:layout_marginTop="10dp"
             android:text="@string/profile_preferences_section"
             android:textColor="@color/fh_primary" />
 
@@ -280,7 +206,7 @@
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_10"
+            android:layout_marginTop="6dp"
             app:cardBackgroundColor="@color/fh_surface"
             app:strokeColor="@color/fh_outline_variant"
             app:strokeWidth="1dp">
@@ -289,8 +215,8 @@
                 android:id="@+id/switchProfileDarkTheme"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="@dimen/space_14"
-                android:text="@string/profile_dark_theme" />
+                android:padding="8dp"
+                android:minHeight="48dp" android:textSize="13sp" android:text="@string/profile_dark_theme" />
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
@@ -298,7 +224,7 @@
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="6dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
@@ -310,13 +236,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/space_14">
+                android:padding="8dp">
 
                 <TextView
                     style="@style/TextAppearance.FamilyHub.CardTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/profile_notifications"
+                    android:textSize="13sp" android:text="@string/profile_notifications"
                     android:textColor="@color/fh_info" />
 
                 <TextView
@@ -333,7 +259,7 @@
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="6dp"
             android:clickable="true"
             android:focusable="true"
             android:foreground="?attr/selectableItemBackground"
@@ -345,13 +271,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/space_14">
+                android:padding="8dp">
 
                 <TextView
                     style="@style/TextAppearance.FamilyHub.CardTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/profile_family_settings"
+                    android:textSize="13sp" android:text="@string/profile_family_settings"
                     android:textColor="@color/fh_module_family" />
 
                 <TextView
@@ -367,7 +293,7 @@
             style="@style/TextAppearance.FamilyHub.Overline"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/compact_section_spacing"
+            android:layout_marginTop="10dp"
             android:text="@string/profile_account_section"
             android:textColor="@color/fh_error" />
 
@@ -375,8 +301,8 @@
             android:id="@+id/buttonProfileLogout"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="@dimen/space_10"
+            android:layout_height="48dp"
+            android:layout_marginTop="6dp"
             android:text="@string/profile_logout"
             android:textAllCaps="false"
             android:textColor="@color/fh_error"

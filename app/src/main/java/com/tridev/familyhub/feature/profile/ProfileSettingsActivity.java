@@ -226,7 +226,7 @@ public final class ProfileSettingsActivity extends AppCompatActivity {
     private void renderProfilePhoto() {
         Bitmap bitmap = ProfilePhotoStore.load(this);
         if (bitmap == null) {
-            profilePhoto.setPadding(dp(24), dp(24), dp(24), dp(24));
+            profilePhoto.setPadding(dp(12), dp(12), dp(12), dp(12));
             profilePhoto.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             profilePhoto.setImageResource(R.drawable.ic_profile_person);
             return;
