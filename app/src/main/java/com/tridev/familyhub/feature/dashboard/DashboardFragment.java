@@ -539,7 +539,7 @@ public class DashboardFragment extends Fragment {
                 R.color.fh_module_family, R.color.fh_module_family_container));
         binding.actionSosEntries.setModel(new ActionCardModel(
                 getString(R.string.feature_menu_sos), getString(R.string.dashboard_sos_value),
-                getString(R.string.dashboard_sos_detail), R.drawable.ic_family_sos,
+                getString(R.string.dashboard_category_sos_detail), R.drawable.ic_family_sos,
                 R.color.fh_error, R.color.fh_error_container));
         binding.actionSafePlaces.setModel(new ActionCardModel(
                 getString(R.string.feature_menu_safe_places), getString(R.string.dashboard_places_value),
