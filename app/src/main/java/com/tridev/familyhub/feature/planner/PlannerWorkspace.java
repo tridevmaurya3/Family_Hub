@@ -121,7 +121,7 @@ public final class PlannerWorkspace {
             public void onDelete(@NonNull PlannerItem item) {
                 confirmDelete(item);
             }
-        });
+        }, floating);
         binding.plannerRecyclerView.setLayoutManager(
                 new LinearLayoutManager(requireContext())
         );

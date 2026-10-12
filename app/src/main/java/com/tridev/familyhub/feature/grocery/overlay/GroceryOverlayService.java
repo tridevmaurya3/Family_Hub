@@ -1537,7 +1537,24 @@ public class GroceryOverlayService extends Service {
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         dp(showLastPurchase ? 70 : 40));
                 rowParams.bottomMargin = dp(3);
-                itemContainer.addView(row, rowParams);
+                LinearLayout itemRow = new LinearLayout(this);
+                itemRow.setOrientation(LinearLayout.HORIZONTAL); itemRow.setGravity(Gravity.CENTER_VERTICAL);
+                itemRow.addView(row, new LinearLayout.LayoutParams(0, -1, 1f));
+                com.google.android.material.button.MaterialButton more =
+                        com.tridev.familyhub.core.ui.FloatingItemActions.button(this, item.name);
+                itemRow.addView(more);
+                more.setOnClickListener(v -> {
+                    dismissOverlayHeaderPopup();
+                    overlayHeaderPopup = com.tridev.familyhub.core.ui.FloatingItemActions.dropdown(
+                            v.getContext(), true, v, java.util.Arrays.asList("Edit", "Mark purchased", "Remove"), option -> {
+                                if ("Edit".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.grocery(
+                                        v, item, repository, this::refreshPanel);
+                                else if ("Remove".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.removeGrocery(
+                                        v, item, repository, this::refreshPanel);
+                                else showInlinePurchaseEditor(item);
+                            });
+                });
+                itemContainer.addView(itemRow, rowParams);
                 shownHere++;
             }
         }

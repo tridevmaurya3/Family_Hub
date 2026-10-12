@@ -147,7 +147,7 @@ public final class ReminderWorkspace {
             public void onOpenModule(Reminder reminder) {
                 openRelatedModule(reminder.relatedModule);
             }
-        });
+        }, floating);
 
         binding.reminderRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.reminderRecyclerView.setAdapter(reminderAdapter);

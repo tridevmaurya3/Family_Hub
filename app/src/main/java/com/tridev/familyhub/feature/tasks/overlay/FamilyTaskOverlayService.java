@@ -1222,6 +1222,23 @@ public final class FamilyTaskOverlayService extends Service {
         priorityParams.gravity = Gravity.CENTER_VERTICAL;
         heading.addView(priority, priorityParams);
 
+        com.google.android.material.button.MaterialButton more =
+                com.tridev.familyhub.core.ui.FloatingItemActions.button(this, task.title);
+        heading.addView(more);
+        more.setOnClickListener(v -> {
+            dismissPopup();
+            activePopup = com.tridev.familyhub.core.ui.FloatingItemActions.dropdown(v.getContext(), true, v,
+                    java.util.Arrays.asList("Edit", completedMode ? "Reopen" : "Mark completed", "Remove"), option -> {
+                        if ("Edit".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.task(
+                                v, task, repository, this::refresh);
+                        else if ("Remove".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.remove(
+                                v, "Remove To-Do?", task.title, () -> {
+                                    FamilyTaskScheduler.cancel(this, task.id);
+                                    repository.delete(task, this::refresh);
+                                });
+                        else check.setChecked(!check.isChecked());
+                    });
+        });
         check.setOnCheckedChangeListener((button, checked) -> {
             repository.setCompleted(task, checked, () -> {
                 if (checked) FamilyTaskScheduler.cancel(this, task.id);

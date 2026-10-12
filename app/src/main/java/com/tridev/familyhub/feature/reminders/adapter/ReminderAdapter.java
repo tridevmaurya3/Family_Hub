@@ -36,11 +36,13 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
 
     private final List<Reminder> reminders = new ArrayList<>();
     private final ReminderActionListener listener;
+    private final boolean floating;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
 
-    public ReminderAdapter(ReminderActionListener listener) {
-        this.listener = listener;
+    public ReminderAdapter(ReminderActionListener listener) { this(listener, false); }
+    public ReminderAdapter(ReminderActionListener listener, boolean floating) {
+        this.listener = listener; this.floating = floating;
     }
 
     public void submitList(List<Reminder> updatedReminders) {
@@ -69,11 +71,17 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
     }
 
     class ReminderViewHolder extends RecyclerView.ViewHolder {
+        private com.google.android.material.button.MaterialButton more;
         private final ItemReminderBinding binding;
 
         ReminderViewHolder(ItemReminderBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
+            if (floating) {
+                android.widget.LinearLayout heading = (android.widget.LinearLayout) binding.reminderTitle.getParent().getParent();
+                more = com.tridev.familyhub.core.ui.FloatingItemActions.button(binding.getRoot().getContext(), "");
+                heading.addView(more);
+            }
         }
 
         void bind(Reminder reminder) {
@@ -96,6 +104,24 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
                         "Open " + friendly(reminder.relatedModule) + item);
                 binding.reminderOpenModuleButton.setOnClickListener(
                         v -> listener.onOpenModule(reminder));
+            }
+            if (floating) {
+                ((android.view.View) binding.reminderStatusButton.getParent()).setVisibility(android.view.View.GONE);
+                binding.reminderOpenModuleButton.setVisibility(android.view.View.GONE);
+                more.setContentDescription("Actions for " + reminder.title);
+                more.setOnClickListener(v -> {
+                    java.util.List<String> options = new java.util.ArrayList<>(java.util.Arrays.asList(
+                            "Edit", reminder.isEnabled ? "Disable" : "Enable", "Update status"));
+                    if (linked) options.add("Open linked module");
+                    options.add("Remove");
+                    com.tridev.familyhub.core.ui.FloatingItemActions.dropdown(v.getContext(), true, v, options, option -> {
+                        if ("Edit".equals(option)) listener.onEdit(reminder);
+                        else if ("Remove".equals(option)) listener.onDelete(reminder);
+                        else if ("Update status".equals(option)) listener.onStatusChanged(reminder);
+                        else if ("Open linked module".equals(option)) listener.onOpenModule(reminder);
+                        else listener.onEnabledChanged(reminder, !reminder.isEnabled);
+                    });
+                });
             }
             if (reminder.isShared && reminder.seenAt == 0L) listener.onSeen(reminder);
             binding.reminderEnabledSwitch.setOnCheckedChangeListener(null);

@@ -29,9 +29,11 @@ public class PlannerAdapter
 
     private final List<PlannerItem> items = new ArrayList<>();
     private final ActionListener listener;
+    private final boolean floating;
 
-    public PlannerAdapter(@NonNull ActionListener listener) {
-        this.listener = listener;
+    public PlannerAdapter(ActionListener listener) { this(listener, false); }
+    public PlannerAdapter(ActionListener listener, boolean floating) {
+        this.listener = listener; this.floating = floating;
     }
 
     public void submitList(@NonNull List<PlannerItem> updated) {
@@ -65,11 +67,17 @@ public class PlannerAdapter
     }
 
     class PlannerViewHolder extends RecyclerView.ViewHolder {
+        private com.google.android.material.button.MaterialButton more;
         private final ItemPlannerBinding binding;
 
         PlannerViewHolder(@NonNull ItemPlannerBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
+            if (floating) {
+                android.widget.LinearLayout heading = (android.widget.LinearLayout) binding.plannerTitle.getParent().getParent();
+                more = com.tridev.familyhub.core.ui.FloatingItemActions.button(binding.getRoot().getContext(), "");
+                heading.addView(more);
+            }
         }
 
         void bind(@NonNull PlannerItem item) {
@@ -103,6 +111,18 @@ public class PlannerAdapter
                             ? View.GONE : View.VISIBLE
             );
 
+            if (floating) {
+                binding.editPlannerButton.setVisibility(View.GONE);
+                binding.deletePlannerButton.setVisibility(View.GONE);
+                more.setContentDescription("Actions for " + item.title);
+                more.setOnClickListener(v -> com.tridev.familyhub.core.ui.FloatingItemActions.dropdown(
+                        v.getContext(), true, v, java.util.Arrays.asList("Edit",
+                                item.isCompleted ? "Reopen" : "Mark completed", "Remove"), option -> {
+                            if ("Edit".equals(option)) listener.onEdit(item);
+                            else if ("Remove".equals(option)) listener.onDelete(item);
+                            else listener.onCompletedChanged(item, !item.isCompleted);
+                        }));
+            }
             int flags = binding.plannerTitle.getPaintFlags();
             if (item.isCompleted) {
                 binding.plannerTitle.setPaintFlags(
