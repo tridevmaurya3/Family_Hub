@@ -149,7 +149,7 @@ public final class PlannerOverlayService extends Service {
         background.setCornerRadius(dp(22)); background.setStroke(dp(1), Color.rgb(223, 214, 240));
         panel.setBackground(background);
         LinearLayout root = new LinearLayout(themed); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(10), dp(8), dp(10), dp(22));
+        root.setPadding(dp(10), dp(8), dp(10), 0);
         panel.addView(root, new FrameLayout.LayoutParams(-1, -1));
         LinearLayout header = new LinearLayout(themed); header.setGravity(Gravity.TOP);
         LinearLayout titleStack = new LinearLayout(themed); titleStack.setOrientation(LinearLayout.VERTICAL);

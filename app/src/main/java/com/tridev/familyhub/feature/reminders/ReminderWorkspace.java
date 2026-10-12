@@ -154,7 +154,16 @@ public final class ReminderWorkspace {
         ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout) binding.getRoot())
                 .makeWorkspaceScrollable(1, binding.reminderListHost,
                         binding.reminderRecyclerView, binding.remindersEmptyState);
-        if (floating) binding.reminderSearchLayout.setVisibility(View.GONE);
+        if (floating) {
+            binding.reminderSearchLayout.setVisibility(View.GONE);
+            // Main pages reserve room for their launcher; overlays have no bottom launcher.
+            binding.reminderRecyclerView.setPadding(
+                    binding.reminderRecyclerView.getPaddingLeft(),
+                    binding.reminderRecyclerView.getPaddingTop(),
+                    binding.reminderRecyclerView.getPaddingRight(), 0);
+            binding.getRoot().setPadding(binding.getRoot().getPaddingLeft(),
+                    binding.getRoot().getPaddingTop(), binding.getRoot().getPaddingRight(), 0);
+        }
         repository.startRealtimeSync(new ReminderRepository.RealtimeCallback() {
             @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull Reminder reminder) {

@@ -5,12 +5,12 @@
     style="@style/Widget.FamilyHub.Card.Data"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="@dimen/card_spacing">
+    android:layout_marginBottom="4dp">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="6dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -55,7 +55,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="0dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
             <TextView
                 android:id="@+id/planner_type"
@@ -70,37 +71,43 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/fh_primary" />
-        </LinearLayout>
-        <TextView
-            android:id="@+id/planner_location"
-            style="@style/TextAppearance.FamilyHub.Caption"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_6" />
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/border_width"
-            android:layout_marginTop="@dimen/space_6"
-            android:background="@color/fh_divider" />
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_planner_button"
                 style="@style/Widget.FamilyHub.Button.Action"
                 android:layout_width="wrap_content"
-                android:layout_height="@dimen/touch_target_min"
+                android:layout_height="36dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="@string/edit"
                 android:textColor="@color/fh_primary" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/delete_planner_button"
                 style="@style/Widget.FamilyHub.Button.Danger"
                 android:layout_width="wrap_content"
-                android:layout_height="@dimen/touch_target_min"
+                android:layout_height="36dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="@string/remove"
                 android:textColor="@color/fh_error" />
         </LinearLayout>
+        <TextView
+            android:id="@+id/planner_location"
+            style="@style/TextAppearance.FamilyHub.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="0dp" />
+
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

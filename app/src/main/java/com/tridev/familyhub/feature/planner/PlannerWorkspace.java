@@ -129,7 +129,16 @@ public final class PlannerWorkspace {
         ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout) binding.getRoot())
                 .makeWorkspaceScrollable(1, binding.plannerListHost,
                         binding.plannerRecyclerView, binding.plannerEmptyState);
-        if (floating) binding.plannerSearchLayout.setVisibility(View.GONE);
+        if (floating) {
+            binding.plannerSearchLayout.setVisibility(View.GONE);
+            // Main pages reserve room for their launcher; overlays have no bottom launcher.
+            binding.plannerRecyclerView.setPadding(
+                    binding.plannerRecyclerView.getPaddingLeft(),
+                    binding.plannerRecyclerView.getPaddingTop(),
+                    binding.plannerRecyclerView.getPaddingRight(), 0);
+            binding.getRoot().setPadding(binding.getRoot().getPaddingLeft(),
+                    binding.getRoot().getPaddingTop(), binding.getRoot().getPaddingRight(), 0);
+        }
         repository.startRealtimeSync(new PlannerRepository.RealtimeCallback() {
             @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull PlannerItem item) {
