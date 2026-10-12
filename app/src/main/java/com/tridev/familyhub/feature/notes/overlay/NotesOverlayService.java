@@ -185,8 +185,6 @@ public final class NotesOverlayService extends Service {
         });
         close.setOnClickListener(v -> dismissPanel());
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
-        root.addView(new com.tridev.familyhub.core.ui.SharedSyncStatusView(root.getContext()),
-                new LinearLayout.LayoutParams(-1, -2));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new NotesWorkspaceView(themed, repository, true, this::edit);
         workspace.setSyncStatusListener((live, connecting) -> {

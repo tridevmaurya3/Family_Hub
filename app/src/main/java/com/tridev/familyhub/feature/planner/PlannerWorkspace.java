@@ -129,6 +129,7 @@ public final class PlannerWorkspace {
         ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout) binding.getRoot())
                 .makeWorkspaceScrollable(1, binding.plannerListHost,
                         binding.plannerRecyclerView, binding.plannerEmptyState);
+        if (floating) binding.plannerSearchLayout.setVisibility(View.GONE);
         repository.startRealtimeSync(new PlannerRepository.RealtimeCallback() {
             @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull PlannerItem item) {

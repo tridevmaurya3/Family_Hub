@@ -455,8 +455,6 @@ public class GroceryOverlayService extends Service {
         header.addView(close, new LinearLayout.LayoutParams(dp(34), dp(42)));
         root.addView(header, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(44)));
-        root.addView(new com.tridev.familyhub.core.ui.SharedSyncStatusView(root.getContext()),
-                new LinearLayout.LayoutParams(-1, -2));
 
 
         overlayFormDetails = new LinearLayout(this);
@@ -868,7 +866,7 @@ public class GroceryOverlayService extends Service {
         });
         setOverlayFormCollapsed(overlayFormCollapsed);
         // A scroll gesture must not change form height underneath the user's finger.
-        root.makeControlsScrollable(2, root.indexOfChild(overlayItemScroll));
+        root.makeControlsScrollable(1, root.indexOfChild(overlayItemScroll));
 
         voice.setOnClickListener(v -> {
             FamilyHubAppLockManager.noteTrustedOverlayInteraction();

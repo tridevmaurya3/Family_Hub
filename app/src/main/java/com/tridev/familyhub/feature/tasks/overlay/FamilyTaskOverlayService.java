@@ -332,8 +332,6 @@ public final class FamilyTaskOverlayService extends Service {
         close.setOnClickListener(v -> closePanel());
         header.addView(close, new LinearLayout.LayoutParams(dp(30), dp(42)));
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
-        root.addView(new com.tridev.familyhub.core.ui.SharedSyncStatusView(root.getContext()),
-                new LinearLayout.LayoutParams(-1, -2));
         attachPanelDrag(titleStack);
 
         LinearLayout searchTools = row();
@@ -574,7 +572,7 @@ public final class FamilyTaskOverlayService extends Service {
         LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(-1, 0, 1f);
         scrollParams.topMargin = dp(2);
         root.addView(scroll, scrollParams);
-        root.makeControlsScrollable(2, root.indexOfChild(scroll));
+        root.makeControlsScrollable(1, root.indexOfChild(scroll));
 
         View.OnClickListener save = v -> {
             String value = input.getText().toString().trim();

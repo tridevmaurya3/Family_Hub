@@ -154,6 +154,7 @@ public final class ReminderWorkspace {
         ((com.tridev.familyhub.core.ui.ScrollableWorkspaceLayout) binding.getRoot())
                 .makeWorkspaceScrollable(1, binding.reminderListHost,
                         binding.reminderRecyclerView, binding.remindersEmptyState);
+        if (floating) binding.reminderSearchLayout.setVisibility(View.GONE);
         repository.startRealtimeSync(new ReminderRepository.RealtimeCallback() {
             @Override public void onSyncStateChanged(boolean live,boolean connecting){syncStatus(live,connecting);}
             @Override public void onChanged(@NonNull Reminder reminder) {

@@ -182,8 +182,6 @@ public final class RemindersOverlayService extends Service {
         });
         close.setOnClickListener(v -> dismissPanel());
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
-        root.addView(new com.tridev.familyhub.core.ui.SharedSyncStatusView(root.getContext()),
-                new LinearLayout.LayoutParams(-1, -2));
         body = new FrameLayout(themed); root.addView(body, new LinearLayout.LayoutParams(-1, 0, 1f));
         workspace = new ReminderWorkspace(themed, true, () -> startActivity(new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));
         workspace.setSyncStatusListener(value -> {state.setText(value + " • Mini");state.setTextColor(value.contains("Live")?Color.rgb(30,125,92):Color.rgb(91,101,113));});
