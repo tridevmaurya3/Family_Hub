@@ -29,6 +29,16 @@ public final class FloatingItemEditors {
         LinearLayout box = new LinearLayout(c); box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(c,12),dp(c,8),dp(c,12),dp(c,8)); return box;
     }
+    private static com.google.android.material.textfield.TextInputLayout outlinedField(EditText input) {
+        com.google.android.material.textfield.TextInputLayout layout =
+                new com.google.android.material.textfield.TextInputLayout(input.getContext());
+        layout.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        layout.setHint(input.getHint());input.setHint(null);
+        layout.addView(input,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.topMargin=dp(input.getContext(),6);layout.setLayoutParams(params);
+        CompactFormStyle.apply(layout);return layout;
+    }
     private static EditText field(LinearLayout box,String title,String value) {
         com.google.android.material.textfield.TextInputEditText text =
                 new com.google.android.material.textfield.TextInputEditText(box.getContext());
@@ -36,16 +46,30 @@ public final class FloatingItemEditors {
         text.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         text.setMinLines(1); text.setMaxLines(5);
-        box.addView(CompactFormStyle.field(text)); return text;
+        box.addView(outlinedField(text)); return text;
     }
     private static AutoCompleteTextView choice(LinearLayout box,String title,String value,String[] values) {
         com.google.android.material.textfield.MaterialAutoCompleteTextView text =
                 new com.google.android.material.textfield.MaterialAutoCompleteTextView(box.getContext());
         text.setHint(title); text.setInputType(0);
-        text.setAdapter(new ArrayAdapter<>(box.getContext(),R.layout.item_form_dropdown,values));
+        text.setThreshold(0);
+        text.setAdapter(new ArrayAdapter<String>(box.getContext(),R.layout.item_form_dropdown,values) {
+            private final android.widget.Filter allOptions = new android.widget.Filter() {
+                @Override protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults result = new FilterResults();
+                    result.values = values; result.count = values.length; return result;
+                }
+                @Override protected void publishResults(CharSequence constraint, FilterResults results) {
+                    notifyDataSetChanged();
+                }
+            };
+            @Override public android.widget.Filter getFilter() { return allOptions; }
+        });
         text.setText(value,false);
-        com.google.android.material.textfield.TextInputLayout layout=CompactFormStyle.field(text);
+        com.google.android.material.textfield.TextInputLayout layout=outlinedField(text);
         layout.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_DROPDOWN_MENU);
+        layout.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_OUTLINE);
+        text.setOnClickListener(v -> text.showDropDown());
         box.addView(layout); return text;
     }
     private static void pair(LinearLayout box,View left,View right) {
@@ -101,13 +125,19 @@ public final class FloatingItemEditors {
         dialog.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         dialog.show();
         dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-        int width=Math.min(dp(c,440),c.getResources().getDisplayMetrics().widthPixels-dp(c,24));
+        int width=Math.min(dp(c,380),c.getResources().getDisplayMetrics().widthPixels-dp(c,32));
         int maxHeight=c.getResources().getDisplayMetrics().heightPixels-dp(c,100);
         shell.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
         int chrome=shell.getMeasuredHeight()-scroll.getMeasuredHeight();
         scroll.getLayoutParams().height=Math.min(scroll.getMeasuredHeight(),Math.max(dp(c,100),maxHeight-chrome));
         scroll.requestLayout();
+        box.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{
+            int height=Math.min(b-t,Math.max(dp(c,100),maxHeight-chrome));
+            if(scroll.getLayoutParams().height!=height){
+                scroll.getLayoutParams().height=height;scroll.requestLayout();
+            }
+        });
         dialog.getWindow().setLayout(width,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         cancel.setOnClickListener(v->dialog.dismiss());update.setOnClickListener(v->save.run());
@@ -117,9 +147,19 @@ public final class FloatingItemEditors {
     public static void grocery(View anchor,GroceryItem item,GroceryRepository repository,Runnable refresh) {
         Context c=themed(anchor); LinearLayout box=form(c);
         EditText name=field(box,"Item name",item.name);
-        EditText quantity=field(box,"Quantity",item.quantity);
-        EditText category=field(box,"Category",item.category);
-        pair(box,quantity,category);
+        String[] parts=item.quantity.trim().split("\\s+",2);
+        EditText quantity=field(box,"Amount",parts.length>0?parts[0]:"");
+        quantity.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        String originalUnit=parts.length>1?parts[1]:"";
+        java.util.LinkedHashSet<String> units=new java.util.LinkedHashSet<>();
+        units.add(originalUnit);
+        java.util.Collections.addAll(units,c.getResources().getStringArray(R.array.grocery_quantity_units));
+        AutoCompleteTextView unit=choice(box,"Unit",originalUnit,units.toArray(new String[0]));
+        pair(box,quantity,unit);
+        java.util.LinkedHashSet<String> categories=new java.util.LinkedHashSet<>();
+        if(!item.category.isEmpty())categories.add(item.category);
+        java.util.Collections.addAll(categories,com.tridev.familyhub.feature.grocery.GroceryOptionCatalog.categoryLabels(c));
+        AutoCompleteTextView category=choice(box,"Category",item.category,categories.toArray(new String[0]));
         EditText notes=field(box,"Notes",item.notes);
         AutoCompleteTextView priority=choice(box,"Priority",item.priority,
                 new String[]{GroceryItem.PRIORITY_NORMAL,GroceryItem.PRIORITY_HIGH,GroceryItem.PRIORITY_URGENT});
@@ -128,7 +168,9 @@ public final class FloatingItemEditors {
         dialog[0]=show(anchor,"Edit grocery",box,()->{
             String title=name.getText().toString().trim();
             if(title.isEmpty()){name.setError("Required");return;}
-            item.name=title;item.quantity=quantity.getText().toString().trim();
+            item.name=title;
+            String amount=quantity.getText().toString().trim(),selectedUnit=unit.getText().toString().trim();
+            item.quantity=amount.isEmpty()?"":amount+(selectedUnit.isEmpty()?"":" "+selectedUnit);
             item.category=category.getText().toString().trim();item.notes=notes.getText().toString().trim();
             item.priority=priority.getText().toString();
             repository.saveEdit(item,originalName,()->{dialog[0].dismiss();refresh.run();});
@@ -146,6 +188,12 @@ public final class FloatingItemEditors {
         AutoCompleteTextView repeat=choice(box,"Repeat",task.repeatType,
                 new String[]{FamilyTask.REPEAT_NONE,FamilyTask.REPEAT_DAILY,FamilyTask.REPEAT_WEEKLY,FamilyTask.REPEAT_MONTHLY});
         pair(box,priority,repeat);
+        com.google.android.material.checkbox.MaterialCheckBox reminder=new com.google.android.material.checkbox.MaterialCheckBox(c);
+        reminder.setText("Reminder enabled");reminder.setChecked(task.reminderEnabled);box.addView(reminder);
+        java.util.LinkedHashSet<String> leadValues=new java.util.LinkedHashSet<>();
+        leadValues.add(String.valueOf(task.reminderMinutesBefore));
+        java.util.Collections.addAll(leadValues,"0","5","10","15","30","60","1440");
+        AutoCompleteTextView lead=choice(box,"Remind minutes before",String.valueOf(task.reminderMinutesBefore),leadValues.toArray(new String[0]));
         final long[] due={task.dueAt};
         com.google.android.material.button.MaterialButton date=new com.google.android.material.button.MaterialButton(c);
         Runnable update=()->date.setText(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(due[0])));
@@ -171,6 +219,7 @@ public final class FloatingItemEditors {
             if(!subtasks.validate())return;
             task.title=name;task.notes=FamilyTaskSubtasks.encode(notes.getText().toString().trim(),subtasks.getItems(),subtasks.getCompleted());
             task.priority=priority.getText().toString();task.repeatType=repeat.getText().toString();task.dueAt=due[0];
+            task.reminderEnabled=reminder.isChecked();task.reminderMinutesBefore=Integer.parseInt(lead.getText().toString());
             repository.save(task,()->{FamilyTaskScheduler.schedule(c,task);dialog[0].dismiss();refresh.run();});
         });
     }
