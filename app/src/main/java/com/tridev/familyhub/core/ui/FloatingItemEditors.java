@@ -49,12 +49,22 @@ public final class FloatingItemEditors {
         box.addView(layout); return text;
     }
     private static void pair(LinearLayout box,View left,View right) {
-        View l=(View)left.getParent(),r=(View)right.getParent();
+        View l=formChild(box,left),r=formChild(box,right);
+        if(l==null||r==null||l==r)return;
         box.removeView(l);box.removeView(r);
         LinearLayout row=new LinearLayout(box.getContext());row.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMarginEnd(dp(box.getContext(),4));
         row.addView(l,lp);row.addView(r,new LinearLayout.LayoutParams(0,-2,1f));
         box.addView(row);
+    }
+    // TextInputLayout puts the input inside an internal frame; move the whole wrapper.
+    private static View formChild(LinearLayout box,View input) {
+        View child=input;
+        while(child.getParent()!=box) {
+            if(!(child.getParent() instanceof View))return null;
+            child=(View)child.getParent();
+        }
+        return child;
     }
     // Item rows are rebuilt by realtime refresh. Only the whole panel owns editor lifetime.
     private static void followPanel(View anchor,android.app.Dialog dialog) {
