@@ -89,7 +89,8 @@ public final class CompactFormStyle {
         TextInputLayout layout = new TextInputLayout(input.getContext());
         layout.setHint(input.getHint());
         input.setHint(null);
-        layout.addView(input, new ViewGroup.LayoutParams(
+        // TextInputLayout expects LinearLayout params when it adjusts input margins.
+        layout.addView(input, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
