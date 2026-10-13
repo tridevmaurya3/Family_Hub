@@ -29,39 +29,79 @@ public final class FloatingItemEditors {
         LinearLayout box = new LinearLayout(c); box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(c,12),dp(c,8),dp(c,12),dp(c,8)); return box;
     }
-    private static void label(LinearLayout box, String label) {
-        TextView text = new TextView(box.getContext()); text.setText(label); text.setTextSize(12);
-        box.addView(text);
-    }
     private static EditText field(LinearLayout box,String title,String value) {
-        label(box,title);
-        EditText text = new androidx.appcompat.widget.AppCompatEditText(box.getContext());
-        text.setText(value); text.setTextSize(14); text.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+        com.google.android.material.textfield.TextInputEditText text =
+                new com.google.android.material.textfield.TextInputEditText(box.getContext());
+        text.setHint(title); text.setText(value);
+        text.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        box.addView(text,new LinearLayout.LayoutParams(-1,-2)); return text;
+        text.setMinLines(1); text.setMaxLines(5);
+        box.addView(CompactFormStyle.field(text)); return text;
     }
     private static AutoCompleteTextView choice(LinearLayout box,String title,String value,String[] values) {
-        label(box,title);
-        AutoCompleteTextView text = new AutoCompleteTextView(box.getContext());
-        text.setInputType(0); text.setTextSize(14);
+        com.google.android.material.textfield.MaterialAutoCompleteTextView text =
+                new com.google.android.material.textfield.MaterialAutoCompleteTextView(box.getContext());
+        text.setHint(title); text.setInputType(0);
         text.setAdapter(new ArrayAdapter<>(box.getContext(),R.layout.item_form_dropdown,values));
-        text.setText(value,false); text.setOnClickListener(v->text.showDropDown());
-        box.addView(text,new LinearLayout.LayoutParams(-1,dp(box.getContext(),48))); return text;
+        text.setText(value,false);
+        com.google.android.material.textfield.TextInputLayout layout=CompactFormStyle.field(text);
+        layout.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_DROPDOWN_MENU);
+        box.addView(layout); return text;
+    }
+    private static void pair(LinearLayout box,View left,View right) {
+        View l=(View)left.getParent(),r=(View)right.getParent();
+        box.removeView(l);box.removeView(r);
+        LinearLayout row=new LinearLayout(box.getContext());row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMarginEnd(dp(box.getContext(),4));
+        row.addView(l,lp);row.addView(r,new LinearLayout.LayoutParams(0,-2,1f));
+        box.addView(row);
+    }
+    // Item rows are rebuilt by realtime refresh. Only the whole panel owns editor lifetime.
+    private static void followPanel(View anchor,android.app.Dialog dialog) {
+        View panel=anchor.getRootView();
+        View.OnAttachStateChangeListener detach=new View.OnAttachStateChangeListener(){
+            public void onViewAttachedToWindow(View v){}
+            public void onViewDetachedFromWindow(View v){dialog.dismiss();}
+        };
+        panel.addOnAttachStateChangeListener(detach);
+        dialog.setOnDismissListener(d->panel.removeOnAttachStateChangeListener(detach));
     }
     private static AlertDialog show(View anchor,String title,LinearLayout box,Runnable save) {
-        android.widget.ScrollView scroll = new android.widget.ScrollView(box.getContext());
-        scroll.addView(box);
-        AlertDialog dialog = new MaterialAlertDialogBuilder(box.getContext()).setTitle(title).setView(scroll)
-                .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.save,null).create();
+        Context c=box.getContext();
+        LinearLayout shell=form(c);shell.setBackgroundResource(R.drawable.bg_form_floating_shell);
+        TextView heading=new TextView(c);heading.setText(title);heading.setTextSize(15);
+        heading.setTypeface(null,android.graphics.Typeface.BOLD);
+        heading.setTextColor(androidx.core.content.ContextCompat.getColor(c,R.color.fh_form_accent));
+        heading.setPadding(dp(c,10),dp(c,8),dp(c,10),dp(c,8));
+        shell.addView(heading,new LinearLayout.LayoutParams(-1,-2));
+        androidx.core.widget.NestedScrollView scroll=new androidx.core.widget.NestedScrollView(c);
+        scroll.setFillViewport(false);scroll.addView(box);shell.addView(scroll,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout actions=new LinearLayout(c);actions.setGravity(android.view.Gravity.END);
+        com.google.android.material.button.MaterialButton cancel=new com.google.android.material.button.MaterialButton(c,null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        cancel.setText(R.string.cancel);
+        com.google.android.material.button.MaterialButton update=new com.google.android.material.button.MaterialButton(c);
+        update.setText(R.string.save);
+        actions.addView(cancel,new LinearLayout.LayoutParams(0,dp(c,44),1f));
+        LinearLayout.LayoutParams updateParams=new LinearLayout.LayoutParams(0,dp(c,44),1f);
+        updateParams.setMarginStart(dp(c,6));actions.addView(update,updateParams);
+        shell.addView(actions,new LinearLayout.LayoutParams(-1,-2));
+        CompactFormStyle.apply(shell);
+        AlertDialog dialog=new MaterialAlertDialogBuilder(c).setView(shell).create();
         dialog.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
         dialog.show();
-        View.OnAttachStateChangeListener detach = new View.OnAttachStateChangeListener() {
-            public void onViewAttachedToWindow(View v) { }
-            public void onViewDetachedFromWindow(View v) { dialog.dismiss(); }
-        };
-        anchor.addOnAttachStateChangeListener(detach);
-        dialog.setOnDismissListener(d->anchor.removeOnAttachStateChangeListener(detach));
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->save.run());
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        int width=Math.min(dp(c,440),c.getResources().getDisplayMetrics().widthPixels-dp(c,24));
+        int maxHeight=c.getResources().getDisplayMetrics().heightPixels-dp(c,100);
+        shell.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
+        int chrome=shell.getMeasuredHeight()-scroll.getMeasuredHeight();
+        scroll.getLayoutParams().height=Math.min(scroll.getMeasuredHeight(),Math.max(dp(c,100),maxHeight-chrome));
+        scroll.requestLayout();
+        dialog.getWindow().setLayout(width,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        cancel.setOnClickListener(v->dialog.dismiss());update.setOnClickListener(v->save.run());
+        followPanel(anchor,dialog);
         return dialog;
     }
     public static void grocery(View anchor,GroceryItem item,GroceryRepository repository,Runnable refresh) {
@@ -69,6 +109,7 @@ public final class FloatingItemEditors {
         EditText name=field(box,"Item name",item.name);
         EditText quantity=field(box,"Quantity",item.quantity);
         EditText category=field(box,"Category",item.category);
+        pair(box,quantity,category);
         EditText notes=field(box,"Notes",item.notes);
         AutoCompleteTextView priority=choice(box,"Priority",item.priority,
                 new String[]{GroceryItem.PRIORITY_NORMAL,GroceryItem.PRIORITY_HIGH,GroceryItem.PRIORITY_URGENT});
@@ -84,6 +125,7 @@ public final class FloatingItemEditors {
         });
     }
     public static void task(View anchor,FamilyTask task,FamilyTaskRepository repository,Runnable refresh) {
+        final View owner=anchor.getRootView();
         Context c=themed(anchor); LinearLayout box=form(c);
         EditText title=field(box,"Task title",task.title);
         FamilyTaskSubtasks.Content content=FamilyTaskSubtasks.decode(task.notes);
@@ -93,6 +135,7 @@ public final class FloatingItemEditors {
                 new String[]{FamilyTask.PRIORITY_NORMAL,FamilyTask.PRIORITY_HIGH,FamilyTask.PRIORITY_URGENT});
         AutoCompleteTextView repeat=choice(box,"Repeat",task.repeatType,
                 new String[]{FamilyTask.REPEAT_NONE,FamilyTask.REPEAT_DAILY,FamilyTask.REPEAT_WEEKLY,FamilyTask.REPEAT_MONTHLY});
+        pair(box,priority,repeat);
         final long[] due={task.dueAt};
         com.google.android.material.button.MaterialButton date=new com.google.android.material.button.MaterialButton(c);
         Runnable update=()->date.setText(java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(due[0])));
@@ -107,9 +150,9 @@ public final class FloatingItemEditors {
                     due[0]=calendar.getTimeInMillis();update.run();
                 },calendar.get(java.util.Calendar.HOUR_OF_DAY),calendar.get(java.util.Calendar.MINUTE),
                     android.text.format.DateFormat.is24HourFormat(c));
-                time.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);time.show();
+                time.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);time.show();followPanel(owner,time);
             },calendar.get(java.util.Calendar.YEAR),calendar.get(java.util.Calendar.MONTH),calendar.get(java.util.Calendar.DAY_OF_MONTH));
-            picker.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);picker.show();
+            picker.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);picker.show();followPanel(owner,picker);
         });
         final AlertDialog[] dialog={null};
         dialog[0]=show(anchor,"Edit To-Do",box,()->{
@@ -126,12 +169,7 @@ public final class FloatingItemEditors {
         AlertDialog dialog=new MaterialAlertDialogBuilder(c).setTitle(title).setMessage(message)
                 .setNegativeButton(R.string.cancel,null).setPositiveButton(R.string.remove,(d,w)->action.run()).create();
         dialog.getWindow().setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);dialog.show();
-        View.OnAttachStateChangeListener detach=new View.OnAttachStateChangeListener(){
-            public void onViewAttachedToWindow(View v){}
-            public void onViewDetachedFromWindow(View v){dialog.dismiss();}
-        };
-        anchor.addOnAttachStateChangeListener(detach);
-        dialog.setOnDismissListener(d->anchor.removeOnAttachStateChangeListener(detach));
+        followPanel(anchor,dialog);
     }
     public static void removeGrocery(View anchor,GroceryItem item,GroceryRepository repository,Runnable refresh) {
         boolean recurring=GroceryRecurrenceEngine.isRecurringType(GroceryRecurrenceEngine.originalCycle(item));
