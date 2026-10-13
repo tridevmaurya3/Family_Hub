@@ -13,7 +13,7 @@
         android:paddingStart="10dp"
         android:paddingTop="7dp"
         android:paddingEnd="10dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="2dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -83,39 +83,33 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="@dimen/border_width"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:background="@color/fh_divider" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="0dp"
             android:gravity="end"
             android:orientation="horizontal">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buying_grocery_button"
-                style="@style/Widget.FamilyHub.Button.Action"
+                style="@style/Widget.FamilyHub.Button.ListAction"
                 android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                android:layout_height="wrap_content"
                 android:text="@string/grocery_mark_buying"
                 android:textColor="@color/fh_warning" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_grocery_button"
-                style="@style/Widget.FamilyHub.Button.Action"
+                style="@style/Widget.FamilyHub.Button.ListAction"
                 android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                android:layout_height="wrap_content"
                 android:text="@string/edit"
                 android:textColor="@color/fh_primary" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/delete_grocery_button"
-                style="@style/Widget.FamilyHub.Button.Danger"
+                style="@style/Widget.FamilyHub.Button.ListDanger"
                 android:layout_width="wrap_content"
-                android:layout_height="38dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
+                android:layout_height="wrap_content"
                 android:text="@string/remove"
                 android:textColor="@color/fh_error" />
         </LinearLayout>

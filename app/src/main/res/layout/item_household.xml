@@ -10,7 +10,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/card_padding">
+        android:paddingStart="@dimen/card_padding"
+        android:paddingTop="@dimen/card_padding"
+        android:paddingEnd="@dimen/card_padding"
+        android:paddingBottom="2dp">
 
         <TextView
             android:id="@+id/tv_household_name"
@@ -36,22 +39,22 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/space_8"
+            android:layout_marginTop="0dp"
             android:gravity="end"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_change_guardian"
-                style="@style/Widget.FamilyHub.Button.Action"
+                style="@style/Widget.FamilyHub.Button.ListAction"
                 android:layout_width="wrap_content"
-                android:layout_height="@dimen/touch_target_min"
+                android:layout_height="wrap_content"
                 android:text="@string/household_change_guardian" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_assign_members"
-                style="@style/Widget.FamilyHub.Button.Action"
+                style="@style/Widget.FamilyHub.Button.ListAction"
                 android:layout_width="wrap_content"
-                android:layout_height="@dimen/touch_target_min"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/space_4"
                 android:text="@string/household_assign_members" />
         </LinearLayout>

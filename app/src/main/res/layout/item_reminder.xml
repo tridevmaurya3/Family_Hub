@@ -14,7 +14,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="6dp">
+        android:paddingStart="6dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="6dp"
+        android:paddingBottom="2dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -99,16 +102,11 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/reminder_status_button"
-                style="@style/Widget.FamilyHub.Button.Action"
+                style="@style/Widget.FamilyHub.Button.ListAction"
                 android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:minHeight="0dp"
+                android:layout_height="wrap_content"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:paddingTop="0dp"
-                android:paddingBottom="0dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
                 android:layout_weight="1"
                 android:minWidth="0dp"
                 android:text="Update status"
@@ -116,32 +114,22 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/edit_reminder_button"
-                style="@style/Widget.FamilyHub.Button.Action"
+                style="@style/Widget.FamilyHub.Button.ListAction"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:minHeight="0dp"
+                android:layout_height="wrap_content"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:paddingTop="0dp"
-                android:paddingBottom="0dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
                 android:minWidth="0dp"
                 android:text="@string/edit"
                 android:textColor="@color/fh_primary" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/delete_reminder_button"
-                style="@style/Widget.FamilyHub.Button.Danger"
+                style="@style/Widget.FamilyHub.Button.ListDanger"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:minHeight="0dp"
+                android:layout_height="wrap_content"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
-                android:paddingTop="0dp"
-                android:paddingBottom="0dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
                 android:layout_marginStart="@dimen/space_4"
                 android:minWidth="0dp"
                 android:text="@string/delete"

@@ -97,6 +97,22 @@
         <item name="iconTint">@color/fh_primary</item>
     </style>
 
+    <!-- Compact actions scoped to list cards; form buttons keep their existing sizes. -->
+    <style name="Widget.FamilyHub.Button.ListAction" parent="Widget.FamilyHub.Button.Action">
+        <item name="android:minHeight">32dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="insetTop">0dp</item>
+        <item name="insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.FamilyHub.Button.ListDanger" parent="Widget.FamilyHub.Button.ListAction">
+        <item name="android:textColor">@color/fh_error</item>
+        <item name="iconTint">@color/fh_error</item>
+    </style>
+
     <style name="Widget.FamilyHub.Button.Text" parent="Widget.FamilyHub.Button.Action" />
 
     <style name="Widget.FamilyHub.Button.Danger" parent="Widget.FamilyHub.Button.Action">
