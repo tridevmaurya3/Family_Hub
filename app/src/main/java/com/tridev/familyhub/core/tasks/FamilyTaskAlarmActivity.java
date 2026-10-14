@@ -62,7 +62,12 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
         cardParams.setMargins(0, dp(18), 0, dp(18)); root.addView(details, cardParams);
         TextView title = text(details, getIntent().getStringExtra("title"), 24);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
-        text(details, getString(getIntent().getIntExtra("stage", 1) == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due), 14);
+        int stage = getIntent().getIntExtra("stage", 1);
+        String notice = stage == 0 || stage == 2
+                ? getString(stage == 0 ? R.string.task_reminder_upcoming : R.string.task_reminder_followup_notice,
+                        java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(new java.util.Date(time)))
+                : getString(stage == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due);
+        text(details, notice, 14);
         String notes = getIntent().getStringExtra("notes");
         if (notes != null && !notes.trim().isEmpty()) text(details, notes, 16);
         text(root, getString(R.string.task_alarm_snooze_tap), 16);

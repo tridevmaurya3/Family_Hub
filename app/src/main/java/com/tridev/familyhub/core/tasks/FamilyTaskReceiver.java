@@ -17,7 +17,6 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import com.tridev.familyhub.R;
-import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
@@ -134,20 +133,23 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
     private boolean show(Context context, FamilyTask task, int stage, long occurrence) {
         boolean important = FamilyTaskReminderPreferences.important(context, task);
         if (!canNotify(context, important)) return false;
-        if ((stage == 1 || stage == 3) && FamilyTaskAlarmService.canRing(context)) {
+        boolean alarmStage = stage == 1 || stage == 3;
+        boolean alarmChannelEnabled = alarmStage && FamilyTaskAlarmService.canRing(context);
+        if (alarmChannelEnabled) {
             Intent alarm = FamilyTaskAlarmService.alarmIntent(context, task, stage, occurrence);
             try {
                 ContextCompat.startForegroundService(context, alarm);
                 return true;
             } catch (RuntimeException denied) {
-                // Keep the existing notification path if Android refuses a background service.
+                // The notification below still carries the explicit alarm screen if a service is denied.
             }
         }
         String channelId = channelId(important);
         long id = task.id;
-        PendingIntent open = PendingIntent.getActivity(context, FamilyTaskScheduler.notificationId(id),
-                new Intent(context, MainActivity.class).putExtra(MainActivity.EXTRA_OPEN_ROUTE, MainActivity.ROUTE_TASKS)
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Intent alarm = FamilyTaskAlarmService.alarmIntent(context, task, stage, occurrence);
+        // Notification taps open only this reminder's controls, never the app dashboard.
+        PendingIntent open = FamilyTaskAlarmService.screenPendingIntent(context, alarm);
+        PendingIntent choose = FamilyTaskAlarmService.snoozePendingIntent(context, alarm);
         FamilyTaskSubtasks.Content content = FamilyTaskSubtasks.decode(task.notes);
         int pending = 0;
         for (Boolean checked : content.completed) if (!Boolean.TRUE.equals(checked)) pending++;
@@ -159,11 +161,20 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle(task.title)
                 .setContentText(detail).setStyle(new NotificationCompat.BigTextStyle().bigText(detail))
-                .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(important ? NotificationCompat.CATEGORY_ALARM : NotificationCompat.CATEGORY_REMINDER)
+                .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(alarmStage || important ? NotificationCompat.CATEGORY_ALARM : NotificationCompat.CATEGORY_REMINDER)
                 .setDefaults(NotificationCompat.DEFAULT_ALL).setAutoCancel(true).setContentIntent(open)
                 .addAction(0, context.getString(R.string.family_tasks_notification_complete), actionIntent(context, id, ACTION_COMPLETE, 610000))
-                .addAction(0, context.getString(R.string.family_tasks_notification_snooze), actionIntent(context, id, ACTION_SNOOZE, 620000))
-                .addAction(0, context.getString(R.string.task_reminder_open), open);
+                .addAction(0, context.getString(R.string.task_alarm_snooze_choose), choose)
+                .addAction(0, context.getString(R.string.task_alarm_dismiss), actionIntent(context, id, ACTION_DISMISS, 620000));
+        if (alarmChannelEnabled && FamilyTaskAlarmService.fullScreenAllowed(context)
+                && FamilyTaskAlarmService.fullScreenChannelReady(context)) {
+            NotificationManager manager = context.getSystemService(NotificationManager.class);
+            NotificationChannel channel = manager == null ? null : manager.getNotificationChannel(channelId);
+            if (channel != null && channel.getImportance() >= NotificationManager.IMPORTANCE_HIGH) {
+                builder.setFullScreenIntent(open, true);
+                manager.cancel(FamilyTaskScheduler.notificationId(id));
+            }
+        }
         try { NotificationManagerCompat.from(context).notify(FamilyTaskScheduler.notificationId(id), builder.build()); return true; }
         catch (SecurityException ignored) { return false; }
     }

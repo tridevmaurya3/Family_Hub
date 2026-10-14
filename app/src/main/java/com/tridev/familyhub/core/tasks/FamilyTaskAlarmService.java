@@ -70,6 +70,34 @@ public final class FamilyTaskAlarmService extends Service {
         NotificationManager manager = context.getSystemService(NotificationManager.class);
         return Build.VERSION.SDK_INT < 34 || (manager != null && manager.canUseFullScreenIntent());
     }
+    private static Intent screenIntent(Context context, Intent alarm) {
+        return new Intent(context, FamilyTaskAlarmActivity.class).putExtras(alarm)
+                .setData(Uri.parse("familyhub://task-alarm/" + alarm.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0)))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+    }
+    static PendingIntent screenPendingIntent(Context context, Intent alarm) {
+        Bundle launchOptions = null;
+        if (Build.VERSION.SDK_INT >= 34) {
+            ActivityOptions options = ActivityOptions.makeBasic();
+            // Only the explicit immutable alarm screen receives background launch privileges.
+            options.setPendingIntentCreatorBackgroundActivityStartMode(Build.VERSION.SDK_INT >= 36
+                    ? ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
+                    : ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+            launchOptions = options.toBundle();
+        }
+        return PendingIntent.getActivity(context,
+                FamilyTaskScheduler.notificationId(alarm.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0)),
+                screenIntent(context, alarm), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE,
+                launchOptions);
+    }
+    static PendingIntent snoozePendingIntent(Context context, Intent alarm) {
+        Intent chooser = screenIntent(context, alarm).setClass(context, FamilyTaskSnoozeActivity.class)
+                .putExtra("snooze_only", true)
+                .setData(Uri.parse("familyhub://task-snooze/" + alarm.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0)));
+        return PendingIntent.getActivity(context,
+                FamilyTaskScheduler.notificationId(alarm.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0)) ^ 0x116611,
+                chooser, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
     public static void stopAlarm(Context context, long id) {
         if (ringingId != id) return;
         try { context.startService(new Intent(context, FamilyTaskAlarmService.class).setAction(STOP)
@@ -93,26 +121,13 @@ public final class FamilyTaskAlarmService extends Service {
         }
         if (id <= 0) { stopSelf(); return START_NOT_STICKY; }
         releaseSound();
+        // A prior occurrence may still own this foreground notification.
+        if (ringingId != 0) stopForeground(STOP_FOREGROUND_REMOVE);
         if (ringingId != 0 && ringingId != id) closed(ringingId);
         ringingId = id;
         ensureChannel(this);
-        Intent screen = new Intent(this, FamilyTaskAlarmActivity.class).putExtras(intent)
-                .setData(Uri.parse("familyhub://task-alarm/" + id)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        Bundle launchOptions = null;
-        if (Build.VERSION.SDK_INT >= 34) {
-            // Only this explicit, immutable alarm intent may launch while the phone is locked.
-            ActivityOptions options = ActivityOptions.makeBasic();
-            options.setPendingIntentCreatorBackgroundActivityStartMode(Build.VERSION.SDK_INT >= 36
-                    ? ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
-                    : ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
-            launchOptions = options.toBundle();
-        }
-        PendingIntent open = PendingIntent.getActivity(this, FamilyTaskScheduler.notificationId(id), screen,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE, launchOptions);
-        Intent chooser = new Intent(screen).setClass(this, FamilyTaskSnoozeActivity.class).putExtra("snooze_only", true)
-                .setData(Uri.parse("familyhub://task-snooze/" + id));
-        PendingIntent choose = PendingIntent.getActivity(this, FamilyTaskScheduler.notificationId(id) ^ 0x116611,
-                chooser, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = screenPendingIntent(this, intent);
+        PendingIntent choose = snoozePendingIntent(this, intent);
         String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
                 .format(new java.util.Date(intent.getLongExtra("time", System.currentTimeMillis())));
         String detail = getString(intent.getIntExtra("stage", 1) == 3 ? R.string.task_alarm_snoozed : R.string.task_alarm_due)
@@ -123,13 +138,17 @@ public final class FamilyTaskAlarmService extends Service {
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle(intent.getStringExtra("title"))
                 .setContentText(detail).setStyle(new NotificationCompat.BigTextStyle().bigText(detail)).setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setPriority(NotificationCompat.PRIORITY_MAX).setOngoing(true).setContentIntent(open)
+                .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                 .addAction(0, getString(R.string.task_alarm_snooze_choose), choose)
                 .addAction(0, getString(R.string.task_alarm_dismiss), action(this, id, FamilyTaskReceiver.ACTION_DISMISS, 0))
                 .addAction(0, getString(R.string.family_tasks_notification_complete), action(this, id, FamilyTaskReceiver.ACTION_COMPLETE, 0));
-        PowerManager power = getSystemService(PowerManager.class);
-        KeyguardManager keyguard = getSystemService(KeyguardManager.class);
-        boolean lockedOrOff = (power != null && !power.isInteractive()) || (keyguard != null && keyguard.isKeyguardLocked());
-        if (lockedOrOff && fullScreenAllowed(this) && fullScreenChannelReady(this)) builder.setFullScreenIntent(open, true);
+        // Android chooses heads-up while in use and full-screen while locked/off/AOD.
+        // Sampling screen state here races with the system waking for the notification.
+        if (fullScreenAllowed(this) && fullScreenChannelReady(this)) builder.setFullScreenIntent(open, true);
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        // Advance reminders and timed-out alarms reuse this id. Publish a fresh entry;
+        // updating the existing notification can skip SystemUI's full-screen launch.
+        if (manager != null) manager.cancel(FamilyTaskScheduler.notificationId(id));
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(FamilyTaskScheduler.notificationId(id), builder.build(),
                     android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
