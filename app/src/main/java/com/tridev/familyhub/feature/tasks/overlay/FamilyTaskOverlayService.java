@@ -141,6 +141,7 @@ public final class FamilyTaskOverlayService extends Service {
     };
     @Nullable private PopupWindow activePopup;
     private FamilyTaskRepository repository;
+    @Nullable private java.util.function.Consumer<FamilyTask> inlineEdit;
     private boolean completedMode;
     private int dateMode = DATE_TODAY;
     private int sortMode = SORT_DUE;
@@ -451,6 +452,9 @@ public final class FamilyTaskOverlayService extends Service {
 
         LinearLayout addOptions = row();
         final int[] quickRepeat = {0};
+        final String[] repeatValues = {FamilyTask.REPEAT_NONE, FamilyTask.REPEAT_DAILY,
+                FamilyTask.REPEAT_WEEKLY, FamilyTask.REPEAT_MONTHLY};
+        final String[] repeatLabels = {"Once", "Repeated", "Weekly", "Monthly"};
         Button quickDate = compactAction(getString(R.string.family_tasks_overlay_today) + "  ▾",
                 Color.rgb(15, 105, 80), Color.argb(220, 226, 244, 238));
         Button quickTimeButton = compactAction(getString(R.string.family_tasks_quick_time) + "  ▾",
@@ -537,10 +541,10 @@ public final class FamilyTaskOverlayService extends Service {
                     quickPriorityButton.setText(getString(labels[index]) + "  ▾");
                 }));
         quickRepeatButton.setOnClickListener(v -> showChoicePopup(quickRepeatButton,
-                new String[]{"Once", "Repeated"}, quickRepeat[0],
+                repeatLabels, quickRepeat[0],
                 Color.rgb(28, 91, 130), index -> {
                     quickRepeat[0] = index;
-                    quickRepeatButton.setText((index == 1 ? "Repeated" : "Once") + "  ▾");
+                    quickRepeatButton.setText(repeatLabels[index] + "  ▾");
                 }));
         customDueText.setOnClickListener(v ->
                 showQuickDatePicker(quickDate, customDueText, customQuickDateAt, () -> {
@@ -555,6 +559,62 @@ public final class FamilyTaskOverlayService extends Service {
                 new com.tridev.familyhub.feature.tasks.FamilyTaskReminderOptionsView(
                         new android.view.ContextThemeWrapper(this, R.style.Theme_FamilyHub), null, true);
         root.addView(reminderOptions, new LinearLayout.LayoutParams(-1, -2));
+
+        final FamilyTask[] editing = {null};
+        final boolean[] saving = {false};
+        EditText editNotes = compactInput("Notes");
+        editNotes.setSingleLine(false); editNotes.setMinLines(1); editNotes.setMaxLines(4);
+        editNotes.setVisibility(View.GONE);
+        root.addView(editNotes, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout editTools = row();
+        editTools.setVisibility(View.GONE);
+        editTools.addView(text("Editing To-Do", 11f, true), new LinearLayout.LayoutParams(0, -2, 1f));
+        Button cancelEdit = compactAction("Cancel edit", Color.rgb(106, 75, 150), Color.rgb(244, 237, 252));
+        editTools.addView(cancelEdit, new LinearLayout.LayoutParams(-2, dp(36)));
+        root.addView(editTools, new LinearLayout.LayoutParams(-1, -2));
+        Runnable resetEdit = () -> {
+            editing[0] = null; input.setText(""); input.setError(null); editNotes.setText("");
+            editNotes.setVisibility(View.GONE); editTools.setVisibility(View.GONE);
+            subtaskEditor.reset(); taskType.setText("Single ▾");
+            quickDateMode[0]=0; customQuickDateAt[0]=0L; quickTimeMode[0]=2;
+            customQuickTime[0]=-1; customQuickTime[1]=-1; quickPriority[0]=0; quickRepeat[0]=0;
+            quickDate.setText(getString(R.string.family_tasks_overlay_today)+"  ▾");
+            customDueText.setVisibility(View.GONE);
+            quickPriorityButton.setText(getString(R.string.task_priority_normal)+"  ▾");
+            quickRepeatButton.setText("Once  ▾"); reminderOptions.bindQuick(null);
+            updateQuickTimeButton(quickTimeButton, 0, 0, 2, customQuickTime);
+            add.setText("+"); add.setTextSize(24f); add.getLayoutParams().width=dp(42); add.requestLayout();
+            add.setContentDescription(getString(R.string.family_tasks_add));
+        };
+        cancelEdit.setOnClickListener(v -> { if(!saving[0]) resetEdit.run(); });
+        inlineEdit = task -> {
+            if(saving[0]) return;
+            dismissPopup(); editing[0]=task; input.setError(null); input.setText(task.title);
+            input.setSelection(input.length());
+            FamilyTaskSubtasks.Content content=FamilyTaskSubtasks.decode(task.notes);
+            subtaskEditor.setContent(content); taskType.setText(subtaskEditor.isMultiple()?"Subtasks ▾":"Single ▾");
+            editNotes.setText(content.notes); editNotes.setVisibility(View.VISIBLE); editTools.setVisibility(View.VISIBLE);
+            quickDateMode[0]=2; customQuickDateAt[0]=task.dueAt; quickTimeMode[0]=3;
+            Calendar due=Calendar.getInstance(); due.setTimeInMillis(task.dueAt);
+            customQuickTime[0]=due.get(Calendar.HOUR_OF_DAY); customQuickTime[1]=due.get(Calendar.MINUTE);
+            quickDate.setText(getString(R.string.family_tasks_custom_date)+"  ▾");
+            customDueText.setText("Due date: "+DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(task.dueAt)));
+            customDueText.setVisibility(View.VISIBLE);
+            updateQuickTimeButton(quickTimeButton, 2, task.dueAt, 3, customQuickTime);
+            quickPriority[0]=FamilyTask.PRIORITY_URGENT.equals(task.priority)?2:FamilyTask.PRIORITY_HIGH.equals(task.priority)?1:0;
+            int[] labels={R.string.task_priority_normal,R.string.task_priority_high,R.string.task_priority_urgent};
+            quickPriorityButton.setText(getString(labels[quickPriority[0]])+"  ▾");
+            quickRepeat[0]=0;
+            for(int i=0;i<repeatValues.length;i++) if(repeatValues[i].equals(task.repeatType)) quickRepeat[0]=i;
+            quickRepeatButton.setText(repeatLabels[quickRepeat[0]]+"  ▾"); reminderOptions.bindQuick(task);
+            add.setText("Update"); add.setTextSize(11f); add.getLayoutParams().width=dp(66); add.requestLayout();
+            add.setContentDescription("Update To-Do"); input.requestFocus();
+            root.post(() -> {
+                android.view.ViewParent parent=input.getParent();
+                while(parent instanceof View && !(parent instanceof androidx.core.widget.NestedScrollView)) parent=parent.getParent();
+                if(parent instanceof androidx.core.widget.NestedScrollView) ((androidx.core.widget.NestedScrollView)parent).smoothScrollTo(0,0);
+            });
+        };
 
         countText = text("", 10f, true);
         countText.setTextColor(Color.rgb(84, 93, 105));
@@ -575,7 +635,9 @@ public final class FamilyTaskOverlayService extends Service {
         root.makeControlsScrollable(1, root.indexOfChild(scroll));
 
         View.OnClickListener save = v -> {
+            if(saving[0]) return;
             String value = input.getText().toString().trim();
+            if (value.isEmpty() && editing[0]!=null) { input.setError("Required"); return; }
             if (value.isEmpty()) {
                 closePanel();
                 startActivity(new Intent(this, MainActivity.class)
@@ -585,23 +647,29 @@ public final class FamilyTaskOverlayService extends Service {
                 return;
             }
             if (!subtaskEditor.validate()) return;
-            FamilyTask task = new FamilyTask();
+            boolean isEdit = editing[0]!=null;
+            FamilyTask task = isEdit ? editing[0] : new FamilyTask();
             task.title = value;
-            task.notes = FamilyTaskSubtasks.encode("", subtaskEditor.getItems(), subtaskEditor.getCompleted());
-            task.dueAt = resolveQuickDueAt(quickDateMode[0], customQuickDateAt[0],
+            task.notes = FamilyTaskSubtasks.encode(isEdit ? editNotes.getText().toString().trim() : "",
+                    subtaskEditor.getItems(), subtaskEditor.getCompleted());
+            Calendar original=Calendar.getInstance(); original.setTimeInMillis(task.dueAt);
+            boolean unchangedDue=isEdit && quickDateMode[0]==2 && customQuickDateAt[0]==task.dueAt
+                    && quickTimeMode[0]==3 && customQuickTime[0]==original.get(Calendar.HOUR_OF_DAY)
+                    && customQuickTime[1]==original.get(Calendar.MINUTE);
+            if(!unchangedDue) task.dueAt = resolveQuickDueAt(quickDateMode[0], customQuickDateAt[0],
                     quickTimeMode[0], customQuickTime);
             task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
                     : quickPriority[0] == 1 ? FamilyTask.PRIORITY_HIGH
                     : FamilyTask.PRIORITY_NORMAL;
-            task.repeatType = quickRepeat[0] == 1
-                    ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
+            task.repeatType = repeatValues[quickRepeat[0]];
             reminderOptions.applyQuick(task);
+            saving[0]=true; add.setEnabled(false); cancelEdit.setEnabled(false);
             repository.save(task, () -> {
                 reminderOptions.saveOptions(task);
                 FamilyTaskScheduler.schedule(this, task);
-                input.setText("");
-                subtaskEditor.reset();
-                taskType.setText("Single ▾");
+                saving[0]=false; add.setEnabled(true); cancelEdit.setEnabled(true);
+                if(isEdit) resetEdit.run();
+                else { input.setText(""); subtaskEditor.reset(); taskType.setText("Single ▾"); }
                 refresh();
             });
         };
@@ -1229,8 +1297,7 @@ public final class FamilyTaskOverlayService extends Service {
             dismissPopup();
             activePopup = com.tridev.familyhub.core.ui.FloatingItemActions.dropdown(v.getContext(), true, v,
                     java.util.Arrays.asList("Edit", completedMode ? "Reopen" : "Mark completed", "Remove"), option -> {
-                        if ("Edit".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.task(
-                                v, task, repository, this::refresh);
+                        if ("Edit".equals(option)) { if(inlineEdit!=null) inlineEdit.accept(task); }
                         else if ("Remove".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.remove(
                                 v, "Remove To-Do?", task.title, () -> {
                                     FamilyTaskScheduler.cancel(this, task.id);
@@ -1385,6 +1452,7 @@ public final class FamilyTaskOverlayService extends Service {
     }
 
     private void closePanel() {
+        inlineEdit=null;
         stopVoiceCapture();
         dismissPopup();
         if (panelView != null && windowManager != null) {

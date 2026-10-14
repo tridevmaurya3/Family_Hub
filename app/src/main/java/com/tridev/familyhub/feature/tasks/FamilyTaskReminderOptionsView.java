@@ -29,6 +29,8 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
     private final MaterialButton exactAccess;
     private MaterialButton fullScreenAccess, alarmChannelAccess;
     private int leadIndex = 3;
+    private int quickMinutes = 15;
+    private int disabledMinutes;
     private int modeIndex;
     private static final int[] MINUTES = {-1, 0, 5, 15, 30, 60, 1440};
     public FamilyTaskReminderOptionsView(Context context, FamilyTask task, boolean quick) {
@@ -63,6 +65,7 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         lead.setText(labels[leadIndex], false);
         lead.setOnItemClickListener((parent, view, position, id) -> {
             leadIndex = position;
+            quickMinutes = MINUTES[position];
             toggle.setText(themed.getString(R.string.task_reminder_quick_selection, labels[position]));
         });
         findViewById(R.id.reminder_lead_layout).setVisibility(quick ? VISIBLE : GONE);
@@ -134,10 +137,28 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (intent.resolveActivity(getContext().getPackageManager()) != null) getContext().startActivity(intent);
     }
+    /** Refill the existing floating controls without changing saved local reminder preferences. */
+    public void bindQuick(FamilyTask task) {
+        quickMinutes = task == null ? 15 : task.reminderEnabled ? task.reminderMinutesBefore : -1;
+        disabledMinutes = task == null ? 0 : task.reminderMinutesBefore;
+        MaterialAutoCompleteTextView lead = findViewById(R.id.reminder_lead_input);
+        String label = quickMinutes < 0 ? getContext().getString(R.string.task_reminder_off)
+                : quickMinutes == 0 ? getContext().getString(R.string.task_reminder_short_at)
+                : quickMinutes + " minutes before + at time";
+        lead.setText(label, false);
+        ((MaterialButton)findViewById(R.id.reminder_toggle)).setText(
+                getContext().getString(R.string.task_reminder_quick_selection, label));
+        modeIndex = task != null && FamilyTaskReminderPreferences.important(getContext(), task) ? 1 : 0;
+        ((MaterialAutoCompleteTextView)findViewById(R.id.reminder_mode_input)).setText(
+                getContext().getString(modeIndex == 1 ? R.string.task_reminder_mode_important
+                        : R.string.task_reminder_mode_normal), false);
+        follow.setChecked(task != null && FamilyTaskReminderPreferences.followUp(getContext(), task));
+        refreshAccess();
+    }
     public void applyQuick(FamilyTask task) {
-        int minutes = MINUTES[leadIndex];
+        int minutes = quickMinutes;
         task.reminderEnabled = minutes >= 0;
-        task.reminderMinutesBefore = Math.max(0, minutes);
+        task.reminderMinutesBefore = minutes < 0 ? disabledMinutes : minutes;
     }
     public void saveOptions(FamilyTask task) {
         FamilyTaskReminderPreferences.save(getContext(), task, modeIndex == 1, follow.isChecked());

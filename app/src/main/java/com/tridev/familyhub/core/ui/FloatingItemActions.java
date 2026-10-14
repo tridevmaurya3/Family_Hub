@@ -55,8 +55,27 @@ public final class FloatingItemActions {
         menu.setContentView(scroll); menu.setWidth(width); menu.setHeight(dropdownHeight(rows, context));
         menu.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
         menu.setElevation(dp(context, 4)); menu.setFocusable(true); menu.setOutsideTouchable(true);
-        if (overlay) menu.setWindowLayoutType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
-        menu.showAsDropDown(anchor, 0, dp(context, 4), android.view.Gravity.END);
+        if (overlay) {
+            menu.setWindowLayoutType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            // Overlay roots are already offset on the display. A dropdown's root-relative
+            // positioning can be clipped/re-scrolled to the panel's top; use screen coordinates.
+            android.graphics.Rect frame = new android.graphics.Rect();
+            anchor.getWindowVisibleDisplayFrame(frame);
+            int[] at = new int[2]; anchor.getLocationOnScreen(at);
+            int gap = dp(context, 4);
+            width = Math.min(width, Math.max(1, frame.width()-2*gap)); menu.setWidth(width);
+            int height = Math.min(menu.getHeight(), Math.max(1, frame.height()-2*gap));
+            menu.setHeight(height);
+            int x = Math.max(frame.left+gap, Math.min(at[0]+anchor.getWidth()-width, frame.right-width-gap));
+            int below = at[1]+anchor.getHeight()+gap;
+            int y = below+height<=frame.bottom-gap ? below : at[1]-height-gap;
+            y = Math.max(frame.top+gap, Math.min(y, frame.bottom-height-gap));
+            if (android.os.Build.VERSION.SDK_INT >= 29) menu.setIsLaidOutInScreen(true);
+            else { x-=frame.left; y-=frame.top; }
+            menu.showAtLocation(anchor.getRootView(), android.view.Gravity.TOP|android.view.Gravity.LEFT, x, y);
+        } else {
+            menu.showAsDropDown(anchor, 0, dp(context, 4), android.view.Gravity.END);
+        }
         View.OnAttachStateChangeListener detach = new View.OnAttachStateChangeListener() {
             @Override public void onViewAttachedToWindow(View v) { }
             @Override public void onViewDetachedFromWindow(View v) { menu.dismiss(); }

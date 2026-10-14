@@ -113,6 +113,7 @@ public class GroceryOverlayService extends Service {
     private int overlayListCompactHeight;
     private int overlayListExpandedHeight;
     private GroceryRepository repository;
+    @Nullable private java.util.function.Consumer<GroceryItem> inlineEdit;
     private FamilyMemberRepository memberRepository;
     private final List<FamilyMember> familyMembers = new ArrayList<>();
     private volatile MoneyManagerMasterCatalogBridge.Catalog moneyCatalog =
@@ -526,9 +527,10 @@ public class GroceryOverlayService extends Service {
         Spinner moneyCategory = moneyCategorySpinner();
         Spinner priority = compactSpinner(getResources().getStringArray(R.array.grocery_priority_labels));
 
+        final List<FamilyMember> formMembers = new ArrayList<>(familyMembers);
         List<String> memberLabels = new ArrayList<>();
         memberLabels.add(getString(R.string.grocery_whole_family));
-        for (FamilyMember familyMember : familyMembers) memberLabels.add(familyMember.name);
+        for (FamilyMember familyMember : formMembers) memberLabels.add(familyMember.name);
         Spinner member = compactSpinner(memberLabels.toArray(new String[0]));
         final List<GroceryItem> smartSuggestions = new ArrayList<>();
         Spinner quickPick = compactSpinner(new String[]{"Suggested"});
@@ -873,7 +875,72 @@ public class GroceryOverlayService extends Service {
             startVoiceInsideOverlay(input, voice);
         });
 
+        final GroceryItem[] editing = {null};
+        final String[] originalName = {""};
+        final boolean[] saving = {false};
+        EditText editNotes = compactInput("Notes");
+        editNotes.setSingleLine(false); editNotes.setMinLines(1); editNotes.setMaxLines(4);
+        editNotes.setVisibility(View.GONE);
+        overlayOptionalDetails.addView(editNotes, new LinearLayout.LayoutParams(-1, -2));
+        Button cancelEdit = compactAction("Cancel edit", Color.rgb(106,75,150),Color.rgb(244,237,252));
+        cancelEdit.setVisibility(View.GONE);
+        overlayFormDetails.addView(cancelEdit, new LinearLayout.LayoutParams(-1,dp(36)));
+        Runnable resetEdit = () -> {
+            editing[0]=null; originalName[0]=""; editNotes.setText(""); editNotes.setVisibility(View.GONE);
+            cancelEdit.setVisibility(View.GONE); priority.setSelection(0); member.setSelection(0);
+            add.setText("+"); add.setTextSize(24f); add.getLayoutParams().width=dp(42); add.requestLayout();
+            add.setContentDescription(getString(R.string.grocery_overlay_quick_item));
+            quickLabel.setText(R.string.grocery_overlay_quick_item);
+            clearSmartFilledForm(input,quantity,quantityUnit,category,price,quickPick);
+        };
+        cancelEdit.setOnClickListener(v -> { if(!saving[0]) resetEdit.run(); });
+        clearSuggestions.setOnClickListener(v -> {
+            if(saving[0]) return;
+            if(editing[0]!=null) resetEdit.run();
+            else clearSmartFilledForm(input,quantity,quantityUnit,category,price,quickPick);
+        });
+        inlineEdit = item -> {
+            if(saving[0]) return;
+            dismissOverlayHeaderPopup(); editing[0]=item; originalName[0]=item.name;
+            input.setError(null); price.setError(null); input.setText(item.name); input.setSelection(input.length());
+            String[] parts=item.quantity.trim().split("\\s+",2);
+            quantity.setText(parts.length>0?parts[0]:"");
+            selectEditSpinnerValue(quantityUnit,parts.length>1?parts[1]:"");
+            selectEditSpinnerValue(category,item.category);
+            price.setText(String.valueOf(item.estimatedCost));
+            priority.setSelection(GroceryItem.PRIORITY_URGENT.equals(item.priority)?2:GroceryItem.PRIORITY_HIGH.equals(item.priority)?1:0);
+            int assignedIndex=0;
+            for(int i=0;i<formMembers.size();i++) {
+                FamilyMember candidate=formMembers.get(i);
+                String key=candidate.cloudProfileId.isEmpty()?String.valueOf(candidate.id):candidate.cloudProfileId;
+                if(key.equals(item.assignedMemberId)) { assignedIndex=i+1; break; }
+            }
+            if(assignedIndex==0 && !item.assignedMemberId.isEmpty()) {
+                // Keep an unavailable assignee's stable identity unless explicitly reassigned.
+                List<String> labels=new ArrayList<>(memberLabels);
+                labels.add(item.assignedMemberName.isEmpty()?item.assignedMemberId:item.assignedMemberName);
+                member.setAdapter(compactSpinnerAdapter(labels.toArray(new String[0])));
+                member.setSelection(labels.size()-1);
+            } else {
+                member.setAdapter(compactSpinnerAdapter(memberLabels.toArray(new String[0])));
+                member.setSelection(assignedIndex);
+            }
+            String origin=GroceryRecurrenceEngine.originalCycle(item);
+            for(int i=0;i<cycleTypes.length;i++) if(cycleTypes[i].equals(origin)) { cycle.setSelection(i); selectedListType[0]=origin; }
+            editNotes.setText(item.notes); editNotes.setVisibility(View.VISIBLE); cancelEdit.setVisibility(View.VISIBLE);
+            setOverlayFormCollapsed(false);
+            quickLabel.setText("Editing grocery");
+            add.setText("Update"); add.setTextSize(11f); add.getLayoutParams().width=dp(66); add.requestLayout();
+            add.setContentDescription("Update grocery"); input.requestFocus();
+            root.post(() -> {
+                android.view.ViewParent parent=input.getParent();
+                while(parent instanceof View && !(parent instanceof androidx.core.widget.NestedScrollView)) parent=parent.getParent();
+                if(parent instanceof androidx.core.widget.NestedScrollView) ((androidx.core.widget.NestedScrollView)parent).smoothScrollTo(0,0);
+            });
+        };
+
         add.setOnClickListener(v -> {
+            if(saving[0]) return;
             String name = input.getText().toString().trim();
             if (name.isEmpty()) {
                 input.setError(getString(R.string.grocery_name_required));
@@ -884,38 +951,47 @@ public class GroceryOverlayService extends Service {
                         android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }
-            rememberMoneyDefaults(moneyAccount, moneyCategory);
-            GroceryItem item = new GroceryItem();
-            item.name = name;
-            item.listType = selectedListType[0];
-            String amount = quantity.getText().toString().trim();
-            item.quantity = amount.isEmpty() ? "" : amount + " " + quantityUnit.getSelectedItem();
-            item.category = String.valueOf(category.getSelectedItem());
-            String priceText = price.getText().toString().trim();
-            if (!priceText.isEmpty()) {
-                try { item.estimatedCost = Double.parseDouble(priceText); }
-                catch (NumberFormatException error) {
-                    price.setError(getString(R.string.grocery_invalid_cost));
-                    return;
-                }
+            boolean isEdit=editing[0]!=null;
+            if(!isEdit) rememberMoneyDefaults(moneyAccount, moneyCategory);
+            GroceryItem item = isEdit ? editing[0] : new GroceryItem();
+            // Validate before changing the existing record.
+            double cost=0D;
+            String priceValue=price.getText().toString().trim();
+            if(!priceValue.isEmpty()) {
+                try { cost=Double.parseDouble(priceValue); }
+                catch(NumberFormatException error) { price.setError(getString(R.string.grocery_invalid_cost)); return; }
             }
+            item.name = name;
+            if(!isEdit || !selectedListType[0].equals(GroceryRecurrenceEngine.originalCycle(item)))
+                item.listType = selectedListType[0];
+            String amount = quantity.getText().toString().trim();
+            String chosenUnit=String.valueOf(quantityUnit.getSelectedItem()).trim();
+            item.quantity = amount.isEmpty() ? "" : amount + (chosenUnit.isEmpty()?"":" "+chosenUnit);
+            item.category = String.valueOf(category.getSelectedItem());
+            item.estimatedCost=cost;
+            if(isEdit) item.notes=editNotes.getText().toString().trim();
             int priorityIndex = priority.getSelectedItemPosition();
             item.priority = priorityIndex == 2 ? GroceryItem.PRIORITY_URGENT
                     : priorityIndex == 1 ? GroceryItem.PRIORITY_HIGH : GroceryItem.PRIORITY_NORMAL;
             int memberIndex = member.getSelectedItemPosition();
-            if (memberIndex > 0 && memberIndex <= familyMembers.size()) {
-                FamilyMember selected = familyMembers.get(memberIndex - 1);
+            if (memberIndex > 0 && memberIndex <= formMembers.size()) {
+                FamilyMember selected = formMembers.get(memberIndex - 1);
                 item.assignedMemberId = selected.cloudProfileId.isEmpty()
                         ? String.valueOf(selected.id) : selected.cloudProfileId;
                 item.assignedMemberName = selected.name;
+            } else if(memberIndex==0) {
+                item.assignedMemberId=""; item.assignedMemberName="";
             }
-            repository.save(item, () -> {
-                input.setText("");
-                quantity.setText("");
-                price.setText("");
-                quickPick.setSelection(0);
+            saving[0]=true; add.setEnabled(false); cancelEdit.setEnabled(false);
+            String oldName=originalName[0];
+            GroceryRepository.ActionCallback done = () -> {
+                saving[0]=false; add.setEnabled(true); cancelEdit.setEnabled(true);
+                if(isEdit) resetEdit.run();
+                else { input.setText(""); quantity.setText(""); price.setText(""); quickPick.setSelection(0); }
                 refreshPanel();
-            });
+            };
+            if(isEdit) repository.saveEdit(item,oldName,done);
+            else repository.save(item,done);
         });
 
         panelView = panelRoot;
@@ -1547,8 +1623,7 @@ public class GroceryOverlayService extends Service {
                     dismissOverlayHeaderPopup();
                     overlayHeaderPopup = com.tridev.familyhub.core.ui.FloatingItemActions.dropdown(
                             v.getContext(), true, v, java.util.Arrays.asList("Edit", "Mark purchased", "Remove"), option -> {
-                                if ("Edit".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.grocery(
-                                        v, item, repository, this::refreshPanel);
+                                if ("Edit".equals(option)) { if(inlineEdit!=null) inlineEdit.accept(item); }
                                 else if ("Remove".equals(option)) com.tridev.familyhub.core.ui.FloatingItemEditors.removeGrocery(
                                         v, item, repository, this::refreshPanel);
                                 else showInlinePurchaseEditor(item);
@@ -1987,6 +2062,16 @@ public class GroceryOverlayService extends Service {
         }, 7000L);
     }
 
+    private void selectEditSpinnerValue(Spinner spinner, String value) {
+        for(int i=0;i<spinner.getCount();i++) {
+            if(value.equalsIgnoreCase(String.valueOf(spinner.getItemAtPosition(i)))) { spinner.setSelection(i); return; }
+        }
+        // Preserve legacy/custom values locally without changing the shared option catalog.
+        List<String> labels=new ArrayList<>();
+        for(int i=0;i<spinner.getCount();i++) labels.add(String.valueOf(spinner.getItemAtPosition(i)));
+        labels.add(value); spinner.setAdapter(compactSpinnerAdapter(labels.toArray(new String[0])));
+        spinner.setSelection(labels.size()-1);
+    }
     private void selectSpinner(Spinner spinner, String[] values, String wanted) {
         for (int index = 0; index < values.length; index++) {
             if (values[index].equalsIgnoreCase(wanted)) {
@@ -2742,6 +2827,7 @@ public class GroceryOverlayService extends Service {
     }
 
     private void closePanel() {
+        inlineEdit=null;
         dismissOverlayHeaderPopup();
         stopOverlayConnectionStatus();
         overlayLiveStatus = null;
