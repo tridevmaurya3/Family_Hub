@@ -214,7 +214,10 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
     }
 
     private boolean isEntryOrLockActivity(@NonNull Activity activity) {
+        // Alarm controls expose only the delivered reminder, not protected app pages.
+        // Includes FamilyTaskSnoozeActivity, which extends FamilyTaskAlarmActivity.
         return activity instanceof com.tridev.familyhub.core.reminders.ReminderAlarmActivity
+                || activity instanceof com.tridev.familyhub.core.tasks.FamilyTaskAlarmActivity
                 || activity instanceof AppLockActivity
                 || activity instanceof AuthActivity
                 || activity instanceof SplashActivity;

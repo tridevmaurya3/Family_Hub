@@ -23,6 +23,7 @@ public final class FamilyTaskAlarmService extends Service {
     private PowerManager.WakeLock wakeLock;
     private AudioManager audio;
     private AudioFocusRequest focus;
+    private boolean keepControlsAfterStop;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable timeout = this::stopSelf;
 
@@ -30,7 +31,8 @@ public final class FamilyTaskAlarmService extends Service {
         return AccountDataScope.stamp(context,new Intent(context, FamilyTaskAlarmService.class))
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, task.id).putExtra("title", task.title)
                 .putExtra("notes", taskDetails(task))
-                .putExtra("time", occurrence).putExtra("stage", stage);
+                .putExtra("time", occurrence).putExtra("stage", stage)
+                .putExtra("important", FamilyTaskReminderPreferences.important(context, task));
     }
     private static String taskDetails(FamilyTask task) {
         com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks.Content content =
@@ -98,6 +100,12 @@ public final class FamilyTaskAlarmService extends Service {
                 FamilyTaskScheduler.notificationId(alarm.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0)) ^ 0x116611,
                 chooser, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
+    static boolean isLockedOrScreenOff(Context context) {
+        PowerManager power = context.getSystemService(PowerManager.class);
+        KeyguardManager keyguard = context.getSystemService(KeyguardManager.class);
+        return (power != null && !power.isInteractive())
+                || (keyguard != null && keyguard.isKeyguardLocked());
+    }
     public static void stopAlarm(Context context, long id) {
         if (ringingId != id) return;
         try { context.startService(new Intent(context, FamilyTaskAlarmService.class).setAction(STOP)
@@ -120,6 +128,8 @@ public final class FamilyTaskAlarmService extends Service {
             com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(accountListener);
         }
         if (id <= 0) { stopSelf(); return START_NOT_STICKY; }
+        boolean ring = isLockedOrScreenOff(this);
+        keepControlsAfterStop = false;
         releaseSound();
         // A prior occurrence may still own this foreground notification.
         if (ringingId != 0) stopForeground(STOP_FOREGROUND_REMOVE);
@@ -153,8 +163,22 @@ public final class FamilyTaskAlarmService extends Service {
             if (Build.VERSION.SDK_INT >= 29) startForeground(FamilyTaskScheduler.notificationId(id), builder.build(),
                     android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
             else startForeground(FamilyTaskScheduler.notificationId(id), builder.build());
-        } catch (RuntimeException denied) { stopSelf(); return START_NOT_STICKY; }
-        startSound(); handler.removeCallbacks(timeout); handler.postDelayed(timeout, 120000);
+        } catch (RuntimeException denied) {
+            // A failure inside startForeground happens after the receiver has returned.
+            // Keep an actionable notification/full-screen intent instead of losing the alarm.
+            FamilyTaskReceiver.ensureChannels(this);
+            builder.setChannelId(FamilyTaskReceiver.channelId(intent.getBooleanExtra("important", false)))
+                    .setDefaults(NotificationCompat.DEFAULT_ALL).setOngoing(false).setAutoCancel(true);
+            try {
+                androidx.core.app.NotificationManagerCompat.from(this)
+                        .notify(FamilyTaskScheduler.notificationId(id), builder.build());
+                keepControlsAfterStop = true;
+            }
+            catch (SecurityException ignored) { }
+            stopSelf(); return START_NOT_STICKY;
+        }
+        if (ring) startSound();
+        handler.removeCallbacks(timeout); handler.postDelayed(timeout, 120000);
         return START_NOT_STICKY;
     }
     private void startSound() {
@@ -191,7 +215,8 @@ public final class FamilyTaskAlarmService extends Service {
     @Override public void onDestroy() {
         if (accountListener != null) com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(accountListener);
         handler.removeCallbacks(timeout); releaseSound();
-        long old = ringingId; ringingId = 0; if (old != 0) closed(old);
+        long old = ringingId; ringingId = 0;
+        if (old != 0 && !keepControlsAfterStop) closed(old);
         // Leave the reminder available after the two-minute ringing limit.
         stopForeground(STOP_FOREGROUND_DETACH); super.onDestroy();
     }

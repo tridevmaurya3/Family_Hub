@@ -135,7 +135,9 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
         if (!canNotify(context, important)) return false;
         boolean alarmStage = stage == 1 || stage == 3;
         boolean alarmChannelEnabled = alarmStage && FamilyTaskAlarmService.canRing(context);
-        if (alarmChannelEnabled) {
+        // While the phone is being used, post a normal actionable notification.
+        // Full-screen eligibility below remains attached so Android handles lock/AOD races.
+        if (alarmChannelEnabled && FamilyTaskAlarmService.isLockedOrScreenOff(context)) {
             Intent alarm = FamilyTaskAlarmService.alarmIntent(context, task, stage, occurrence);
             try {
                 ContextCompat.startForegroundService(context, alarm);

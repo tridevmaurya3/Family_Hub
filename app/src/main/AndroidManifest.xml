@@ -350,6 +350,7 @@
         <activity android:name=".core.tasks.FamilyTaskSnoozeActivity"
             android:exported="false" android:excludeFromRecents="true"
             android:taskAffinity=""
+            android:showWhenLocked="true" android:turnScreenOn="true"
             android:theme="@style/Theme.FamilyHub.AlarmSnooze" />
         <service android:name=".core.tasks.FamilyTaskAlarmService"
             android:exported="false" android:foregroundServiceType="mediaPlayback" />

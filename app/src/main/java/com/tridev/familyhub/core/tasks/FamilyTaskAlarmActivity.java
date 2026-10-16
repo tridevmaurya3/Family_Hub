@@ -17,17 +17,17 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
     private long id;
     private final BroadcastReceiver close = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent intent) {
-            if (intent.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0) == id) finish();
+            if (intent.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0) == id
+                    && !getIntent().getBooleanExtra("snooze_only", false)) finish();
         }
     };
     @Override protected void onCreate(Bundle state) {
         if (getIntent().getBooleanExtra("snooze_only", false)) setTheme(R.style.Theme_FamilyHub_AlarmSnooze);
         super.onCreate(state);
-        if (!getIntent().getBooleanExtra("snooze_only", false)) {
+        // The compact Snooze chooser must also work over the device lock screen.
         if (android.os.Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
         else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        }
         ContextCompat.registerReceiver(this, close, new IntentFilter(FamilyTaskAlarmService.CLOSED), ContextCompat.RECEIVER_NOT_EXPORTED);
         render();
     }
