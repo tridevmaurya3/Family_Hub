@@ -79,6 +79,7 @@ public final class GroceryOptionCatalog {
             sorted.sort(String.CASE_INSENSITIVE_ORDER);
             for (String value : sorted) addUnique(result, seen, value);
         }
+        result.sort(String.CASE_INSENSITIVE_ORDER);
         return result.toArray(new String[0]);
     }
 

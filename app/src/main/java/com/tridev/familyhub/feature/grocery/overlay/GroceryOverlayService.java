@@ -1926,6 +1926,7 @@ public class GroceryOverlayService extends Service {
             String key = current.toLowerCase(java.util.Locale.ENGLISH);
             if (seen.add(key)) values.add(current);
         }
+        values.sort(String.CASE_INSENSITIVE_ORDER);
         return values.toArray(new String[0]);
     }
 
