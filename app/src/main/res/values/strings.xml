@@ -1654,4 +1654,8 @@ Sharing: %12$s</string>
     <string name="store_analytics_current_month">Showing purchases for the current month.</string>
     <string name="store_analytics_retry">Could not load purchases. Tap here to retry.</string>
     <string name="store_analytics_store_label">Store / Shop</string>
+    <string name="grocery_add_store">Add store / market</string>
+    <string name="grocery_new_store_hint">Store or market name</string>
+    <string name="grocery_store_name_required">Enter a store or market name</string>
+    <string name="grocery_store_add_action">Add</string>
 </resources>

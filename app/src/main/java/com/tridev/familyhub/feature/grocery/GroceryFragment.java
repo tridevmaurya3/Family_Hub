@@ -881,6 +881,14 @@ public class GroceryFragment extends Fragment implements AddActionHost {
                 form.groceryMoneyCategoryInput
         );
         form.groceryStoreInput.setThreshold(0);
+        form.groceryStoreAdd.setOnClickListener(view ->
+                GroceryStoreNameDialog.show(requireContext(), false, value -> {
+                    String[] stores = GroceryOptionCatalog.storePresets(requireContext());
+                    form.groceryStoreInput.setAdapter(new ArrayAdapter<>(requireContext(),
+                            R.layout.item_form_dropdown, stores));
+                    form.groceryStoreInput.setText(value, false);
+                    configurePremiumDropdowns(form.groceryStoreInput);
+                }));
 
         form.groceryPurchaseDateCard.setVisibility(
                 completeAfterSave || editingPurchasedOccurrence

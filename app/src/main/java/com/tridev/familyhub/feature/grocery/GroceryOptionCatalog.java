@@ -16,6 +16,7 @@ import java.util.Set;
 public final class GroceryOptionCatalog {
     public static final String ADD_CATEGORY_LABEL = "＋ Add new category";
     private static final String PREFS = "grocery_custom_categories";
+    private static final String STORE_PREFS = "grocery_custom_stores";
     private static final String KEY_VALUES = "values";
 
     private GroceryOptionCatalog() { }
@@ -67,7 +68,34 @@ public final class GroceryOptionCatalog {
 
     @NonNull
     public static String[] storePresets(@NonNull Context context) {
-        return context.getResources().getStringArray(R.array.grocery_store_presets);
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (String value : context.getResources().getStringArray(
+                R.array.grocery_store_presets)) addUnique(result, seen, value);
+        Set<String> custom = context.getSharedPreferences(STORE_PREFS,
+                Context.MODE_PRIVATE).getStringSet(KEY_VALUES, new LinkedHashSet<>());
+        if (custom != null) {
+            List<String> sorted = new ArrayList<>(custom);
+            sorted.sort(String.CASE_INSENSITIVE_ORDER);
+            for (String value : sorted) addUnique(result, seen, value);
+        }
+        return result.toArray(new String[0]);
+    }
+
+    /** Save only a local dropdown option; item/cloud save behavior stays unchanged. */
+    public static boolean addCustomStore(@NonNull Context context, String value) {
+        String clean = value == null ? "" : value.trim();
+        if (clean.isEmpty()) return false;
+        for (String existing : storePresets(context)) {
+            if (existing.equalsIgnoreCase(clean)) return true;
+        }
+        Set<String> values = new LinkedHashSet<>(context.getSharedPreferences(
+                STORE_PREFS, Context.MODE_PRIVATE).getStringSet(
+                KEY_VALUES, new LinkedHashSet<>()));
+        values.add(clean);
+        context.getSharedPreferences(STORE_PREFS, Context.MODE_PRIVATE)
+                .edit().putStringSet(KEY_VALUES, values).apply();
+        return true;
     }
 
     private static void addUnique(@NonNull List<String> out,

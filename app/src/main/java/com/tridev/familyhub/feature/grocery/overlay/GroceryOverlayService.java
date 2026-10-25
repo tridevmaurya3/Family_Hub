@@ -1831,7 +1831,25 @@ public class GroceryOverlayService extends Service {
         if (!currentStore.isEmpty()) {
             selectSpinner(store, storeValues, currentStore);
         }
-        itemContainer.addView(labelledField(getString(R.string.grocery_store_name), store), fullEditorField());
+        LinearLayout storeRow = new LinearLayout(this);
+        storeRow.setOrientation(LinearLayout.HORIZONTAL);
+        storeRow.setGravity(Gravity.CENTER_VERTICAL);
+        storeRow.addView(store, new LinearLayout.LayoutParams(0, dp(42), 1f));
+        TextView addStore = text("+", 22, true);
+        addStore.setGravity(Gravity.CENTER);
+        addStore.setTextColor(Color.rgb(15, 108, 89));
+        addStore.setBackground(glassFieldBackground());
+        addStore.setContentDescription(getString(R.string.grocery_add_store));
+        LinearLayout.LayoutParams addStoreParams = new LinearLayout.LayoutParams(dp(48), dp(42));
+        addStoreParams.setMarginStart(dp(5));
+        storeRow.addView(addStore, addStoreParams);
+        addStore.setOnClickListener(view -> {
+            FamilyHubAppLockManager.noteTrustedOverlayInteraction();
+            com.tridev.familyhub.feature.grocery.GroceryStoreNameDialog.show(
+                    this, true, value -> bindStoreSpinner(store, value));
+        });
+        itemContainer.addView(labelledField(getString(R.string.grocery_store_name), storeRow),
+                fullEditorField());
 
         TextView historyInsight = text("", 10, false);
         historyInsight.setTextColor(Color.rgb(15, 108, 89));
