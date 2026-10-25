@@ -115,7 +115,8 @@ public final class ReminderWorkspace {
         reminderAdapter = new ReminderAdapter(new ReminderAdapter.ReminderActionListener() {
             @Override
             public void onEdit(Reminder reminder) {
-                showReminderEditor(reminder);
+                if (floating && quick != null) { quick.edit(reminder); quick.requestRectangleOnScreen(new android.graphics.Rect(0,0,quick.getWidth(),quick.getHeight()), false); }
+                else showReminderEditor(reminder);
             }
 
             @Override
@@ -223,7 +224,6 @@ public final class ReminderWorkspace {
         quick = new ReminderQuickAddView(context, floating, this::saveQuick, () -> showReminderEditor(quick.draft()));
         binding.reminderQuickHost.addView(quick);
         voice.bind(quick);
-        com.google.android.material.button.MaterialButton alarmAccess=new com.google.android.material.button.MaterialButton(context);alarmAccess.setText("Alarm access / settings");alarmAccess.setAllCaps(false);alarmAccess.setTextSize(11);alarmAccess.setOnClickListener(v->context.startActivity(new Intent(context,com.tridev.familyhub.core.reminders.ReminderAlarmAccessActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)));quick.addView(alarmAccess,new android.widget.LinearLayout.LayoutParams(-1,-2));
         loadReminders("");
     }
 
@@ -459,8 +459,11 @@ public final class ReminderWorkspace {
                 requireContext(), R.layout.item_form_dropdown, priorities));
         dialogBinding.reminderCategoryInput.setAdapter(new android.widget.ArrayAdapter<>(
                 requireContext(), R.layout.item_form_dropdown, categories));
-        String[] preAlertLabels = {"At reminder time", "10 minutes before", "30 minutes before", "1 hour before", "1 day before"};
-        int[] preAlertValues = {0, 10, 30, 60, 1440};
+        String[] preAlertLabels = existingReminder != null && existingReminder.preAlertMinutes == 10
+                ? new String[]{"At reminder time", "5 minutes before", "15 minutes before", "30 minutes before", "1 hour before", "1 day before", "10 minutes before"}
+                : new String[]{"At reminder time", "5 minutes before", "15 minutes before", "30 minutes before", "1 hour before", "1 day before"};
+        int[] preAlertValues = existingReminder != null && existingReminder.preAlertMinutes == 10
+                ? new int[]{0,5,15,30,60,1440,10} : new int[]{0,5,15,30,60,1440};
         dialogBinding.reminderPreAlertInput.setAdapter(new android.widget.ArrayAdapter<>(
                 requireContext(), R.layout.item_form_dropdown, preAlertLabels));
         String[] relatedModules = {"None", "FINANCE", "GROCERY", "HEALTH", "VEHICLE", "DOCUMENTS", "PROPERTY"};
@@ -520,9 +523,16 @@ public final class ReminderWorkspace {
             dialogBinding.reminderPriorityInput.setText("MEDIUM", false);
             dialogBinding.reminderCategoryInput.setText("GENERAL", false);
             dialogBinding.reminderAssigneeInput.setText("Unassigned", false);
-            dialogBinding.reminderPreAlertInput.setText(preAlertLabels[0], false);
+            dialogBinding.reminderPreAlertInput.setText(preAlertLabels[2], false);
             dialogBinding.reminderRelatedModuleInput.setText("None", false);
         }
+        ReminderOptionsView reminderOptions = new ReminderOptionsView(context, existingReminder, false);
+        dialogBinding.reminderOptionsHost.addView(reminderOptions);
+        if (quickDraft || floating) quick.copyOptionsTo(reminderOptions);
+        dialogBinding.reminderPreAlertInput.setEnabled(dialogBinding.reminderEnabledSwitch.isChecked());
+        dialogBinding.reminderEnabledSwitch.setOnCheckedChangeListener((button, enabled) ->
+                dialogBinding.reminderPreAlertInput.setEnabled(enabled));
+        final long originalReminderAt = existingReminder == null ? 0 : existingReminder.reminderAt;
         updateDateTimeInputs(dialogBinding, selectedTime);
 
         final androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
@@ -542,11 +552,15 @@ public final class ReminderWorkspace {
             String title = dialogBinding.reminderTitleInput.getText().toString().trim();
             String repeatType = selectedRepeatType(
                     dialogBinding.reminderRepeatGroup.getCheckedRadioButtonId());
-            boolean repeating = !Reminder.REPEAT_ONCE.equals(repeatType);
-            if (!validateEditor(dialogBinding.reminderTitleLayout, title, selectedTime, repeating)) {
+            if (!validateEditor(dialogBinding.reminderTitleLayout, title)) {
                 return;
             }
 
+            if (dialogBinding.reminderEnabledSwitch.isChecked()
+                    && !com.tridev.familyhub.core.reminders.ReminderTiming.validReminderDue(
+                            selectedTime.getTimeInMillis(), originalReminderAt, !isNewReminder, System.currentTimeMillis())) {
+                dialogBinding.reminderTimeInput.setError(getString(R.string.reminder_future_time_required)); return;
+            }
             Reminder reminder = existingReminder == null ? new Reminder() : existingReminder;
             reminder.title = title;
             reminder.note = dialogBinding.reminderNoteInput.getText().toString().trim();
@@ -580,16 +594,19 @@ public final class ReminderWorkspace {
                     .getText().toString().trim();
             stampCollaborationStatus(reminder, reminder.collaborationStatus);
 
+            Runnable saveOptions = reminderOptions.captureSave(reminder);
+            String reminderUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
             dialogBinding.saveReminderButton.setEnabled(false);
             repository.save(reminder, savedReminder -> {
+                if (!reminderUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return;
+                saveOptions.run();
                 if (savedReminder.isEnabled) {
-                    if (binding != null) requestNotificationPermissionIfNeeded();
-                    ReminderScheduler.schedule(requireContext(), savedReminder);
+                    ReminderScheduler.schedule(context, savedReminder);
                 } else {
-                    ReminderScheduler.cancel(requireContext(), savedReminder.id);
+                    ReminderScheduler.cancel(context, savedReminder.id);
                 }
                 if (binding == null) return;
-                if (quickDraft) quick.saved();
+                if (quickDraft || floating) quick.saved();
                 dialog.dismiss();
                 loadReminders(binding.reminderSearchInput.getText().toString());
                 Snackbar.make(
@@ -603,18 +620,12 @@ public final class ReminderWorkspace {
         showDialog(dialog);
     }
 
-    private boolean validateEditor(TextInputLayout titleLayout, String title, Calendar selectedTime,
-                                   boolean repeating) {
+    private boolean validateEditor(TextInputLayout titleLayout, String title) {
         if (TextUtils.isEmpty(title)) {
             titleLayout.setError(getString(R.string.reminder_title_required));
             return false;
         }
         titleLayout.setError(null);
-        if (!repeating && selectedTime.getTimeInMillis() <= System.currentTimeMillis()) {
-            Snackbar.make(binding.getRoot(), R.string.reminder_future_time_required,
-                    Snackbar.LENGTH_SHORT).show();
-            return false;
-        }
         return true;
     }
 
@@ -676,9 +687,9 @@ public final class ReminderWorkspace {
         repository.save(reminder, savedReminder -> {
             if (savedReminder.isEnabled) {
                 requestNotificationPermissionIfNeeded();
-                ReminderScheduler.schedule(requireContext(), savedReminder);
+                ReminderScheduler.schedule(context, savedReminder);
             } else {
-                ReminderScheduler.cancel(requireContext(), savedReminder.id);
+                ReminderScheduler.cancel(context, savedReminder.id);
             }
             if (binding != null) {
                 Snackbar.make(
@@ -788,11 +799,15 @@ public final class ReminderWorkspace {
         dialog.show();
     }
     private void saveQuick(Reminder reminder) {
+        String reminderUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+        boolean isNew = reminder.id == 0;
         repository.save(reminder, saved -> {
-            if (saved.isEnabled) { if (binding != null) requestNotificationPermissionIfNeeded(); ReminderScheduler.schedule(context, saved); }
+            if (!reminderUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return;
+            quick.persistOptions();
+            if (saved.isEnabled) { ReminderScheduler.schedule(context, saved); }
             if (binding == null) return;
             quick.saved(); reload();
-            Snackbar.make(binding.getRoot(), R.string.reminder_added, Snackbar.LENGTH_SHORT).show();
+            Snackbar.make(binding.getRoot(), isNew ? R.string.reminder_added : R.string.reminder_updated, Snackbar.LENGTH_SHORT).show();
         });
     }
     public void dispose() {

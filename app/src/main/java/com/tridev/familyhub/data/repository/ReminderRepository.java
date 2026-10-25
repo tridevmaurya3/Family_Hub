@@ -1,6 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
 import com.tridev.familyhub.core.security.AccountDataScope;
+import com.tridev.familyhub.core.reminders.ReminderScheduler;
 
 import android.content.Context;
 import android.os.Handler;
@@ -48,12 +49,14 @@ public class ReminderRepository {
 
     private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
 
+    private final Context appContext;
     private final ReminderDao reminderDao;
     private final FamilyMemberDao familyMemberDao;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     @Nullable private FamilyCollaborationSubscriber subscriber;
 
     public ReminderRepository(Context context) {
+        appContext = context.getApplicationContext();
         FamilyHubDatabase database = FamilyHubDatabase.getInstance(context);
         reminderDao = database.reminderDao();
         familyMemberDao = database.familyMemberDao();
@@ -91,6 +94,7 @@ public class ReminderRepository {
                             if (local == null) return;
                             long id = local.id;
                             reminderDao.delete(local);
+                            ReminderScheduler.cancel(appContext, local.id);
                             mainHandler.post(() -> callback.onRemoved(id));
                         });
                     }
@@ -171,6 +175,7 @@ public class ReminderRepository {
                 FamilyCollaborationPublisher.remove(scopeUid,
                         "reminders", previousFamilyId, previousCloudId);
             }
+            ReminderScheduler.schedule(appContext, reminder);
             mainHandler.post(() -> callback.onComplete(reminder));
         });
     }
@@ -242,6 +247,7 @@ public class ReminderRepository {
             reminder.updatedAt=updatedAt; reminder.updatedByUid=text(s,"updatedByUid");
             if(insert) reminder.id=reminderDao.insert(reminder); else reminderDao.update(reminder);
             FamilySyncVersions.applied(scopeUid,"reminders",cloudId,s);
+            ReminderScheduler.schedule(appContext, reminder);
             Reminder changed=reminder;
             mainHandler.post(() -> callback.onChanged(changed));
         });
@@ -264,6 +270,7 @@ public class ReminderRepository {
             if (!scopeUid.equals(AccountDataScope.uid())) return;
             FamilyCollaborationPublisher.remove(scopeUid, "reminders", reminder.familyId, reminder.cloudId);
             reminderDao.delete(reminder);
+            ReminderScheduler.cancel(appContext, reminder.id);
             mainHandler.post(() -> callback.onComplete(reminder));
         });
     }

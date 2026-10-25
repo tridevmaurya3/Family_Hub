@@ -6,202 +6,126 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
-
+import androidx.annotation.NonNull;
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.Reminder;
-
-import java.util.Calendar;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Schedules local reminder broadcasts and restores them after a device restart. */
+/** Local alarm projection using the same stage and delivery rules as Family To-Do. */
 public final class ReminderScheduler {
-
-    private static final ExecutorService DATABASE_EXECUTOR = Executors.newSingleThreadExecutor();
-
-    private ReminderScheduler() {
-    }
-
-    public static void schedule(Context context, Reminder reminder) {
-        if (!reminder.isEnabled || "COMPLETED".equalsIgnoreCase(reminder.collaborationStatus)) {
-            cancel(context, reminder.id);
-            return;
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
+    private ReminderScheduler() { }
+    public static synchronized void schedule(@NonNull Context context, @NonNull Reminder task) {
+        if (!task.isEnabled || "COMPLETED".equalsIgnoreCase(task.collaborationStatus)) {
+            cancel(context, task.id); return;
         }
-
-        long triggerAt = nextTriggerTime(reminder);
-        if (triggerAt <= 0) {
-            cancel(context, reminder.id);
-            return;
-        }
-        scheduleAlarm(context, reminder.id, reminder.title, reminder.note, reminder.repeatType,
-                reminder.priority, triggerAt, false);
-        long preAlertAt = triggerAt - reminder.preAlertMinutes * 60_000L;
-        if (reminder.preAlertMinutes > 0 && preAlertAt > System.currentTimeMillis()) {
-            scheduleAlarm(context, reminder.id, reminder.title, reminder.note, reminder.repeatType,
-                    reminder.priority, preAlertAt, true);
-        }
-    }
-
-    public static void cancel(Context context, long reminderId) {
-        ReminderAlarmService.stopAlarm(context,reminderId);
-        androidx.core.app.NotificationManagerCompat.from(context).cancel(ReminderAlarmService.notificationId(reminderId));
-        AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
-        if (alarmManager == null) {
-            return;
-        }
-        PendingIntent pendingIntent = reminderPendingIntent(context, reminderId,
-                null, null, null, null, false);
-        alarmManager.cancel(pendingIntent);
-        pendingIntent.cancel();
-        PendingIntent preAlert = reminderPendingIntent(context, reminderId,
-                null, null, null, null, true);
-        alarmManager.cancel(preAlert);
-        preAlert.cancel();
-        PendingIntent snooze=PendingIntent.getBroadcast(context,((int)(reminderId&0x7fffffff))^0x2f2f2f2f,AccountDataScope.isolate(context,new Intent(context,ReminderReceiver.class).setAction(ReminderReceiver.ACTION_FIRE)),PendingIntent.FLAG_NO_CREATE|PendingIntent.FLAG_IMMUTABLE);
-        if(snooze!=null){alarmManager.cancel(snooze);snooze.cancel();}
-    }
-
-    public static void rescheduleRepeatingIfEnabled(Context context, long reminderId, Runnable onComplete) {
-        Context appContext = context.getApplicationContext();
-        String expectedUid = AccountDataScope.uid();
-        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
-        DATABASE_EXECUTOR.execute(() -> {
-            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
-            Reminder reminder = accountDatabase
-                    .reminderDao()
-                    .getById(reminderId);
-            if (reminder != null && reminder.isEnabled
-                    && !Reminder.REPEAT_ONCE.equals(reminder.repeatType)) {
-                schedule(appContext, reminder);
-            }
-            if (onComplete != null) {
-                onComplete.run();
-            }
-        });
-    }
-
-    public static void disableOneTimeIfPresent(Context context, long reminderId, Runnable onComplete) {
-        Context appContext = context.getApplicationContext();
-        String expectedUid = AccountDataScope.uid();
-        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
-        DATABASE_EXECUTOR.execute(() -> {
-            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
-            Reminder reminder = accountDatabase
-                    .reminderDao()
-                    .getById(reminderId);
-            if (reminder != null && Reminder.REPEAT_ONCE.equals(reminder.repeatType)) {
-                reminder.isEnabled = false;
-                accountDatabase.reminderDao().update(reminder);
-            }
-            if (onComplete != null) {
-                onComplete.run();
-            }
-        });
-    }
-
-    public static void rescheduleAll(Context context, Runnable onComplete) {
-        Context appContext = context.getApplicationContext();
-        String expectedUid = AccountDataScope.uid();
-        FamilyHubDatabase accountDatabase = FamilyHubDatabase.getInstance(appContext);
-        DATABASE_EXECUTOR.execute(() -> {
-            if (!expectedUid.equals(AccountDataScope.uid())) { if (onComplete != null) onComplete.run(); return; }
-            List<Reminder> reminders = accountDatabase
-                    .reminderDao()
-                    .getEnabled();
-            for (Reminder reminder : reminders) {
-                schedule(appContext, reminder);
-            }
-            if (onComplete != null) {
-                onComplete.run();
-            }
-        });
-    }
-
-    private static long nextTriggerTime(Reminder reminder) {
         long now = System.currentTimeMillis();
-        if (Reminder.REPEAT_ONCE.equals(reminder.repeatType)) {
-            return reminder.reminderAt > now ? reminder.reminderAt : -1;
+        boolean follow = ReminderPreferences.followUp(context, task);
+        AlarmManager manager = context.getSystemService(AlarmManager.class);
+        boolean exact = manager != null && (Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms());
+        String signature = task.reminderAt + ":" + task.repeatType + ":" + task.preAlertMinutes + ":" + follow + ":" + exact;
+        // Preserve already-due alarms while Android is waiting to deliver them.
+        if (ReminderPreferences.updateSchedule(context, task.id, signature)) {
+            clearAlarms(context, task.id);
+            ReminderAlarmService.stopAlarm(context, task.id);
+            closeControls(context, task.id);
+            androidx.core.app.NotificationManagerCompat.from(context).cancel(notificationId(task.id));
         }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(reminder.reminderAt);
-        int field = Calendar.DATE;
-        if (Reminder.REPEAT_WEEKLY.equals(reminder.repeatType)) field = Calendar.WEEK_OF_YEAR;
-        else if (Reminder.REPEAT_MONTHLY.equals(reminder.repeatType)) field = Calendar.MONTH;
-        else if (Reminder.REPEAT_YEARLY.equals(reminder.repeatType)) field = Calendar.YEAR;
-        while (calendar.getTimeInMillis() <= now) {
-            calendar.add(field, 1);
-        }
-        return calendar.getTimeInMillis();
-    }
-
-    public static void scheduleSnooze(Context context, long reminderId, String title,
-                                      String note, String repeatType, int minutes) {
-        long triggerAt = System.currentTimeMillis() + Math.max(1, minutes) * 60_000L;
-        AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
-        if (alarmManager == null) return;
-        Intent intent = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class))
-                .setAction(ReminderReceiver.ACTION_FIRE)
-                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId)
-                .putExtra(ReminderReceiver.EXTRA_TITLE, title)
-                .putExtra(ReminderReceiver.EXTRA_NOTE, note)
-                .putExtra(ReminderReceiver.EXTRA_REPEAT_TYPE, repeatType)
-                .putExtra(ReminderReceiver.EXTRA_SNOOZE_DELIVERY, true);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context,
-                ((int) (reminderId & 0x7fffffff)) ^ 0x2f2f2f2f, AccountDataScope.isolate(context,intent),
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        try {
-            if(Build.VERSION.SDK_INT<31 || alarmManager.canScheduleExactAlarms())alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,triggerAt,pendingIntent);else alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
-        } catch (SecurityException ignored) {
-            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
-        }
-    }
-
-    private static void scheduleAlarm(Context context, long reminderId, String title, String note,
-                                      String repeatType, String priority, long triggerAt,
-                                      boolean preAlert) {
-        AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
-        if (alarmManager == null) {
-            return;
-        }
-        PendingIntent pendingIntent = reminderPendingIntent(context, reminderId, title, note,
-                repeatType, priority, preAlert);
-        try {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
-            } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
+        boolean notificationsReady = ReminderReceiver.canNotify(context, ReminderPreferences.important(context, task));
+        boolean dueDelivered = ReminderPreferences.delivered(context, task.id, task.reminderAt, 1, task.reminderAt);
+        long catchUp = ReminderTiming.deliveryTrigger(task.reminderAt, 1, now, dueDelivered);
+        long due = task.reminderAt <= now && catchUp > 0 && notificationsReady ? task.reminderAt
+                : ReminderTiming.occurrence(task.reminderAt, task.repeatType, now, follow);
+        long snooze = ReminderPreferences.snooze(context, task.id, task.reminderAt);
+        long snoozeTrigger = ReminderTiming.deliveryTrigger(snooze, 3, now,
+                ReminderPreferences.delivered(context, task.id, task.reminderAt, 3, snooze));
+        if (due > 0) {
+            for (int stage = 0; stage <= 2; stage++) {
+                if ((stage == 0 && task.preAlertMinutes <= 0) || (stage == 2 && !follow)) continue;
+                long intended = ReminderTiming.trigger(due, task.preAlertMinutes, stage);
+                if (snoozeTrigger > 0 && intended <= snoozeTrigger) continue;
+                boolean delivered = ReminderPreferences.delivered(context, task.id, task.reminderAt, stage, due);
+                long trigger = ReminderTiming.deliveryTrigger(intended, stage, now, delivered);
+                if (trigger > 0 && (intended > now || notificationsReady)) set(context, trigger, pendingIntent(context, task, stage, due));
             }
-        } catch (SecurityException ignored) {
-            // Devices without alarm special-access still receive an inexact, battery-friendly reminder.
-            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent);
+        }
+        if (snoozeTrigger > 0 && (snooze > now || notificationsReady)) set(context, snoozeTrigger, pendingIntent(context, task, 3, snooze));
+    }
+    public static synchronized void cancel(@NonNull Context context, long id) {
+        ReminderAlarmService.stopAlarm(context, id);
+        closeControls(context, id);
+        clearAlarms(context, id);
+        ReminderPreferences.clearSnooze(context, id);
+        ReminderPreferences.clearDelivery(context, id);
+        androidx.core.app.NotificationManagerCompat.from(context).cancel(notificationId(id));
+    }
+    private static void closeControls(Context context, long id) {
+        context.sendBroadcast(new Intent(ReminderAlarmService.CLOSED).setPackage(context.getPackageName())
+                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, id));
+    }
+    private static void clearAlarms(Context context, long id) {
+        AlarmManager manager = context.getSystemService(AlarmManager.class);
+        if (manager == null) return;
+        for (int code : new int[]{(int)(id & 0x7fffffff), ((int)(id & 0x7fffffff)) ^ 0x15151515,
+                ((int)(id & 0x7fffffff)) ^ 0x2f2f2f2f}) {
+            Intent legacy = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class))
+                    .setAction(ReminderReceiver.ACTION_FIRE);
+            PendingIntent old = PendingIntent.getBroadcast(context, code, AccountDataScope.isolate(context, legacy),
+                    PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+            if (old != null) { manager.cancel(old); old.cancel(); }
+        }
+        androidx.core.app.NotificationManagerCompat.from(context).cancel((int)(id & 0x7fffffff));
+        // Also cancel the legacy identity so installing the update cannot leave two alarms.
+        for (int stage = -1; stage <= 3; stage++) {
+            Intent intent = fireIntent(context, id, stage);
+            PendingIntent pi = PendingIntent.getBroadcast(context, notificationId(id), AccountDataScope.isolate(context,intent),
+                    PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+            if (pi != null) { manager.cancel(pi); pi.cancel(); }
         }
     }
-
-    private static PendingIntent reminderPendingIntent(Context context, long reminderId, String title,
-                                                        String note, String repeatType,
-                                                        String priority, boolean preAlert) {
-        Intent intent = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class))
-                .setAction(ReminderReceiver.ACTION_FIRE)
-                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, reminderId)
-                .putExtra(ReminderReceiver.EXTRA_PRE_ALERT, preAlert);
-        if (title != null) {
-            intent.putExtra(ReminderReceiver.EXTRA_TITLE, title);
-        }
-        if (note != null) {
-            intent.putExtra(ReminderReceiver.EXTRA_NOTE, note);
-        }
-        if (repeatType != null) {
-            intent.putExtra(ReminderReceiver.EXTRA_REPEAT_TYPE, repeatType);
-        }
-        if (priority != null) intent.putExtra(ReminderReceiver.EXTRA_PRIORITY, priority);
-        return PendingIntent.getBroadcast(
-                context,
-                ((int) (reminderId & 0x7fffffff)) ^ (preAlert ? 0x15151515 : 0),
-                AccountDataScope.isolate(context,intent),
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+    private static void set(Context context, long trigger, PendingIntent pi) {
+        AlarmManager manager = context.getSystemService(AlarmManager.class);
+        if (manager == null) return;
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms())
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
+            else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi);
+        } catch (SecurityException ignored) { manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pi); }
+    }
+    public static synchronized void snooze(@NonNull Context context, @NonNull Reminder task, long delayMillis) {
+        if (!task.isEnabled || "COMPLETED".equalsIgnoreCase(task.collaborationStatus)) return;
+        long trigger = System.currentTimeMillis() + Math.max(60000L, delayMillis);
+        ReminderPreferences.snooze(context, task.id, task.reminderAt, trigger);
+        schedule(context, task);
+    }
+    public static void rescheduleAll(@NonNull Context context, @NonNull Runnable done) {
+        Context app = context.getApplicationContext();
+        String expectedUid = AccountDataScope.uid();
+        FamilyHubDatabase database = FamilyHubDatabase.getInstance(app);
+        EXECUTOR.execute(() -> {
+            try { if (!expectedUid.equals(AccountDataScope.uid())) return;
+                for (Reminder task : database.reminderDao().getEnabled()) {
+                    if (!expectedUid.equals(AccountDataScope.uid())) return;
+                    schedule(app, task);
+                }
+            }
+            finally { done.run(); }
+        });
+    }
+    public static int notificationId(long id) { return ReminderAlarmService.notificationId(id); }
+    private static Intent fireIntent(Context context, long id, int stage) {
+        Intent intent = AccountDataScope.stamp(context, new Intent(context, ReminderReceiver.class)).setAction(ReminderReceiver.ACTION_FIRE)
+                .putExtra(ReminderReceiver.EXTRA_REMINDER_ID, id);
+        if (stage >= 0) intent.setData(Uri.parse("familyhub://reminder-trigger/" + id + "/" + stage));
+        return intent;
+    }
+    private static PendingIntent pendingIntent(Context context, Reminder task, int stage, long occurrence) {
+        Intent intent = fireIntent(context, task.id, stage).putExtra("due", task.reminderAt)
+                .putExtra("stage", stage).putExtra("occurrence", occurrence);
+        return PendingIntent.getBroadcast(context, notificationId(task.id), AccountDataScope.isolate(context,intent),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

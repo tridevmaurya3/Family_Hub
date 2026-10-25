@@ -1,31 +1,53 @@
 package com.tridev.familyhub.core.reminders;
 
 import android.Manifest;
-import android.app.*;
-import android.content.*;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
-import android.os.*;
+import android.os.Build;
+import android.os.Bundle;
 import android.provider.Settings;
-import android.widget.*;
+import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import com.google.android.material.button.MaterialButton;
+import com.tridev.familyhub.R;
 
-/** User-controlled alarm access; never opens settings from an alarm delivery. */
+/** Small permission bridge: an overlay Service cannot display a runtime permission prompt. */
 public final class ReminderAlarmAccessActivity extends AppCompatActivity {
-    private LinearLayout body;
-    @Override protected void onCreate(Bundle state){super.onCreate(state);body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);int pad=Math.round(16*getResources().getDisplayMetrics().density);body.setPadding(pad,pad,pad,pad);setContentView(body);}
-    @Override protected void onResume(){super.onResume();render();ReminderScheduler.rescheduleAll(this,()->{});}
-    private void render(){body.removeAllViews();TextView title=new TextView(this);title.setText("Reminder alarm access");title.setTextSize(20);body.addView(title);
-        TextView help=new TextView(this);help.setText("Allow notifications, exact alarms and full-screen alarms for lock-screen reminders. These permissions apply to all your reminders.");body.addView(help);
-        if(Build.VERSION.SDK_INT>=33&&ContextCompat.checkSelfPermission(this,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)button("Allow notifications",()->requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},301));
-        if(Build.VERSION.SDK_INT>=34&&!ReminderAlarmService.fullScreenAllowed(this))button("Allow full-screen alarms",()->open(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:"+getPackageName()))));
-        AlarmManager manager=getSystemService(AlarmManager.class);if(Build.VERSION.SDK_INT>=31&&manager!=null&&!manager.canScheduleExactAlarms())button("Allow exact alarm times",()->open(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName()))));
-        button("Alarm notification settings",()->open(new Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,getPackageName()).putExtra(Settings.EXTRA_CHANNEL_ID,ReminderAlarmService.alarmChannel())));
-        button("Done",this::finish);
+    private final ActivityResultLauncher<String> permission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
+                    if (getIntent().getBooleanExtra("test", false)) ReminderReceiver.testNotification(this,
+                            getIntent().getBooleanExtra("important", false));
+                    ReminderScheduler.rescheduleAll(this, () -> { });
+                } else Toast.makeText(this, R.string.reminder_permission_required, Toast.LENGTH_LONG).show();
+                finish();
+            });
+    public static boolean needsPermission(Context context) {
+        return Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context,
+                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED;
     }
-    private void button(String label,Runnable action){MaterialButton b=new MaterialButton(this);b.setText(label);b.setAllCaps(false);b.setOnClickListener(v->action.run());body.addView(b,new LinearLayout.LayoutParams(-1,-2));}
-    private void open(Intent intent){if(intent.resolveActivity(getPackageManager())!=null)startActivity(intent);}
-    @Override public void onRequestPermissionsResult(int code,String[] permissions,int[] results){super.onRequestPermissionsResult(code,permissions,results);render();}
+    public static void request(Context context, boolean test, boolean important) {
+        context.startActivity(new Intent(context, ReminderAlarmAccessActivity.class)
+                .putExtra("test", test).putExtra("important", important).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+    public static void requestOnce(Context context) {
+        if (needsPermission(context) && !context.getSharedPreferences("family_reminder_access", MODE_PRIVATE)
+                .getBoolean("requested", false)) request(context, false, false);
+    }
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        if (state != null) return;
+        if (!needsPermission(this)) { finish(); return; }
+        boolean asked = getSharedPreferences("family_reminder_access", MODE_PRIVATE).getBoolean("requested", false);
+        if (asked && !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+            Intent settings = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName());
+            if (settings.resolveActivity(getPackageManager()) != null) startActivity(settings);
+            finish(); return;
+        }
+        getSharedPreferences("family_reminder_access", MODE_PRIVATE).edit().putBoolean("requested", true).apply();
+        permission.launch(Manifest.permission.POST_NOTIFICATIONS);
+    }
 }

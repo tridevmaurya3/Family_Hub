@@ -339,6 +339,7 @@
             android:launchMode="singleTask" android:theme="@style/Theme.FamilyHub.Alarm" />
         <activity android:name=".core.reminders.ReminderSnoozeActivity"
             android:exported="false" android:excludeFromRecents="true" android:taskAffinity=""
+            android:showWhenLocked="true" android:turnScreenOn="true"
             android:theme="@style/Theme.FamilyHub.AlarmSnooze" />
         <service android:name=".core.reminders.ReminderAlarmService"
             android:exported="false" android:foregroundServiceType="mediaPlayback" />

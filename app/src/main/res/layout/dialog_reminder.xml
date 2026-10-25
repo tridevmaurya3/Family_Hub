@@ -85,7 +85,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:hint="@string/reminder_title">
+                    android:hint="@string/reminder_title"
+                    app:endIconMode="custom" app:endIconDrawable="@drawable/ic_mic"
+                    app:endIconContentDescription="Voice input">
                     <com.google.android.material.textfield.TextInputEditText
                         style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/reminder_title_input"
@@ -364,7 +366,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="5dp"
-                    android:hint="@string/reminder_note">
+                    android:hint="@string/reminder_note"
+                    app:endIconMode="custom" app:endIconDrawable="@drawable/ic_mic"
+                    app:endIconContentDescription="Voice input">
                     <com.google.android.material.textfield.TextInputEditText
                         style="@style/Widget.FamilyHub.FloatingCompact.Input"
                         android:id="@+id/reminder_note_input"
@@ -421,6 +425,9 @@
                     android:text="@string/share_with_family"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+        <LinearLayout android:id="@+id/reminder_options_host"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

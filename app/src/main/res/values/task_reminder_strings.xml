@@ -31,5 +31,7 @@
     <string name="task_reminder_short_hour">1 hour before</string>
     <string name="task_reminder_short_day">1 day before</string>
     <string name="task_reminder_future_required">Choose a future date and time for the reminder.</string>
+    <string name="reminder_alarm_heading">Reminder alarm</string>
+    <string name="reminder_permission_required">Enable notifications for Reminders.</string>
 </resources>
 
