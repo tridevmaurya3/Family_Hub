@@ -9,7 +9,6 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.transition.TransitionManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,9 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.core.content.FileProvider;
-import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -79,7 +76,6 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     @NonNull private String selectedFinanceCategory = "";
     @Nullable private Chip financeSourceChip;
     @Nullable private Chip financeCategoryChip;
-    private boolean financeHeaderCollapsed;
     private final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("en", "IN"));
 
     @Nullable
@@ -117,35 +113,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
                     }
                 }
         );
-        binding.financeRecyclerView.addOnScrollListener(
-                new RecyclerView.OnScrollListener() {
-                    @Override
-                    public void onScrollStateChanged(
-                            @NonNull RecyclerView recyclerView,
-                            int newState
-                    ) {
-                        if (newState == RecyclerView.SCROLL_STATE_DRAGGING
-                                && recyclerView.canScrollVertically(1)
-                                && !financeHeaderCollapsed) {
-                            setFinanceHeaderCollapsed(true);
-                        }
-                    }
-
-                    @Override
-                    public void onScrolled(
-                            @NonNull RecyclerView recyclerView,
-                            int dx,
-                            int dy
-                    ) {
-                        if (dy > 2 && !financeHeaderCollapsed) {
-                            setFinanceHeaderCollapsed(true);
-                        } else if (!recyclerView.canScrollVertically(-1)
-                                && financeHeaderCollapsed) {
-                            setFinanceHeaderCollapsed(false);
-                        }
-                    }
-                }
-        );
+        // financePageScroll owns the page; do not collapse/re-constrain children during list layout.
         binding.emptyAddFinanceButton.setOnClickListener(v -> showEntryEditor(null));
         binding.financeBudgetButton.setOnClickListener(v -> showBudgetEditor());
         binding.financeReportButton.setOnClickListener(v -> showReportOptions());
@@ -175,37 +143,6 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
         refreshData();
     }
 
-    /** Matches Grocery: keep search visible while the list uses the full page. */
-    private void setFinanceHeaderCollapsed(boolean collapsed) {
-        if (binding == null || financeHeaderCollapsed == collapsed) return;
-        financeHeaderCollapsed = collapsed;
-        TransitionManager.beginDelayedTransition(binding.getRoot());
-        int visibility = collapsed ? View.GONE : View.VISIBLE;
-        binding.financeOverview.setVisibility(visibility);
-        binding.monthSummaryCard.setVisibility(visibility);
-        binding.financeAccountsCard.setVisibility(visibility);
-        binding.financeSmartHealthCard.setVisibility(visibility);
-        binding.financeInsightsActions.setVisibility(visibility);
-        binding.financeAnalyticsCard.setVisibility(visibility);
-        if (collapsed) {
-            binding.financeSearchInput.clearFocus();
-        }
-
-        ConstraintSet constraints = new ConstraintSet();
-        constraints.clone(binding.getRoot());
-        constraints.clear(R.id.finance_search_layout, ConstraintSet.TOP);
-        constraints.connect(
-                R.id.finance_search_layout,
-                ConstraintSet.TOP,
-                collapsed ? ConstraintSet.PARENT_ID : R.id.finance_analytics_card,
-                collapsed ? ConstraintSet.TOP : ConstraintSet.BOTTOM,
-                getResources().getDimensionPixelSize(
-                        collapsed ? R.dimen.space_4 : R.dimen.space_16
-                )
-        );
-        constraints.applyTo(binding.getRoot());
-    }
-
     @Override
     public void onAddRequested() {
         showEntryEditor(null);
@@ -227,6 +164,7 @@ public class FinanceFragment extends Fragment implements com.tridev.familyhub.fe
     }
 
     private void refreshData() {
+        if (binding == null) return;
         loadEntries(binding.financeSearchInput.getText().toString());
         loadSummary();
         loadAccountSummary();
