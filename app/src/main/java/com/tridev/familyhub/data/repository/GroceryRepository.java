@@ -566,6 +566,56 @@ public class GroceryRepository {
                 Double.doubleToRawLongBits(Math.max(0D, budget))).apply();
     }
 
+    /** Read-only analytics snapshot; never waits behind upload/reconciliation writes. */
+    public void loadAnalyticsPurchases(@NonNull PurchasesCallback callback,
+                                       @NonNull Runnable onError) {
+        LOAD_EXECUTOR.execute(() -> {
+            try {
+                if (!currentAccount()) {
+                    mainHandler.post(onError);
+                    return;
+                }
+                java.util.Calendar start = java.util.Calendar.getInstance();
+                start.set(java.util.Calendar.DAY_OF_MONTH, 1);
+                start.set(java.util.Calendar.HOUR_OF_DAY, 0);
+                start.set(java.util.Calendar.MINUTE, 0);
+                start.set(java.util.Calendar.SECOND, 0);
+                start.set(java.util.Calendar.MILLISECOND, 0);
+                java.util.Calendar end = (java.util.Calendar) start.clone();
+                end.add(java.util.Calendar.MONTH, 1);
+                List<GroceryPurchase> rows = accountDatabase.groceryPurchaseDao()
+                        .getForPeriod(start.getTimeInMillis(), end.getTimeInMillis());
+                // Other devices already receive purchased Grocery items through the
+                // existing sync. Include missing history in memory only, without
+                // changing cloud paths or writing duplicate purchase/finance rows.
+                Set<String> seen = new HashSet<>();
+                for (GroceryPurchase row : rows) {
+                    seen.add(purchaseHistoryKey(row.itemName, row.purchasedAt));
+                }
+                for (GroceryItem item : groceryItemDao.getAll()) {
+                    if (!item.isPurchased || item.purchasedAt < start.getTimeInMillis()
+                            || item.purchasedAt >= end.getTimeInMillis()) continue;
+                    if (!seen.add(purchaseHistoryKey(item.name, item.purchasedAt))) continue;
+                    GroceryPurchase row = new GroceryPurchase();
+                    row.sourceItemId = item.id;
+                    row.itemName = item.name;
+                    row.category = item.category;
+                    row.quantity = item.quantity;
+                    row.storeName = item.storeName;
+                    row.actualCost = item.actualCost > 0D ? item.actualCost : item.estimatedCost;
+                    row.purchasedAt = item.purchasedAt;
+                    rows.add(row);
+                }
+                mainHandler.post(() -> {
+                    if (currentAccount()) callback.onLoaded(rows);
+                    else onError.run();
+                });
+            } catch (Exception error) {
+                mainHandler.post(onError);
+            }
+        });
+    }
+
     public void loadCurrentMonthPurchases(@NonNull PurchasesCallback callback) {
         DATABASE_EXECUTOR.execute(() -> {
             if (!scopeUid.equals(AccountDataScope.uid())) return;

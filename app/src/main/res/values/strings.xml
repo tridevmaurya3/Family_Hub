@@ -1650,4 +1650,8 @@ Sharing: %12$s</string>
     <string name="notes_checklist_progress">%1$d/%2$d completed</string>
     <string name="notes_actions">Note actions</string>
     <string name="notes_main_live">● Live · Family sync</string>
+    <string name="store_analytics_loading">Loading this month’s purchases…</string>
+    <string name="store_analytics_current_month">Showing purchases for the current month.</string>
+    <string name="store_analytics_retry">Could not load purchases. Tap here to retry.</string>
+    <string name="store_analytics_store_label">Store / Shop</string>
 </resources>

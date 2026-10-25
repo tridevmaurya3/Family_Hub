@@ -6,6 +6,11 @@ import android.os.Bundle;
 import android.graphics.Typeface;
 import android.view.Gravity;
 import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import android.widget.AdapterView;
+import android.view.View;
+import android.view.ViewGroup;
+import com.tridev.familyhub.core.ui.ScheduleDropdownView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,6 +53,10 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
     private String selectedCategory = "All";
     private String selectedStore = "All";
 
+    private GroceryRepository repository;
+    private boolean loading;
+    private boolean loaded;
+
     @Override protected void onCreate(@Nullable Bundle state) {
         super.onCreate(state);
         binding = ActivityGroceryStoreAnalyticsBinding.inflate(getLayoutInflater());
@@ -57,12 +66,45 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
                 R.drawable.ic_arrow_back, R.string.back, view -> finish());
         binding.storeAnalyticsPdf.setOnClickListener(view -> export(true));
         binding.storeAnalyticsExcel.setOnClickListener(view -> export(false));
-        new GroceryRepository(this).loadCurrentMonthPurchases(rows -> {
+        repository = new GroceryRepository(this);
+        setupFilters();
+        render();
+        binding.storeAnalyticsStatus.setOnClickListener(view -> loadPurchases());
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        loadPurchases();
+    }
+
+    private void loadPurchases() {
+        if (loading) return;
+        loading = true;
+        setExportEnabled(false);
+        binding.storeAnalyticsStatus.setText(R.string.store_analytics_loading);
+        repository.loadAnalyticsPurchases(rows -> {
+            if (isFinishing() || isDestroyed()) return;
+            loading = false;
+            loaded = true;
             purchases.clear();
             purchases.addAll(rows);
             setupFilters();
             render();
+            binding.storeAnalyticsStatus.setText(rows.isEmpty()
+                    ? R.string.grocery_store_analytics_empty
+                    : R.string.store_analytics_current_month);
+            setExportEnabled(!filtered().isEmpty());
+        }, () -> {
+            if (isFinishing() || isDestroyed()) return;
+            loading = false;
+            binding.storeAnalyticsStatus.setText(R.string.store_analytics_retry);
+            setExportEnabled(loaded && !filtered().isEmpty());
         });
+    }
+
+    private void setExportEnabled(boolean enabled) {
+        binding.storeAnalyticsPdf.setEnabled(enabled);
+        binding.storeAnalyticsExcel.setEnabled(enabled);
     }
 
     private void installSystemBarInsets() {
@@ -86,19 +128,49 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
             categories.add(category(purchase));
             stores.add(store(purchase));
         }
-        binding.storeAnalyticsCategoryFilter.setAdapter(new ArrayAdapter<>(this,
-                R.layout.item_form_dropdown,
-                new ArrayList<>(categories)));
-        binding.storeAnalyticsStoreFilter.setAdapter(new ArrayAdapter<>(this,
-                R.layout.item_form_dropdown,
-                new ArrayList<>(stores)));
-        binding.storeAnalyticsCategoryFilter.setText("All", false);
-        binding.storeAnalyticsStoreFilter.setText("All", false);
-        binding.storeAnalyticsCategoryFilter.setOnItemClickListener((p, v, i, id) -> {
-            selectedCategory = String.valueOf(p.getItemAtPosition(i)); render();
+        if (!categories.contains(selectedCategory)) selectedCategory = "All";
+        if (!stores.contains(selectedStore)) selectedStore = "All";
+        configureFilter(binding.storeAnalyticsCategoryFilter, categories, selectedCategory, true);
+        configureFilter(binding.storeAnalyticsStoreFilter, stores, selectedStore, false);
+    }
+
+    private void configureFilter(Spinner spinner, Set<String> options,
+                                 String selected, boolean categoryFilter) {
+        String[] values = options.toArray(new String[0]);
+        spinner.setOnItemSelectedListener(null);
+        spinner.setAdapter(new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, values) {
+            @Override public View getView(int position, View old, ViewGroup parent) {
+                TextView text = new TextView(GroceryStoreAnalyticsActivity.this);
+                text.setText(getItem(position) + " ▾");
+                text.setTextSize(11);
+                text.setTextColor(ContextCompat.getColor(GroceryStoreAnalyticsActivity.this,
+                        R.color.fh_text_primary));
+                text.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+                text.setMaxLines(2);
+                text.setPadding(dp(9), dp(2), dp(9), dp(2));
+                return text;
+            }
+            @Override public View getDropDownView(int position, View old, ViewGroup parent) {
+                return ScheduleDropdownView.popupRow(GroceryStoreAnalyticsActivity.this,
+                        getItem(position));
+            }
         });
-        binding.storeAnalyticsStoreFilter.setOnItemClickListener((p, v, i, id) -> {
-            selectedStore = String.valueOf(p.getItemAtPosition(i)); render();
+        spinner.setBackground(ScheduleDropdownView.surface(this, false));
+        spinner.setPopupBackgroundDrawable(ScheduleDropdownView.surface(this, true));
+        spinner.setDropDownWidth(ScheduleDropdownView.popupWidth(this, values));
+        spinner.setDropDownVerticalOffset(dp(4));
+        spinner.setSelection(new ArrayList<>(options).indexOf(selected));
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view,
+                                                  int position, long id) {
+                String value = String.valueOf(parent.getItemAtPosition(position));
+                if (categoryFilter) selectedCategory = value;
+                else selectedStore = value;
+                render();
+                setExportEnabled(loaded && !loading && !filtered().isEmpty());
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
         });
     }
 
@@ -247,7 +319,7 @@ public class GroceryStoreAnalyticsActivity extends AppCompatActivity {
     private Map<String, Double> cheapestByComparablePurchase(List<GroceryPurchase> rows) {
         Map<String, Double> result = new LinkedHashMap<>();
         for (GroceryPurchase row : rows) {
-            if (row.actualCost <= 0D || row.storeName.trim().isEmpty()) continue;
+            if (row.actualCost <= 0D || (row.storeName == null || row.storeName.trim().isEmpty())) continue;
             String key = comparisonKey(row);
             result.put(key, Math.min(result.getOrDefault(key, row.actualCost),
                     row.actualCost));

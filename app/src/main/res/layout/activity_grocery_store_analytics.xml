@@ -106,6 +106,16 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/store_analytics_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:padding="8dp"
+            android:text="@string/store_analytics_loading"
+            android:textColor="@color/fh_text_secondary"
+            android:textSize="12sp" />
+
         <com.google.android.material.card.MaterialCardView
             style="@style/Widget.FamilyHub.Card.Flat"
             android:layout_width="match_parent"
@@ -143,33 +153,44 @@
                     android:layout_marginTop="12dp"
                     android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="5dp"
                         android:layout_weight="1"
-                        android:hint="@string/grocery_category">
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:layout_marginEnd="5dp"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/grocery_category"
+                            android:textSize="10sp"
+                            android:textColor="@color/fh_text_secondary"
+                            android:paddingBottom="3dp" />
+                        <Spinner
                             android:id="@+id/store_analytics_category_filter"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.FamilyHub.Form.Dropdown"
+                            android:layout_height="48dp"
+                            android:spinnerMode="dropdown" />
+                    </LinearLayout>
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="5dp"
                         android:layout_weight="1"
-                        android:hint="@string/grocery_store_name">
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/store_analytics_store_filter"
+                        android:layout_marginStart="5dp"
+                        android:orientation="vertical">
+                        <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="none" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:text="@string/store_analytics_store_label"
+                            android:textSize="10sp"
+                            android:textColor="@color/fh_text_secondary"
+                            android:paddingBottom="3dp" />
+                        <Spinner
+                            android:id="@+id/store_analytics_store_filter"
+                            android:layout_width="match_parent"
+                            android:layout_height="48dp"
+                            android:spinnerMode="dropdown" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
