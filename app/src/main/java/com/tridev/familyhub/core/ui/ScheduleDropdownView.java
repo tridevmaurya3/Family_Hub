@@ -40,6 +40,18 @@ public final class ScheduleDropdownView extends LinearLayout {
             ViewGroup.LayoutParams p=b.getLayoutParams();p.height=dp(view.getContext(),38);b.setLayoutParams(p);
         }else if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)styleFilters(group.getChildAt(i));}
     }
+    /** Select an existing option when binding an editor or resetting its fields. */
+    public void setText(CharSequence value) {
+        if (value == null || spinner.getAdapter() == null) return;
+        String selected = value.toString().trim();
+        for (int i = 0; i < spinner.getAdapter().getCount(); i++) {
+            Object option = spinner.getAdapter().getItem(i);
+            if (option != null && selected.equalsIgnoreCase(option.toString().trim())) {
+                spinner.setSelection(i);
+                return;
+            }
+        }
+    }
     public CharSequence getText(){return String.valueOf(spinner.getSelectedItem());}
     public static int dp(Context c,int n){return Math.round(n*c.getResources().getDisplayMetrics().density);}
     public static int popupWidth(Context c,String[] values){Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);paint.setTextSize(12.5f*c.getResources().getDisplayMetrics().scaledDensity);float longest=0;for(String v:values)longest=Math.max(longest,paint.measureText(v));return Math.min(Math.max(dp(c,120),Math.round(longest)+dp(c,42)),c.getResources().getDisplayMetrics().widthPixels-dp(c,40));}
