@@ -78,6 +78,11 @@ public class ReminderAdapter extends RecyclerView.Adapter<ReminderAdapter.Remind
             super(binding.getRoot());
             this.binding = binding;
             if (floating) {
+                android.view.View content = (android.view.View) binding.reminderTitle
+                        .getParent().getParent().getParent();
+                int bottom = Math.round(8 * content.getResources().getDisplayMetrics().density);
+                content.setPadding(content.getPaddingLeft(), content.getPaddingTop(),
+                        content.getPaddingRight(), bottom);
                 android.widget.LinearLayout heading = (android.widget.LinearLayout) binding.reminderTitle.getParent().getParent();
                 more = com.tridev.familyhub.core.ui.FloatingItemActions.button(binding.getRoot().getContext(), "");
                 heading.addView(more);

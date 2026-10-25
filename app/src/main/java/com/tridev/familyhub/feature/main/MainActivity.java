@@ -110,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
                         if (binding != null) {
                             binding.fabAdd.setVisibility(
                                     fragment instanceof AddActionHost
+                                            && !(fragment instanceof RemindersFragment)
                                             ? View.VISIBLE
                                             : View.GONE
                             );

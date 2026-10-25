@@ -149,8 +149,9 @@ public final class RemindersOverlayService extends Service {
                 new int[]{Color.rgb(244, 252, 247), Color.rgb(255, 250, 245), Color.rgb(245, 250, 255)});
         background.setCornerRadius(dp(22)); background.setStroke(dp(1), Color.rgb(223, 214, 240));
         panel.setBackground(background);
+        panel.setClipToOutline(true);
         LinearLayout root = new LinearLayout(themed); root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(10), dp(8), dp(10), 0);
+        root.setPadding(dp(10), dp(8), dp(10), dp(8));
         panel.addView(root, new FrameLayout.LayoutParams(-1, -1));
         LinearLayout header = new LinearLayout(themed); header.setGravity(Gravity.TOP);
         LinearLayout titleStack = new LinearLayout(themed); titleStack.setOrientation(LinearLayout.VERTICAL);
@@ -190,7 +191,11 @@ public final class RemindersOverlayService extends Service {
         TextView grip = new TextView(themed); grip.setText("◢"); grip.setTextColor(Color.rgb(32, 87, 140));
         grip.setClickable(true);
         grip.setContentDescription("Resize floating Reminders"); grip.setGravity(Gravity.BOTTOM | Gravity.END);
-        panel.addView(grip, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.BOTTOM | Gravity.END));
+        FrameLayout.LayoutParams gripParams = new FrameLayout.LayoutParams(
+                dp(26), dp(26), Gravity.BOTTOM | Gravity.END);
+        gripParams.setMarginEnd(dp(3));
+        gripParams.bottomMargin = dp(3);
+        panel.addView(grip, gripParams);
         drag(grip, true);
         com.tridev.familyhub.core.ui.FormTextEditing.observe(panel);
         manager.addView(panel, params);
