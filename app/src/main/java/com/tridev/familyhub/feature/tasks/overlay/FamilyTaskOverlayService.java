@@ -454,7 +454,7 @@ public final class FamilyTaskOverlayService extends Service {
         final int[] quickRepeat = {0};
         final String[] repeatValues = {FamilyTask.REPEAT_NONE, FamilyTask.REPEAT_DAILY,
                 FamilyTask.REPEAT_WEEKLY, FamilyTask.REPEAT_MONTHLY};
-        final String[] repeatLabels = {"Once", "Repeated", "Weekly", "Monthly"};
+        final String[] repeatLabels = {"Once", "Daily", "Weekly", "Monthly"};
         Button quickDate = compactAction(getString(R.string.family_tasks_overlay_today) + "  ▾",
                 Color.rgb(15, 105, 80), Color.argb(220, 226, 244, 238));
         Button quickTimeButton = compactAction(getString(R.string.family_tasks_quick_time) + "  ▾",
@@ -601,6 +601,7 @@ public final class FamilyTaskOverlayService extends Service {
             customDueText.setText("Due date: "+DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(task.dueAt)));
             customDueText.setVisibility(View.VISIBLE);
             updateQuickTimeButton(quickTimeButton, 2, task.dueAt, 3, customQuickTime);
+            quickTimeButton.setTag(task.dueAt);
             quickPriority[0]=FamilyTask.PRIORITY_URGENT.equals(task.priority)?2:FamilyTask.PRIORITY_HIGH.equals(task.priority)?1:0;
             int[] labels={R.string.task_priority_normal,R.string.task_priority_high,R.string.task_priority_urgent};
             quickPriorityButton.setText(getString(labels[quickPriority[0]])+"  ▾");
@@ -649,27 +650,34 @@ public final class FamilyTaskOverlayService extends Service {
             if (!subtaskEditor.validate()) return;
             boolean isEdit = editing[0]!=null;
             FamilyTask task = isEdit ? editing[0] : new FamilyTask();
+            long selectedDue = (Long) quickTimeButton.getTag();
+            if (reminderOptions.isReminderEnabled()
+                    && !com.tridev.familyhub.core.tasks.FamilyTaskReminderTiming.validReminderDue(
+                            selectedDue, task.dueAt, isEdit, System.currentTimeMillis())) {
+                input.setError(getString(R.string.task_reminder_future_required)); return;
+            }
             task.title = value;
             task.notes = FamilyTaskSubtasks.encode(isEdit ? editNotes.getText().toString().trim() : "",
                     subtaskEditor.getItems(), subtaskEditor.getCompleted());
-            Calendar original=Calendar.getInstance(); original.setTimeInMillis(task.dueAt);
-            boolean unchangedDue=isEdit && quickDateMode[0]==2 && customQuickDateAt[0]==task.dueAt
-                    && quickTimeMode[0]==3 && customQuickTime[0]==original.get(Calendar.HOUR_OF_DAY)
-                    && customQuickTime[1]==original.get(Calendar.MINUTE);
-            if(!unchangedDue) task.dueAt = resolveQuickDueAt(quickDateMode[0], customQuickDateAt[0],
-                    quickTimeMode[0], customQuickTime);
+            task.dueAt = selectedDue;
             task.priority = quickPriority[0] == 2 ? FamilyTask.PRIORITY_URGENT
                     : quickPriority[0] == 1 ? FamilyTask.PRIORITY_HIGH
                     : FamilyTask.PRIORITY_NORMAL;
             task.repeatType = repeatValues[quickRepeat[0]];
             reminderOptions.applyQuick(task);
+            String reminderUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+            Runnable saveOptions = reminderOptions.captureSave(task);
             saving[0]=true; add.setEnabled(false); cancelEdit.setEnabled(false);
             repository.save(task, () -> {
-                reminderOptions.saveOptions(task);
+                if (!reminderUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return;
+                saveOptions.run();
                 FamilyTaskScheduler.schedule(this, task);
                 saving[0]=false; add.setEnabled(true); cancelEdit.setEnabled(true);
                 if(isEdit) resetEdit.run();
-                else { input.setText(""); subtaskEditor.reset(); taskType.setText("Single ▾"); }
+                else { input.setText(""); subtaskEditor.reset(); taskType.setText("Single ▾");
+                    reminderOptions.bindQuick(null);
+                    updateQuickTimeButton(quickTimeButton, quickDateMode[0], customQuickDateAt[0], quickTimeMode[0], customQuickTime);
+                }
                 refresh();
             });
         };
@@ -922,38 +930,17 @@ public final class FamilyTaskOverlayService extends Service {
 
     private void updateQuickTimeButton(@NonNull Button button, int dateMode, long customDateAt,
                                        int timeMode, @NonNull int[] customTime) {
-        String value = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(
-                resolveQuickDueAt(dateMode, customDateAt, timeMode, customTime)));
+        long selected = resolveQuickDueAt(dateMode, customDateAt, timeMode, customTime);
+        button.setTag(selected);
+        String value = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(selected));
         button.setText(value + "  ▾");
         button.setContentDescription(getString(R.string.family_tasks_quick_time) + ": " + value);
     }
 
     private long resolveQuickDueAt(int dateMode, long customDateAt, int timeMode,
                                    @NonNull int[] customTime) {
-        Calendar due = Calendar.getInstance();
-        if (dateMode == 2 && customDateAt > 0L) {
-            Calendar selected = Calendar.getInstance();
-            selected.setTimeInMillis(customDateAt);
-            due.set(Calendar.YEAR, selected.get(Calendar.YEAR));
-            due.set(Calendar.MONTH, selected.get(Calendar.MONTH));
-            due.set(Calendar.DAY_OF_MONTH, selected.get(Calendar.DAY_OF_MONTH));
-        } else if (dateMode == 1) {
-            due.add(Calendar.DAY_OF_YEAR, 1);
-        }
-        due.set(Calendar.SECOND, 0);
-        due.set(Calendar.MILLISECOND, 0);
-        if (timeMode == 3 && customTime[0] >= 0 && customTime[1] >= 0) {
-            due.set(Calendar.HOUR_OF_DAY, customTime[0]);
-            due.set(Calendar.MINUTE, customTime[1]);
-        } else if (timeMode == 1) {
-            due.add(Calendar.MINUTE, 30);
-        } else if (timeMode == 2) {
-            due.add(Calendar.HOUR_OF_DAY, 1);
-        }
-        if (dateMode == 0 && due.getTimeInMillis() <= System.currentTimeMillis()) {
-            due.add(Calendar.MINUTE, 1);
-        }
-        return due.getTimeInMillis();
+        return com.tridev.familyhub.core.tasks.FamilyTaskReminderTiming.quickDue(
+                System.currentTimeMillis(), dateMode, customDateAt, timeMode, customTime[0], customTime[1]);
     }
 
     private interface ChoiceListener { void onChoice(int index); }

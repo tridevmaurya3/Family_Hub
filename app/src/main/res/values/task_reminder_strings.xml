@@ -7,7 +7,7 @@
     <string name="task_reminder_normal">Normal notification</string>
     <string name="task_reminder_important">Important reminder (alarm sound)</string>
     <string name="task_reminder_followup">Remind again after 30 minutes if pending</string>
-    <string name="task_reminder_device_options">Sound and follow-up apply on this phone.</string>
+    <string name="task_reminder_device_options">Sound, follow-up, Snooze and Stop apply only on this phone. Complete updates the shared task.</string>
     <string name="task_reminder_permissions">Reminder permissions</string>
     <string name="task_reminder_notification_access">Enable notifications</string>
     <string name="task_reminder_exact_access">Allow precise reminder timing</string>
@@ -21,7 +21,7 @@
     <string name="task_reminder_mode_normal">Normal</string>
     <string name="task_reminder_mode_important">Important</string>
     <string name="task_reminder_test">Test notification</string>
-    <string name="task_reminder_test_message">Task reminders can reach this phone.</string>
+    <string name="task_reminder_test_message">Notification delivery works on this phone. This does not test alarm timing, lock-screen display or Snooze.</string>
     <string name="task_reminder_test_sent">Test notification sent</string>
     <string name="task_reminder_permission_required">Enable notifications for Family To-Do reminders.</string>
     <string name="task_reminder_short_at">At time</string>
@@ -30,5 +30,6 @@
     <string name="task_reminder_short_30">30 min before</string>
     <string name="task_reminder_short_hour">1 hour before</string>
     <string name="task_reminder_short_day">1 day before</string>
+    <string name="task_reminder_future_required">Choose a future date and time for the reminder.</string>
 </resources>
 

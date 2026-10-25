@@ -28,7 +28,12 @@ public final class FamilyTaskScheduler {
         boolean exact = manager != null && (Build.VERSION.SDK_INT < 31 || manager.canScheduleExactAlarms());
         String signature = task.dueAt + ":" + task.repeatType + ":" + task.reminderMinutesBefore + ":" + follow + ":" + exact;
         // Preserve already-due alarms while Android is waiting to deliver them.
-        if (FamilyTaskReminderPreferences.updateSchedule(context, task.id, signature)) clearAlarms(context, task.id);
+        if (FamilyTaskReminderPreferences.updateSchedule(context, task.id, signature)) {
+            clearAlarms(context, task.id);
+            FamilyTaskAlarmService.stopAlarm(context, task.id);
+            closeControls(context, task.id);
+            androidx.core.app.NotificationManagerCompat.from(context).cancel(notificationId(task.id));
+        }
         boolean notificationsReady = FamilyTaskReceiver.canNotify(context, FamilyTaskReminderPreferences.important(context, task));
         boolean dueDelivered = FamilyTaskReminderPreferences.delivered(context, task.id, task.dueAt, 1, task.dueAt);
         long catchUp = FamilyTaskReminderTiming.deliveryTrigger(task.dueAt, 1, now, dueDelivered);
@@ -51,10 +56,15 @@ public final class FamilyTaskScheduler {
     }
     public static synchronized void cancel(@NonNull Context context, long id) {
         FamilyTaskAlarmService.stopAlarm(context, id);
+        closeControls(context, id);
         clearAlarms(context, id);
         FamilyTaskReminderPreferences.clearSnooze(context, id);
         FamilyTaskReminderPreferences.clearDelivery(context, id);
         androidx.core.app.NotificationManagerCompat.from(context).cancel(notificationId(id));
+    }
+    private static void closeControls(Context context, long id) {
+        context.sendBroadcast(new Intent(FamilyTaskAlarmService.CLOSED).setPackage(context.getPackageName())
+                .putExtra(FamilyTaskReceiver.EXTRA_ID, id));
     }
     private static void clearAlarms(Context context, long id) {
         AlarmManager manager = context.getSystemService(AlarmManager.class);

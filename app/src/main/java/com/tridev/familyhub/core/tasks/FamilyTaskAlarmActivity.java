@@ -15,10 +15,17 @@ import com.tridev.familyhub.R;
 /** Alarm controls for this occurrence; dismissing never marks a task completed. */
 public class FamilyTaskAlarmActivity extends AppCompatActivity {
     private long id;
+    private boolean occurrenceValid;
+    private boolean observing;
+    private com.tridev.familyhub.data.local.FamilyHubDatabase observedDatabase;
+    private final com.google.firebase.auth.FirebaseAuth.AuthStateListener accountListener = auth -> validateOccurrence();
+    private final androidx.room.InvalidationTracker.Observer taskObserver =
+            new androidx.room.InvalidationTracker.Observer("family_tasks") {
+                @Override public void onInvalidated(java.util.Set<String> tables) { validateOccurrence(); }
+            };
     private final BroadcastReceiver close = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent intent) {
-            if (intent.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0) == id
-                    && !getIntent().getBooleanExtra("snooze_only", false)) finish();
+            if (intent.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0) == id) finish();
         }
     };
     @Override protected void onCreate(Bundle state) {
@@ -27,15 +34,17 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
         // The compact Snooze chooser must also work over the device lock screen.
         if (android.os.Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true); }
         else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        // Android screen timeout remains active while the user leaves controls open.
         ContextCompat.registerReceiver(this, close, new IntentFilter(FamilyTaskAlarmService.CLOSED), ContextCompat.RECEIVER_NOT_EXPORTED);
         render();
     }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); render(); }
     private void render() {
         if (!AccountDataScope.canDeliver(this,getIntent().getStringExtra(AccountDataScope.EXTRA_UID))) { finish(); return; }
+        occurrenceValid = false;
         id = getIntent().getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0);
         if (id <= 0) { finish(); return; }
+        validateOccurrence();
         if (getIntent().getBooleanExtra("snooze_only", false)) {
             LinearLayout chooser = new LinearLayout(this); chooser.setOrientation(LinearLayout.VERTICAL);
             chooser.setPadding(dp(20), dp(16), dp(20), dp(16));
@@ -142,9 +151,56 @@ public class FamilyTaskAlarmActivity extends AppCompatActivity {
                 ? new LinearLayout.LayoutParams(0, -2, 1) : new LinearLayout.LayoutParams(-1, -2));
     }
     private void action(String action, int minutes) {
-        sendBroadcast(AccountDataScope.stamp(this, new Intent(this, FamilyTaskReceiver.class)).setAction(action)
+        if (!AccountDataScope.canDeliver(this, getIntent().getStringExtra(AccountDataScope.EXTRA_UID))) {
+            finish(); return;
+        }
+        Intent command = AccountDataScope.stamp(this, new Intent(this, FamilyTaskReceiver.class)).setAction(action)
                 .putExtra(AccountDataScope.EXTRA_UID, getIntent().getStringExtra(AccountDataScope.EXTRA_UID))
-                .putExtra(FamilyTaskReceiver.EXTRA_ID, id).putExtra("minutes", minutes)); finish();
+                .putExtra(FamilyTaskReceiver.EXTRA_ID, id).putExtra("minutes", minutes);
+        if (getIntent().hasExtra("due")) command.putExtra("due", getIntent().getLongExtra("due", -1));
+        sendBroadcast(command); finish();
+    }
+    private void validateOccurrence() {
+        // Database work stays off the UI thread; account changes also invalidate visible details.
+        runOnUiThread(() -> {
+            if (isFinishing() || isDestroyed()) return;
+            Intent delivered = getIntent();
+            String uid = delivered.getStringExtra(AccountDataScope.EXTRA_UID);
+            if (!AccountDataScope.canDeliver(this, uid)) { occurrenceValid = false; finish(); return; }
+            occurrenceValid = false;
+            long expectedId = id;
+            com.tridev.familyhub.data.local.FamilyHubDatabase database =
+                    com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(this);
+            new Thread(() -> {
+                com.tridev.familyhub.data.local.entity.FamilyTask task =
+                        database.familyTaskDao().getById(expectedId);
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed() || delivered != getIntent()) return;
+                    occurrenceValid = AccountDataScope.canDeliver(this, uid) && task != null && task.reminderEnabled
+                            && !com.tridev.familyhub.data.local.entity.FamilyTask.STATUS_COMPLETED.equals(task.status)
+                            && (!delivered.hasExtra("due") || delivered.getLongExtra("due", -1) == task.dueAt);
+                    if (!occurrenceValid) finish();
+                });
+            }, "TaskAlarmValidation").start();
+        });
+    }
+    @Override protected void onStart() {
+        super.onStart();
+        com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(accountListener);
+        observedDatabase = com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(this);
+        observedDatabase.getInvalidationTracker().addObserver(taskObserver);
+        observing = true;
+        validateOccurrence();
+    }
+    @Override protected void onStop() {
+        if (observing) {
+            com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(accountListener);
+            observedDatabase.getInvalidationTracker().removeObserver(taskObserver);
+            observedDatabase = null;
+            observing = false;
+        }
+        occurrenceValid = false;
+        super.onStop();
     }
     @Override public void onBackPressed() { if (getIntent().getBooleanExtra("snooze_only", false)) finish(); else action(FamilyTaskReceiver.ACTION_DISMISS, 0); }
     @Override protected void onDestroy() { unregisterReceiver(close); super.onDestroy(); }

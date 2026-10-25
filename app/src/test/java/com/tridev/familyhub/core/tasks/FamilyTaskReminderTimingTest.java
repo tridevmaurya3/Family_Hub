@@ -69,5 +69,41 @@ public class FamilyTaskReminderTimingTest {
         assertEquals(120 * MINUTE, FamilyTaskReminderTiming.deliveryTrigger(120 * MINUTE, 1, 110 * MINUTE, false));
     }
 
+    private static long date(int day, int hour, int minute) {
+        Calendar c = Calendar.getInstance();
+        c.clear(); c.set(2026, Calendar.OCTOBER, day, hour, minute);
+        return c.getTimeInMillis();
+    }
+    @Test public void relativeTimeIsOneTimestampThatCanBeSavedWithoutRecalculation() {
+        long selected = FamilyTaskReminderTiming.quickDue(date(25, 10, 0), 0, 0, 2, -1, -1);
+        assertEquals(date(25, 11, 0), selected);
+        org.junit.Assert.assertTrue(FamilyTaskReminderTiming.validReminderDue(selected, 0, false, date(25, 10, 10)));
+        assertEquals(date(25, 11, 0), selected);
+    }
+    @Test public void explicitPastTimeIsNotSilentlyMovedByOneMinute() {
+        long selected = FamilyTaskReminderTiming.quickDue(date(25, 18, 0), 0, 0, 3, 17, 0);
+        assertEquals(date(25, 17, 0), selected);
+        org.junit.Assert.assertFalse(FamilyTaskReminderTiming.validReminderDue(selected, 0, false, date(25, 18, 0)));
+    }
+    @Test public void nowUsesNextMinuteEvenAtEndOfDay() {
+        assertEquals(date(26, 0, 0), FamilyTaskReminderTiming.quickDue(date(25, 23, 59) + 45000, 0, 0, 0, -1, -1));
+    }
+    @Test public void tomorrowCustomTimeKeepsItsChosenDate() {
+        assertEquals(date(26, 9, 15), FamilyTaskReminderTiming.quickDue(date(25, 18, 0), 1, 0, 3, 9, 15));
+    }
+    @Test public void customPastDateRequiresCorrectionForNewReminder() {
+        long selected = FamilyTaskReminderTiming.quickDue(date(25, 18, 0), 2, date(20, 12, 0), 3, 8, 30);
+        assertEquals(date(20, 8, 30), selected);
+        org.junit.Assert.assertFalse(FamilyTaskReminderTiming.validReminderDue(selected, 0, false, date(25, 18, 0)));
+    }
+    @Test public void overdueTaskCanBeEditedWithoutChangingItsReminderDate() {
+        org.junit.Assert.assertTrue(FamilyTaskReminderTiming.validReminderDue(date(20, 8, 30), date(20, 8, 30), true, date(25, 18, 0)));
+        org.junit.Assert.assertFalse(FamilyTaskReminderTiming.validReminderDue(date(21, 8, 30), date(20, 8, 30), true, date(25, 18, 0)));
+    }
+    @Test public void zeroAndEqualToNowAreRejectedForNewReminders() {
+        org.junit.Assert.assertFalse(FamilyTaskReminderTiming.validReminderDue(0, 0, false, date(25, 18, 0)));
+        org.junit.Assert.assertFalse(FamilyTaskReminderTiming.validReminderDue(date(25, 18, 0), 0, false, date(25, 18, 0)));
+    }
+
 }
 

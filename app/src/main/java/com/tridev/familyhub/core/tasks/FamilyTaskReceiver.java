@@ -40,11 +40,6 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
         if (!ACTION_FIRE.equals(action) && !ACTION_COMPLETE.equals(action) && !ACTION_SNOOZE.equals(action) && !ACTION_DISMISS.equals(action)) return;
         long id = intent.getLongExtra(EXTRA_ID, 0);
         if (id <= 0) return;
-        if (!ACTION_FIRE.equals(action)) {
-            FamilyTaskAlarmService.stopAlarm(context, id);
-            NotificationManagerCompat.from(context).cancel(FamilyTaskScheduler.notificationId(id));
-            if (ACTION_DISMISS.equals(action)) return;
-        }
         PendingResult result = goAsync();
         Context app = context.getApplicationContext();
         new Thread(() -> {
@@ -54,6 +49,18 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 FamilyTask task = FamilyHubDatabase.getInstance(app).familyTaskDao().getById(id);
                 if (task == null || FamilyTask.STATUS_COMPLETED.equals(task.status)) {
                     FamilyTaskScheduler.cancel(app, id); return;
+                }
+                if (!ACTION_FIRE.equals(action) && intent.hasExtra("due")
+                        && intent.getLongExtra("due", -1) != task.dueAt) {
+                    FamilyTaskScheduler.schedule(app, task); return;
+                }
+                if (!ACTION_FIRE.equals(action)) {
+                    if (!task.reminderEnabled) { FamilyTaskScheduler.cancel(app, id); return; }
+                    FamilyTaskAlarmService.stopAlarm(app, id);
+                    NotificationManagerCompat.from(app).cancel(FamilyTaskScheduler.notificationId(id));
+                    app.sendBroadcast(new Intent(FamilyTaskAlarmService.CLOSED).setPackage(app.getPackageName())
+                            .putExtra(EXTRA_ID, id));
+                    if (ACTION_DISMISS.equals(action)) return;
                 }
                 if (ACTION_COMPLETE.equals(action)) {
                     completing = true;
@@ -84,14 +91,9 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                     if (stage == 0 && occurrence <= System.currentTimeMillis()) {
                         FamilyTaskScheduler.schedule(app, task); return;
                     }
-                    if (show(app, task, stage, occurrence)) {
-                        FamilyTaskReminderPreferences.markDelivered(app, id, task.dueAt, stage, occurrence);
-                        if (stage == 3) {
-                            FamilyTaskReminderPreferences.clearSnooze(app, id);
-                            if (task.dueAt <= System.currentTimeMillis())
-                                FamilyTaskReminderPreferences.markDelivered(app, id, task.dueAt, 1, task.dueAt);
-                        }
-                    }
+                    int delivery = show(app, task, stage, occurrence);
+                    if (delivery == 2) return; // Service confirms only after promotion/fallback succeeds.
+                    if (delivery == 1) confirmDelivery(app, FamilyTaskAlarmService.alarmIntent(app, task, stage, occurrence));
                     FamilyTaskScheduler.schedule(app, task);
                 }
             } finally { if (!completing) result.finish(); }
@@ -130,18 +132,18 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
         try { NotificationManagerCompat.from(context).notify(490001, builder.build()); return true; }
         catch (SecurityException ignored) { return false; }
     }
-    private boolean show(Context context, FamilyTask task, int stage, long occurrence) {
+    private int show(Context context, FamilyTask task, int stage, long occurrence) {
         boolean important = FamilyTaskReminderPreferences.important(context, task);
-        if (!canNotify(context, important)) return false;
+        if (!canNotify(context, important)) return 0;
         boolean alarmStage = stage == 1 || stage == 3;
         boolean alarmChannelEnabled = alarmStage && FamilyTaskAlarmService.canRing(context);
         // While the phone is being used, post a normal actionable notification.
         // Full-screen eligibility below remains attached so Android handles lock/AOD races.
         if (alarmChannelEnabled && FamilyTaskAlarmService.isLockedOrScreenOff(context)) {
-            Intent alarm = FamilyTaskAlarmService.alarmIntent(context, task, stage, occurrence);
+            Intent alarm = FamilyTaskAlarmService.alarmIntent(context, task, stage, occurrence).putExtra("ring", true);
             try {
                 ContextCompat.startForegroundService(context, alarm);
-                return true;
+                return 2;
             } catch (RuntimeException denied) {
                 // The notification below still carries the explicit alarm screen if a service is denied.
             }
@@ -164,10 +166,10 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 .setSmallIcon(R.drawable.ic_family_task).setContentTitle(task.title)
                 .setContentText(detail).setStyle(new NotificationCompat.BigTextStyle().bigText(detail))
                 .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(alarmStage || important ? NotificationCompat.CATEGORY_ALARM : NotificationCompat.CATEGORY_REMINDER)
-                .setDefaults(NotificationCompat.DEFAULT_ALL).setAutoCancel(true).setContentIntent(open)
-                .addAction(0, context.getString(R.string.family_tasks_notification_complete), actionIntent(context, id, ACTION_COMPLETE, 610000))
+                .setDefaults(NotificationCompat.DEFAULT_ALL).setAutoCancel(!alarmStage).setContentIntent(open)
+                .addAction(0, context.getString(R.string.family_tasks_notification_complete), actionIntent(context, task, ACTION_COMPLETE, 610000))
                 .addAction(0, context.getString(R.string.task_alarm_snooze_choose), choose)
-                .addAction(0, context.getString(R.string.task_alarm_dismiss), actionIntent(context, id, ACTION_DISMISS, 620000));
+                .addAction(0, context.getString(R.string.task_alarm_dismiss), actionIntent(context, task, ACTION_DISMISS, 620000));
         if (alarmChannelEnabled && FamilyTaskAlarmService.fullScreenAllowed(context)
                 && FamilyTaskAlarmService.fullScreenChannelReady(context)) {
             NotificationManager manager = context.getSystemService(NotificationManager.class);
@@ -177,12 +179,27 @@ public final class FamilyTaskReceiver extends BroadcastReceiver {
                 manager.cancel(FamilyTaskScheduler.notificationId(id));
             }
         }
-        try { NotificationManagerCompat.from(context).notify(FamilyTaskScheduler.notificationId(id), builder.build()); return true; }
-        catch (SecurityException ignored) { return false; }
+        try { NotificationManagerCompat.from(context).notify(FamilyTaskScheduler.notificationId(id), builder.build()); return 1; }
+        catch (SecurityException ignored) { return 0; }
     }
-    private PendingIntent actionIntent(Context context, long id, String action, int base) {
+    static void confirmDelivery(Context context, Intent alarm) {
+        if (!AccountDataScope.canDeliver(context, alarm.getStringExtra(AccountDataScope.EXTRA_UID))) return;
+        long id = alarm.getLongExtra(EXTRA_ID, 0), due = alarm.getLongExtra("due", -1);
+        int stage = alarm.getIntExtra("stage", 1);
+        long occurrence = alarm.getLongExtra("time", due);
+        synchronized (DELIVERY_LOCK) {
+            FamilyTaskReminderPreferences.markDelivered(context, id, due, stage, occurrence);
+            if (stage == 3) {
+                FamilyTaskReminderPreferences.clearSnooze(context, id);
+                if (due <= System.currentTimeMillis())
+                    FamilyTaskReminderPreferences.markDelivered(context, id, due, 1, due);
+            }
+        }
+    }
+    private PendingIntent actionIntent(Context context, FamilyTask task, String action, int base) {
+        long id = task.id;
         return PendingIntent.getBroadcast(context, base + (int)(id & 0x0fffffff),
-                AccountDataScope.stamp(context, new Intent(context, FamilyTaskReceiver.class)).setAction(action).putExtra(EXTRA_ID, id),
+                AccountDataScope.stamp(context, new Intent(context, FamilyTaskReceiver.class)).setAction(action).putExtra(EXTRA_ID, id).putExtra("due", task.dueAt),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }

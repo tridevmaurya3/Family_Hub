@@ -24,15 +24,20 @@ public final class FamilyTaskAlarmService extends Service {
     private AudioManager audio;
     private AudioFocusRequest focus;
     private boolean keepControlsAfterStop;
+    private int currentStartId;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable timeout = this::stopSelf;
+    private final Runnable timeout = () -> {
+        keepControlsAfterStop = true;
+        stopSelf();
+    };
 
     static Intent alarmIntent(Context context, FamilyTask task, int stage, long occurrence) {
         return AccountDataScope.stamp(context,new Intent(context, FamilyTaskAlarmService.class))
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, task.id).putExtra("title", task.title)
                 .putExtra("notes", taskDetails(task))
                 .putExtra("time", occurrence).putExtra("stage", stage)
-                .putExtra("important", FamilyTaskReminderPreferences.important(context, task));
+                .putExtra("important", FamilyTaskReminderPreferences.important(context, task))
+                .putExtra("due", task.dueAt);
     }
     private static String taskDetails(FamilyTask task) {
         com.tridev.familyhub.feature.tasks.FamilyTaskSubtasks.Content content =
@@ -111,10 +116,10 @@ public final class FamilyTaskAlarmService extends Service {
         try { context.startService(new Intent(context, FamilyTaskAlarmService.class).setAction(STOP)
                 .putExtra(FamilyTaskReceiver.EXTRA_ID, id)); } catch (RuntimeException ignored) { }
     }
-    static PendingIntent action(Context context, long id, String action, int minutes) {
+    static PendingIntent action(Context context, long id, long due, String action, int minutes) {
         Intent intent = AccountDataScope.stamp(context, new Intent(context, FamilyTaskReceiver.class)).setAction(action)
                 .setData(Uri.parse("familyhub://alarm-action/" + id + "/" + action + "/" + minutes))
-                .putExtra(FamilyTaskReceiver.EXTRA_ID, id).putExtra("minutes", minutes);
+                .putExtra(FamilyTaskReceiver.EXTRA_ID, id).putExtra("due", due).putExtra("minutes", minutes);
         return PendingIntent.getBroadcast(context, 0, AccountDataScope.isolate(context,intent), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -127,8 +132,12 @@ public final class FamilyTaskAlarmService extends Service {
             accountListener = auth -> { if (!account.equals(AccountDataScope.uid())) stopSelf(); };
             com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener(accountListener);
         }
-        if (id <= 0) { stopSelf(); return START_NOT_STICKY; }
-        boolean ring = isLockedOrScreenOff(this);
+        if (id <= 0 || !FamilyTaskReceiver.canNotify(this, intent.getBooleanExtra("important", false))) {
+            stopSelf(); return START_NOT_STICKY;
+        }
+        currentStartId = startId;
+        // Receiver already chose ringing while locked/off; do not re-sample after wake-up.
+        boolean ring = intent.getBooleanExtra("ring", true);
         keepControlsAfterStop = false;
         releaseSound();
         // A prior occurrence may still own this foreground notification.
@@ -150,8 +159,8 @@ public final class FamilyTaskAlarmService extends Service {
                 .setPriority(NotificationCompat.PRIORITY_MAX).setOngoing(true).setContentIntent(open)
                 .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
                 .addAction(0, getString(R.string.task_alarm_snooze_choose), choose)
-                .addAction(0, getString(R.string.task_alarm_dismiss), action(this, id, FamilyTaskReceiver.ACTION_DISMISS, 0))
-                .addAction(0, getString(R.string.family_tasks_notification_complete), action(this, id, FamilyTaskReceiver.ACTION_COMPLETE, 0));
+                .addAction(0, getString(R.string.task_alarm_dismiss), action(this, id, intent.getLongExtra("due", -1), FamilyTaskReceiver.ACTION_DISMISS, 0))
+                .addAction(0, getString(R.string.family_tasks_notification_complete), action(this, id, intent.getLongExtra("due", -1), FamilyTaskReceiver.ACTION_COMPLETE, 0));
         // Android chooses heads-up while in use and full-screen while locked/off/AOD.
         // Sampling screen state here races with the system waking for the notification.
         if (fullScreenAllowed(this) && fullScreenChannelReady(this)) builder.setFullScreenIntent(open, true);
@@ -166,20 +175,47 @@ public final class FamilyTaskAlarmService extends Service {
         } catch (RuntimeException denied) {
             // A failure inside startForeground happens after the receiver has returned.
             // Keep an actionable notification/full-screen intent instead of losing the alarm.
-            FamilyTaskReceiver.ensureChannels(this);
-            builder.setChannelId(FamilyTaskReceiver.channelId(intent.getBooleanExtra("important", false)))
-                    .setDefaults(NotificationCompat.DEFAULT_ALL).setOngoing(false).setAutoCancel(true);
+            boolean available = FamilyTaskReceiver.canNotify(this, intent.getBooleanExtra("important", false));
+            String fallbackChannel = FamilyTaskReceiver.channelId(intent.getBooleanExtra("important", false));
+            NotificationChannel fallback = manager == null ? null : manager.getNotificationChannel(fallbackChannel);
+            if (fallback == null || fallback.getImportance() < NotificationManager.IMPORTANCE_HIGH)
+                builder.setFullScreenIntent(null, false);
+            builder.setChannelId(fallbackChannel)
+                    .setDefaults(NotificationCompat.DEFAULT_ALL).setOngoing(false).setAutoCancel(false);
             try {
+                if (!available) { stopSelf(); return START_NOT_STICKY; }
                 androidx.core.app.NotificationManagerCompat.from(this)
                         .notify(FamilyTaskScheduler.notificationId(id), builder.build());
                 keepControlsAfterStop = true;
+                FamilyTaskReceiver.confirmDelivery(this, intent);
+                FamilyTaskScheduler.rescheduleAll(this, () -> { });
             }
             catch (SecurityException ignored) { }
             stopSelf(); return START_NOT_STICKY;
         }
+        validateRingingTask(intent, startId);
+        FamilyTaskReceiver.confirmDelivery(this, intent);
+        FamilyTaskScheduler.rescheduleAll(this, () -> { });
         if (ring) startSound();
         handler.removeCallbacks(timeout); handler.postDelayed(timeout, 120000);
         return START_NOT_STICKY;
+    }
+    private void validateRingingTask(Intent alarm, int startId) {
+        String uid = alarm.getStringExtra(AccountDataScope.EXTRA_UID);
+        com.tridev.familyhub.data.local.FamilyHubDatabase database =
+                com.tridev.familyhub.data.local.FamilyHubDatabase.getInstance(this);
+        new Thread(() -> {
+            FamilyTask task = database.familyTaskDao().getById(alarm.getLongExtra(FamilyTaskReceiver.EXTRA_ID, 0));
+            handler.post(() -> {
+                if (currentStartId != startId || ringingId == 0) return;
+                if (!AccountDataScope.canDeliver(this, uid) || task == null || !task.reminderEnabled
+                        || FamilyTask.STATUS_COMPLETED.equals(task.status)
+                        || task.dueAt != alarm.getLongExtra("due", -1)) {
+                    keepControlsAfterStop = false;
+                    stopSelf();
+                }
+            });
+        }, "TaskAlarmCurrentState").start();
     }
     private void startSound() {
         try {
@@ -218,7 +254,7 @@ public final class FamilyTaskAlarmService extends Service {
         long old = ringingId; ringingId = 0;
         if (old != 0 && !keepControlsAfterStop) closed(old);
         // Leave the reminder available after the two-minute ringing limit.
-        stopForeground(STOP_FOREGROUND_DETACH); super.onDestroy();
+        stopForeground(keepControlsAfterStop ? STOP_FOREGROUND_DETACH : STOP_FOREGROUND_REMOVE); super.onDestroy();
     }
     @Override public IBinder onBind(Intent intent) { return null; }
 }

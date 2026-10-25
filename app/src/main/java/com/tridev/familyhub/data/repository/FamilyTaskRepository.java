@@ -1,6 +1,7 @@
 package com.tridev.familyhub.data.repository;
 
 import com.tridev.familyhub.core.security.AccountDataScope;
+import com.tridev.familyhub.core.tasks.FamilyTaskScheduler;
 
 import android.content.Context;
 import android.os.Handler;
@@ -97,6 +98,7 @@ public final class FamilyTaskRepository {
                                     local.updatedByUid, local.updatedByName,
                                     System.currentTimeMillis());
                             dao.delete(local);
+                            FamilyTaskScheduler.cancel(appContext, local.id);
                             mainHandler.post(() -> callback.onRemoved(id));
                         });
                     }
@@ -181,6 +183,7 @@ public final class FamilyTaskRepository {
             task.completedByName = completed ? displayName() : "";
             task.updatedAt = now;
             if (task.id == 0L) task.id = dao.insert(task); else dao.update(task);
+            FamilyTaskScheduler.schedule(appContext, task);
             if (task.shared) publish(task);
 
             if (wasCompleted != completed) {
@@ -203,12 +206,14 @@ public final class FamilyTaskRepository {
                         next.id = dao.insert(next);
                     }
                     if (next.shared) publish(next);
+                    FamilyTaskScheduler.schedule(appContext, next);
                 } else if (next != null
                         && FamilyTask.STATUS_PENDING.equals(next.status)
                         && next.createdAt == previousCompletedAt) {
                     FamilyCollaborationPublisher.remove(scopeUid,
                             "tasks", next.familyId, next.cloudId);
                     dao.delete(next);
+                    FamilyTaskScheduler.cancel(appContext, next.id);
                 }
             }
             mainHandler.post(callback::onComplete);
@@ -288,6 +293,7 @@ public final class FamilyTaskRepository {
                 publishTombstone(task, actorUid, actorName, deletedAt);
             }
             dao.delete(task);
+            FamilyTaskScheduler.cancel(appContext, task.id);
             mainHandler.post(callback::onComplete);
         });
     }
@@ -375,6 +381,7 @@ public final class FamilyTaskRepository {
                         text(s, "deletedByUid"), text(s, "deletedByName"),
                         number(s, "deletedAt"));
                 dao.delete(local);
+                FamilyTaskScheduler.cancel(appContext, local.id);
                 mainHandler.post(() -> callback.onRemoved(id));
                 return;
             }
@@ -416,6 +423,8 @@ public final class FamilyTaskRepository {
 
             if (insert) task.id = dao.insert(task); else dao.update(task);
             FamilySyncVersions.applied(scopeUid,"tasks",cloudId,s);
+            // Project remote changes locally regardless of which To-Do surface owns the listener.
+            FamilyTaskScheduler.schedule(appContext, task);
 
             if (insert) {
                 activityRepository.recordRemoteAt(task,

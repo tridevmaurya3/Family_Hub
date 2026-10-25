@@ -160,9 +160,18 @@ public final class FamilyTaskReminderOptionsView extends LinearLayout {
         task.reminderEnabled = minutes >= 0;
         task.reminderMinutesBefore = minutes < 0 ? disabledMinutes : minutes;
     }
-    public void saveOptions(FamilyTask task) {
-        FamilyTaskReminderPreferences.save(getContext(), task, modeIndex == 1, follow.isChecked());
-        if (task.reminderEnabled) FamilyTaskReminderPermissionActivity.requestOnce(getContext());
+    public boolean isReminderEnabled() { return quickMinutes >= 0; }
+    /** Capture at the Save tap; asynchronous persistence must not read a later form selection. */
+    public Runnable captureSave(FamilyTask task) {
+        final boolean important = modeIndex == 1, followUp = follow.isChecked();
+        final boolean enabled = task.reminderEnabled;
+        final String uid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+        final Context context = getContext().getApplicationContext();
+        return () -> {
+            if (!uid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return;
+            FamilyTaskReminderPreferences.save(context, task, important, followUp);
+            if (enabled) FamilyTaskReminderPermissionActivity.requestOnce(context);
+        };
     }
 }
 

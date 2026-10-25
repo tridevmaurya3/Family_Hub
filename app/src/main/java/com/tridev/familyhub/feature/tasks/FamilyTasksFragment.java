@@ -85,6 +85,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     private long customDateEnd;
     private int quickDateMode;
     private int quickTimeMode = 2;
+    private long quickResolvedDueAt;
     private int quickPriorityMode;
     private int quickRepeatMode;
     private long quickCustomDateAt;
@@ -373,16 +374,21 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                     binding.taskQuickPriorityButton.setText(getString(labels[index]) + "  ▾");
                 }));
         binding.taskQuickRepeatButton.setOnClickListener(anchor -> showPremiumFilterPopup(
-                anchor, new String[]{getString(R.string.task_repeat_none), "Repeated"},
+                anchor, new String[]{getString(R.string.task_repeat_none), getString(R.string.task_repeat_daily),
+                        getString(R.string.task_repeat_weekly), getString(R.string.task_repeat_monthly)},
                 quickRepeatMode, ContextCompat.getColor(requireContext(), R.color.fh_info), index -> {
                     quickRepeatMode = index;
                     binding.taskQuickRepeatButton.setText(
-                            (index == 1 ? "Repeated" : getString(R.string.task_repeat_none)) + "  ▾");
+                            getString(new int[]{R.string.task_repeat_none, R.string.task_repeat_daily,
+                                    R.string.task_repeat_weekly, R.string.task_repeat_monthly}[index]) + "  ▾");
                 }));
     }
 
     private void updateQuickTimeLabel() {
         if (binding == null) return;
+        quickResolvedDueAt = com.tridev.familyhub.core.tasks.FamilyTaskReminderTiming.quickDue(
+                System.currentTimeMillis(), quickDateMode, quickCustomDateAt, quickTimeMode,
+                quickCustomHour, quickCustomMinute);
         String value = DateFormat.getTimeInstance(DateFormat.SHORT)
                 .format(new Date(resolveQuickDueAt()));
         binding.taskQuickTimeButton.setText(value + "  ▾");
@@ -391,32 +397,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private long resolveQuickDueAt() {
-        Calendar due = Calendar.getInstance();
-        if (quickDateMode == 2 && quickCustomDateAt > 0L) {
-            Calendar selected = Calendar.getInstance();
-            selected.setTimeInMillis(quickCustomDateAt);
-            due.set(Calendar.YEAR, selected.get(Calendar.YEAR));
-            due.set(Calendar.MONTH, selected.get(Calendar.MONTH));
-            due.set(Calendar.DAY_OF_MONTH, selected.get(Calendar.DAY_OF_MONTH));
-        } else if (quickDateMode == 1) {
-            due.add(Calendar.DAY_OF_YEAR, 1);
-        }
-        due.set(Calendar.SECOND, 0);
-        due.set(Calendar.MILLISECOND, 0);
-
-        if (quickTimeMode == 3 && quickCustomHour >= 0 && quickCustomMinute >= 0) {
-            due.set(Calendar.HOUR_OF_DAY, quickCustomHour);
-            due.set(Calendar.MINUTE, quickCustomMinute);
-        } else if (quickTimeMode == 1) {
-            due.add(Calendar.MINUTE, 30);
-        } else if (quickTimeMode == 2) {
-            due.add(Calendar.HOUR_OF_DAY, 1);
-        }
-
-        if (quickDateMode == 0 && due.getTimeInMillis() <= System.currentTimeMillis()) {
-            due.add(Calendar.MINUTE, 1);
-        }
-        return due.getTimeInMillis();
+        return quickResolvedDueAt;
     }
 
     private void pickQuickDate(long initial, @NonNull DateCallback callback) {
@@ -725,6 +706,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private void quickAdd() {
+        if (!binding.taskQuickAddButton.isEnabled()) return;
         String title = text(binding.taskQuickAddInput);
         if (title.isEmpty()) {
             if (quickSubtaskEditor.isMultiple()) binding.taskQuickAddLayout.setError(getString(R.string.family_tasks_required));
@@ -740,15 +722,26 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         task.priority = quickPriorityMode == 2 ? FamilyTask.PRIORITY_URGENT
                 : quickPriorityMode == 1 ? FamilyTask.PRIORITY_HIGH
                 : FamilyTask.PRIORITY_NORMAL;
-        task.repeatType = quickRepeatMode == 1
-                ? FamilyTask.REPEAT_DAILY : FamilyTask.REPEAT_NONE;
+        task.repeatType = new String[]{FamilyTask.REPEAT_NONE, FamilyTask.REPEAT_DAILY,
+                FamilyTask.REPEAT_WEEKLY, FamilyTask.REPEAT_MONTHLY}[quickRepeatMode];
         android.content.Context reminderContext = requireContext().getApplicationContext();
         FamilyTaskReminderOptionsView options = quickReminderOptions;
         options.applyQuick(task);
+        if (task.reminderEnabled && !com.tridev.familyhub.core.tasks.FamilyTaskReminderTiming.validReminderDue(
+                task.dueAt, 0, false, System.currentTimeMillis())) {
+            binding.taskQuickAddLayout.setError(getString(R.string.task_reminder_future_required)); return;
+        }
+        String reminderUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+        Runnable saveOptions = options.captureSave(task);
+        binding.taskQuickAddButton.setEnabled(false);
         repository.save(task, () -> {
-            options.saveOptions(task);
+            if (!reminderUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return;
+            saveOptions.run();
             FamilyTaskScheduler.schedule(reminderContext, task);
             if (binding != null) {
+                binding.taskQuickAddButton.setEnabled(true);
+                quickReminderOptions.bindQuick(null);
+                updateQuickTimeLabel();
                 binding.taskQuickAddInput.setText("");
                 quickSubtaskEditor.reset();
                 binding.taskQuickSubtasksHost.setVisibility(View.GONE);
@@ -915,6 +908,8 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         DialogFamilyTaskBinding form = DialogFamilyTaskBinding.inflate(getLayoutInflater());
         com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         FamilyTask task = existing == null ? new FamilyTask() : existing;
+        long originalDueAt = task.dueAt;
+        if (existing == null) task.reminderMinutesBefore = 15;
         long[] dueAt = {task.dueAt > 0 ? task.dueAt : defaultDueTime()};
         String[] priorities = {getString(R.string.task_priority_normal),
                 getString(R.string.task_priority_high), getString(R.string.task_priority_urgent)};
@@ -1028,6 +1023,11 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 return;
             }
             if (!subtaskEditor.validate()) return;
+            if (form.taskReminderSwitch.isChecked()
+                    && !com.tridev.familyhub.core.tasks.FamilyTaskReminderTiming.validReminderDue(
+                            dueAt[0], originalDueAt, existing != null, System.currentTimeMillis())) {
+                form.taskDueInput.setError(getString(R.string.task_reminder_future_required)); return;
+            }
             task.title = title;
             task.notes = FamilyTaskSubtasks.encode(text(form.taskNotesInput), subtaskEditor.getItems(), subtaskEditor.getCompleted());
             task.dueAt = dueAt[0];
@@ -1055,8 +1055,12 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             task.reminderMinutesBefore = reminderValues[indexOf(
                     reminderLabels, text(form.taskReminderLeadInput))];
 
+            String reminderUid = com.tridev.familyhub.core.security.AccountDataScope.uid();
+            Runnable saveOptions = reminderOptions.captureSave(task);
+            form.saveTaskButton.setEnabled(false);
             Runnable persistTask = () -> repository.save(task, () -> {
-                reminderOptions.saveOptions(task);
+                if (!reminderUid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid())) return;
+                saveOptions.run();
                 FamilyTaskScheduler.schedule(reminderContext, task);
                 dialog.dismiss();
                 reload();
