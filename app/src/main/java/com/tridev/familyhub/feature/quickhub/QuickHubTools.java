@@ -1,5 +1,6 @@
 package com.tridev.familyhub.feature.quickhub;
 
+import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -11,22 +12,21 @@ import android.os.Build;
 import android.provider.AlarmClock;
 import android.text.format.DateFormat;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.TimePicker;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.tridev.familyhub.R;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -42,12 +42,15 @@ final class QuickHubTools {
 
     private final Context context;
     private AlertDialog dialog;
+    private TimePickerDialog alarmTimePicker;
 
     QuickHubTools(Context context) {
         this.context = context;
     }
 
     void dismiss() {
+        if (alarmTimePicker != null) alarmTimePicker.dismiss();
+        alarmTimePicker = null;
         if (dialog != null) dialog.dismiss();
         dialog = null;
     }
@@ -158,35 +161,85 @@ final class QuickHubTools {
 
     void alarm() {
         LinearLayout content = column();
-        Calendar now = Calendar.getInstance();
-        TimePicker time = (TimePicker) LayoutInflater.from(context)
-                .inflate(R.layout.quick_hub_alarm_time, content, false);
-        time.setIs24HourView(DateFormat.is24HourFormat(context));
-        time.setHour(now.get(Calendar.HOUR_OF_DAY));
-        time.setMinute(now.get(Calendar.MINUTE));
-        content.addView(time);
-        EditText label = new EditText(context);
-        label.setHint("Alarm label (optional)");
+        content.setBackgroundColor(PANEL);
+
+        LinearLayout header = new LinearLayout(context);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = new TextView(context);
+        title.setText("Alarm");
+        title.setTextSize(22);
+        title.setTextColor(INK);
+        title.setTypeface(null, Typeface.BOLD);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        MaterialButton close = calculatorButton("×", ACCENT_SURFACE, INK);
+        close.setContentDescription("Close alarm");
+        close.setOnClickListener(v -> dismiss());
+        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        content.addView(header);
+
+        Calendar selection = Calendar.getInstance();
+        MaterialButton time = calculatorButton(alarmTimeLabel(selection), INK, Color.WHITE);
+        time.setTextSize(26);
+        time.setOnClickListener(v -> {
+            alarmTimePicker = new TimePickerDialog(context, (picker, hour, minute) -> {
+                selection.set(Calendar.HOUR_OF_DAY, hour);
+                selection.set(Calendar.MINUTE, minute);
+                time.setText(alarmTimeLabel(selection));
+            }, selection.get(Calendar.HOUR_OF_DAY), selection.get(Calendar.MINUTE),
+                    DateFormat.is24HourFormat(context));
+            alarmTimePicker.setOnDismissListener(dialog -> alarmTimePicker = null);
+            alarmTimePicker.getWindow().setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
+            alarmTimePicker.show();
+        });
+        LinearLayout timeCard = column();
+        timeCard.addView(time, new LinearLayout.LayoutParams(-1, dp(66)));
+        addCalculatorSection(content, timeCard, 6);
+
+        TextInputLayout labelField = new TextInputLayout(context, null,
+                com.google.android.material.R.attr.textInputOutlinedStyle);
+        labelField.setHint("Alarm label (optional)");
+        TextInputEditText label = new TextInputEditText(labelField.getContext());
         label.setSingleLine();
-        content.addView(label);
+        label.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        labelField.addView(label);
+        addCalculatorSection(content, labelField, 8);
 
         TextView repeat = new TextView(context);
-        repeat.setText("Repeat days (optional)");
-        content.addView(repeat);
-        String[] names = new DateFormatSymbols().getShortWeekdays();
-        CheckBox[] days = new CheckBox[7];
+        repeat.setText("Repeat days");
+        repeat.setTextColor(INK);
+        repeat.setTypeface(null, Typeface.BOLD);
+        addCalculatorSection(content, repeat, 10);
+        String[] shortNames = new DateFormatSymbols().getShortWeekdays();
+        String[] fullNames = new DateFormatSymbols().getWeekdays();
+        MaterialButton[] days = new MaterialButton[7];
+        LinearLayout row = null;
         for (int i = 0; i < days.length; i++) {
-            days[i] = new CheckBox(context);
-            days[i].setText(names[Calendar.SUNDAY + i]);
-            content.addView(days[i]);
+            if (i == 0 || i == 4) {
+                row = new LinearLayout(context);
+                addCalculatorSection(content, row, 4);
+            }
+            int day = Calendar.SUNDAY + i;
+            MaterialButton chip = calculatorButton(shortNames[day], ACCENT_SURFACE, INK);
+            chip.setTextSize(13);
+            chip.setContentDescription(fullNames[day]);
+            chip.setCheckable(true);
+            chip.addOnCheckedChangeListener((button, checked) -> {
+                button.setBackgroundTintList(ColorStateList.valueOf(checked ? BLUE : ACCENT_SURFACE));
+                button.setTextColor(checked ? Color.WHITE : INK);
+            });
+            days[i] = chip;
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
+            params.setMarginEnd(dp(4));
+            row.addView(chip, params);
         }
 
-        MaterialButton save = button("Set alarm");
+        MaterialButton save = calculatorButton("Set alarm", BLUE, Color.WHITE);
+        save.setTextSize(16);
         save.setOnClickListener(v -> {
-            time.clearFocus();
             Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM)
-                    .putExtra(AlarmClock.EXTRA_HOUR, time.getHour())
-                    .putExtra(AlarmClock.EXTRA_MINUTES, time.getMinute())
+                    .putExtra(AlarmClock.EXTRA_HOUR, selection.get(Calendar.HOUR_OF_DAY))
+                    .putExtra(AlarmClock.EXTRA_MINUTES, selection.get(Calendar.MINUTE))
                     .putExtra(AlarmClock.EXTRA_MESSAGE, label.getText().toString().trim())
                     .putExtra(AlarmClock.EXTRA_SKIP_UI, true);
             ArrayList<Integer> selectedDays = new ArrayList<>();
@@ -198,11 +251,16 @@ final class QuickHubTools {
             }
             openClock(intent);
         });
-        content.addView(save);
-        MaterialButton manage = button("Manage alarms in Clock");
+        addCalculatorSection(content, save, 10);
+        MaterialButton manage = calculatorButton("Manage alarms in Clock", ACCENT_SURFACE, INK);
+        manage.setTextSize(15);
         manage.setOnClickListener(v -> openClock(new Intent(AlarmClock.ACTION_SHOW_ALARMS)));
-        content.addView(manage);
-        show("Alarm", content);
+        addCalculatorSection(content, manage, 4);
+        show(null, content);
+    }
+
+    private String alarmTimeLabel(Calendar selection) {
+        return DateFormat.getTimeFormat(context).format(selection.getTime()) + "  ›";
     }
 
     private void openClock(Intent intent) {
