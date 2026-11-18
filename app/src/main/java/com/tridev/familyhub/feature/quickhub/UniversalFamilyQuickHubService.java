@@ -56,6 +56,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams params;
     private View icon;
     private PopupWindow selector;
+    private QuickHubTools tools;
     private View selectorAnchor;
     private LinearLayout selectorContent;
     private FamilyHubDatabase database;
@@ -138,18 +139,26 @@ public final class UniversalFamilyQuickHubService extends Service {
         if(selector!=null&&selector.isShowing()){selector.dismiss();return;}
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
         Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), reminders=choice("Reminders"), planner=choice("Planner"), opacity=choice("More");
+        Button calculator = choice("Calculator"), alarm = choice("Alarm");
+        coloredIcon(calculator, R.drawable.ic_quick_calculator, R.color.fh_primary);
+        coloredIcon(alarm, R.drawable.ic_reminder, R.color.fh_module_reminders);
         coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
         coloredIcon(tasks, R.drawable.ic_family_task, R.color.fh_primary);
         coloredIcon(opacity, R.drawable.ic_transparency, R.color.fh_primary);
         coloredIcon(planner, R.drawable.ic_planner, R.color.fh_module_planner);
         coloredIcon(reminders, R.drawable.ic_reminder, R.color.fh_module_reminders);
-        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(planner,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
+        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(planner,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(calculator,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
         selectorAnchor = anchor;
         selectorContent = box;
         int width = selectorWidth(box);
-        selector=new PopupWindow(box,width,dp(228),true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
+        android.widget.ScrollView menuScroll = new android.widget.ScrollView(this);
+        menuScroll.addView(box);
+        int height = Math.min(dp(300), getResources().getDisplayMetrics().heightPixels - dp(60));
+        selector=new PopupWindow(menuScroll,width,height,true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
+        calculator.setOnClickListener(v -> { selector.dismiss(); quickTools().calculator(); });
+        alarm.setOnClickListener(v -> { selector.dismiss(); quickTools().alarm(); });
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});
         notes.setOnClickListener(v -> {
             open(com.tridev.familyhub.feature.notes.overlay.NotesOverlayService.class,
@@ -186,6 +195,12 @@ public final class UniversalFamilyQuickHubService extends Service {
         selector.showAsDropDown(anchor, anchor.getWidth() - width, dp(4));
         database.getInvalidationTracker().addObserver(countObserver);
         refreshPendingCounts();
+    }
+
+    private QuickHubTools quickTools() {
+        if (tools == null) tools = new QuickHubTools(
+                new android.view.ContextThemeWrapper(this, R.style.Theme_FamilyHub));
+        return tools;
     }
 
     private void refreshPendingCounts() {
@@ -270,7 +285,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return Math.round(v*getResources().getDisplayMetrics().density);} private int clamp(int v,int a,int b){return Math.max(a,Math.min(b,v));}
-    @Override public void onDestroy(){destroyed=true;if(countAuthListener!=null)com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(countAuthListener);countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
+    @Override public void onDestroy(){destroyed=true;if(tools!=null)tools.dismiss();if(countAuthListener!=null)com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(countAuthListener);countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
     @Nullable @Override public IBinder onBind(Intent intent){return null;}
     private void createChannel(){if(Build.VERSION.SDK_INT>=26){NotificationManager n=getSystemService(NotificationManager.class);if(n!=null)n.createNotificationChannel(new NotificationChannel(CHANNEL,"Family Quick Hub",NotificationManager.IMPORTANCE_LOW));}}
 }
