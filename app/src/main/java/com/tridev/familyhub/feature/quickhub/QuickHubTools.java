@@ -3,10 +3,16 @@ package com.tridev.familyhub.feature.quickhub;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.provider.AlarmClock;
 import android.text.format.DateFormat;
+import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -29,6 +35,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 final class QuickHubTools {
+    private static final int INK = 0xff192644;
+    private static final int BLUE = 0xff365bd9;
+    private static final int PANEL = 0xfff7f8ff;
+    private static final int ACCENT_SURFACE = 0xffe5ebff;
+
     private final Context context;
     private AlertDialog dialog;
 
@@ -43,23 +54,62 @@ final class QuickHubTools {
 
     void calculator() {
         LinearLayout content = column();
+        LinearLayout header = new LinearLayout(context);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = new TextView(context);
+        title.setText("Calculator");
+        title.setTextSize(22);
+        title.setTextColor(INK);
+        title.setTypeface(null, Typeface.BOLD);
+        header.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1));
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        MaterialButton close = calculatorButton("×", ACCENT_SURFACE, INK);
+        close.setContentDescription("Close calculator");
+        close.setOnClickListener(v -> dismiss());
+        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        content.addView(header);
+
+        LinearLayout expressionCard = new LinearLayout(context);
+        expressionCard.setGravity(Gravity.CENTER_VERTICAL);
+        expressionCard.setBackground(rounded(INK, 18));
+        expressionCard.setPadding(dp(14), dp(8), dp(8), dp(8));
         TextView display = new TextView(context);
-        display.setTextSize(24);
+        display.setTextSize(26);
+        display.setTextColor(Color.WHITE);
+        display.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        display.setTextIsSelectable(true);
         display.setText("0");
+        expressionCard.addView(display, new LinearLayout.LayoutParams(0, -2, 1));
+        MaterialButton backspace = calculatorButton("⌫", 0xff344564, Color.WHITE);
+        backspace.setContentDescription("Delete last character");
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        deleteParams.setMarginStart(dp(8));
+        expressionCard.addView(backspace, deleteParams);
+        addCalculatorSection(content, expressionCard, 8);
+
         StringBuilder expression = new StringBuilder();
         boolean[] degrees = {true};
         boolean[] evaluated = {false};
-
+        LinearLayout modes = new LinearLayout(context);
+        MaterialButton basic = calculatorButton("Basic", BLUE, Color.WHITE);
+        MaterialButton advanced = calculatorButton("Scientific", ACCENT_SURFACE, INK);
+        basic.setTextSize(15);
+        advanced.setTextSize(15);
+        modes.addView(basic, new LinearLayout.LayoutParams(0, dp(48), 1));
+        LinearLayout.LayoutParams advancedParams = new LinearLayout.LayoutParams(0, dp(48), 1);
+        advancedParams.setMarginStart(dp(6));
+        modes.addView(advanced, advancedParams);
+        addCalculatorSection(content, modes, 8);
         LinearLayout scientific = column();
-        scientific.setVisibility(android.view.View.GONE);
-        MaterialButton mode = button("Scientific");
-        mode.setOnClickListener(v -> {
-            boolean expanded = scientific.getVisibility() != android.view.View.VISIBLE;
-            scientific.setVisibility(expanded ? android.view.View.VISIBLE : android.view.View.GONE);
-            mode.setText(expanded ? "Basic" : "Scientific");
+        scientific.setVisibility(View.GONE);
+        basic.setOnClickListener(v -> {
+            scientific.setVisibility(View.GONE);
+            setCalculatorMode(basic, advanced);
         });
-        content.addView(display);
-        content.addView(mode);
+        advanced.setOnClickListener(v -> {
+            scientific.setVisibility(View.VISIBLE);
+            setCalculatorMode(advanced, basic);
+        });
         content.addView(scientific);
 
         java.util.function.Consumer<String> key = value -> {
@@ -88,20 +138,22 @@ final class QuickHubTools {
             }
             display.setText(expression.length() == 0 ? "0" : expression.toString());
         };
-        MaterialButton angle = button("DEG");
+        backspace.setOnClickListener(v -> key.accept("⌫"));
+        MaterialButton angle = calculatorButton("DEG", ACCENT_SURFACE, INK);
         angle.setOnClickListener(v -> {
             degrees[0] = !degrees[0];
             angle.setText(degrees[0] ? "DEG" : "RAD");
         });
-        scientific.addView(angle);
+        addCalculatorSection(scientific, angle, 6);
         keys(scientific, key, new String[][]{
                 {"sin(", "cos(", "tan("}, {"sqrt(", "log(", "ln("}, {"π", "e", "^"}
         });
         keys(content, key, new String[][]{
-                {"AC", "⌫", "%", "÷"}, {"7", "8", "9", "×"}, {"4", "5", "6", "-"},
-                {"1", "2", "3", "+"}, {"(", "0", ")", "."}, {"="}
+                {"AC", "%", "(", "÷"}, {"7", "8", "9", "×"}, {"4", "5", "6", "-"},
+                {"1", "2", "3", "+"}, {")", "0", ".", "="}
         });
-        show("Calculator", content);
+        content.setBackgroundColor(PANEL);
+        show(null, content);
     }
 
     void alarm() {
@@ -168,8 +220,10 @@ final class QuickHubTools {
         content.setPadding(padding, 0, padding, padding);
         ScrollView scroll = new ScrollView(context);
         scroll.addView(content);
-        dialog = new MaterialAlertDialogBuilder(context)
-                .setTitle(title).setView(scroll).setNegativeButton(android.R.string.cancel, null).create();
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setView(scroll);
+        if (title != null) builder.setTitle(title).setNegativeButton(android.R.string.cancel, null);
+        else content.setPadding(padding, padding, padding, padding);
+        dialog = builder.create();
         dialog.getWindow().setType(Build.VERSION.SDK_INT >= 26
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE);
@@ -180,17 +234,63 @@ final class QuickHubTools {
         for (String[] values : rows) {
             LinearLayout row = new LinearLayout(context);
             for (String value : values) {
-                MaterialButton key = button("sqrt(".equals(value) ? "√" : value);
-                key.setMinWidth(0);
-                key.setMinimumWidth(0);
-                key.setPadding(0, 0, 0, 0);
+                int fill = value.matches("[0-9.]") ? Color.WHITE : ACCENT_SURFACE;
+                int foreground = INK;
+                if ("AC".equals(value)) {
+                    fill = 0xffffe7e5;
+                    foreground = 0xff9e382f;
+                } else if ("=".equals(value)) {
+                    fill = BLUE;
+                    foreground = Color.WHITE;
+                }
+                String label = "sqrt(".equals(value) ? "√" : "-".equals(value) ? "−" : value;
+                MaterialButton key = calculatorButton(label, fill, foreground);
                 key.setOnClickListener(v -> action.accept(value));
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(44), 1);
-                params.setMargins(dp(2), 0, dp(2), 0);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(52), 1);
+                params.setMargins(dp(3), 0, dp(3), 0);
                 row.addView(key, params);
             }
-            panel.addView(row);
+            addCalculatorSection(panel, row, 6);
         }
+    }
+
+    private void addCalculatorSection(LinearLayout parent, View section, int gap) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(gap);
+        parent.addView(section, params);
+    }
+
+    private void setCalculatorMode(MaterialButton selected, MaterialButton other) {
+        selected.setBackgroundTintList(ColorStateList.valueOf(BLUE));
+        selected.setTextColor(Color.WHITE);
+        other.setBackgroundTintList(ColorStateList.valueOf(ACCENT_SURFACE));
+        other.setTextColor(INK);
+    }
+
+    private MaterialButton calculatorButton(String title, int fill, int textColor) {
+        MaterialButton key = button(title);
+        key.setTextSize(20);
+        key.setTypeface(null, Typeface.BOLD);
+        key.setBackgroundTintList(ColorStateList.valueOf(fill));
+        key.setTextColor(textColor);
+        key.setCornerRadius(dp(14));
+        key.setMinWidth(0);
+        key.setMinimumWidth(0);
+        key.setInsetTop(0);
+        key.setInsetBottom(0);
+        key.setPadding(0, 0, 0, 0);
+        if (fill == Color.WHITE) {
+            key.setStrokeWidth(dp(1));
+            key.setStrokeColor(ColorStateList.valueOf(0xffdde4f6));
+        }
+        return key;
+    }
+
+    private GradientDrawable rounded(int color, int radius) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(color);
+        background.setCornerRadius(dp(radius));
+        return background;
     }
 
     private MaterialButton button(String title) {
