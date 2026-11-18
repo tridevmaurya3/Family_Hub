@@ -1,6 +1,9 @@
 package com.tridev.familyhub.feature.notes;
 
+import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
@@ -22,6 +25,7 @@ import com.tridev.familyhub.core.ui.CompactFormStyle;
 import com.tridev.familyhub.data.local.entity.NoteEntry;
 import com.tridev.familyhub.data.repository.NotesRepository;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 /** One smart workspace for the normal Notes page and the floating Notes panel. */
@@ -438,29 +442,46 @@ public final class NotesWorkspaceView extends com.tridev.familyhub.core.ui.Scrol
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
     }
     private void chooseReminder(Runnable saved, Runnable cancelled) {
-        LinearLayout content = NotesPanels.content(getContext(), "Reminder date & time");
-        android.content.Context themed = new android.view.ContextThemeWrapper(getContext(), R.style.ThemeOverlay_FamilyHub_NotesPanel);
-        android.widget.DatePicker date = new android.widget.DatePicker(themed);
-        android.widget.TimePicker time = new android.widget.TimePicker(themed);
-        time.setIs24HourView(android.text.format.DateFormat.is24HourFormat(getContext()));
-        java.util.Calendar initial = java.util.Calendar.getInstance();
-        if (quickReminder > 0) initial.setTimeInMillis(quickReminder); else initial.add(java.util.Calendar.HOUR_OF_DAY, 1);
-        date.updateDate(initial.get(java.util.Calendar.YEAR), initial.get(java.util.Calendar.MONTH), initial.get(java.util.Calendar.DAY_OF_MONTH));
-        time.setHour(initial.get(java.util.Calendar.HOUR_OF_DAY)); time.setMinute(initial.get(java.util.Calendar.MINUTE));
-        content.addView(date, new LayoutParams(-1, -2)); content.addView(time, new LayoutParams(-1, -2));
-        TextView error = label("", 11); error.setTextColor(Color.rgb(176, 52, 65)); content.addView(error);
-        MaterialButton apply = NotesPanels.action(getContext(), "Set reminder"); content.addView(apply);
-        MaterialButton cancel = NotesPanels.action(getContext(), "Cancel"); content.addView(cancel);
-        androidx.appcompat.app.AlertDialog dialog = panel(content);
-        final boolean[] accepted = {false};
-        dialog.setOnDismissListener(d -> { panels.remove(dialog); if (!accepted[0]) cancelled.run(); });
-        cancel.setOnClickListener(v -> dialog.dismiss());
-        apply.setOnClickListener(v -> {
-            date.clearFocus(); time.clearFocus(); java.util.Calendar chosen = java.util.Calendar.getInstance();
-            chosen.set(date.getYear(), date.getMonth(), date.getDayOfMonth(), time.getHour(), time.getMinute(), 0); chosen.set(java.util.Calendar.MILLISECOND, 0);
-            if (chosen.getTimeInMillis() <= System.currentTimeMillis()) { error.setText("Choose a future date and time"); return; }
-            accepted[0] = true; quickReminder = chosen.getTimeInMillis(); dialog.dismiss(); requestReminderPermission(); saved.run();
-        });
+        Calendar selection = Calendar.getInstance();
+        if (quickReminder > 0) selection.setTimeInMillis(quickReminder);
+        else selection.add(Calendar.HOUR_OF_DAY, 1);
+        chooseReminderDate(selection, saved, cancelled);
+    }
+
+    private void chooseReminderDate(Calendar selection, Runnable saved, Runnable cancelled) {
+        Context context = getContext();
+        DatePickerDialog date = new DatePickerDialog(context, (picker, year, month, day) -> {
+            selection.set(year, month, day);
+            TimePickerDialog time = new TimePickerDialog(context, (clock, hour, minute) -> {
+                selection.set(Calendar.HOUR_OF_DAY, hour);
+                selection.set(Calendar.MINUTE, minute);
+                selection.set(Calendar.SECOND, 0);
+                selection.set(Calendar.MILLISECOND, 0);
+                long reminderAt = selection.getTimeInMillis();
+                if (reminderAt <= System.currentTimeMillis()) {
+                    android.widget.Toast.makeText(context, "Choose a future date and time",
+                            android.widget.Toast.LENGTH_SHORT).show();
+                    chooseReminderDate(selection, saved, cancelled);
+                    return;
+                }
+                quickReminder = reminderAt;
+                requestReminderPermission();
+                saved.run();
+            }, selection.get(Calendar.HOUR_OF_DAY), selection.get(Calendar.MINUTE),
+                    android.text.format.DateFormat.is24HourFormat(context));
+            showReminderPicker(time, cancelled);
+        }, selection.get(Calendar.YEAR), selection.get(Calendar.MONTH),
+                selection.get(Calendar.DAY_OF_MONTH));
+        showReminderPicker(date, cancelled);
+    }
+
+    private void showReminderPicker(android.app.AlertDialog picker, Runnable cancelled) {
+        picker.setButton(DialogInterface.BUTTON_NEGATIVE, getContext().getText(android.R.string.cancel),
+                (dialog, which) -> dialog.cancel());
+        picker.setOnCancelListener(dialog -> cancelled.run());
+        picker.setOnDismissListener(dialog -> panels.remove(picker));
+        panels.add(picker);
+        NotesEditor.present(picker, overlay);
     }
     @SuppressWarnings("unchecked")
     private void refreshCategories(String selected) {
