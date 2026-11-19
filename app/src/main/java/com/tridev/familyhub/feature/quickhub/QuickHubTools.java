@@ -120,9 +120,7 @@ final class QuickHubTools {
         java.util.function.Consumer<String> key = value -> {
             if ("=".equals(value)) {
                 try {
-                    double result = CalculatorExpression.evaluate(expression.toString(), degrees[0]);
-                    String number = BigDecimal.valueOf(result).round(MathContext.DECIMAL64)
-                            .stripTrailingZeros().toPlainString();
+                    String number = calculatorResult(expression.toString(), degrees[0]);
                     expression.setLength(0);
                     expression.append(number);
                     evaluated[0] = true;
@@ -139,7 +137,7 @@ final class QuickHubTools {
             } else {
                 if (evaluated[0] && !"+-×÷^%".contains(value)) expression.setLength(0);
                 evaluated[0] = false;
-                if (expression.length() + value.length() <= 256) expression.append(value);
+                appendCalculatorKey(expression, value, degrees[0]);
             }
             display.setText(expression.length() == 0 ? "0" : expression.toString());
         };
@@ -159,6 +157,26 @@ final class QuickHubTools {
         });
         content.setBackgroundColor(PANEL);
         show(header, content);
+    }
+
+    private static void appendCalculatorKey(StringBuilder expression, String key, boolean degrees) {
+        if (key.length() == 1 && "+-×÷^".contains(key) && expression.length() > 0) {
+            String current = expression.toString();
+            try {
+                String result = calculatorResult(current, degrees);
+                expression.replace(0, expression.length(), result);
+            } catch (IllegalArgumentException incompleteOrInvalid) {
+                // An open parenthesis, a pending operator or a unary sign must
+                // remain editable until the user completes the expression.
+            }
+        }
+        if (expression.length() + key.length() <= 256) expression.append(key);
+    }
+
+    private static String calculatorResult(String expression, boolean degrees) {
+        double result = CalculatorExpression.evaluate(expression, degrees);
+        return BigDecimal.valueOf(result).round(MathContext.DECIMAL64)
+                .stripTrailingZeros().toPlainString();
     }
 
     void alarm() {
