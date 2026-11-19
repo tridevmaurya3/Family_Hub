@@ -84,7 +84,15 @@ final class QuickHubTools {
         display.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         display.setTextIsSelectable(true);
         display.setText("0");
-        expressionCard.addView(display, new LinearLayout.LayoutParams(0, -2, 1));
+        LinearLayout calculation = column();
+        calculation.addView(display);
+        TextView result = new TextView(context);
+        result.setTextSize(17);
+        result.setTextColor(0xffcddcff);
+        result.setGravity(Gravity.END);
+        result.setVisibility(View.GONE);
+        calculation.addView(result);
+        expressionCard.addView(calculation, new LinearLayout.LayoutParams(0, -2, 1));
         MaterialButton backspace = calculatorButton("⌫", 0xff344564, Color.WHITE);
         backspace.setContentDescription("Delete last character");
         LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(dp(48), dp(48));
@@ -117,35 +125,55 @@ final class QuickHubTools {
         });
         content.addView(scientific);
 
+        Runnable updatePreview = () -> {
+            String input = expression.toString();
+            while (input.length() > 1 && "+-×÷^".indexOf(input.charAt(input.length() - 1)) >= 0) {
+                input = input.substring(0, input.length() - 1);
+            }
+            try {
+                String total = calculatorResult(input, degrees[0]);
+                result.setText(total);
+                result.setVisibility(View.VISIBLE);
+            } catch (IllegalArgumentException incompleteOrInvalid) {
+                result.setVisibility(View.GONE);
+            }
+        };
+
         java.util.function.Consumer<String> key = value -> {
             if ("=".equals(value)) {
                 try {
-                    String number = calculatorResult(expression.toString(), degrees[0]);
-                    expression.setLength(0);
-                    expression.append(number);
+                    result.setText(calculatorResult(expression.toString(), degrees[0]));
+                    result.setVisibility(View.VISIBLE);
                     evaluated[0] = true;
                 } catch (IllegalArgumentException e) {
-                    display.setText("Invalid calculation");
-                    return;
+                    result.setText("Invalid calculation");
+                    result.setVisibility(View.VISIBLE);
                 }
-            } else if ("AC".equals(value)) {
+                return;
+            }
+            if ("AC".equals(value)) {
                 expression.setLength(0);
-                evaluated[0] = false;
             } else if ("⌫".equals(value)) {
                 if (expression.length() > 0) expression.deleteCharAt(expression.length() - 1);
-                evaluated[0] = false;
             } else {
-                if (evaluated[0] && !"+-×÷^%".contains(value)) expression.setLength(0);
-                evaluated[0] = false;
-                appendCalculatorKey(expression, value, degrees[0]);
+                if (evaluated[0]) {
+                    String previousResult = result.getText().toString();
+                    expression.setLength(0);
+                    if ("+-×÷^%".contains(value)) expression.append(previousResult);
+                }
+                if (expression.length() + value.length() <= 256) expression.append(value);
             }
+            evaluated[0] = false;
             display.setText(expression.length() == 0 ? "0" : expression.toString());
+            updatePreview.run();
         };
         backspace.setOnClickListener(v -> key.accept("⌫"));
         MaterialButton angle = calculatorButton("DEG", ACCENT_SURFACE, INK);
         angle.setOnClickListener(v -> {
             degrees[0] = !degrees[0];
             angle.setText(degrees[0] ? "DEG" : "RAD");
+            evaluated[0] = false;
+            updatePreview.run();
         });
         addCalculatorSection(scientific, angle, 6);
         keys(scientific, key, new String[][]{
@@ -157,20 +185,6 @@ final class QuickHubTools {
         });
         content.setBackgroundColor(PANEL);
         show(header, content);
-    }
-
-    private static void appendCalculatorKey(StringBuilder expression, String key, boolean degrees) {
-        if (key.length() == 1 && "+-×÷^".contains(key) && expression.length() > 0) {
-            String current = expression.toString();
-            try {
-                String result = calculatorResult(current, degrees);
-                expression.replace(0, expression.length(), result);
-            } catch (IllegalArgumentException incompleteOrInvalid) {
-                // An open parenthesis, a pending operator or a unary sign must
-                // remain editable until the user completes the expression.
-            }
-        }
-        if (expression.length() + key.length() <= 256) expression.append(key);
     }
 
     private static String calculatorResult(String expression, boolean degrees) {
