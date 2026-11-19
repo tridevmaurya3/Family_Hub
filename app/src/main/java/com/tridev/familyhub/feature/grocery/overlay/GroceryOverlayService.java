@@ -991,7 +991,7 @@ public class GroceryOverlayService extends Service {
                 refreshPanel();
             };
             if(isEdit) repository.saveEdit(item,oldName,done);
-            else repository.save(item,done);
+            else repository.saveFromFloatingAdd(item,done);
         });
 
         panelView = panelRoot;
