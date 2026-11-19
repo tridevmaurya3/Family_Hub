@@ -7,12 +7,15 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.provider.AlarmClock;
 import android.text.format.DateFormat;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -70,7 +73,6 @@ final class QuickHubTools {
         close.setContentDescription("Close calculator");
         close.setOnClickListener(v -> dismiss());
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        content.addView(header);
 
         LinearLayout expressionCard = new LinearLayout(context);
         expressionCard.setGravity(Gravity.CENTER_VERTICAL);
@@ -156,7 +158,7 @@ final class QuickHubTools {
                 {"1", "2", "3", "+"}, {")", "0", ".", "="}
         });
         content.setBackgroundColor(PANEL);
-        show(null, content);
+        show(header, content);
     }
 
     void alarm() {
@@ -175,7 +177,6 @@ final class QuickHubTools {
         close.setContentDescription("Close alarm");
         close.setOnClickListener(v -> dismiss());
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        content.addView(header);
 
         Calendar selection = Calendar.getInstance();
         MaterialButton time = calculatorButton(alarmTimeLabel(selection), INK, Color.WHITE);
@@ -225,7 +226,7 @@ final class QuickHubTools {
             chip.setContentDescription(fullNames[day]);
             chip.setCheckable(true);
             chip.addOnCheckedChangeListener((button, checked) -> {
-                button.setBackgroundTintList(ColorStateList.valueOf(checked ? BLUE : ACCENT_SURFACE));
+                button.setBackgroundTintList(glassTint(checked ? BLUE : ACCENT_SURFACE));
                 button.setTextColor(checked ? Color.WHITE : INK);
             });
             days[i] = chip;
@@ -256,7 +257,7 @@ final class QuickHubTools {
         manage.setTextSize(15);
         manage.setOnClickListener(v -> openClock(new Intent(AlarmClock.ACTION_SHOW_ALARMS)));
         addCalculatorSection(content, manage, 4);
-        show(null, content);
+        show(header, content);
     }
 
     private String alarmTimeLabel(Calendar selection) {
@@ -272,20 +273,66 @@ final class QuickHubTools {
         }
     }
 
-    private void show(String title, LinearLayout content) {
+    private void show(LinearLayout header, LinearLayout content) {
         dismiss();
+        LinearLayout panel = column();
         int padding = dp(12);
-        content.setPadding(padding, 0, padding, padding);
+        panel.setPadding(padding, padding, padding, padding);
+        panel.setBackgroundColor(PANEL);
+        panel.addView(header);
         ScrollView scroll = new ScrollView(context);
         scroll.addView(content);
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context).setView(scroll);
-        if (title != null) builder.setTitle(title).setNegativeButton(android.R.string.cancel, null);
-        else content.setPadding(padding, padding, padding, padding);
-        dialog = builder.create();
-        dialog.getWindow().setType(Build.VERSION.SDK_INT >= 26
+        panel.addView(scroll, new LinearLayout.LayoutParams(-1, -2));
+        dialog = new MaterialAlertDialogBuilder(context).setView(panel).create();
+        Window window = dialog.getWindow();
+        window.setType(Build.VERSION.SDK_INT >= 26
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE);
+        window.setGravity(Gravity.CENTER);
+        attachDragHandle(header, window);
         dialog.show();
+    }
+
+    private void attachDragHandle(View header, Window window) {
+        header.setOnTouchListener(new View.OnTouchListener() {
+            private final Rect frame = new Rect();
+            private final int[] location = new int[2];
+            private float touchX, touchY;
+            private int startX, startY;
+
+            @Override public boolean onTouch(View view, MotionEvent event) {
+                View decor = window.getDecorView();
+                WindowManager.LayoutParams params = window.getAttributes();
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        touchX = event.getRawX();
+                        touchY = event.getRawY();
+                        startX = params.x;
+                        startY = params.y;
+                        decor.getLocationOnScreen(location);
+                        decor.getWindowVisibleDisplayFrame(frame);
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        params.x = startX + clampDrag(Math.round(event.getRawX() - touchX),
+                                location[0], decor.getWidth(), frame.left, frame.right);
+                        params.y = startY + clampDrag(Math.round(event.getRawY() - touchY),
+                                location[1], decor.getHeight(), frame.top, frame.bottom);
+                        window.setAttributes(params);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
+    }
+
+    private static int clampDrag(int change, int position, int size, int start, int end) {
+        int min = Math.min(0, start - position);
+        int max = Math.max(0, end - position - size);
+        return Math.max(min, Math.min(max, change));
     }
 
     private void keys(LinearLayout panel, java.util.function.Consumer<String> action, String[][] rows) {
@@ -319,9 +366,9 @@ final class QuickHubTools {
     }
 
     private void setCalculatorMode(MaterialButton selected, MaterialButton other) {
-        selected.setBackgroundTintList(ColorStateList.valueOf(BLUE));
+        selected.setBackgroundTintList(glassTint(BLUE));
         selected.setTextColor(Color.WHITE);
-        other.setBackgroundTintList(ColorStateList.valueOf(ACCENT_SURFACE));
+        other.setBackgroundTintList(glassTint(ACCENT_SURFACE));
         other.setTextColor(INK);
     }
 
@@ -329,7 +376,7 @@ final class QuickHubTools {
         MaterialButton key = button(title);
         key.setTextSize(20);
         key.setTypeface(null, Typeface.BOLD);
-        key.setBackgroundTintList(ColorStateList.valueOf(fill));
+        key.setBackgroundTintList(glassTint(fill));
         key.setTextColor(textColor);
         key.setCornerRadius(dp(14));
         key.setMinWidth(0);
@@ -337,11 +384,19 @@ final class QuickHubTools {
         key.setInsetTop(0);
         key.setInsetBottom(0);
         key.setPadding(0, 0, 0, 0);
-        if (fill == Color.WHITE) {
-            key.setStrokeWidth(dp(1));
-            key.setStrokeColor(ColorStateList.valueOf(0xffdde4f6));
-        }
+        key.setStrokeWidth(dp(1));
+        key.setStrokeColor(ColorStateList.valueOf(0x6081aa9f));
+        GradientDrawable sheen = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0x22ffffff, 0x00ffffff, 0x0980b6a5});
+        sheen.setCornerRadius(dp(14));
+        key.setForeground(sheen);
         return key;
+    }
+
+    private ColorStateList glassTint(int color) {
+        int pressed = androidx.core.graphics.ColorUtils.blendARGB(color, INK, 0.12f);
+        return new ColorStateList(new int[][]{new int[]{android.R.attr.state_pressed}, new int[]{}},
+                new int[]{pressed, color});
     }
 
     private GradientDrawable rounded(int color, int radius) {
