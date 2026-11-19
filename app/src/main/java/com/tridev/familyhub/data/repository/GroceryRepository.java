@@ -120,10 +120,25 @@ public class GroceryRepository {
         repository.reconcileFinanceLinksInternal();
     }
 
+    private static final android.net.Uri COMPANION_PURCHASES = android.net.Uri.parse(
+            "content://com.tridev.familyhub.pending_grocery/items");
+    private final android.database.ContentObserver companionPurchaseObserver =
+            new android.database.ContentObserver(mainHandler) {
+                @Override public void onChange(boolean selfChange) {
+                    dispatchRealtimeChange();
+                }
+            };
+    private boolean observingCompanionPurchases;
+
     /** Starts one family-scoped realtime listener; safe to call repeatedly. */
     public void startRealtimeSync(@NonNull Runnable onChanged) {
         stopListenerOnly();
         changeCallback = onChanged;
+        if (!observingCompanionPurchases) {
+            appContext.getContentResolver().registerContentObserver(
+                    COMPANION_PURCHASES, false, companionPurchaseObserver);
+            observingCompanionPurchases = true;
+        }
         accountRepository.loadSession(
                 new FamilyAccountRepository.ResultCallback<
                         FamilyAccountRepository.SessionState>() {
@@ -149,6 +164,10 @@ public class GroceryRepository {
     }
 
     public void stopRealtimeSync() {
+        if (observingCompanionPurchases) {
+            appContext.getContentResolver().unregisterContentObserver(companionPurchaseObserver);
+            observingCompanionPurchases = false;
+        }
         if (activeItemsReference != null && activeListener != null) {
             activeItemsReference.removeEventListener(activeListener);
         }
@@ -403,6 +422,82 @@ public class GroceryRepository {
         mainHandler.post(() -> syncItem(master));
     }
 
+    public boolean completeMoneyManagerPurchase(String cloudId, int purchaseCount,
+                                                String reference, double cost, long at) {
+        if (!currentAccount() || cloudId.isEmpty() || reference.isEmpty()
+                || !Double.isFinite(cost) || cost < 0) return false;
+        List<GroceryItem> changed = new java.util.ArrayList<>();
+        boolean completed = accountDatabase.runInTransaction(() -> {
+            GroceryItem item = groceryItemDao.getByCloudId(cloudId);
+            if (item == null || item.financeEntryId > 0) return false;
+            if (item.isPurchased) return reference.equals(item.moneyManagerPurchase);
+            if (item.purchaseCount != purchaseCount) {
+                return item.purchaseCount == purchaseCount + 1
+                        && reference.equals(item.moneyManagerPurchase);
+            }
+            long purchasedAt = normalizePurchaseTimestamp(at);
+            String cycle = GroceryRecurrenceEngine.originalCycle(item);
+            boolean recurring = GroceryRecurrenceEngine.isRecurringType(cycle)
+                    && !GroceryItem.LIST_DAILY.equals(item.listType);
+            GroceryItem purchased = recurring ? copyForPurchase(item) : item;
+            if (recurring) {
+                purchased.cloudId = "recurrence-purchase-" + UUID.randomUUID();
+                purchased.listType = GroceryRecurrenceEngine.normalizeCycle(cycle);
+                purchased.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(cycle);
+                purchased.createdAt = purchasedAt;
+                purchased.purchaseCount = item.purchaseCount;
+            }
+
+            purchased.isPurchased = true;
+            purchased.buyingStatus = GroceryItem.STATUS_PURCHASED;
+            purchased.purchasedAt = purchasedAt;
+            purchased.actualCost = cost;
+            purchased.moneyManagerPurchase = reference;
+            purchased.purchaseCount++;
+            purchased.updatedAt = System.currentTimeMillis();
+            purchased.purchasedByName = displayName(FirebaseAuth.getInstance().getCurrentUser());
+            markCurrentEditor(purchased);
+            upsertLocal(purchased);
+            changed.add(purchased);
+
+            GroceryPurchase history = new GroceryPurchase();
+            history.sourceItemId = item.id;
+            history.itemName = item.name;
+            history.category = item.category;
+            history.quantity = item.quantity;
+            history.storeName = item.storeName;
+            history.actualCost = cost;
+            history.purchasedAt = purchasedAt;
+            history.moneyManagerPurchase = reference;
+            accountDatabase.groceryPurchaseDao().insert(history);
+
+            if (recurring) {
+                item.createdAt = purchasedAt;
+                item.purchasedAt = purchasedAt;
+                item.listType = GroceryRecurrenceEngine.normalizeCycle(cycle);
+                item.lastResetMonth = GroceryRecurrenceEngine.occurrenceMetadata(cycle);
+                item.purchaseCount++;
+                item.buyingStatus = GroceryItem.STATUS_PENDING;
+                item.purchasedByName = "";
+                item.actualCost = 0D;
+                item.moneyManagerPurchase = reference;
+                item.updatedAt = purchased.updatedAt;
+                markCurrentEditor(item);
+                upsertLocal(item);
+                changed.add(item);
+            }
+            return true;
+        });
+        if (!changed.isEmpty()) {
+            appContext.getContentResolver().notifyChange(COMPANION_PURCHASES, null);
+            mainHandler.post(() -> {
+                for (GroceryItem item : changed) syncItem(item);
+            });
+            GroceryWidgetProvider.refreshAll(appContext);
+        }
+        return completed;
+    }
+
     public void setPurchased(
             @NonNull GroceryItem item,
             boolean purchased,
@@ -426,6 +521,7 @@ public class GroceryRepository {
             return;
         }
         boolean recordPurchase = purchased && !item.isPurchased;
+        item.moneyManagerPurchase = "";
         item.isPurchased = purchased;
         item.purchasedAt = purchased ? purchasedAt : 0L;
         item.buyingStatus = purchased
@@ -474,6 +570,7 @@ public class GroceryRepository {
             accountDatabase.groceryPurchaseDao()
                     .deletePurchase(item.id, completedAt);
             item.isPurchased = false;
+            item.moneyManagerPurchase = "";
             item.purchasedAt = 0L;
             item.buyingStatus = GroceryItem.STATUS_PENDING;
             item.purchasedByName = "";
@@ -1070,6 +1167,7 @@ public class GroceryRepository {
         values.put("lastResetMonth", item.lastResetMonth);
         values.put("purchaseCount", item.purchaseCount);
         values.put("notes", item.notes);
+        values.put("moneyManagerPurchase", item.moneyManagerPurchase);
         values.put("listType", item.listType);
         values.put("assignedMemberId", item.assignedMemberId);
         values.put("assignedMemberName", item.assignedMemberName);
@@ -1120,6 +1218,7 @@ public class GroceryRepository {
         item.lastResetMonth = stringValue(snapshot.child("lastResetMonth"));
         item.purchaseCount = intValue(snapshot.child("purchaseCount"));
         item.notes = stringValue(snapshot.child("notes"));
+        item.moneyManagerPurchase = stringValue(snapshot.child("moneyManagerPurchase"));
         item.listType = stringValue(snapshot.child("listType"));
         if (item.listType.isEmpty()) {
             item.listType = GroceryItem.LIST_DAILY;
@@ -1373,6 +1472,7 @@ public class GroceryRepository {
             row.familyId = activeFamilyId;
             markCurrentEditor(row);
             row.historyOnly = true;
+            row.moneyManagerPurchase = history.moneyManagerPurchase;
             restored.add(row);
             existingPurchases.add(historyKey);
             // Upload is batched only after the UI has rendered. Do not enqueue one
@@ -1710,6 +1810,7 @@ public class GroceryRepository {
     }
 
     private void linkFinance(@NonNull GroceryItem item) {
+        if (item.isPurchased && !item.moneyManagerPurchase.isEmpty()) return;
         if (!item.isPurchased) {
             if (item.financeEntryId > 0L) {
                 FinanceEntry linked = financeEntryDao.getById(item.financeEntryId);

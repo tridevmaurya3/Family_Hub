@@ -9,6 +9,9 @@ import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
+
+import com.tridev.familyhub.data.repository.GroceryRepository;
 
 import com.tridev.familyhub.data.local.FamilyHubDatabase;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
@@ -28,13 +31,32 @@ public final class PendingGroceryProvider extends ContentProvider {
         if (!"/items".equals(uri.getPath())) throw new IllegalArgumentException("Unknown grocery path");
         long identity = Binder.clearCallingIdentity();
         try {
-            MatrixCursor result = new MatrixCursor(new String[]{"name", "quantity"});
+            MatrixCursor result = new MatrixCursor(new String[]{"name", "quantity", "cloud_id", "purchase_count"});
             for (GroceryItem item : FamilyHubDatabase.getInstance(context).groceryItemDao().getAll()) {
                 if (!item.isPurchased && !item.historyOnly && item.financeEntryId <= 0
-                        && item.name != null && !item.name.trim().isEmpty()) {
-                    result.addRow(new Object[]{item.name, item.quantity});
+                        && !item.cloudId.isEmpty() && item.name != null && !item.name.trim().isEmpty()) {
+                    result.addRow(new Object[]{item.name, item.quantity, item.cloudId, item.purchaseCount});
                 }
             }
+            return result;
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    @Override public Bundle call(String method, String arg, Bundle extras) {
+        Context context = getContext();
+        if (context == null || !trustedCaller(context)) throw new SecurityException("Untrusted caller");
+        if (!"complete_purchase".equals(method) || extras == null) {
+            throw new IllegalArgumentException("Unknown Grocery operation");
+        }
+        long identity = Binder.clearCallingIdentity();
+        try {
+            Bundle result = new Bundle();
+            result.putBoolean("completed", new GroceryRepository(context).completeMoneyManagerPurchase(
+                    extras.getString("id", ""), extras.getInt("count", -1),
+                    extras.getString("reference", ""), extras.getDouble("cost", -1),
+                    extras.getLong("at")));
             return result;
         } finally {
             Binder.restoreCallingIdentity(identity);

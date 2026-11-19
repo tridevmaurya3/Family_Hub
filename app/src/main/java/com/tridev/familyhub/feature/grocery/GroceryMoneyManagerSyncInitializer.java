@@ -179,6 +179,7 @@ public final class GroceryMoneyManagerSyncInitializer extends ContentProvider {
             if (item == null || item.id <= 0L) continue;
             String key = itemPreferenceKey(item);
             existingKeys.add(key);
+            if (item.isPurchased && !item.moneyManagerPurchase.isEmpty()) continue;
 
             String canonicalEvent = safe(preferences.getString(PREFIX_EVENT + key, ""));
             String canonicalSource = safe(preferences.getString(PREFIX_SOURCE + key, ""));

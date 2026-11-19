@@ -17,4 +17,5 @@ public class GroceryPurchase {
     @NonNull public String storeName = "";
     public double actualCost;
     public long purchasedAt;
+    @NonNull @androidx.room.ColumnInfo(defaultValue = "''") public String moneyManagerPurchase = "";
 }

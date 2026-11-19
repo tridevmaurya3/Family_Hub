@@ -74,12 +74,19 @@ import com.tridev.familyhub.data.local.entity.FamilyTask;
                 SafePlaceAlert.class,
                 FamilyTask.class
         },
-        version = 39,
+        version = 40,
         exportSchema = false
 )
 public abstract class FamilyHubDatabase extends RoomDatabase {
 
     private static final java.util.Map<String, FamilyHubDatabase> INSTANCES = new java.util.HashMap<>();
+
+    private static final Migration MIGRATION_39_40 = new Migration(39, 40) {
+        @Override public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE grocery_items ADD COLUMN moneyManagerPurchase TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE grocery_purchases ADD COLUMN moneyManagerPurchase TEXT NOT NULL DEFAULT ''");
+        }
+    };
 
     private static final Migration MIGRATION_38_39 = new Migration(38, 39) {
         @Override public void migrate(SupportSQLiteDatabase database) {
@@ -960,7 +967,8 @@ public abstract class FamilyHubDatabase extends RoomDatabase {
                                     MIGRATION_35_36,
                                     MIGRATION_36_37,
                                     MIGRATION_37_38,
-                                    MIGRATION_38_39
+                                    MIGRATION_38_39,
+                                    MIGRATION_39_40
                             )
                             .build();
             INSTANCES.put(databaseName, instance);

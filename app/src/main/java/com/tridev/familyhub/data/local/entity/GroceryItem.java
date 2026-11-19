@@ -92,6 +92,8 @@ public class GroceryItem {
 
     @ColumnInfo(defaultValue = "0") public long financeEntryId;
 
+    @NonNull @ColumnInfo(defaultValue = "''") public String moneyManagerPurchase = "";
+
     @NonNull
     public String notes = "";
 
