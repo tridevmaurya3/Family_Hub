@@ -245,6 +245,12 @@ public class GroceryRepository {
         save(item, callback, null, null);
     }
 
+    /** Prioritizes a new floating entry over background Grocery sync. */
+    public void saveFromFloatingAdd(
+            @NonNull GroceryItem item, @NonNull ActionCallback callback) {
+        save(item, callback, USER_ACTION_EXECUTOR, null, true);
+    }
+
     /** Saves an explicit edit without waiting behind realtime sync work. */
     public void saveEdit(
             @NonNull GroceryItem item,
@@ -270,6 +276,16 @@ public class GroceryRepository {
             @NonNull ActionCallback callback,
             @Nullable ExecutorService requestedExecutor,
             @Nullable String originalItemName
+    ) {
+        save(item, callback, requestedExecutor, originalItemName, false);
+    }
+
+    private void save(
+            @NonNull GroceryItem item,
+            @NonNull ActionCallback callback,
+            @Nullable ExecutorService requestedExecutor,
+            @Nullable String originalItemName,
+            boolean floatingAdd
     ) {
         if (item.historyOnly) {
             saveRecoveredPurchase(item, callback,
@@ -297,24 +313,14 @@ public class GroceryRepository {
                 ? requestedExecutor
                 : item.isPurchased ? PURCHASE_ACTION_EXECUTOR : DATABASE_EXECUTOR;
         writeExecutor.execute(() -> {
-            if (item.id == 0L) {
-                GroceryItem duplicate = groceryItemDao.findDuplicate(item.name);
-                if (duplicate != null) {
-                    item.duplicateMerged = true;
-                    item.id = duplicate.id;
-                    item.cloudId = duplicate.cloudId;
-                    item.familyId = duplicate.familyId;
-                    item.createdAt = duplicate.createdAt;
-                    item.purchaseCount = duplicate.purchaseCount;
-                    // A new shopping cycle must not remove the previous expense.
-                    item.financeEntryId = 0L;
-                    item.isPurchased = false;
-                    item.purchasedAt = 0L;
-                    item.buyingStatus = GroceryItem.STATUS_PENDING;
-                }
+            if (floatingAdd) {
+                accountDatabase.runInTransaction(() -> {
+                    item.updatedAt = System.currentTimeMillis();
+                    saveLocalItem(item);
+                });
+            } else {
+                saveLocalItem(item);
             }
-            linkFinance(item);
-            upsertLocal(item);
             if (originalItemName != null && !item.isPurchased
                     && GroceryRecurrenceEngine.isRecurringType(
                     GroceryRecurrenceEngine.originalCycle(item))) {
@@ -322,12 +328,34 @@ public class GroceryRepository {
                         .renameForSourceItem(item.id, originalItemName, item.name);
                 removeRecoveredRecurringDuplicates(item, originalItemName);
             }
-            GroceryWidgetProvider.refreshAll(appContext);
+            if (!floatingAdd) GroceryWidgetProvider.refreshAll(appContext);
             mainHandler.post(() -> {
                 callback.onComplete();
                 syncItem(item);
             });
+            if (floatingAdd) GroceryWidgetProvider.refreshAll(appContext);
         });
+    }
+
+    private void saveLocalItem(@NonNull GroceryItem item) {
+        if (item.id == 0L) {
+            GroceryItem duplicate = groceryItemDao.findDuplicate(item.name);
+            if (duplicate != null) {
+                item.duplicateMerged = true;
+                item.id = duplicate.id;
+                item.cloudId = duplicate.cloudId;
+                item.familyId = duplicate.familyId;
+                item.createdAt = duplicate.createdAt;
+                item.purchaseCount = duplicate.purchaseCount;
+                // A new shopping cycle must not remove the previous expense.
+                item.financeEntryId = 0L;
+                item.isPurchased = false;
+                item.purchasedAt = 0L;
+                item.buyingStatus = GroceryItem.STATUS_PENDING;
+            }
+        }
+        linkFinance(item);
+        upsertLocal(item);
     }
 
     /**
@@ -799,30 +827,32 @@ public class GroceryRepository {
                             continue;
                         }
                         remoteIds.add(remote.cloudId);
-                        GroceryItem local = groceryItemDao.getByCloudId(
-                                remote.cloudId);
-                        if (local == null || remote.updatedAt >= local.updatedAt) {
-                            boolean statusChanged = local != null
-                                    && !remote.buyingStatus.equals(local.buyingStatus);
-                            boolean assignmentChanged = local != null
-                                    && !remote.assignedMemberId.equals(local.assignedMemberId);
-                            FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
-                            boolean fromAnotherMember = current == null
-                                    || !remote.updatedByUid.equals(current.getUid());
-                            if (local != null) {
-                                remote.id = local.id;
-                                remote.financeEntryId = local.financeEntryId;
+                        accountDatabase.runInTransaction(() -> {
+                            GroceryItem local = groceryItemDao.getByCloudId(
+                                    remote.cloudId);
+                            if (local == null || remote.updatedAt >= local.updatedAt) {
+                                boolean statusChanged = local != null
+                                        && !remote.buyingStatus.equals(local.buyingStatus);
+                                boolean assignmentChanged = local != null
+                                        && !remote.assignedMemberId.equals(local.assignedMemberId);
+                                FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
+                                boolean fromAnotherMember = current == null
+                                        || !remote.updatedByUid.equals(current.getUid());
+                                if (local != null) {
+                                    remote.id = local.id;
+                                    remote.financeEntryId = local.financeEntryId;
+                                }
+                                linkFinance(remote);
+                                upsertLocal(remote);
+                                if (fromAnotherMember && (statusChanged
+                                        || assignmentChanged
+                                        || (local == null
+                                        && !remote.assignedMemberId.isEmpty()))) {
+                                    mainHandler.post(() -> GroceryNotificationHelper
+                                            .notifyUpdate(appContext, remote));
+                                }
                             }
-                            linkFinance(remote);
-                            upsertLocal(remote);
-                            if (fromAnotherMember && (statusChanged
-                                    || assignmentChanged
-                                    || (local == null
-                                    && !remote.assignedMemberId.isEmpty()))) {
-                                mainHandler.post(() -> GroceryNotificationHelper
-                                        .notifyUpdate(appContext, remote));
-                            }
-                        }
+                        });
                     }
                     // Never treat the first remote snapshot as an authoritative
                     // delete list. A previously rejected/offline upload can be absent
@@ -881,29 +911,33 @@ public class GroceryRepository {
     private void uploadLocalOnlyItems(@NonNull String familyId) {
         DATABASE_EXECUTOR.execute(() -> {
             if (!scopeUid.equals(AccountDataScope.uid())) return;
-            for (GroceryItem item : groceryItemDao.getAll()) {
-                if (!item.familyId.isEmpty() && !familyId.equals(item.familyId)) {
-                    continue;
-                }
-                boolean localOnly = item.familyId.isEmpty();
-                // New local rows may be published after family setup. Existing
-                // family rows are compared with Firebase before any retry so an
-                // older device cannot restore stale or deleted data.
-                if (item.cloudId.isEmpty()) {
-                    item.cloudId = UUID.randomUUID().toString();
-                }
-                item.familyId = familyId;
-                if (item.updatedAt == 0L) {
-                    item.updatedAt = Math.max(item.createdAt,
-                            System.currentTimeMillis());
-                }
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user != null) {
-                    item.updatedByUid = user.getUid();
-                    item.updatedByName = displayName(user);
-                }
-                upsertLocal(item);
-                uploadIfNotStale(item, familyId, localOnly);
+            for (GroceryItem snapshot : groceryItemDao.getAll()) {
+                accountDatabase.runInTransaction(() -> {
+                    GroceryItem item = groceryItemDao.getById(snapshot.id);
+                    if (item == null || item.updatedAt != snapshot.updatedAt) return;
+                    if (!item.familyId.isEmpty() && !familyId.equals(item.familyId)) {
+                        return;
+                    }
+                    boolean localOnly = item.familyId.isEmpty();
+                    // New local rows may be published after family setup. Existing
+                    // family rows are compared with Firebase before any retry so an
+                    // older device cannot restore stale or deleted data.
+                    if (item.cloudId.isEmpty()) {
+                        item.cloudId = UUID.randomUUID().toString();
+                    }
+                    item.familyId = familyId;
+                    if (item.updatedAt == 0L) {
+                        item.updatedAt = Math.max(item.createdAt,
+                                System.currentTimeMillis());
+                    }
+                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                    if (user != null) {
+                        item.updatedByUid = user.getUid();
+                        item.updatedByName = displayName(user);
+                    }
+                    upsertLocal(item);
+                    uploadIfNotStale(item, familyId, localOnly);
+                });
             }
         });
     }
@@ -988,7 +1022,13 @@ public class GroceryRepository {
                              @NonNull String familyId) {
         if (!currentAccount()) return;
         item.familyId = familyId;
-        DATABASE_EXECUTOR.execute(() -> { if (currentAccount()) upsertLocal(item); });
+        DATABASE_EXECUTOR.execute(() -> {
+            if (!currentAccount()) return;
+            accountDatabase.runInTransaction(() -> {
+                GroceryItem current = groceryItemDao.getById(item.id);
+                if (current == null || current.updatedAt <= item.updatedAt) upsertLocal(item);
+            });
+        });
         firebaseRoot.child("sharedShopping").child(familyId)
                 .child("items").child(item.cloudId)
                 .updateChildren(toCloudValues(item));
