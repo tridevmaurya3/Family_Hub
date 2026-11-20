@@ -2,6 +2,18 @@ package com.tridev.familyhub.feature.chat;
 
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.util.Base64;
+import android.widget.ImageView;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.text.InputFilter;
@@ -34,11 +46,21 @@ final class ChatStatus {
 
     private final FamilyChatFragment host;
     private final FamilyChatStore store;
+    private static final int MAX_PHOTO_BYTES = 384 * 1024;
+    private static final int MAX_PHOTO_LENGTH = MAX_PHOTO_BYTES / 3 * 4;
+    private static final int MAX_IMAGE_SIDE = 1280;
+    private final ActivityResultLauncher<String> photoPicker;
+    private java.util.function.Consumer<Uri> photoSelection;
     private AlertDialog dialog;
 
     ChatStatus(FamilyChatFragment host, FamilyChatStore store) {
         this.host = host;
         this.store = store;
+        photoPicker = host.registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            java.util.function.Consumer<Uri> selection = photoSelection;
+            photoSelection = null;
+            if (uri != null && selection != null) selection.accept(uri);
+        });
     }
 
     void open() {
@@ -72,6 +94,7 @@ final class ChatStatus {
             statuses.child(member.getKey()).get().addOnSuccessListener(snapshot -> {
                 if (!listing.isShowing() || !active(family, uid)) return;
                 String body = snapshot.child("body").getValue(String.class);
+                String photo = snapshot.child("photo").getValue(String.class);
                 Long postedAt = snapshot.child("postedAt").getValue(Long.class);
                 if (body == null || postedAt == null) return;
                 long remaining = postedAt + 86400000L - System.currentTimeMillis();
@@ -80,10 +103,10 @@ final class ChatStatus {
                         .child(family).child(member.getKey()).child(Long.toString(postedAt));
                 String time = android.text.format.DateUtils.getRelativeTimeSpanString(
                         postedAt, System.currentTimeMillis(), 60000).toString();
-                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + time, false, () -> {
+                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + (photo == null ? "" : "Photo  ·  ") + time, false, () -> {
                     if (!active(family, uid) || postedAt + 86400000L <= System.currentTimeMillis()) return;
                     listing.dismiss();
-                    showStatus(family, uid, member.getKey(), member.getValue(), body, receipts);
+                    showStatus(family, uid, member.getKey(), member.getValue(), body, photo, receipts);
                 });
                 empty.setVisibility(View.GONE);
                 rows.postDelayed(() -> {
@@ -98,7 +121,7 @@ final class ChatStatus {
     private static final String[] EMOJI = {"❤️", "😂", "😮", "😢", "👏", "🔥"};
 
     private void showStatus(String family, String uid, String author, String name, String body,
-                            DatabaseReference receipts) {
+                            String photo, DatabaseReference receipts) {
         boolean mine = uid.equals(author);
         LinearLayout content = new LinearLayout(host.requireContext());
         content.setOrientation(LinearLayout.VERTICAL);
@@ -111,7 +134,13 @@ final class ChatStatus {
         post.setGravity(android.view.Gravity.CENTER);
         post.setMinHeight(8 * inset);
         post.setTextIsSelectable(true);
-        content.addView(post, new LinearLayout.LayoutParams(-1, -2));
+        if (photo != null) {
+            ImageView image = statusImage();
+            content.addView(image, new LinearLayout.LayoutParams(-1, dp(270)));
+            loadPreview(image, photo);
+            post.setMinHeight(0);
+        }
+        if (!body.isEmpty()) content.addView(post, new LinearLayout.LayoutParams(-1, -2));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(content);
         dialog = statusDialog(name, scroll)
@@ -220,7 +249,7 @@ final class ChatStatus {
 
     private void compose(DatabaseReference path, String family, String uid) {
         EditText input = new EditText(host.requireContext());
-        input.setHint("Write a status");
+        input.setHint("Status text or photo caption");
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(500)});
         LinearLayout form = new LinearLayout(host.requireContext());
         form.setOrientation(LinearLayout.VERTICAL);
@@ -228,6 +257,47 @@ final class ChatStatus {
         form.setPadding(inset, 0, inset, inset);
         input.setMinLines(3);
         form.addView(statusField(input));
+        ImageView preview = statusImage();
+        preview.setVisibility(View.GONE);
+        LinearLayout.LayoutParams previewSize = new LinearLayout.LayoutParams(-1, dp(180));
+        previewSize.topMargin = dp(8);
+        form.addView(preview, previewSize);
+        String[] selectedPhoto = {null};
+        boolean[] loadingPhoto = {false};
+        addAction(form, "Choose photo", false, () -> {
+            AlertDialog owner = dialog;
+            if (loadingPhoto[0] || !active(family, uid)) return;
+            photoSelection = uri -> {
+                if (!owner.isShowing() || !active(family, uid)) return;
+                loadingPhoto[0] = true;
+                owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                android.content.ContentResolver resolver = form.getContext().getContentResolver();
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> encodePhoto(resolver, uri))
+                        .thenAccept(encoded -> form.post(() -> {
+                            if (!owner.isShowing() || !active(family, uid)) return;
+                            loadingPhoto[0] = false;
+                            owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            if (encoded == null) {
+                                notice("Unable to prepare photo. Try another image.");
+                                return;
+                            }
+                            selectedPhoto[0] = encoded;
+                            preview.setVisibility(View.VISIBLE);
+                            loadPreview(preview, encoded);
+                        }));
+            };
+            try { photoPicker.launch("image/*"); } catch (android.content.ActivityNotFoundException unavailable) {
+                photoSelection = null;
+                notice("No photo picker is available");
+            }
+        });
+        addAction(form, "Remove photo", false, () -> {
+            if (loadingPhoto[0]) return;
+            selectedPhoto[0] = null;
+            preview.setTag(null);
+            preview.setImageDrawable(null);
+            preview.setVisibility(View.GONE);
+        });
         form.addView(section("Choose who can see your status for 24 hours.", 14, MUTED));
         com.google.android.material.checkbox.MaterialCheckBox restricted =
                 new com.google.android.material.checkbox.MaterialCheckBox(host.requireContext());
@@ -257,14 +327,14 @@ final class ChatStatus {
                 people.setVisibility(checked ? android.view.View.VISIBLE : android.view.View.GONE));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(form);
-        dialog = statusDialog("New text status", scroll)
+        dialog = statusDialog("New status", scroll)
                 .setNegativeButton("Cancel", null).setPositiveButton("Post", null).show();
         styleWindow(dialog);
         AlertDialog editor = dialog;
         editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             if (!active(family, uid)) return;
             String body = input.getText().toString().trim();
-            if (body.isEmpty()) { input.setError("Enter a status"); return; }
+            if (body.isEmpty() && selectedPhoto[0] == null) { input.setError("Enter text or choose a photo"); return; }
             if (restricted.isChecked() && audience.isEmpty()) {
                 notice("Select at least one family member");
                 return;
@@ -273,6 +343,7 @@ final class ChatStatus {
             Map<String, Object> value = new LinkedHashMap<>();
             if (restricted.isChecked()) value.put("audience", new LinkedHashMap<>(audience));
             value.put("body", body);
+            if (selectedPhoto[0] != null) value.put("photo", selectedPhoto[0]);
             value.put("postedAt", ServerValue.TIMESTAMP);
             path.setValue(value).addOnCompleteListener(task -> {
                 if (!editor.isShowing()) return;
@@ -280,6 +351,77 @@ final class ChatStatus {
                 else { view.setEnabled(true); notice("Unable to publish status"); }
             });
         });
+    }
+
+    private ImageView statusImage() {
+        ImageView image = new ImageView(host.requireContext());
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        image.setBackground(surface(16, EDGE, 0xffe2f4ee, 0xfff6fcfa));
+        image.setClipToOutline(true);
+        image.setContentDescription("Status photo");
+        return image;
+    }
+
+    private void loadPreview(ImageView image, String photo) {
+        image.setTag(photo);
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            if (photo.length() > MAX_PHOTO_LENGTH) return null;
+            try {
+                byte[] jpeg = Base64.decode(photo, Base64.NO_WRAP);
+                BitmapFactory.Options bounds = new BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length, bounds);
+                if (bounds.outWidth < 1 || bounds.outHeight < 1
+                        || Math.max(bounds.outWidth, bounds.outHeight) > MAX_IMAGE_SIDE) return null;
+                return BitmapFactory.decodeByteArray(jpeg, 0, jpeg.length);
+            } catch (IllegalArgumentException badData) {
+                return null;
+            }
+        }).thenAccept(bitmap -> image.post(() -> {
+            if (image.isAttachedToWindow() && photo.equals(image.getTag())) image.setImageBitmap(bitmap);
+        }));
+    }
+
+    private static String encodePhoto(android.content.ContentResolver resolver, Uri uri) {
+        Bitmap bitmap = null;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 28) {
+                android.graphics.ImageDecoder.Source source = android.graphics.ImageDecoder.createSource(resolver, uri);
+                bitmap = android.graphics.ImageDecoder.decodeBitmap(source, (decoder, info, data) -> {
+                    int width = info.getSize().getWidth();
+                    int height = info.getSize().getHeight();
+                    double ratio = Math.min(1d, MAX_IMAGE_SIDE / (double) Math.max(width, height));
+                    decoder.setTargetSize(Math.max(1, (int) (width * ratio)), Math.max(1, (int) (height * ratio)));
+                    decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                });
+            } else {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                try (InputStream input = resolver.openInputStream(uri)) {
+                    BitmapFactory.decodeStream(input, null, options);
+                }
+                options.inSampleSize = 1;
+                while (Math.max(options.outWidth, options.outHeight) / options.inSampleSize > MAX_IMAGE_SIDE) {
+                    options.inSampleSize *= 2;
+                }
+                options.inJustDecodeBounds = false;
+                try (InputStream input = resolver.openInputStream(uri)) {
+                    bitmap = BitmapFactory.decodeStream(input, null, options);
+                }
+            }
+            if (bitmap == null) return null;
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            for (int quality = 85; quality >= 35; quality -= 10) {
+                output.reset();
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, output)) return null;
+                if (output.size() <= MAX_PHOTO_BYTES) return Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP);
+            }
+            return null;
+        } catch (IOException | RuntimeException error) {
+            return null;
+        } finally {
+            if (bitmap != null) bitmap.recycle();
+        }
     }
 
     private ChatFormDialog statusDialog(String title, ScrollView content) {

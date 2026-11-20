@@ -487,3 +487,20 @@ test('status audience, receipts and 24-hour expiry', async () => {
   await assertFails(ref(reader, status).once('value'));
   await assertFails(ref(reader, receipts + '/' + reader).set('seen'));
 });
+
+test('photo status accepts an optional caption and enforces the selected audience', async () => {
+  const path = 'familyTextStatus/familyA/' + writer;
+  const ref = uid => env.authenticatedContext(uid).database().ref(path);
+  const status = {
+    body: '', postedAt: { '.sv': 'timestamp' }, audience: { [reader]: true }
+  };
+  const jpegSignature = '/9j/QUJDREVGR0hJ';
+  await assertFails(ref(writer).set(status));
+  await assertFails(ref(writer).set({ ...status, photo: 'not-a-jpeg' }));
+  await assertFails(ref(writer).set({ ...status, photo: '/9j/' + 'A'.repeat(524288) }));
+  await assertSucceeds(ref(writer).set({ ...status, photo: jpegSignature }));
+  const selected = await assertSucceeds(ref(reader).child('photo').get());
+  assert.equal(selected.val(), jpegSignature);
+  await assertFails(ref('profile-owner').child('photo').get());
+  await assertFails(ref(outsider).child('photo').get());
+});
