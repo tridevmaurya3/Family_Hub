@@ -2,6 +2,20 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "familyStatusReceipts": {
+      "$familyId": {
+        "$author": {
+          "$revision": {
+            ".read": "auth != null && auth.uid === $author && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+            "$viewer": {
+              ".read": "auth != null && auth.uid === $viewer && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && auth.uid === $viewer && auth.uid !== $author && root.child('memberships').child($familyId).child($author).child('status').val() === 'ACTIVE' && root.child('familyTextStatus').child($familyId).child($author).child('postedAt').val() + '' === $revision && root.child('familyTextStatus').child($familyId).child($author).child('postedAt').val() > now - 86400000 && (!root.child('familyTextStatus').child($familyId).child($author).child('audience').exists() || root.child('familyTextStatus').child($familyId).child($author).child('audience').child(auth.uid).val() === true)",
+              ".validate": "newData.val() === 'seen' || newData.val() === 'liked'"
+            }
+          }
+        }
+      }
+    },
     "familyTextStatus": {
       "$familyId": {
         "$author": {

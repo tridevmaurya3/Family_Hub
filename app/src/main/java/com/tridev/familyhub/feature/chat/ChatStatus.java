@@ -66,6 +66,45 @@ final class ChatStatus {
                 LinearLayout card = new LinearLayout(rows.getContext());
                 card.setOrientation(LinearLayout.VERTICAL);
                 card.addView(text);
+                DatabaseReference receipts = statuses.getRoot().child("familyStatusReceipts")
+                        .child(family).child(member.getKey()).child(Long.toString(postedAt));
+                if (uid.equals(member.getKey())) {
+                    addAction(card, "Viewers and likes", () -> receipts.get().addOnSuccessListener(data -> {
+                        if (!listing.isShowing() || !active(family, uid)) return;
+                        StringBuilder list = new StringBuilder();
+                        for (com.google.firebase.database.DataSnapshot viewer : data.getChildren()) {
+                            String id = viewer.getKey();
+                            if (id == null) continue;
+                            if (list.length() > 0) list.append("\n");
+                            list.append(store.name(id));
+                            if ("liked".equals(viewer.getValue(String.class))) list.append("  ♥");
+                        }
+                        new ChatFormDialog(host.requireContext()).setTitle("Viewers and likes")
+                                .setMessage(list.length() == 0 ? "No views yet" : list.toString())
+                                .setPositiveButton("Close", null).show();
+                    }).addOnFailureListener(error -> notice("Unable to load viewers")));
+                } else {
+                    // A receipt records opening the post. Keep an existing like when reopening.
+                    text.setText(member.getValue());
+                    addAction(card, "View status", () -> {
+                        if (!active(family, uid)) return;
+                        text.setText(member.getValue() + "\n" + body);
+                        receipts.child(uid).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+                            public com.google.firebase.database.Transaction.Result doTransaction(
+                                    com.google.firebase.database.MutableData current) {
+                                if (current.getValue() == null) current.setValue("seen");
+                                return com.google.firebase.database.Transaction.success(current);
+                            }
+                            public void onComplete(com.google.firebase.database.DatabaseError error,
+                                    boolean committed, com.google.firebase.database.DataSnapshot value) {
+                                if (error != null) notice("View receipt unavailable");
+                            }
+                        });
+                    });
+                    addAction(card, "Like status", () -> receipts.child(uid).setValue("liked")
+                            .addOnSuccessListener(done -> notice("Status liked"))
+                            .addOnFailureListener(error -> notice("Unable to like status")));
+                }
                 if (!uid.equals(member.getKey())) {
                     com.google.android.material.button.MaterialButton reply =
                             new com.google.android.material.button.MaterialButton(rows.getContext(), null,
@@ -82,6 +121,15 @@ final class ChatStatus {
                 rows.postDelayed(() -> rows.removeView(card), remaining);
             });
         }
+    }
+
+    private void addAction(LinearLayout row, String title, Runnable action) {
+        com.google.android.material.button.MaterialButton button = new com.google.android.material.button.MaterialButton(
+                row.getContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        button.setText(title);
+        button.setAllCaps(false);
+        button.setOnClickListener(view -> action.run());
+        row.addView(button);
     }
 
     private void compose(DatabaseReference path, String family, String uid) {
