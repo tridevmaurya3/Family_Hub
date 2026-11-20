@@ -23,6 +23,9 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.button.MaterialButton;
+import com.tridev.familyhub.R;
+import com.tridev.familyhub.core.ui.cards.ModuleOverviewView;
+import com.tridev.familyhub.feature.main.MainActivity;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -40,11 +43,11 @@ public final class FamilyChatFragment extends Fragment {
     private final ChatAttachments attachments = new ChatAttachments(this, store);
     private final Runnable observer = this::render;
     private final List<View> bubbles = new ArrayList<>();
-    private LinearLayout screen, header, rows, bottom;
+    private LinearLayout screen, rows, bottom;
+    private ModuleOverviewView header;
     private ScrollView scroll;
     private EditText search, draft;
-    private TextView title, status;
-    private MaterialButton back, send, newGroup;
+    private MaterialButton send, newGroup;
     private OnBackPressedCallback backCallback;
     private String peer;
     private String lastMessageKey;
@@ -80,34 +83,22 @@ public final class FamilyChatFragment extends Fragment {
                                        @Nullable Bundle state) {
         screen = column();
         screen.setPadding(dp(10), dp(8), dp(10), dp(6));
-        header = new LinearLayout(requireContext());
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(6), dp(5), dp(8), dp(5));
-        header.setBackground(card(WHITE, EDGE, 18));
-        back = new MaterialButton(requireContext());
-        back.setText("‹");
-        back.setTextSize(24);
-        back.setContentDescription("Back to chats");
-        back.setOnClickListener(v -> open(null));
-        header.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        LinearLayout headings = column();
-        title = text("Family Chat", 19, INK, true);
-        status = text("", 12, GREEN, false);
-        headings.addView(title);
-        headings.addView(status);
-        header.addView(headings, new LinearLayout.LayoutParams(0, -2, 1));
-        newGroup = new MaterialButton(requireContext());
+        header = (ModuleOverviewView) inflater.inflate(R.layout.view_family_chat_header, screen, false);
+        newGroup = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        newGroup.setTextSize(12);
+        newGroup.setMaxLines(2);
+        newGroup.setMinWidth(0);
         newGroup.setText("New group");
         newGroup.setAllCaps(false);
         newGroup.setOnClickListener(v -> {
             if (choosingLiveRecipient) {
-                choosingLiveRecipient = false;
-                render();
+                cancelLiveRecipient();
             } else {
                 showCreateGroup();
             }
         });
-        header.addView(newGroup);
+        header.addHeaderAction(newGroup);
         screen.addView(header);
 
         search = new EditText(requireContext());
@@ -149,8 +140,10 @@ public final class FamilyChatFragment extends Fragment {
         draft.setPadding(dp(6), dp(8), dp(6), dp(8));
         MaterialButton attach = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        attach.setText("+");
-        attach.setTextSize(20);
+        attach.setIconResource(R.drawable.ic_chat_attachment);
+        attach.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        attach.setIconPadding(0);
+        attach.setIconSize(dp(22));
         attach.setContentDescription("Add attachment");
         attach.setPadding(0, 0, 0, 0);
         attach.setOnClickListener(v -> {
@@ -185,8 +178,11 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     @Override public void onViewCreated(@NonNull View view, @Nullable Bundle state) {
-        backCallback = new OnBackPressedCallback(peer != null) {
-            @Override public void handleOnBackPressed() { open(null); }
+        backCallback = new OnBackPressedCallback(peer != null || choosingLiveRecipient) {
+            @Override public void handleOnBackPressed() {
+                if (choosingLiveRecipient) cancelLiveRecipient();
+                else open(null);
+            }
         };
         requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), backCallback);
         view.getViewTreeObserver().addOnWindowFocusChangeListener(
@@ -241,7 +237,6 @@ public final class FamilyChatFragment extends Fragment {
         if (requireActivity() instanceof com.tridev.familyhub.feature.main.MainActivity) {
             ((com.tridev.familyhub.feature.main.MainActivity) requireActivity()).refreshChatInsets();
         }
-        backCallback.setEnabled(peer != null);
         lastMessageKey = null;
         draft.setText("");
         render();
@@ -253,22 +248,37 @@ public final class FamilyChatFragment extends Fragment {
         send.setEnabled(thread != null && !thread.error && !draft.getText().toString().trim().isEmpty());
     }
 
+    private void cancelLiveRecipient() {
+        choosingLiveRecipient = false;
+        render();
+    }
+
     private void render() {
         if (screen == null) return;
         boolean inThread = peer != null;
+        if (backCallback != null) backCallback.setEnabled(inThread || choosingLiveRecipient);
         FamilyChatStore.ThreadState thread = store.thread(peer);
-        back.setVisibility(inThread ? View.VISIBLE : View.GONE);
+        if (inThread || choosingLiveRecipient) {
+            header.setNavigationAction(R.drawable.ic_arrow_back, R.string.back, v -> {
+                if (inThread) open(null);
+                else cancelLiveRecipient();
+            });
+        } else {
+            header.setNavigationAction(R.drawable.ic_menu_hamburger, R.string.feature_menu_title, v -> {
+                if (requireActivity() instanceof MainActivity) ((MainActivity) requireActivity()).showFeatureMenu();
+            });
+        }
         newGroup.setText(choosingLiveRecipient ? "Cancel" : "New group");
         newGroup.setVisibility(!inThread && (choosingLiveRecipient || store.groupCandidates().size() >= 2)
                 ? View.VISIBLE : View.GONE);
         newGroup.setEnabled(choosingLiveRecipient || store.online());
+        header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE);
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
         bottom.setVisibility(inThread && thread != null && !thread.error ? View.VISIBLE : View.GONE);
-        title.setText(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
+        header.setTitle(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
         String currentStatus = store.status();
-        status.setText(!currentStatus.isEmpty() ? currentStatus
+        header.setDetail(!currentStatus.isEmpty() ? currentStatus
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
-        status.setTextColor(store.online() ? GREEN : MUTED);
         updateSend();
         int oldY = scroll.getScrollY();
         rows.removeAllViews();

@@ -15,7 +15,7 @@ import java.io.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Local square avatar editor. Nothing is uploaded until the caller accepts its result. */
+/** Local photo editor for profile avatars and chat attachments. */
 public final class ProfilePhotoCropActivity extends AppCompatActivity {
     public static final String EXTRA_CHAT_PHOTO = "chat_photo";
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -23,22 +23,30 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
     private MaterialButton save;
     private Uri source;
     private int turns;
+    private boolean chatPhoto;
+    private boolean mirrored;
+    private int cropFormat;
+    private static final String[] CROP_FORMATS = {"Original", "Square", "Landscape 4:3", "Portrait 3:4"};
     private boolean busy;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         source=getIntent().getData();
         if(source==null){finish();return;}
-        turns=state==null?0:state.getInt("turns");
+        chatPhoto = getIntent().getBooleanExtra(EXTRA_CHAT_PHOTO, false);
+        turns = state == null ? 0 : state.getInt("turns");
+        mirrored = state != null && state.getBoolean("mirrored");
+        cropFormat = state == null ? 0 : state.getInt("cropFormat");
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16),dp(16),dp(16),dp(16));
         root.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this,com.tridev.familyhub.R.color.fh_background));
-        TextView title=new TextView(this);title.setText(getIntent().getBooleanExtra(EXTRA_CHAT_PHOTO, false) ? "Crop chat photo" : "Crop profile photo");title.setTextSize(20);root.addView(title);
-        TextView hint=new TextView(this);hint.setText("Drag to position • Pinch to zoom • Rotate to adjust");root.addView(hint);
+        TextView title=new TextView(this);title.setText(chatPhoto ? "Edit chat photo" : "Crop profile photo");title.setTextSize(20);root.addView(title);
+        TextView hint=new TextView(this);hint.setText(chatPhoto ? "Choose a crop shape, then drag or pinch to frame your photo." : "Drag to position • Pinch to zoom • Rotate to adjust");root.addView(hint);
         crop=new CropView();root.addView(crop,new LinearLayout.LayoutParams(-1,0,1));
+        if (chatPhoto) addChatEditingActions(root);
         LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);
         MaterialButton cancel=button("Cancel");cancel.setOnClickListener(v->finish());actions.addView(cancel,new LinearLayout.LayoutParams(0,-2,1));
-        MaterialButton rotate=button("Rotate ↻");rotate.setOnClickListener(v->{if(!busy&&crop.photo!=null){turns=(turns+1)%4;crop.rotate();}});actions.addView(rotate,new LinearLayout.LayoutParams(0,-2,1));
-        save=button(getIntent().getBooleanExtra(EXTRA_CHAT_PHOTO, false) ? "Use photo" : "Save");save.setEnabled(false);save.setOnClickListener(v->saveCrop());actions.addView(save,new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);setContentView(root);
+        MaterialButton rotate=button("Rotate ↻");rotate.setOnClickListener(v->{if (!busy && crop.photo != null && crop.rotate()) turns = (turns + (mirrored ? 3 : 1)) % 4;});actions.addView(rotate,new LinearLayout.LayoutParams(0,-2,1));
+        save=button(chatPhoto ? "Use photo" : "Save");save.setEnabled(false);save.setOnClickListener(v->saveCrop());actions.addView(save,new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);setContentView(root);
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root,(view,insets)->{
             androidx.core.graphics.Insets safe=insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()|androidx.core.view.WindowInsetsCompat.Type.displayCutout());
             view.setPadding(dp(16)+safe.left,dp(16)+safe.top,dp(16)+safe.right,dp(16)+safe.bottom);return insets;
@@ -61,11 +69,41 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
                 }
             }catch(Exception|OutOfMemoryError ignored){}
             final Bitmap decoded=image;
-            runOnUiThread(()->{if(isFinishing()||isDestroyed())return;if(decoded==null){Toast.makeText(this,"Photo could not be opened",Toast.LENGTH_LONG).show();finish();return;}crop.photo=decoded;for(int i=0;i<turns;i++)crop.rotate();crop.reset();save.setEnabled(true);});
+            runOnUiThread(()->{if(isFinishing()||isDestroyed())return;if(decoded==null){Toast.makeText(this,"Photo could not be opened",Toast.LENGTH_LONG).show();finish();return;}crop.photo=decoded;for(int i=0;i<turns;i++)crop.rotate();if(mirrored)crop.flip();crop.updateFrame();save.setEnabled(true);});
         });
     }
+    private void addChatEditingActions(LinearLayout root) {
+        LinearLayout editing = new LinearLayout(this);
+        MaterialButton format = button("Crop: " + CROP_FORMATS[cropFormat]);
+        format.setOnClickListener(v -> {
+            if (busy || crop.photo == null) return;
+            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                    .setTitle("Crop shape")
+                    .setSingleChoiceItems(CROP_FORMATS, cropFormat, (dialog, selected) -> {
+                        cropFormat = selected;
+                        format.setText("Crop: " + CROP_FORMATS[selected]);
+                        crop.updateFrame();
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+        editing.addView(format, new LinearLayout.LayoutParams(0, -2, 2));
+        MaterialButton flip = button("Flip");
+        flip.setOnClickListener(v -> {
+            if (!busy && crop.photo != null && crop.flip()) mirrored = !mirrored;
+        });
+        editing.addView(flip, new LinearLayout.LayoutParams(0, -2, 1));
+        MaterialButton reset = button("Recenter");
+        reset.setOnClickListener(v -> {
+            if (!busy) crop.reset();
+        });
+        editing.addView(reset, new LinearLayout.LayoutParams(0, -2, 1));
+        root.addView(editing);
+    }
+
     private void saveCrop(){
-        if(busy||crop.photo==null)return;
+        if (busy || crop.photo == null || crop.frame.isEmpty()) return;
         busy=true;save.setEnabled(false);
         final Bitmap result=crop.render();
         worker.execute(()->{Uri output=null;try{
@@ -76,7 +114,12 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         }catch(Exception ignored){}finally{result.recycle();}
         final Uri uri=output;runOnUiThread(()->{if(isFinishing()||isDestroyed())return;busy=false;if(uri==null){save.setEnabled(true);Toast.makeText(this,"Photo could not be saved",Toast.LENGTH_LONG).show();return;}setResult(Activity.RESULT_OK,new Intent().setData(uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));finish();});});
     }
-    @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putInt("turns",turns);}
+    @Override protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putInt("turns", turns);
+        state.putBoolean("mirrored", mirrored);
+        state.putInt("cropFormat", cropFormat);
+    }
     @Override protected void onDestroy(){worker.shutdown();super.onDestroy();}
     private MaterialButton button(String text){MaterialButton b=new MaterialButton(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);return b;}
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
@@ -84,13 +127,98 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         Bitmap photo;float scale,minScale,x,y,lastX,lastY;final RectF frame=new RectF();final Paint paint=new Paint(3);
         final ScaleGestureDetector pinch=new ScaleGestureDetector(ProfilePhotoCropActivity.this,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
             @Override public boolean onScale(ScaleGestureDetector d){float old=scale;scale=Math.max(minScale,Math.min(minScale*8,scale*d.getScaleFactor()));float ratio=scale/old;x=d.getFocusX()+(x-d.getFocusX())*ratio;y=d.getFocusY()+(y-d.getFocusY())*ratio;clamp();invalidate();return true;}});
-        CropView(){super(ProfilePhotoCropActivity.this);setContentDescription("Square crop area. Drag photo and pinch to zoom.");}
-        @Override protected void onSizeChanged(int w,int h,int ow,int oh){float side=Math.max(1,Math.min(w,h)-dp(24));frame.set((w-side)/2,(h-side)/2,(w+side)/2,(h+side)/2);reset();}
+        CropView(){super(ProfilePhotoCropActivity.this);setContentDescription("Crop area. Drag photo and pinch to zoom.");}
+        @Override protected void onSizeChanged(int w, int h, int ow, int oh) {
+            updateFrame();
+        }
+
+        void updateFrame() {
+            float aspect = 1f;
+            if (chatPhoto) {
+                if (cropFormat == 0 && photo != null) aspect = (float) photo.getWidth() / photo.getHeight();
+                else if (cropFormat == 2) aspect = 4f / 3f;
+                else if (cropFormat == 3) aspect = 3f / 4f;
+            }
+            float width = Math.max(1, getWidth() - dp(24));
+            float height = Math.max(1, getHeight() - dp(24));
+            float frameWidth = Math.min(width, height * aspect);
+            float frameHeight = frameWidth / aspect;
+            float left = (getWidth() - frameWidth) / 2f;
+            float top = (getHeight() - frameHeight) / 2f;
+            frame.set(left, top, left + frameWidth, top + frameHeight);
+            reset();
+        }
+
         void reset(){if(photo==null||frame.width()==0)return;minScale=Math.max(frame.width()/photo.getWidth(),frame.height()/photo.getHeight());scale=minScale;x=frame.centerX()-photo.getWidth()*scale/2;y=frame.centerY()-photo.getHeight()*scale/2;invalidate();}
-        void rotate(){if(photo==null)return;Matrix m=new Matrix();m.setRotate(90);try{Bitmap old=photo;photo=Bitmap.createBitmap(old,0,0,old.getWidth(),old.getHeight(),m,true);if(old!=photo)old.recycle();reset();}catch(OutOfMemoryError error){Toast.makeText(ProfilePhotoCropActivity.this,"Photo could not be rotated",Toast.LENGTH_SHORT).show();}}
+
+        boolean rotate() {
+            Matrix matrix = new Matrix();
+            matrix.setRotate(90);
+            return transform(matrix);
+        }
+
+        boolean flip() {
+            Matrix matrix = new Matrix();
+            matrix.setScale(-1, 1);
+            return transform(matrix);
+        }
+
+        private boolean transform(Matrix matrix) {
+            Bitmap old = photo;
+            try {
+                photo = Bitmap.createBitmap(old, 0, 0, old.getWidth(), old.getHeight(), matrix, true);
+            } catch (OutOfMemoryError error) {
+                Toast.makeText(ProfilePhotoCropActivity.this, "Photo could not be edited", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+            if (photo != old) old.recycle();
+            updateFrame();
+            return true;
+        }
+
         void clamp(){if(photo==null)return;x=Math.min(frame.left,Math.max(frame.right-photo.getWidth()*scale,x));y=Math.min(frame.top,Math.max(frame.bottom-photo.getHeight()*scale,y));}
-        @Override protected void onDraw(Canvas c){super.onDraw(c);c.drawColor(Color.rgb(30,30,35));if(photo!=null)c.drawBitmap(photo,null,new RectF(x,y,x+photo.getWidth()*scale,y+photo.getHeight()*scale),paint);paint.setColor(0x99000000);c.drawRect(0,0,getWidth(),frame.top,paint);c.drawRect(0,frame.bottom,getWidth(),getHeight(),paint);c.drawRect(0,frame.top,frame.left,frame.bottom,paint);c.drawRect(frame.right,frame.top,getWidth(),frame.bottom,paint);paint.setColor(Color.WHITE);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(dp(2));c.drawRect(frame,paint);paint.setStyle(Paint.Style.FILL);}
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            canvas.drawColor(Color.rgb(30, 30, 35));
+            if (photo != null) {
+                canvas.drawBitmap(photo, null, new RectF(x, y, x + photo.getWidth() * scale,
+                        y + photo.getHeight() * scale), paint);
+            }
+            paint.setColor(0x99000000);
+            canvas.drawRect(0, 0, getWidth(), frame.top, paint);
+            canvas.drawRect(0, frame.bottom, getWidth(), getHeight(), paint);
+            canvas.drawRect(0, frame.top, frame.left, frame.bottom, paint);
+            canvas.drawRect(frame.right, frame.top, getWidth(), frame.bottom, paint);
+            if (chatPhoto && photo != null) {
+                paint.setColor(0x80ffffff);
+                paint.setStrokeWidth(dp(1));
+                for (int line = 1; line <= 2; line++) {
+                    float gridX = frame.left + frame.width() * line / 3;
+                    float gridY = frame.top + frame.height() * line / 3;
+                    canvas.drawLine(gridX, frame.top, gridX, frame.bottom, paint);
+                    canvas.drawLine(frame.left, gridY, frame.right, gridY, paint);
+                }
+            }
+            paint.setColor(Color.WHITE);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2));
+            canvas.drawRect(frame, paint);
+            paint.setStyle(Paint.Style.FILL);
+        }
+
         @Override public boolean onTouchEvent(MotionEvent e){if(photo==null||busy)return true;pinch.onTouchEvent(e);if(e.getActionMasked()==MotionEvent.ACTION_DOWN){lastX=e.getX();lastY=e.getY();}else if(e.getActionMasked()==MotionEvent.ACTION_MOVE){if(!pinch.isInProgress()&&e.getPointerCount()==1){x+=e.getX()-lastX;y+=e.getY()-lastY;clamp();invalidate();}lastX=e.getX();lastY=e.getY();}else if(e.getActionMasked()==MotionEvent.ACTION_POINTER_UP){int remaining=e.getActionIndex()==0?1:0;lastX=e.getX(remaining);lastY=e.getY(remaining);}return true;}
-        Bitmap render(){Bitmap result=Bitmap.createBitmap(640,640,Bitmap.Config.ARGB_8888);Canvas c=new Canvas(result);float ratio=640/frame.width();c.translate(-frame.left*ratio,-frame.top*ratio);c.scale(ratio,ratio);c.drawBitmap(photo,null,new RectF(x,y,x+photo.getWidth()*scale,y+photo.getHeight()*scale),paint);return result;}
+        Bitmap render() {
+            int longestEdge = chatPhoto ? 960 : 640;
+            float ratio = longestEdge / Math.max(frame.width(), frame.height());
+            int width = Math.max(1, Math.round(frame.width() * ratio));
+            int height = Math.max(1, Math.round(frame.height() * ratio));
+            Bitmap result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(result);
+            canvas.scale(width / frame.width(), height / frame.height());
+            canvas.translate(-frame.left, -frame.top);
+            canvas.drawBitmap(photo, null, new RectF(x, y, x + photo.getWidth() * scale,
+                    y + photo.getHeight() * scale), paint);
+            return result;
+        }
     }
 }

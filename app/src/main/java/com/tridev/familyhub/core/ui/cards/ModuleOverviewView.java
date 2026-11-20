@@ -185,7 +185,18 @@ public final class ModuleOverviewView extends FrameLayout {
         titleView.setTextColor(accent);
     }
 
-    /** Optional search action; hidden on other module headers. */
+    public void setTitle(@NonNull CharSequence title) { titleView.setText(title); }
+
+    public void addHeaderAction(@NonNull View action) {
+        android.view.ViewGroup row = (android.view.ViewGroup) notificationButton.getParent();
+        row.addView(action);
+    }
+
+    public void showDashboardActions(boolean show) {
+        notificationButton.setVisibility(show ? View.VISIBLE : View.GONE);
+        profileButton.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
     public void setDetail(@NonNull String detail) { detailView.setText(detail); }
 
     public void setSearchAction(@NonNull View.OnClickListener listener) {
