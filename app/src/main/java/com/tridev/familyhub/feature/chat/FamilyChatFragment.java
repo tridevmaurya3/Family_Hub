@@ -52,6 +52,9 @@ public final class FamilyChatFragment extends Fragment {
     private TextView replyText;
     private MaterialButton toolsButton;
     private MaterialButton pinBanner;
+    private com.tridev.familyhub.data.repository.FamilyTaskRepository taskRepository;
+    private final java.util.Map<String, com.tridev.familyhub.data.local.entity.FamilyTask> linkedTasks =
+            new java.util.HashMap<>();
     private final ChatGroupScreens groupScreens = new ChatGroupScreens(this, store, this::open);
     private final Runnable observer = this::render;
     private final FamilyAvatarStore.Listener avatarObserver = this::render;
@@ -276,6 +279,12 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onStart() {
         super.onStart();
         store.observe(observer);
+        taskRepository = new com.tridev.familyhub.data.repository.FamilyTaskRepository(requireContext());
+        taskRepository.startRealtimeSync(new com.tridev.familyhub.data.repository.FamilyTaskRepository.RealtimeCallback() {
+            @Override public void onChanged(@NonNull com.tridev.familyhub.data.local.entity.FamilyTask task) { loadLinkedTasks(); }
+            @Override public void onRemoved(long id) { loadLinkedTasks(); }
+        });
+        loadLinkedTasks();
         avatars().addListener(avatarObserver);
         render();
     }
@@ -287,6 +296,9 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onStop() {
         store.removeObserver(observer);
+        if (taskRepository != null) taskRepository.stopRealtimeSync();
+        taskRepository = null;
+        linkedTasks.clear();
         avatars().removeListener(avatarObserver);
         attachments.stopPreviews();
         voiceNotes.stop();
@@ -428,7 +440,7 @@ public final class FamilyChatFragment extends Fragment {
         pinBanner.setText("Pinned messages");
         if (chatReady) for (int i = thread.messages.size() - 1; i >= 0; i--) {
             FamilyChatStore.Message pinned = thread.messages.get(i);
-            if (!pinned.pinned()) continue;
+            if (!pinned.pinned() || pinned.deleted()) continue;
             pinBanner.setText("Pinned · " + pinned.body);
             break;
         }
@@ -550,6 +562,38 @@ public final class FamilyChatFragment extends Fragment {
         addLine(row);
     }
 
+    private void loadLinkedTasks() {
+        if (taskRepository == null) return;
+        com.tridev.familyhub.data.repository.FamilyTaskRepository source = taskRepository;
+        String uid = store.accountId();
+        source.loadAll("", tasks -> {
+            if (taskRepository != source || screen == null || !java.util.Objects.equals(uid, store.accountId())) return;
+            linkedTasks.clear();
+            for (com.tridev.familyhub.data.local.entity.FamilyTask task : tasks) {
+                if (!"CHAT_MESSAGE".equals(task.sourceType) || task.sourceRecordId.isEmpty()) continue;
+                com.tridev.familyhub.data.local.entity.FamilyTask known = linkedTasks.get(task.sourceRecordId);
+                if (known == null || task.createdAt > known.createdAt) linkedTasks.put(task.sourceRecordId, task);
+            }
+            render();
+        });
+    }
+
+    static String taskKey(FamilyChatStore.Message message) {
+        return java.util.UUID.nameUUIDFromBytes(message.snapshot.getRef().toString()
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+    }
+
+    com.tridev.familyhub.data.local.entity.FamilyTask linkedTask(FamilyChatStore.Message message) {
+        return linkedTasks.get(taskKey(message));
+    }
+
+    void openLinkedTask(com.tridev.familyhub.data.local.entity.FamilyTask task) {
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).openFeature(
+                    com.tridev.familyhub.feature.tasks.FamilyTasksFragment.forLinkedTask(task.cloudId));
+        }
+    }
+
     private void renderThread(FamilyChatStore.ThreadState thread, int oldY) {
         String latestKey = thread.messages.isEmpty() ? null
                 : thread.messages.get(thread.messages.size() - 1).snapshot.getKey();
@@ -593,7 +637,7 @@ public final class FamilyChatFragment extends Fragment {
                 messageText.setTextIsSelectable(true);
                 bubble.addView(messageText);
             }
-            if (store.accountId() != null && message.snapshot.child("mentions").child(store.accountId()).exists()) {
+            if (!message.deleted() && store.accountId() != null && message.snapshot.child("mentions").child(store.accountId()).exists()) {
                 bubble.addView(text("Mentioned you", 12, BLUE, true));
             }
             java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
@@ -601,14 +645,25 @@ public final class FamilyChatFragment extends Fragment {
                 String emoji = reaction.getValue(String.class);
                 if (emoji != null) counts.put(emoji, counts.getOrDefault(emoji, 0) + 1);
             }
-            if (!counts.isEmpty()) {
+            if (!message.deleted() && !counts.isEmpty()) {
                 List<String> summary = new ArrayList<>();
                 counts.forEach((emoji, count) -> summary.add(emoji + " " + count));
                 bubble.addView(text(String.join("  ", summary), 13, MUTED, false));
             }
+            com.tridev.familyhub.data.local.entity.FamilyTask task = linkedTask(message);
+            if (task != null && !message.deleted()) {
+                boolean done = com.tridev.familyhub.data.local.entity.FamilyTask.STATUS_COMPLETED.equals(task.status);
+                String status = done ? "Done" : task.dueAt > 0 && task.dueAt < System.currentTimeMillis()
+                        ? "Overdue" : "Pending";
+                MaterialButton taskLink = flatButton("To-Do · " + status);
+                taskLink.setOnClickListener(view -> openLinkedTask(task));
+                bubble.addView(taskLink);
+            }
             LinearLayout metadata = new LinearLayout(requireContext());
             metadata.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-            metadata.addView(text(message.pinned() ? "Pinned · " + dateTime(message.at) : dateTime(message.at), 11, MUTED, false));
+            String badge = message.edited() ? "Edited · " : "";
+            if (message.pinned() && !message.deleted()) badge = "Pinned · " + badge;
+            metadata.addView(text(badge + dateTime(message.at), 11, MUTED, false));
             TextView menu = text("  ⋮", 17, BLUE, true);
             menu.setContentDescription("Message actions");
             menu.setPadding(dp(4), dp(8), dp(4), dp(8));

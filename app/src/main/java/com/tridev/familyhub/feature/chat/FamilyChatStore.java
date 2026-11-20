@@ -231,6 +231,14 @@ public final class FamilyChatStore {
         threads.put(peer, thread);
         if (thread.members != null) {
             DatabaseReference room = thread.ref.getParent();
+            thread.titleListener = listen(room.child("title"), snapshot -> {
+                if (threads.get(peer) != thread) return;
+                String title = snapshot.getValue(String.class);
+                if (title != null && !title.equals(thread.roomTitle)) {
+                    thread.roomTitle = title;
+                    notifyObservers();
+                }
+            }, error -> {});
             room.child("creator").get().addOnSuccessListener(snapshot -> {
                 if (threads.get(peer) != thread) return;
                 thread.creator = snapshot.getValue(String.class);
@@ -315,7 +323,7 @@ public final class FamilyChatStore {
             List<Message> messages = new ArrayList<>();
             for (DataSnapshot snapshot : task.getResult().getChildren()) {
                 Message message = parseMessage(snapshot);
-                if (message != null) messages.add(0, message);
+                if (message != null && !message.deleted()) messages.add(0, message);
             }
             callback.accept(messages);
         });
@@ -355,6 +363,27 @@ public final class FamilyChatStore {
 
     boolean canEditGroupPhoto(ThreadState thread) {
         return canUse(thread) && thread.members != null && uid.equals(thread.creator);
+    }
+
+    void renameGroup(ThreadState thread, String title, Consumer<Boolean> complete) {
+        if (!canEditGroupPhoto(thread)) {
+            complete.accept(false);
+            return;
+        }
+        thread.ref.getParent().child("title").setValue(title)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
+    }
+
+    void editText(ThreadState thread, Message message, String body, boolean delete, Consumer<Boolean> complete) {
+        if (!canUse(thread) || !own(message) || !"text".equals(message.kind()) || message.deleted()) {
+            complete.accept(false);
+            return;
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("body", delete ? "Message deleted" : body);
+        updates.put(delete ? "deletedAt" : "editedAt", ServerValue.TIMESTAMP);
+        message.snapshot.getRef().updateChildren(updates)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
     }
 
     void setGroupPhoto(ThreadState thread, String photo, Consumer<Boolean> complete) {
@@ -473,6 +502,7 @@ public final class FamilyChatStore {
         if (thread == null) return;
         thread.query.removeEventListener(thread.listener);
         if (thread.photoListener != null) thread.ref.getParent().child("photo").removeEventListener(thread.photoListener);
+        if (thread.titleListener != null) thread.ref.getParent().child("title").removeEventListener(thread.titleListener);
     }
 
     void observe(Runnable listener) { observers.add(listener); }
@@ -523,7 +553,8 @@ public final class FamilyChatStore {
         String creator;
         android.graphics.Bitmap photo;
         boolean error;
-        final String roomTitle;
+        String roomTitle;
+        ValueEventListener titleListener;
         final List<String> members;
         ThreadState(String peer, DatabaseReference ref, DatabaseReference files, String roomTitle, List<String> members) {
             this.roomTitle = roomTitle;
@@ -550,6 +581,17 @@ public final class FamilyChatStore {
             this.body = body;
             this.at = at;
         }
+        boolean deleted() { return snapshot.hasChild("deletedAt"); }
+
+        boolean edited() { return !deleted() && snapshot.hasChild("editedAt"); }
+
+        Long pollDeadline() { return snapshot.child("closesAt").getValue(Long.class); }
+
+        boolean pollClosed() {
+            Long deadline = pollDeadline();
+            return deadline != null && deadline <= System.currentTimeMillis();
+        }
+
         boolean pinned() { return Boolean.TRUE.equals(snapshot.child("pinned").getValue(Boolean.class)); }
 
         String kind() {

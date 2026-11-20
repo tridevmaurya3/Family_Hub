@@ -393,3 +393,28 @@ test('chat tools validate replies, mentions, reaction ownership and pins', async
   assert.equal((await b.root.child('familyChat/familyA/' + audioPath).get()).val(), 'UklGRg==');
   await assertFails(outsiderRef.root.child('familyChat/familyA/' + audioPath).get());
 });
+
+test('chat edits, deletion, deadlines and group names enforce ownership', async () => {
+  const path = `familyChat/familyA/direct/${writer}/${reader}`;
+  const a = env.authenticatedContext(writer).database().ref(path);
+  const b = env.authenticatedContext(reader).database().ref(path);
+  const stamp = { '.sv': 'timestamp' };
+  await assertSucceeds(a.child('editable').set({ sender: writer, body: 'Before', at: stamp }));
+  await assertFails(b.child('editable').update({ body: 'Forged', editedAt: stamp }));
+  await assertFails(a.child('editable/body').set('No audit marker'));
+  await assertSucceeds(a.child('editable').update({ body: 'After', editedAt: stamp }));
+  assert.equal((await b.child('editable/body').get()).val(), 'After');
+  await assertSucceeds(a.child('editable').update({ body: 'Message deleted', deletedAt: stamp }));
+  await assertFails(a.child('editable').update({ body: 'Restore', editedAt: stamp }));
+  const poll = { sender: writer, body: 'Dinner?', at: stamp, kind: 'poll', options: { 0: 'Yes', 1: 'No' } };
+  await assertFails(a.child('expired-on-send').set({ ...poll, closesAt: 1 }));
+  await assertSucceeds(a.child('open-until').set({ ...poll, closesAt: Date.now() + 60000 }));
+  await assertSucceeds(b.child(`open-until/votes/${reader}`).set('0'));
+  await env.withSecurityRulesDisabled(context => context.database().ref(path + '/open-until/closesAt').set(1));
+  await assertFails(b.child(`open-until/votes/${reader}`).set('1'));
+  const family = a.root.child('familyChat/familyA');
+  await assertSucceeds(family.child('rooms/rename-test').set({ title: 'Old', creator: writer, members: { [writer]: true, [reader]: true } }));
+  await assertFails(b.root.child('familyChat/familyA/rooms/rename-test/title').set('Forged'));
+  await assertSucceeds(family.child('rooms/rename-test/title').set('New'));
+  assert.equal((await b.root.child('familyChat/familyA/rooms/rename-test/title').get()).val(), 'New');
+});

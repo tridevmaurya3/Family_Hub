@@ -175,6 +175,7 @@ final class ChatGroupScreens {
         List<String> members = store.groupMembers(thread);
         Page page = page("Group info", thread.members == null ? "Family group" : "Private group", this::dismiss);
         LinearLayout hero = hero(page, store.title(thread), thread.photo, store.title(thread));
+        if (store.canEditGroupPhoto(thread)) hero.addView(button("Rename group", false, () -> renameGroup(thread)));
         if (store.canEditGroupPhoto(thread)) hero.addView(button("Change group photo", false, () ->
                 choosePhoto(photo -> store.setGroupPhoto(thread, photo, saved -> {
                     if (closed || active != page.dialog) return;
@@ -188,6 +189,34 @@ final class ChatGroupScreens {
                     () -> showMember(uid, () -> showGroup(thread))));
         }
         page.show();
+    }
+
+    private void renameGroup(FamilyChatStore.ThreadState thread) {
+        EditText input = field("Group name");
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(60)});
+        input.setText(store.title(thread));
+        LinearLayout content = column();
+        content.setPadding(dp(16), 0, dp(16), 0);
+        content.addView(input);
+        androidx.appcompat.app.AlertDialog dialog =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+                        .setTitle("Rename group").setView(content).setNegativeButton("Cancel", null)
+                        .setPositiveButton("Save", null).show();
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            String title = input.getText().toString().trim();
+            if (title.isEmpty()) { input.setError("Enter a group name"); return; }
+            view.setEnabled(false);
+            store.renameGroup(thread, title, ok -> {
+                if (closed || !dialog.isShowing()) return;
+                if (ok) {
+                    dialog.dismiss();
+                    showGroup(thread);
+                } else {
+                    view.setEnabled(true);
+                    toast("Unable to rename group");
+                }
+            });
+        });
     }
 
     void showMember(String uid, Runnable back) {

@@ -86,7 +86,9 @@ final class ChatAttachmentCards {
                 }
                 break;
             case "poll":
-                card.addView(label("Poll", false));
+                Long deadline = message.pollDeadline();
+                card.addView(label(deadline == null ? "Poll" : message.pollClosed()
+                        ? "Voting closed" : "Closes · " + attachments.pollDate(deadline), false));
                 card.addView(label(message.body, true));
                 String selected = attachments.selectedVote(message);
                 for (DataSnapshot option : message.snapshot.child("options").getChildren()) {
@@ -102,6 +104,7 @@ final class ChatAttachmentCards {
                 }
                 LinearLayout actions = new LinearLayout(context);
                 MaterialButton vote = action("Vote", open);
+                vote.setVisibility(message.pollClosed() ? View.GONE : View.VISIBLE);
                 if (selected != null) vote.setContentDescription("Change vote");
                 MaterialButton results = action("Results", () -> attachments.showPollResults(message));
                 for (MaterialButton button : new MaterialButton[]{vote, results}) {

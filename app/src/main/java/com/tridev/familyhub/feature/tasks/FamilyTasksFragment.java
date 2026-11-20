@@ -116,10 +116,25 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     @NonNull
     public static FamilyTasksFragment forNewTask(@NonNull String title) {
+        return forChatMessage(title, "");
+    }
+
+    @NonNull
+    public static FamilyTasksFragment forChatMessage(@NonNull String title, @NonNull String sourceKey) {
         FamilyTasksFragment fragment = new FamilyTasksFragment();
         Bundle args = new Bundle();
         args.putBoolean(ARG_OPEN_NEW_TASK, true);
         args.putString("new_task_title", title);
+        args.putString("chat_task_source", sourceKey);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    @NonNull
+    public static FamilyTasksFragment forLinkedTask(@NonNull String cloudId) {
+        FamilyTasksFragment fragment = new FamilyTasksFragment();
+        Bundle args = new Bundle();
+        args.putString("chat_task_target", cloudId);
         fragment.setArguments(args);
         return fragment;
     }
@@ -222,8 +237,24 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
             args.remove(ARG_OPEN_NEW_TASK);
             String title = args.getString("new_task_title", "");
             args.remove("new_task_title");
+            String source = args.getString("chat_task_source", "");
+            args.remove("chat_task_source");
             view.post(() -> {
-                if (binding != null) prepareEditor(null, title);
+                if (binding != null) prepareEditor(null, title, source);
+            });
+        }
+        String target = args == null ? null : args.getString("chat_task_target");
+        if (target != null) {
+            args.remove("chat_task_target");
+            repository.loadAll("", tasks -> {
+                if (binding == null) return;
+                for (FamilyTask task : tasks) {
+                    if (target.equals(task.cloudId)) {
+                        prepareEditor(task);
+                        return;
+                    }
+                }
+                android.widget.Toast.makeText(requireContext(), "Linked task unavailable", android.widget.Toast.LENGTH_SHORT).show();
             });
         }
     }
@@ -907,19 +938,23 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private void prepareEditor(@Nullable FamilyTask existing) {
-        prepareEditor(existing, "");
+        prepareEditor(existing, "", "");
     }
 
-    private void prepareEditor(@Nullable FamilyTask existing, @NonNull String draftTitle) {
+    private void prepareEditor(@Nullable FamilyTask existing, @NonNull String draftTitle, @NonNull String source) {
         memberRepository.loadMembers("", members -> {
-            if (binding != null) showEditor(existing, members, draftTitle);
+            if (binding != null) showEditor(existing, members, draftTitle, source);
         });
     }
 
-    private void showEditor(@Nullable FamilyTask existing, @NonNull List<FamilyMember> members, @NonNull String draftTitle) {
+    private void showEditor(@Nullable FamilyTask existing, @NonNull List<FamilyMember> members, @NonNull String draftTitle, @NonNull String source) {
         DialogFamilyTaskBinding form = DialogFamilyTaskBinding.inflate(getLayoutInflater());
         com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         FamilyTask task = existing == null ? new FamilyTask() : existing;
+        if (existing == null && !source.isEmpty()) {
+            task.sourceType = "CHAT_MESSAGE";
+            task.sourceRecordId = source;
+        }
         long originalDueAt = task.dueAt;
         if (existing == null) task.reminderMinutesBefore = 15;
         long[] dueAt = {task.dueAt > 0 ? task.dueAt : defaultDueTime()};

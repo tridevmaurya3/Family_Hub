@@ -330,6 +330,25 @@ final class ChatAttachments {
             choices.add(choice);
             form.addView(choice);
         }
+        long[] closesAt = {0L};
+        MaterialButton deadline = new MaterialButton(fragment.requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        deadline.setText("Set voting deadline");
+        deadline.setAllCaps(false);
+        deadline.setOnClickListener(view -> pickPollDeadline(value -> {
+            closesAt[0] = value;
+            deadline.setText("Closes · " + pollDate(value));
+        }));
+        form.addView(deadline);
+        MaterialButton clearDeadline = new MaterialButton(fragment.requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        clearDeadline.setText("No deadline");
+        clearDeadline.setAllCaps(false);
+        clearDeadline.setOnClickListener(view -> {
+            closesAt[0] = 0L;
+            deadline.setText("Set voting deadline");
+        });
+        form.addView(clearDeadline);
         android.widget.ScrollView scroll = new android.widget.ScrollView(fragment.requireContext());
         scroll.addView(form);
         androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(fragment.requireContext())
@@ -353,9 +372,41 @@ final class ChatAttachments {
             Map<String, Object> details = new HashMap<>();
             details.put("kind", "poll");
             details.put("options", options);
+            if (closesAt[0] != 0L) {
+                if (closesAt[0] <= System.currentTimeMillis()) {
+                    notice("Choose a deadline in the future");
+                    return;
+                }
+                details.put("closesAt", closesAt[0]);
+            }
             dialog.dismiss();
             store.send(thread, label, details, null, () -> notice("Unable to send poll"));
         });
+    }
+
+    private void pickPollDeadline(java.util.function.LongConsumer selected) {
+        Context context = fragment.requireContext();
+        java.util.Calendar day = java.util.Calendar.getInstance();
+        day.add(java.util.Calendar.HOUR_OF_DAY, 1);
+        android.app.DatePickerDialog date = new android.app.DatePickerDialog(context, (picker, year, month, dateOfMonth) -> {
+            new android.app.TimePickerDialog(context, (time, hour, minute) -> {
+                day.clear();
+                day.set(year, month, dateOfMonth, hour, minute);
+                long value = day.getTimeInMillis();
+                if (value <= System.currentTimeMillis()) notice("Choose a deadline in the future");
+                else selected.accept(value);
+            }, day.get(java.util.Calendar.HOUR_OF_DAY), day.get(java.util.Calendar.MINUTE),
+                    android.text.format.DateFormat.is24HourFormat(context)).show();
+        }, day.get(java.util.Calendar.YEAR), day.get(java.util.Calendar.MONTH), day.get(java.util.Calendar.DAY_OF_MONTH));
+        date.getDatePicker().setMinDate(System.currentTimeMillis());
+        date.show();
+    }
+
+    String pollDate(long millis) {
+        Context context = fragment.requireContext();
+        java.util.Date date = new java.util.Date(millis);
+        return android.text.format.DateFormat.getDateFormat(context).format(date) + " "
+                + android.text.format.DateFormat.getTimeFormat(context).format(date);
     }
 
     private static String limit(String value, String fallback, int length) {
@@ -575,6 +626,7 @@ final class ChatAttachments {
     }
 
     private void showPoll(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (message.pollClosed()) { showPollResults(message); return; }
         java.util.List<String> ids = new java.util.ArrayList<>();
         java.util.List<String> labels = new java.util.ArrayList<>();
         for (com.google.firebase.database.DataSnapshot option : message.snapshot.child("options").getChildren()) {
@@ -587,6 +639,7 @@ final class ChatAttachments {
                 .setSingleChoiceItems(labels.toArray(new String[0]), selected[0], (d, which) -> selected[0] = which)
                 .setNegativeButton("Close", null)
                 .setPositiveButton("Vote", (d, w) -> {
+                    if (message.pollClosed()) { notice("Voting has closed"); return; }
                     if (selected[0] >= 0) store.vote(thread, message, ids.get(selected[0]),
                             () -> notice("Unable to save vote"));
                 }).show();
