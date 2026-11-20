@@ -31,6 +31,7 @@ import androidx.core.content.FileProvider;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.tridev.familyhub.R;
+import com.tridev.familyhub.data.repository.FamilyMemberRepository;
 import com.tridev.familyhub.feature.familylive.FamilyMemberDetailActivity;
 import com.tridev.familyhub.feature.profile.AccountProfileSync;
 import com.tridev.familyhub.feature.profile.FamilyAvatarStore;
@@ -198,12 +199,39 @@ final class ChatGroupScreens {
         page.content.addView(memberRow(uid, "Family profile", "View available profile details", () ->
                 fragment.startActivity(own ? new Intent(context(), ProfileSettingsActivity.class)
                         : FamilyMemberDetailActivity.createIntent(context(), uid))));
+        LinearLayout details = column();
+        page.content.addView(details);
+        FamilyMemberRepository profiles = new FamilyMemberRepository(context());
+        profiles.loadMembers("", members -> {
+            if (closed || active != page.dialog
+                    || (!own && !store.groupCandidates().containsKey(uid))
+                    || (own && !uid.equals(store.accountId()))) return;
+            for (com.tridev.familyhub.data.local.entity.FamilyMember member : members) {
+                if (!uid.equals(member.cloudUid)) continue;
+                addProfileField(details, "Relationship", member.relation);
+                addProfileField(details, "Phone", member.phone);
+                addProfileField(details, "Email", member.email);
+                break;
+            }
+        });
         if (!own) page.footer.addView(button("Open chat", true, () -> {
             if (store.thread(uid) == null) return;
             dismiss();
             openThread.accept(uid);
         }));
         page.show();
+    }
+
+    private void addProfileField(LinearLayout details, String title, String value) {
+        if (value.isEmpty()) return;
+        LinearLayout field = column();
+        field.setPadding(dp(12), dp(8), dp(12), dp(8));
+        field.setBackground(background(R.color.fh_surface, 12));
+        field.addView(label(title, 12, R.color.fh_text_secondary, false));
+        field.addView(label(value, 15, R.color.fh_on_surface, true));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.bottomMargin = dp(8);
+        details.addView(field, params);
     }
 
     private void choosePhoto(Consumer<String> result) {
