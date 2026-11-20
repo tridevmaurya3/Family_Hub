@@ -572,10 +572,52 @@ final class ChatAttachments {
         fragment.startActivity(FamilyMapActivity.createLocationIntent(fragment.requireContext(), latitude, longitude));
     }
 
+    boolean announcementAuthor(FamilyChatStore.Message message) { return store.own(message); }
+
+    boolean acknowledged(FamilyChatStore.Message message) {
+        String uid = store.accountId();
+        return uid != null && message.snapshot.child("acks").child(uid).exists();
+    }
+
+    void acknowledge(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        store.acknowledgeAnnouncement(thread, message, ok -> { if (!ok) notice("Unable to acknowledge"); });
+    }
+
+    void toggleChecklist(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, String item) {
+        boolean checked = message.snapshot.child("checks").child(item).exists();
+        store.setChecklistItem(thread, message, item, !checked, ok -> { if (!ok) notice("Unable to update checklist"); });
+    }
+
+    void announcementResponses(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        store.loadMessage(thread, message.snapshot.getKey(), latest -> {
+            if (latest == null || !visible()) return;
+            java.util.List<String> yes = new java.util.ArrayList<>();
+            java.util.List<String> no = new java.util.ArrayList<>();
+            for (String uid : store.participants(thread)) {
+                if (uid == null || uid.equals(latest.sender)) continue;
+                (latest.snapshot.child("acks").child(uid).exists() ? yes : no).add(store.name(uid));
+            }
+            new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Acknowledgments")
+                    .setMessage("Got it · " + yes.size() + "\n" + String.join(", ", yes)
+                            + "\n\nWaiting · " + no.size() + "\n" + String.join(", ", no))
+                    .setPositiveButton("Done", null).show();
+        });
+    }
+
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         if (!store.canUse(thread)) return;
         String kind = message.snapshot.child("kind").getValue(String.class);
-        if ("voice".equals(kind)) {
+        if ("announcement".equals(kind)) {
+            announcementResponses(thread, message);
+        } else if ("checklist".equals(kind)) {
+            StringBuilder text = new StringBuilder();
+            for (com.google.firebase.database.DataSnapshot item : message.snapshot.child("entries").getChildren()) {
+                text.append(message.snapshot.child("checks").child(item.getKey()).exists() ? "✓  " : "○  ")
+                        .append(item.getValue(String.class)).append('\n');
+            }
+            new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle(message.body)
+                    .setMessage(text).setPositiveButton("Done", null).show();
+        } else if ("voice".equals(kind)) {
             voiceNotes.open(thread, message);
         } else if ("live".equals(kind)) {
             fragment.startActivity(FamilyMapActivity.createIntent(fragment.requireContext(), message.sender));

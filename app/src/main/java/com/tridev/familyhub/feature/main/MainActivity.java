@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String EXTRA_OPEN_DOCUMENTS_VAULT =
             "open_documents_vault";
     private static final String EXTRA_OPEN_HEALTH = "open_health";
+    public static final String EXTRA_CHAT_CONVERSATION = "family_chat_conversation";
     public static final String EXTRA_OPEN_CHAT = "open_family_chat";
     public static final String EXTRA_SHARE_LIVE_IN_CHAT = "share_live_in_chat";
     public static final String EXTRA_OPEN_GROCERY = "open_grocery";
@@ -254,7 +255,15 @@ public class MainActivity extends AppCompatActivity {
                     intent.getStringExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID))) return false;
         if (intent.getBooleanExtra(EXTRA_OPEN_CHAT, false)) {
             intent.removeExtra(EXTRA_OPEN_CHAT);
-            openTab(R.id.nav_chat);
+            String conversation = intent.getStringExtra(EXTRA_CHAT_CONVERSATION);
+            intent.removeExtra(EXTRA_CHAT_CONVERSATION);
+            if (conversation == null) openTab(R.id.nav_chat);
+            else {
+                clearSecondaryScreens();
+                binding.bottomNavigation.setSelectedItemId(R.id.nav_chat);
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.main_content, FamilyChatFragment.forNotification(conversation)).commit();
+            }
             return true;
         }
         if (intent.getBooleanExtra(EXTRA_SHARE_LIVE_IN_CHAT, false)) {

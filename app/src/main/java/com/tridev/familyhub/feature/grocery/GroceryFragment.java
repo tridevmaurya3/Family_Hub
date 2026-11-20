@@ -136,6 +136,12 @@ public class GroceryFragment extends Fragment implements AddActionHost {
             @Nullable Bundle savedInstanceState
     ) {
         super.onViewCreated(view, savedInstanceState);
+        Bundle args = getArguments();
+        String draft = args == null ? null : args.getString("chat_grocery_name");
+        if (draft != null) {
+            args.remove("chat_grocery_name");
+            view.post(() -> { if (binding != null) showEditor(null, false, draft); });
+        }
         repository = new GroceryRepository(requireContext());
         memberRepository = new FamilyMemberRepository(requireContext());
         adapter = new GroceryAdapter(
@@ -798,8 +804,20 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         showEditor(existing, false);
     }
 
+    public static GroceryFragment forChatMessage(String message) {
+        GroceryFragment fragment = new GroceryFragment();
+        Bundle args = new Bundle();
+        args.putString("chat_grocery_name", message);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    private void showEditor(@Nullable GroceryItem existing, boolean completeAfterSave) {
+        showEditor(existing, completeAfterSave, "");
+    }
+
     private void showEditor(@Nullable GroceryItem existing,
-                            boolean completeAfterSave) {
+                            boolean completeAfterSave, String draftName) {
         DialogGroceryBinding form =
                 DialogGroceryBinding.inflate(getLayoutInflater());
         com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
@@ -911,6 +929,7 @@ public class GroceryFragment extends Fragment implements AddActionHost {
         });
 
         if (existing == null) {
+            form.groceryNameInput.setText(draftName);
             form.groceryCategoryInput.setText(categoryLabels[0], false);
             form.groceryPriorityInput.setText(priorityLabels[0], false);
             form.groceryListTypeInput.setText(listTypeLabels[0], false);

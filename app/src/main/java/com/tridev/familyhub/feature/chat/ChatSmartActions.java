@@ -38,6 +38,7 @@ final class ChatSmartActions {
     }
 
     void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (!ready(thread) || message.deleted()) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         if (message.deleted()) return;
@@ -46,14 +47,7 @@ final class ChatSmartActions {
         addAction(labels, actions, message.pinned() ? "Unpin" : "Pin for this chat", () ->
                 store.pin(thread, message, ok -> toast(ok ? (message.pinned() ? "Message unpinned" : "Message pinned")
                         : "Unable to change pin")));
-        String key = message.snapshot.getKey();
-        boolean saved = savedMessages(thread).contains(key);
-        addAction(labels, actions, saved ? "Remove from saved" : "Save for me", () -> {
-            java.util.Set<String> keys = savedMessages(thread);
-            if (!keys.remove(key)) keys.add(key);
-            savedPreferences().edit().putStringSet(savedKey(thread), keys).apply();
-            toast(saved ? "Removed from saved messages" : "Saved on this device");
-        });
+        addAction(labels, actions, "Save for me", () -> chooseSavedAction(thread, message));
         if ("text".equals(message.kind())) {
             if (store.own(message)) {
                 addAction(labels, actions, "Edit message", () -> editMessage(thread, message));
@@ -64,6 +58,11 @@ final class ChatSmartActions {
                         .setPositiveButton("Delete", (dialog, which) -> store.editText(thread, message, "", true,
                                 ok -> { if (!ok) toast("Unable to delete message"); })).show());
             }
+            addAction(labels, actions, "Save to Family Notes", () ->
+                    openFeature(com.tridev.familyhub.feature.notes.NotesFragment.forChatMessage(message.body)));
+            addAction(labels, actions, "Add to Grocery List", () ->
+                    openFeature(com.tridev.familyhub.feature.grocery.GroceryFragment.forChatMessage(
+                            message.body.substring(0, Math.min(message.body.length(), 160)))));
             addAction(labels, actions, "Create reminder", () -> openFeature(RemindersFragment.forChatMessage(message.body)));
             com.tridev.familyhub.data.local.entity.FamilyTask task = fragment.linkedTask(message);
             if (task == null) addAction(labels, actions, "Add to Family To-Do", () ->
@@ -81,6 +80,9 @@ final class ChatSmartActions {
         List<Runnable> actions = new ArrayList<>();
         addAction(labels, actions, "Search messages", () -> search(thread, false));
         addAction(labels, actions, "Pinned messages", () -> pinned(thread));
+        addAction(labels, actions, "Post announcement", () -> newSharedMessage(thread, false));
+        addAction(labels, actions, "Create checklist", () -> newSharedMessage(thread, true));
+        addAction(labels, actions, "Share calendar event", () -> shareEvent(thread));
         addAction(labels, actions, "Notifications", () -> notifications(thread));
         addAction(labels, actions, "Schedule a message", () -> editSchedule(thread, null));
         addAction(labels, actions, "Scheduled messages", () -> showSchedule(thread));
@@ -89,6 +91,74 @@ final class ChatSmartActions {
         addAction(labels, actions, "Catch up on unread", () -> catchUp(thread));
         addAction(labels, actions, "@Mention a member", () -> mentions(thread));
         choose("Chat tools", labels, actions);
+    }
+
+    private void shareEvent(FamilyChatStore.ThreadState thread) {
+        new com.tridev.familyhub.data.repository.PlannerRepository(context()).loadUpcoming(50, items -> {
+            if (!ready(thread)) return;
+            List<String> labels = new ArrayList<>();
+            List<Runnable> actions = new ArrayList<>();
+            for (com.tridev.familyhub.data.local.entity.PlannerItem item : items) {
+                if (!com.tridev.familyhub.data.local.entity.PlannerItem.TYPE_EVENT.equals(item.itemType)
+                        || item.startAt <= 0 || item.title.trim().isEmpty()) continue;
+                String label = item.title + " · " + dateTime(item.startAt);
+                addAction(labels, actions, label, () -> new MaterialAlertDialogBuilder(context())
+                        .setTitle("Share event?")
+                        .setMessage(label)
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Share", (dialog, which) -> {
+                            if (!ready(thread)) return;
+                            java.util.Map<String, Object> details = new java.util.HashMap<>();
+                            details.put("kind", "event");
+                            details.put("startsAt", item.startAt);
+                            store.send(thread, item.title, details, null, () -> toast("Unable to share event"));
+                        }).show());
+            }
+            if (labels.isEmpty()) toast("No upcoming Family Calendar events");
+            else choose("Share calendar event", labels, actions);
+        });
+    }
+
+    private void newSharedMessage(FamilyChatStore.ThreadState thread, boolean checklist) {
+        LinearLayout content = panel();
+        EditText title = new EditText(context());
+        title.setHint(checklist ? "Checklist title" : "Announcement");
+        title.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(checklist ? 160 : 2000)});
+        content.addView(title);
+        EditText entries = new EditText(context());
+        if (checklist) {
+            entries.setHint("One item per line · up to 8 items");
+            entries.setMinLines(3);
+            entries.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+            entries.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(1300)});
+            content.addView(entries);
+        }
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context())
+                .setTitle(checklist ? "New checklist" : "New announcement")
+                .setView(scroll(content)).setNegativeButton("Cancel", null).setPositiveButton("Post", null).show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            if (!ready(thread)) return;
+            String body = title.getText().toString().trim();
+            if (body.isEmpty()) { title.setError("Enter a title or announcement"); return; }
+            java.util.Map<String, Object> details = new java.util.HashMap<>();
+            details.put("kind", checklist ? "checklist" : "announcement");
+            if (checklist) {
+                java.util.Map<String, String> rows = new java.util.LinkedHashMap<>();
+                for (String line : entries.getText().toString().split("\r?\n")) {
+                    String value = line.trim();
+                    if (value.isEmpty()) continue;
+                    if (rows.size() >= 8 || value.length() > 160) {
+                        entries.setError("Use up to 8 items, at most 160 characters each");
+                        return;
+                    }
+                    rows.put(Integer.toString(rows.size()), value);
+                }
+                if (rows.isEmpty()) { entries.setError("Enter at least one item"); return; }
+                details.put("entries", rows);
+            }
+            dialog.dismiss();
+            store.send(thread, body, details, null, () -> toast("Unable to post"));
+        });
     }
 
     private void notifications(FamilyChatStore.ThreadState thread) {
@@ -196,10 +266,46 @@ final class ChatSmartActions {
                 java.util.Collections.emptySet()));
     }
 
+    private void chooseSavedAction(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        store.saved(thread, snapshot -> {
+            if (!ready(thread)) return;
+            if (snapshot == null) { toast("Unable to sync saved messages"); return; }
+            String key = message.snapshot.getKey();
+            boolean saved = syncedKeys(thread, snapshot).contains(key);
+            String action = saved ? "Remove from saved" : "Save to my account";
+            new MaterialAlertDialogBuilder(context()).setTitle("Saved messages")
+                    .setMessage(saved ? "This message is saved to your account." : "Save privately across your devices.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton(action, (dialog, which) -> store.saveForMe(thread, key, !saved,
+                            ok -> toast(!ok ? "Unable to update saved messages"
+                                    : saved ? "Removed from saved messages" : "Saved to your account"))).show();
+        });
+    }
+
+    private java.util.Set<String> syncedKeys(FamilyChatStore.ThreadState thread, com.google.firebase.database.DataSnapshot snapshot) {
+        java.util.Set<String> keys = new java.util.LinkedHashSet<>();
+        for (com.google.firebase.database.DataSnapshot child : snapshot.getChildren()) {
+            if (Boolean.TRUE.equals(child.getValue(Boolean.class))) keys.add(child.getKey());
+        }
+        for (String local : savedMessages(thread)) {
+            if (!local.matches("[A-Za-z0-9_-]{1,128}") || snapshot.hasChild(local)) continue;
+            keys.add(local);
+            store.importSaved(thread, local);
+        }
+        return keys;
+    }
+
     private void showSaved(FamilyChatStore.ThreadState thread) {
-        java.util.Set<String> keys = savedMessages(thread);
+        store.saved(thread, snapshot -> {
+            if (!ready(thread)) return;
+            if (snapshot == null) { toast("Unable to sync saved messages"); return; }
+            showSavedResults(thread, syncedKeys(thread, snapshot));
+        });
+    }
+
+    private void showSavedResults(FamilyChatStore.ThreadState thread, java.util.Set<String> keys) {
         LinearLayout content = panel();
-        TextView loading = label(keys.isEmpty() ? "No messages saved on this device." : "Loading saved messages…");
+        TextView loading = label(keys.isEmpty() ? "No messages saved in this chat." : "Loading saved messages…");
         content.addView(loading);
         AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle("Saved messages")
                 .setView(scroll(content)).setPositiveButton("Done", null).show();

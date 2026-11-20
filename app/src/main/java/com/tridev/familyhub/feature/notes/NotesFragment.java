@@ -22,6 +22,14 @@ import com.tridev.familyhub.feature.main.MainActivity;
 
 /** Smart Notes page; shared workspace/editor also power the floating Notes panel. */
 public class NotesFragment extends Fragment implements AddActionHost {
+    public static NotesFragment forChatMessage(String message) {
+        NotesFragment fragment = new NotesFragment();
+        Bundle args = new Bundle();
+        args.putString("chat_note_content", message);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     private FragmentNotesBinding binding;
     private NotesRepository repository;
     private NotesWorkspaceView workspace;
@@ -50,6 +58,14 @@ public class NotesFragment extends Fragment implements AddActionHost {
         });
         binding.notesOverview.setSearchAction(v -> workspace.toggleSearch());
         workspace.activate();
+        Bundle args = getArguments();
+        String draft = args == null ? null : args.getString("chat_note_content");
+        if (draft != null) {
+            args.remove("chat_note_content");
+            NoteEntry note = new NoteEntry();
+            note.content = draft;
+            view.post(() -> { if (binding != null) showEditor(note); });
+        }
     }
     @Override public void onAddRequested() { showEditor(null); }
     private void showEditor(@Nullable NoteEntry note) {

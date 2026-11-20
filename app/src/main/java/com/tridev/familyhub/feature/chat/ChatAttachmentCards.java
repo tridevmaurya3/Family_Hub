@@ -115,6 +115,33 @@ final class ChatAttachmentCards {
                 }
                 card.addView(actions);
                 break;
+            case "announcement":
+                card.addView(label("Announcement", false));
+                card.addView(label(message.body, true));
+                if (attachments.announcementAuthor(message)) {
+                    card.addView(action("Responses · " + message.snapshot.child("acks").getChildrenCount(),
+                            () -> attachments.announcementResponses(thread, message)));
+                } else {
+                    boolean acknowledged = attachments.acknowledged(message);
+                    MaterialButton confirm = action(acknowledged ? "Acknowledged" : "Got it",
+                            () -> attachments.acknowledge(thread, message));
+                    confirm.setEnabled(!acknowledged);
+                    card.addView(confirm);
+                }
+                break;
+            case "checklist":
+                card.addView(label("Shared checklist", false));
+                card.addView(label(message.body, true));
+                for (DataSnapshot entry : message.snapshot.child("entries").getChildren()) {
+                    String id = entry.getKey();
+                    if (id == null) continue;
+                    boolean checked = message.snapshot.child("checks").child(id).exists();
+                    MaterialButton item = action((checked ? "✓  " : "○  ") + entry.getValue(String.class),
+                            () -> attachments.toggleChecklist(thread, message, id));
+                    item.setMaxLines(4);
+                    card.addView(item);
+                }
+                break;
             case "voice":
                 details(card, "Voice note", message.body, null, "Play", open);
                 break;

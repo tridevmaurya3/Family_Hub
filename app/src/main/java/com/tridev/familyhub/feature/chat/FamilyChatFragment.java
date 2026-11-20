@@ -52,6 +52,7 @@ public final class FamilyChatFragment extends Fragment {
     private TextView replyText;
     private MaterialButton toolsButton;
     private MaterialButton pinBanner;
+    private String pendingNotificationConversation;
     private final androidx.activity.result.ActivityResultLauncher<String> chatNotificationPermission =
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
                     granted -> {
@@ -84,8 +85,18 @@ public final class FamilyChatFragment extends Fragment {
         return result;
     }
 
+    public static FamilyChatFragment forNotification(String conversation) {
+        FamilyChatFragment fragment = new FamilyChatFragment();
+        Bundle args = new Bundle();
+        args.putString("chat_notification_ref", conversation);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
     @Override public void onCreate(@Nullable Bundle state) {
         super.onCreate(state);
+        Bundle args = state != null ? state : getArguments();
+        pendingNotificationConversation = args == null ? null : args.getString("chat_notification_ref");
         if (state != null) choosingLiveRecipient = state.getBoolean("share_live");
         else choosingLiveRecipient = getArguments() != null && getArguments().getBoolean("share_live");
         if (state != null) {
@@ -97,6 +108,7 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putString("chat_peer", peer);
+        out.putString("chat_notification_ref", pendingNotificationConversation);
         out.putString("chat_reply_key", replyKey);
         out.putString("chat_reply_preview", replyPreview);
         out.putStringArrayList("chat_mentions", new ArrayList<>(mentions.keySet()));
@@ -423,6 +435,15 @@ public final class FamilyChatFragment extends Fragment {
 
     private void render() {
         if (screen == null) return;
+        if (pendingNotificationConversation != null) {
+            for (FamilyChatStore.ThreadState candidate : store.threads()) {
+                if (pendingNotificationConversation.equals(candidate.ref.toString()) && store.canUse(candidate)) {
+                    pendingNotificationConversation = null;
+                    open(candidate.peer);
+                    return;
+                }
+            }
+        }
         boolean inThread = peer != null;
         if (backCallback != null) backCallback.setEnabled(inThread || choosingLiveRecipient);
         FamilyChatStore.ThreadState thread = store.thread(peer);

@@ -440,3 +440,30 @@ test('group management updates membership and inbox together and limits admin au
   assert.equal((await invited.child(entry).get()).exists(), false);
   await assertFails(invited.child(room).get());
 });
+
+test('announcements and checklists stay within a chat and bookmarks stay private', async () => {
+  const path = `familyChat/familyA/direct/${writer}/${reader}`;
+  const a = env.authenticatedContext(writer).database();
+  const b = env.authenticatedContext(reader).database();
+  const other = env.authenticatedContext(outsider).database();
+  const stamp = { '.sv': 'timestamp' };
+  const announcement = { sender: writer, body: 'Pickup at 5', kind: 'announcement', at: stamp };
+  await assertFails(a.ref(path + '/forged-announcement').set({ ...announcement, acks: { [reader]: true } }));
+  await assertSucceeds(a.ref(path + '/announcement').set(announcement));
+  await assertFails(a.ref(path + '/announcement/acks/' + reader).set(true));
+  await assertFails(other.ref(path + '/announcement/acks/' + outsider).set(true));
+  await assertSucceeds(b.ref(path + '/announcement/acks/' + reader).set(true));
+  assert.equal((await a.ref(path + '/announcement/acks/' + reader).get()).val(), true);
+  const checklist = { sender: writer, body: 'Groceries', kind: 'checklist', at: stamp, entries: { 0: 'Milk', 1: 'Rice' } };
+  await assertFails(a.ref(path + '/invalid-checklist').set({ ...checklist, entries: { 9: 'Invalid' } }));
+  await assertSucceeds(a.ref(path + '/checklist').set(checklist));
+  await assertFails(b.ref(path + '/checklist/checks/0').set(writer));
+  await assertFails(b.ref(path + '/checklist/checks/3').set(reader));
+  await assertSucceeds(b.ref(path + '/checklist/checks/0').set(reader));
+  await assertSucceeds(a.ref(path + '/checklist/checks/0').remove());
+  const key = `chatSaved/${reader}/de305d54-75b4-431b-adb2-eb6b9e546014/announcement`;
+  await assertFails(a.ref(key).set(true));
+  await assertSucceeds(b.ref(key).set(true));
+  await assertFails(a.ref(key).get());
+  await assertSucceeds(b.ref(key).set(false));
+});

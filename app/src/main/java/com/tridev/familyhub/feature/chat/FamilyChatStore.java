@@ -557,6 +557,49 @@ public final class FamilyChatStore {
 
     String accountId() { return uid; }
 
+    private DatabaseReference savedRef(ThreadState thread) {
+        String key = java.util.UUID.nameUUIDFromBytes(thread.ref.toString()
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+        return root.child("chatSaved").child(uid).child(key);
+    }
+
+    void saved(ThreadState thread, Consumer<DataSnapshot> callback) {
+        if (!canUse(thread)) { callback.accept(null); return; }
+        savedRef(thread).get().addOnCompleteListener(task ->
+                callback.accept(task.isSuccessful() && canUse(thread) ? task.getResult() : null));
+    }
+
+    void importSaved(ThreadState thread, String key) {
+        if (!canUse(thread) || !key.matches("[A-Za-z0-9_-]{1,128}")) return;
+        savedRef(thread).child(key).runTransaction(new com.google.firebase.database.Transaction.Handler() {
+            @NonNull @Override public com.google.firebase.database.Transaction.Result doTransaction(
+                    @NonNull com.google.firebase.database.MutableData data) {
+                if (data.getValue() != null) return com.google.firebase.database.Transaction.abort();
+                data.setValue(true);
+                return com.google.firebase.database.Transaction.success(data);
+            }
+            @Override public void onComplete(DatabaseError error, boolean committed, DataSnapshot snapshot) {}
+        });
+    }
+
+    void saveForMe(ThreadState thread, String key, boolean saved, Consumer<Boolean> callback) {
+        if (!canUse(thread)) { callback.accept(false); return; }
+        savedRef(thread).child(key).setValue(saved).addOnCompleteListener(task -> callback.accept(task.isSuccessful()));
+    }
+
+    void acknowledgeAnnouncement(ThreadState thread, Message message, Consumer<Boolean> callback) {
+        if (!canUse(thread) || own(message)) { callback.accept(false); return; }
+        message.snapshot.getRef().child("acks").child(uid).setValue(true)
+                .addOnCompleteListener(task -> callback.accept(task.isSuccessful()));
+    }
+
+    void setChecklistItem(ThreadState thread, Message message, String key, boolean checked,
+                          Consumer<Boolean> callback) {
+        if (!canUse(thread)) { callback.accept(false); return; }
+        message.snapshot.getRef().child("checks").child(key).setValue(checked ? uid : null)
+                .addOnCompleteListener(task -> callback.accept(task.isSuccessful()));
+    }
+
     boolean canUse(ThreadState thread) {
         return uid != null && threads.get(thread.peer) == thread && !thread.error;
     }

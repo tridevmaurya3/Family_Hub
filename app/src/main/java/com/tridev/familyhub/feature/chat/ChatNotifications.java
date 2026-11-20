@@ -54,7 +54,7 @@ final class ChatNotifications {
                 if (reply != null) store.loadMessage(thread, reply, original -> {
                     if (original != null && uid.equals(store.accountId()) && store.own(original)
                             && store.canUse(thread) && mode(context, uid, thread) == MENTIONS
-                            && store.unread(message)) show(uid);
+                            && store.unread(message)) show(uid, thread);
                 });
             }
         }
@@ -63,11 +63,11 @@ final class ChatNotifications {
             thread.notificationSeen.clear();
             for (FamilyChatStore.Message message : thread.messages) thread.notificationSeen.add(message.snapshot.getKey());
         }
-        if (incoming != null) show(uid);
+        if (incoming != null) show(uid, thread);
     }
 
     @android.annotation.SuppressLint("MissingPermission")
-    private void show(String uid) {
+    private void show(String uid, FamilyChatStore.ThreadState thread) {
         if (uid == null || !uid.equals(store.accountId())) return;
         NotificationManagerCompat manager = NotificationManagerCompat.from(context);
         if (!manager.areNotificationsEnabled()) return;
@@ -80,7 +80,8 @@ final class ChatNotifications {
         Intent open = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtra(AccountDataScope.EXTRA_UID, uid)
-                .putExtra(MainActivity.EXTRA_OPEN_CHAT, true);
+                .putExtra(MainActivity.EXTRA_OPEN_CHAT, true)
+                .putExtra(MainActivity.EXTRA_CHAT_CONVERSATION, thread.ref.toString());
         PendingIntent intent = PendingIntent.getActivity(context, 9032, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         manager.notify(TAG, 1, new NotificationCompat.Builder(context, CHANNEL)
