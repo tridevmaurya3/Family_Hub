@@ -71,7 +71,8 @@ public final class FamilyChatFragment extends Fragment {
     private ModuleOverviewView header;
     private ScrollView scroll;
     private EditText search, draft;
-    private MaterialButton send, newGroup;
+    private final ChatStatus chatStatus = new ChatStatus(this, store);
+    private MaterialButton send, newGroup, statusButton;
     private OnBackPressedCallback backCallback;
     private String peer;
     private String lastMessageKey;
@@ -137,6 +138,9 @@ public final class FamilyChatFragment extends Fragment {
             }
         });
         header.addHeaderAction(newGroup);
+        statusButton = flatButton("Status");
+        statusButton.setOnClickListener(v -> chatStatus.open());
+        header.addHeaderAction(statusButton);
         headerAvatar = new LinearLayout(requireContext());
         header.addHeaderAction(headerAvatar);
         toolsButton = flatButton("⋮");
@@ -346,6 +350,7 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onDestroyView() {
         groupScreens.dismiss();
+        chatStatus.dismiss();
         screen = null;
         bubbles.clear();
         super.onDestroyView();
@@ -486,6 +491,8 @@ public final class FamilyChatFragment extends Fragment {
         newGroup.setVisibility(!inThread && (choosingLiveRecipient || !store.groupCandidates().isEmpty())
                 ? View.VISIBLE : View.GONE);
         newGroup.setEnabled(choosingLiveRecipient || store.online());
+        statusButton.setVisibility(!inThread && !choosingLiveRecipient && store.statusFamily() != null
+                ? View.VISIBLE : View.GONE);
         boolean chatReady = thread != null && !thread.error;
         toolsButton.setVisibility(chatReady ? View.VISIBLE : View.GONE);
         pinBanner.setVisibility(chatReady ? View.VISIBLE : View.GONE);

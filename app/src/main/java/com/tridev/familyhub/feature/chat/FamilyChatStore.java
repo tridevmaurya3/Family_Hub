@@ -555,6 +555,8 @@ public final class FamilyChatStore {
                 .addOnFailureListener(error -> failed.run());
     }
 
+    String statusFamily() { return family; }
+
     String accountId() { return uid; }
 
     private DatabaseReference savedRef(ThreadState thread) {
