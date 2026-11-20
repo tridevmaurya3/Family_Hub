@@ -485,7 +485,8 @@ final class ChatSmartActions {
                 names.add(store.name(uid));
             }
         }
-        ChatFormDialog builder = new ChatFormDialog(context())
+        ChatFormDialog builder = new ChatFormDialog(context());
+        builder
                 .setTitle("Pending votes · " + pending.size())
                 .setMessage(names.isEmpty() ? "Everyone else has voted." : String.join("\n", names))
                 .setNegativeButton("Done", null);
