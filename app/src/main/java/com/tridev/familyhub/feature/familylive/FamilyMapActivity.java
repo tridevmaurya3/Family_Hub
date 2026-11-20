@@ -249,6 +249,14 @@ public final class FamilyMapActivity extends AppCompatActivity {
     }
 
     private void bindControls() {
+        findViewById(R.id.buttonFamilyMapShareChat).setOnClickListener(view -> {
+            com.google.firebase.auth.FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user == null) return;
+            startActivity(new Intent(this, com.tridev.familyhub.feature.main.MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    .putExtra(com.tridev.familyhub.feature.main.MainActivity.EXTRA_SHARE_LIVE_IN_CHAT, true)
+                    .putExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID, user.getUid()));
+        });
         findViewById(R.id.buttonFamilyMapBack).setOnClickListener(
                 ignored -> getOnBackPressedDispatcher().onBackPressed()
         );

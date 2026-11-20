@@ -47,6 +47,7 @@
     <string name="dashboard_shortcut_reports">Location Reports</string>
     <string name="dashboard_shortcut_reports_value">Charts • Insights</string>
     <string name="dashboard_shortcut_reports_detail">PDF • Excel</string>
+    <string name="family_map_share_in_chat">Share my Family Live location in chat</string>
     <string name="dashboard_family_chat">Family Chat</string>
     <string name="dashboard_family_chat_value">Messages</string>
     <string name="dashboard_family_chat_detail">Family conversations</string>

@@ -48,9 +48,20 @@ public final class FamilyChatFragment extends Fragment {
     private OnBackPressedCallback backCallback;
     private String peer;
     private String lastMessageKey;
+    private boolean choosingLiveRecipient;
+
+    public static FamilyChatFragment forLiveShare() {
+        FamilyChatFragment result = new FamilyChatFragment();
+        Bundle arguments = new Bundle();
+        arguments.putBoolean("share_live", true);
+        result.setArguments(arguments);
+        return result;
+    }
 
     @Override public void onCreate(@Nullable Bundle state) {
         super.onCreate(state);
+        if (state != null) choosingLiveRecipient = state.getBoolean("share_live");
+        else choosingLiveRecipient = getArguments() != null && getArguments().getBoolean("share_live");
         if (state != null) {
             peer = state.getString("chat_peer");
             attachments.restoreState(state);
@@ -60,6 +71,7 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putString("chat_peer", peer);
+        out.putBoolean("share_live", choosingLiveRecipient);
         attachments.saveState(out);
         if (draft != null) out.putString("chat_draft", draft.getText().toString());
     }
@@ -87,7 +99,14 @@ public final class FamilyChatFragment extends Fragment {
         newGroup = new MaterialButton(requireContext());
         newGroup.setText("New group");
         newGroup.setAllCaps(false);
-        newGroup.setOnClickListener(v -> showCreateGroup());
+        newGroup.setOnClickListener(v -> {
+            if (choosingLiveRecipient) {
+                choosingLiveRecipient = false;
+                render();
+            } else {
+                showCreateGroup();
+            }
+        });
         header.addView(newGroup);
         screen.addView(header);
 
@@ -239,11 +258,13 @@ public final class FamilyChatFragment extends Fragment {
         boolean inThread = peer != null;
         FamilyChatStore.ThreadState thread = store.thread(peer);
         back.setVisibility(inThread ? View.VISIBLE : View.GONE);
-        newGroup.setVisibility(!inThread && store.groupCandidates().size() >= 2 ? View.VISIBLE : View.GONE);
-        newGroup.setEnabled(store.online());
+        newGroup.setText(choosingLiveRecipient ? "Cancel" : "New group");
+        newGroup.setVisibility(!inThread && (choosingLiveRecipient || store.groupCandidates().size() >= 2)
+                ? View.VISIBLE : View.GONE);
+        newGroup.setEnabled(choosingLiveRecipient || store.online());
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
         bottom.setVisibility(inThread && thread != null && !thread.error ? View.VISIBLE : View.GONE);
-        title.setText(thread == null ? "Family Chat" : store.title(thread));
+        title.setText(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
         String currentStatus = store.status();
         status.setText(!currentStatus.isEmpty() ? currentStatus
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
@@ -355,7 +376,17 @@ public final class FamilyChatFragment extends Fragment {
             card.addView(text(detail, 12, unread == 0 ? MUTED : BLUE, unread != 0));
         }
         card.setFocusable(true);
-        card.setOnClickListener(v -> open(thread.peer));
+        card.setOnClickListener(v -> {
+            if (choosingLiveRecipient) {
+                if (!store.canUse(thread)) return;
+                attachments.confirmLiveShare(thread, () -> {
+                    choosingLiveRecipient = false;
+                    open(thread.peer);
+                });
+            } else {
+                open(thread.peer);
+            }
+        });
         addLine(card);
     }
 

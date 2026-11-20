@@ -329,13 +329,25 @@ final class ChatAttachments {
         return value.substring(0, Math.min(value.length(), length));
     }
 
+    void confirmLiveShare(FamilyChatStore.ThreadState thread, Runnable openChat) {
+        new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Share Family Live location")
+                .setMessage("Send your Family Live link to " + store.title(thread) + "?")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Send", (dialog, which) -> {
+                    store.send(thread, "Family Live location",
+                            java.util.Collections.singletonMap("kind", "live"), null,
+                            () -> notice("Unable to share Family Live location"));
+                    openChat.run();
+                }).show();
+    }
+
     private void chooseLocation() {
         FamilyChatStore.ThreadState thread = target();
         if (thread == null || !store.canUse(thread)) return;
         new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Share location")
                 .setItems(new String[]{"Current location", "Link to my location in Family Live"}, (d, which) -> {
                     if (which == 1) {
-                        confirm(thread, "Family Live location", java.util.Collections.singletonMap("kind", "live"), null, null);
+                        confirmLiveShare(thread, () -> {});
                     } else if (hasLocationPermission()) {
                         requestLocation();
                     } else {
