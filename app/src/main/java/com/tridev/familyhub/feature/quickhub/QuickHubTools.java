@@ -30,6 +30,9 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.tridev.familyhub.core.reminders.ReminderAlarmAccessActivity;
+import com.tridev.familyhub.data.local.entity.Reminder;
+import com.tridev.familyhub.data.repository.ReminderRepository;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -211,6 +214,24 @@ final class QuickHubTools {
         header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
         Calendar selection = Calendar.getInstance();
+        boolean[] repeating = {false};
+        MaterialButton[] days = new MaterialButton[7];
+        TextView summary = new TextView(context);
+        summary.setTextColor(INK);
+        Runnable updateSummary = () -> {
+            ArrayList<Integer> selected = alarmDays(days);
+            if (repeating[0]) {
+                String[] dayNames = new DateFormatSymbols().getShortWeekdays();
+                ArrayList<String> names = new ArrayList<>();
+                for (int day : selected) names.add(dayNames[day]);
+                summary.setText(names.isEmpty() ? "Choose repeat days" : "Every " + String.join(", ", names));
+            } else {
+                int day = selected.isEmpty() ? 0 : selected.get(0);
+                Calendar next = nextAlarmDate(Calendar.getInstance(), selection, day);
+                summary.setText("One time · " + new java.text.SimpleDateFormat(
+                        "EEE, d MMM yyyy", java.util.Locale.getDefault()).format(next.getTime()));
+            }
+        };
         MaterialButton time = calculatorButton(alarmTimeLabel(selection), INK, Color.WHITE);
         time.setTextSize(26);
         time.setOnClickListener(v -> {
@@ -218,6 +239,7 @@ final class QuickHubTools {
                 selection.set(Calendar.HOUR_OF_DAY, hour);
                 selection.set(Calendar.MINUTE, minute);
                 time.setText(alarmTimeLabel(selection));
+                updateSummary.run();
             }, selection.get(Calendar.HOUR_OF_DAY), selection.get(Calendar.MINUTE),
                     DateFormat.is24HourFormat(context));
             alarmTimePicker.setOnDismissListener(dialog -> alarmTimePicker = null);
@@ -227,6 +249,18 @@ final class QuickHubTools {
         LinearLayout timeCard = column();
         timeCard.addView(time, new LinearLayout.LayoutParams(-1, dp(66)));
         addCalculatorSection(content, timeCard, 6);
+
+        LinearLayout modes = new LinearLayout(context);
+        MaterialButton once = calculatorButton("Once", BLUE, Color.WHITE);
+        MaterialButton repeatMode = calculatorButton("Repeat", ACCENT_SURFACE, INK);
+        once.setTextSize(15);
+        repeatMode.setTextSize(15);
+        modes.addView(once, new LinearLayout.LayoutParams(0, dp(48), 1));
+        LinearLayout.LayoutParams repeatParams = new LinearLayout.LayoutParams(0, dp(48), 1);
+        repeatParams.setMarginStart(dp(6));
+        modes.addView(repeatMode, repeatParams);
+        addCalculatorSection(content, modes, 8);
+        addCalculatorSection(content, summary, 4);
 
         TextInputLayout labelField = new TextInputLayout(context, null,
                 com.google.android.material.R.attr.textInputOutlinedStyle);
@@ -239,13 +273,12 @@ final class QuickHubTools {
         addCalculatorSection(content, labelField, 8);
 
         TextView repeat = new TextView(context);
-        repeat.setText("Repeat days");
+        repeat.setText("Choose one day");
         repeat.setTextColor(INK);
         repeat.setTypeface(null, Typeface.BOLD);
         addCalculatorSection(content, repeat, 10);
         String[] shortNames = new DateFormatSymbols().getShortWeekdays();
         String[] fullNames = new DateFormatSymbols().getWeekdays();
-        MaterialButton[] days = new MaterialButton[7];
         LinearLayout row = null;
         for (int i = 0; i < days.length; i++) {
             if (i == 0 || i == 4) {
@@ -260,6 +293,12 @@ final class QuickHubTools {
             chip.addOnCheckedChangeListener((button, checked) -> {
                 button.setBackgroundTintList(glassTint(checked ? BLUE : ACCENT_SURFACE));
                 button.setTextColor(checked ? Color.WHITE : INK);
+                if (checked && !repeating[0]) {
+                    for (MaterialButton other : days) {
+                        if (other != null && other != button) other.setChecked(false);
+                    }
+                }
+                updateSummary.run();
             });
             days[i] = chip;
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
@@ -267,21 +306,59 @@ final class QuickHubTools {
             row.addView(chip, params);
         }
 
+        once.setOnClickListener(v -> {
+            repeating[0] = false;
+            setCalculatorMode(once, repeatMode);
+            repeat.setText("Choose one day");
+            boolean found = false;
+            for (MaterialButton day : days) {
+                if (!day.isChecked()) continue;
+                if (found) day.setChecked(false);
+                found = true;
+            }
+            updateSummary.run();
+        });
+        repeatMode.setOnClickListener(v -> {
+            repeating[0] = true;
+            setCalculatorMode(repeatMode, once);
+            repeat.setText("Repeat days");
+            updateSummary.run();
+        });
+        updateSummary.run();
+
         MaterialButton save = calculatorButton("Set alarm", BLUE, Color.WHITE);
         save.setTextSize(16);
         save.setOnClickListener(v -> {
+            ArrayList<Integer> selectedDays = alarmDays(days);
+            String alarmLabel = label.getText().toString().trim();
+            if (!repeating[0]) {
+                int day = selectedDays.isEmpty() ? 0 : selectedDays.get(0);
+                Calendar next = nextAlarmDate(Calendar.getInstance(), selection, day);
+                Reminder reminder = new Reminder();
+                reminder.title = alarmLabel.isEmpty() ? "Alarm" : alarmLabel;
+                reminder.reminderAt = next.getTimeInMillis();
+                reminder.priority = "URGENT";
+                save.setEnabled(false);
+                new ReminderRepository(context).save(reminder, saved -> {
+                    Toast.makeText(context, "One-time alarm set in Family Hub Reminders",
+                            Toast.LENGTH_SHORT).show();
+                    dismiss();
+                    if (ReminderAlarmAccessActivity.needsPermission(context)) {
+                        ReminderAlarmAccessActivity.request(context, false, true);
+                    }
+                });
+                return;
+            }
+            if (selectedDays.isEmpty()) {
+                Toast.makeText(context, "Choose at least one repeat day", Toast.LENGTH_SHORT).show();
+                return;
+            }
             Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM)
                     .putExtra(AlarmClock.EXTRA_HOUR, selection.get(Calendar.HOUR_OF_DAY))
                     .putExtra(AlarmClock.EXTRA_MINUTES, selection.get(Calendar.MINUTE))
-                    .putExtra(AlarmClock.EXTRA_MESSAGE, label.getText().toString().trim())
+                    .putExtra(AlarmClock.EXTRA_MESSAGE, alarmLabel)
                     .putExtra(AlarmClock.EXTRA_SKIP_UI, true);
-            ArrayList<Integer> selectedDays = new ArrayList<>();
-            for (int i = 0; i < days.length; i++) {
-                if (days[i].isChecked()) selectedDays.add(Calendar.SUNDAY + i);
-            }
-            if (!selectedDays.isEmpty()) {
-                intent.putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, selectedDays);
-            }
+            intent.putIntegerArrayListExtra(AlarmClock.EXTRA_DAYS, selectedDays);
             openClock(intent);
         });
         addCalculatorSection(content, save, 10);
@@ -290,6 +367,30 @@ final class QuickHubTools {
         manage.setOnClickListener(v -> openClock(new Intent(AlarmClock.ACTION_SHOW_ALARMS)));
         addCalculatorSection(content, manage, 4);
         show(header, content);
+    }
+
+    private static ArrayList<Integer> alarmDays(MaterialButton[] days) {
+        ArrayList<Integer> selected = new ArrayList<>();
+        for (int i = 0; i < days.length; i++) {
+            if (days[i] != null && days[i].isChecked()) selected.add(Calendar.SUNDAY + i);
+        }
+        return selected;
+    }
+
+    private static Calendar nextAlarmDate(Calendar now, Calendar time, int day) {
+        Calendar next = (Calendar) now.clone();
+        next.set(Calendar.HOUR_OF_DAY, time.get(Calendar.HOUR_OF_DAY));
+        next.set(Calendar.MINUTE, time.get(Calendar.MINUTE));
+        next.set(Calendar.SECOND, 0);
+        next.set(Calendar.MILLISECOND, 0);
+        if (day == 0) {
+            if (!next.after(now)) next.add(Calendar.DAY_OF_YEAR, 1);
+        } else {
+            int daysAhead = (day - now.get(Calendar.DAY_OF_WEEK) + 7) % 7;
+            if (daysAhead == 0 && !next.after(now)) daysAhead = 7;
+            next.add(Calendar.DAY_OF_YEAR, daysAhead);
+        }
+        return next;
     }
 
     private String alarmTimeLabel(Calendar selection) {
