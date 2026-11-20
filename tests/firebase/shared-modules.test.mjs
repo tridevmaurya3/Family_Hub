@@ -509,8 +509,8 @@ test('video status retains audience restrictions and rejects oversized or mixed 
   const path = 'familyTextStatus/familyA/' + writer;
   const ref = uid => env.authenticatedContext(uid).database().ref(path);
   const status = { body: '', postedAt: { '.sv': 'timestamp' }, audience: { [reader]: true } };
-  const video = 'AAAAGGZ0eXBpc29t';
-  await assertFails(ref(writer).set({ ...status, video: 'A'.repeat(1048577) }));
+  const video = Buffer.alloc(5 * 1024 * 1024).toString('base64');
+  await assertFails(ref(writer).set({ ...status, video: 'A'.repeat(6990509) }));
   await assertFails(ref(writer).set({ ...status, video, photo: '/9j/QUJDREVGR0hJ' }));
   await assertSucceeds(ref(writer).set({ ...status, video }));
   const selected = await assertSucceeds(ref(reader).child('video').get());

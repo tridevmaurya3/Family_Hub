@@ -49,8 +49,8 @@ final class ChatStatus {
     private static final int MAX_PHOTO_BYTES = 384 * 1024;
     private static final int MAX_PHOTO_LENGTH = MAX_PHOTO_BYTES / 3 * 4;
     private static final int MAX_IMAGE_SIDE = 1280;
-    private static final int MAX_VIDEO_BYTES = 768 * 1024;
-    private static final int MAX_VIDEO_LENGTH = MAX_VIDEO_BYTES / 3 * 4;
+    private static final int MAX_VIDEO_BYTES = 5 * 1024 * 1024;
+    private static final int MAX_VIDEO_LENGTH = ((MAX_VIDEO_BYTES + 2) / 3) * 4;
     private static final int MAX_VIDEO_DURATION_MS = 15000;
     private final ActivityResultLauncher<String> mediaPicker;
     private java.util.function.Consumer<Uri> mediaSelection;
@@ -322,7 +322,7 @@ final class ChatStatus {
                             loadingMedia[0] = false;
                             owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
                             if (encoded == null) {
-                                notice("Choose an MP4 up to 15 seconds and 768 KB");
+                                notice("Choose a supported video up to 15 seconds and 5 MB");
                                 return;
                             }
                             selectedVideo[0] = encoded;
@@ -333,7 +333,7 @@ final class ChatStatus {
                             videoSelection.setVisibility(View.VISIBLE);
                         }));
             };
-            try { mediaPicker.launch("video/mp4"); } catch (android.content.ActivityNotFoundException unavailable) {
+            try { mediaPicker.launch("video/*"); } catch (android.content.ActivityNotFoundException unavailable) {
                 mediaSelection = null;
                 notice("No video picker is available");
             }
@@ -418,9 +418,7 @@ final class ChatStatus {
                 bytes.write(buffer, 0, count);
             }
             byte[] video = bytes.toByteArray();
-            if (video.length < 12 || video[4] != 'f' || video[5] != 't' || video[6] != 'y' || video[7] != 'p') {
-                return null;
-            }
+            if (video.length < 12) return null;
             android.media.MediaMetadataRetriever metadata = new android.media.MediaMetadataRetriever();
             try {
                 metadata.setDataSource(context, uri);
@@ -444,7 +442,7 @@ final class ChatStatus {
         try {
             byte[] payload = Base64.decode(encoded, Base64.NO_WRAP);
             if (payload.length > MAX_VIDEO_BYTES) return;
-            clip = java.io.File.createTempFile("family-status-", ".mp4", host.requireContext().getCacheDir());
+            clip = java.io.File.createTempFile("family-status-", ".video", host.requireContext().getCacheDir());
             try {
                 java.nio.file.Files.write(clip.toPath(), payload);
             } catch (IOException failure) {

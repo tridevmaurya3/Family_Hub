@@ -29,7 +29,7 @@
             ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 524288 && newData.val().beginsWith('/9j/')"
           },
           "video": {
-            ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 1048576"
+            ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 6990508"
           },
           "postedAt": {
             ".validate": "newData.isNumber() && newData.val() === now"
