@@ -26,6 +26,7 @@ import com.google.android.material.button.MaterialButton;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.ui.cards.ModuleOverviewView;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.profile.FamilyAvatarStore;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,7 +42,10 @@ public final class FamilyChatFragment extends Fragment {
     private static final int WHITE = 0xffffffff;
     private final FamilyChatStore store = FamilyChatStore.get();
     private final ChatAttachments attachments = new ChatAttachments(this, store);
+    private final ChatGroupScreens groupScreens = new ChatGroupScreens(this, store, this::open);
     private final Runnable observer = this::render;
+    private final FamilyAvatarStore.Listener avatarObserver = this::render;
+    private LinearLayout headerAvatar;
     private final List<View> bubbles = new ArrayList<>();
     private LinearLayout screen, rows, bottom;
     private ModuleOverviewView header;
@@ -95,10 +99,12 @@ public final class FamilyChatFragment extends Fragment {
             if (choosingLiveRecipient) {
                 cancelLiveRecipient();
             } else {
-                showCreateGroup();
+                groupScreens.showCreate();
             }
         });
         header.addHeaderAction(newGroup);
+        headerAvatar = new LinearLayout(requireContext());
+        header.addHeaderAction(headerAvatar);
         screen.addView(header);
 
         search = new EditText(requireContext());
@@ -198,6 +204,7 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onStart() {
         super.onStart();
         store.observe(observer);
+        avatars().addListener(avatarObserver);
         render();
     }
 
@@ -208,11 +215,13 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onStop() {
         store.removeObserver(observer);
+        avatars().removeListener(avatarObserver);
         attachments.stopPreviews();
         super.onStop();
     }
 
     @Override public void onDestroyView() {
+        groupScreens.dismiss();
         screen = null;
         bubbles.clear();
         super.onDestroyView();
@@ -220,6 +229,7 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onDestroy() {
         attachments.close();
+        groupScreens.close();
         super.onDestroy();
     }
 
@@ -270,15 +280,18 @@ public final class FamilyChatFragment extends Fragment {
             });
         }
         newGroup.setText(choosingLiveRecipient ? "Cancel" : "New group");
-        newGroup.setVisibility(!inThread && (choosingLiveRecipient || store.groupCandidates().size() >= 2)
+        newGroup.setVisibility(!inThread && (choosingLiveRecipient || !store.groupCandidates().isEmpty())
                 ? View.VISIBLE : View.GONE);
         newGroup.setEnabled(choosingLiveRecipient || store.online());
-        header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE);
+        headerAvatar.removeAllViews();
+        if (thread != null) headerAvatar.addView(threadAvatar(thread, 40));
+        header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
         bottom.setVisibility(inThread && thread != null && !thread.error ? View.VISIBLE : View.GONE);
         header.setTitle(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
         String currentStatus = store.status();
         header.setDetail(!currentStatus.isEmpty() ? currentStatus
+                : thread != null && thread.isGroup() ? store.groupMembers(thread).size() + " members · Group info"
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
         updateSend();
         int oldY = scroll.getScrollY();
@@ -310,63 +323,49 @@ public final class FamilyChatFragment extends Fragment {
         if (!groups.isEmpty()) addLine(text("Private groups", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : groups) addConversation(thread);
         direct.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
-        if (!direct.isEmpty()) addLine(text("Direct messages", 14, BLUE, true));
+        boolean showOwn = !choosingLiveRecipient && store.accountId() != null && store.status().isEmpty()
+                && "you".contains(filter);
+        if (!direct.isEmpty() || showOwn) addLine(text("Direct messages", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : direct) addConversation(thread);
+        if (showOwn) addOwnProfile();
         if (rows.getChildCount() == 0 && store.status().isEmpty()) {
             addLine(text("No matching chats", 14, MUTED, false));
         }
     }
 
-    private void showCreateGroup() {
-        java.util.Map<String, String> candidates = store.groupCandidates();
-        List<String> ids = new ArrayList<>(candidates.keySet());
-        boolean[] checked = new boolean[ids.size()];
-        String[] labels = candidates.values().toArray(new String[0]);
-        androidx.appcompat.app.AlertDialog selector =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Choose group members")
-                        .setMultiChoiceItems(labels, checked, (dialog, which, selected) -> checked[which] = selected)
-                        .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Next", null).show();
-        selector.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
-            List<String> selected = new ArrayList<>();
-            for (int i = 0; i < ids.size(); i++) if (checked[i]) selected.add(ids.get(i));
-            if (selected.size() < 2) {
-                Toast.makeText(requireContext(), "Select at least two members", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            selector.dismiss();
-            EditText name = new EditText(requireContext());
-            name.setSingleLine(true);
-            name.setHint("Group name");
-            name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(60)});
-            androidx.appcompat.app.AlertDialog naming =
-                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                            .setTitle("Name your private group").setView(name)
-                            .setNegativeButton("Cancel", null).setPositiveButton("Create", null).show();
-            View create = naming.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
-            create.setOnClickListener(button -> {
-                String value = name.getText().toString().trim();
-                if (value.isEmpty()) {
-                    name.setError("Enter a group name");
-                    return;
-                }
-                create.setEnabled(false);
-                store.createRoom(value, selected, destination -> {
-                    naming.dismiss();
-                    if (screen != null) open(destination);
-                }, () -> {
-                    create.setEnabled(true);
-                    if (screen != null) Toast.makeText(requireContext(), "Unable to create group", Toast.LENGTH_SHORT).show();
-                });
-            });
-        });
+    private FamilyAvatarStore avatars() { return FamilyAvatarStore.get(requireContext()); }
+
+    private View threadAvatar(FamilyChatStore.ThreadState thread, int size) {
+        Runnable openInfo = thread.isGroup() ? () -> groupScreens.showGroup(thread)
+                : () -> groupScreens.showMember(thread.peer, groupScreens::dismiss);
+        return groupScreens.avatar(store.title(thread), thread.isGroup() ? thread.photo : avatars().photo(thread.peer),
+                size, choosingLiveRecipient ? null : openInfo);
+    }
+
+    private LinearLayout avatarRow(View avatar, LinearLayout content) {
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(9), dp(12), dp(9));
+        row.setBackground(card(WHITE, EDGE, 16));
+        row.addView(avatar);
+        content.setPadding(dp(12), 0, 0, 0);
+        row.addView(content, new LinearLayout.LayoutParams(0, -2, 1));
+        return row;
+    }
+
+    private void addOwnProfile() {
+        String uid = store.accountId();
+        Runnable show = () -> groupScreens.showMember(uid, groupScreens::dismiss);
+        LinearLayout content = column();
+        content.addView(text("You", 16, INK, true));
+        content.addView(text("Your profile", 13, MUTED, false));
+        LinearLayout row = avatarRow(groupScreens.avatar("You", avatars().ownPhoto(), 44, show), content);
+        row.setOnClickListener(v -> show.run());
+        addLine(row);
     }
 
     private void addConversation(FamilyChatStore.ThreadState thread) {
         LinearLayout card = column();
-        card.setPadding(dp(12), dp(9), dp(12), dp(9));
-        card.setBackground(card(WHITE, EDGE, 16));
         TextView name = text(store.title(thread), 16, INK, true);
         card.addView(name);
         if (thread.messages.isEmpty()) {
@@ -386,8 +385,9 @@ public final class FamilyChatFragment extends Fragment {
             String detail = direction + dateTime(store.listTime(latest)) + (unread == 0 ? "" : "  ·  " + unread + " new");
             card.addView(text(detail, 12, unread == 0 ? MUTED : BLUE, unread != 0));
         }
-        card.setFocusable(true);
-        card.setOnClickListener(v -> {
+        LinearLayout row = avatarRow(threadAvatar(thread, 44), card);
+        row.setFocusable(true);
+        row.setOnClickListener(v -> {
             if (choosingLiveRecipient) {
                 if (!store.canUse(thread)) return;
                 attachments.confirmLiveShare(thread, () -> {
@@ -398,7 +398,7 @@ public final class FamilyChatFragment extends Fragment {
                 open(thread.peer);
             }
         });
-        addLine(card);
+        addLine(row);
     }
 
     private void renderThread(FamilyChatStore.ThreadState thread, int oldY) {

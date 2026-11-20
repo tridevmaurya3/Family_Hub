@@ -168,8 +168,8 @@ public final class FamilyChatStore {
         return candidates;
     }
 
-    void createRoom(String title, List<String> selected, Consumer<String> success, Runnable failed) {
-        if (uid == null || family == null || !names.containsKey(uid) || selected.size() < 2
+    void createRoom(String title, List<String> selected, String photo, Consumer<String> success, Runnable failed) {
+        if (uid == null || family == null || !names.containsKey(uid) || selected.isEmpty() || selected.contains(uid)
                 || !names.keySet().containsAll(selected)) {
             failed.run();
             return;
@@ -187,7 +187,8 @@ public final class FamilyChatStore {
         String path = "rooms/" + roomId + "/";
         changes.put(path + "title", title);
         changes.put(path + "creator", creator);
-        List<String> members = new ArrayList<>(selected);
+        if (photo != null) changes.put(path + "photo", photo);
+        List<String> members = new ArrayList<>(new java.util.LinkedHashSet<>(selected));
         members.add(creator);
         for (String member : members) {
             changes.put(path + "members/" + member, true);
@@ -228,6 +229,23 @@ public final class FamilyChatStore {
     private void watchThread(ThreadState thread) {
         String peer = thread.peer;
         threads.put(peer, thread);
+        if (thread.members != null) {
+            DatabaseReference room = thread.ref.getParent();
+            room.child("creator").get().addOnSuccessListener(snapshot -> {
+                if (threads.get(peer) != thread) return;
+                thread.creator = snapshot.getValue(String.class);
+                notifyObservers();
+            });
+            thread.photoListener = listen(room.child("photo"), snapshot -> {
+                if (threads.get(peer) != thread) return;
+                thread.photo = decodeGroupPhoto(snapshot.getValue(String.class));
+                notifyObservers();
+            }, error -> {
+                if (threads.get(peer) != thread) return;
+                thread.photo = null;
+                notifyObservers();
+            });
+        }
         thread.listener = listen(thread.query, snapshot -> {
             if (threads.get(peer) != thread) return;
             thread.messages.clear();
@@ -248,6 +266,40 @@ public final class FamilyChatStore {
             thread.error = true;
             notifyObservers();
         });
+    }
+
+    static android.graphics.Bitmap decodeGroupPhoto(String encoded) {
+        if (encoded == null || encoded.length() > 64000) return null;
+        try {
+            byte[] bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT);
+            android.graphics.BitmapFactory.Options bounds = new android.graphics.BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            if (bounds.outWidth < 1 || bounds.outHeight < 1 || bounds.outWidth > 320 || bounds.outHeight > 320) return null;
+            return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (IllegalArgumentException | OutOfMemoryError error) {
+            return null;
+        }
+    }
+
+    boolean canEditGroupPhoto(ThreadState thread) {
+        return canUse(thread) && thread.members != null && uid.equals(thread.creator);
+    }
+
+    void setGroupPhoto(ThreadState thread, String photo, Consumer<Boolean> complete) {
+        if (!canEditGroupPhoto(thread)) {
+            complete.accept(false);
+            return;
+        }
+        thread.ref.getParent().child("photo").setValue(photo)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
+    }
+
+    List<String> groupMembers(ThreadState thread) {
+        if (thread.members == null) return new ArrayList<>(names.keySet());
+        List<String> active = new ArrayList<>();
+        for (String member : thread.members) if (names.containsKey(member)) active.add(member);
+        return active;
     }
 
     private void acknowledgeDelivery(ThreadState thread) {
@@ -347,7 +399,9 @@ public final class FamilyChatStore {
 
     private void removeThread(String peer) {
         ThreadState thread = threads.remove(peer);
-        if (thread != null) thread.query.removeEventListener(thread.listener);
+        if (thread == null) return;
+        thread.query.removeEventListener(thread.listener);
+        if (thread.photoListener != null) thread.ref.getParent().child("photo").removeEventListener(thread.photoListener);
     }
 
     void observe(Runnable listener) { observers.add(listener); }
@@ -394,6 +448,9 @@ public final class FamilyChatStore {
         final DatabaseReference files;
         final List<Message> messages = new ArrayList<>();
         ValueEventListener listener;
+        ValueEventListener photoListener;
+        String creator;
+        android.graphics.Bitmap photo;
         boolean error;
         final String roomTitle;
         final List<String> members;

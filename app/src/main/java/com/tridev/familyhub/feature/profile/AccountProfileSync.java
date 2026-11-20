@@ -151,7 +151,7 @@ public final class AccountProfileSync {
     private void migratePhoto(String account,long token) {
         io.execute(() -> {
             Bitmap old=ProfilePhotoStore.load(context, account);
-            String data=old==null?null:encode(old);
+            String data=old==null?null:encodeAvatar(old);
             main.post(() -> {
                 if (!current(account,token) || data==null) return;
                 reference.child("accountPhoto").runTransaction(new Transaction.Handler() {
@@ -204,7 +204,7 @@ public final class AccountProfileSync {
                 BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
                 try(InputStream in=context.getContentResolver().openInputStream(uri)){BitmapFactory.decodeStream(in,null,bounds);}
                 if(bounds.outWidth>0&&bounds.outHeight>0){BitmapFactory.Options opts=new BitmapFactory.Options();opts.inSampleSize=1;while(Math.max(bounds.outWidth,bounds.outHeight)/opts.inSampleSize>640)opts.inSampleSize*=2;
-                    try(InputStream in=context.getContentResolver().openInputStream(uri)){Bitmap bitmap=BitmapFactory.decodeStream(in,null,opts);if(bitmap!=null)data=encode(bitmap);}}
+                    try(InputStream in=context.getContentResolver().openInputStream(uri)){Bitmap bitmap=BitmapFactory.decodeStream(in,null,opts);if(bitmap!=null)data=encodeAvatar(bitmap);}}
             }catch(Exception ignored){ }
             final String encoded=data;
             main.post(() -> {if(!current(account,token))return;if(operation!=photoOperation){callback.complete(false,"A newer photo choice was kept");return;}if(encoded==null){state="Photo could not be read";notifyChanged();callback.complete(false,state);return;}writePhoto(encoded,callback);});
@@ -217,7 +217,8 @@ public final class AccountProfileSync {
         Map<String,Object> changes=new HashMap<>();changes.put("accountPhoto",encoded);changes.put("profileUpdatedAt",ServerValue.TIMESTAMP);
         reference.updateChildren(changes).addOnCompleteListener(task -> {if(current(account,token)){pendingWrites=Math.max(0,pendingWrites-1);state=task.isSuccessful()?"Profile photo synced":"Photo sync failed";notifyChanged();callback.complete(task.isSuccessful(),state);}});
     }
-    private static String encode(Bitmap original) {
+    /** Encodes a bounded-size avatar and releases the source bitmap. */
+    public static String encodeAvatar(Bitmap original) {
         int edge=Math.max(original.getWidth(),original.getHeight());
         Bitmap small=edge>320?Bitmap.createScaledBitmap(original,Math.max(1,original.getWidth()*320/edge),Math.max(1,original.getHeight()*320/edge),true):original;
         try { for(int q=85;q>=35;q-=10){ByteArrayOutputStream bytes=new ByteArrayOutputStream();small.compress(Bitmap.CompressFormat.JPEG,q,bytes);if(bytes.size()<=48000)return Base64.encodeToString(bytes.toByteArray(),Base64.NO_WRAP);}return null; }

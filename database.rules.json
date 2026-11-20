@@ -223,6 +223,10 @@
             },
             "$other": {
               ".validate": false
+            },
+            "photo": {
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && data.parent().child('creator').val() === auth.uid && data.parent().child('members').child(auth.uid).val() === true",
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64000 && newData.val().matches(/^[A-Za-z0-9+\\/=]+$/)"
             }
           }
         },

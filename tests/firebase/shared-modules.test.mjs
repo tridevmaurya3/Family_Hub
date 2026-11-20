@@ -293,11 +293,12 @@ test('private groups and their attachments are visible only to selected active m
   const stamp = { '.sv': 'timestamp' };
   const room = id => `rooms/${id}`;
   const index = (uid, id) => `roomIndex/${uid}/${id}`;
-  const create = (id, members) => {
+  const create = (id, members, avatar) => {
     const updates = {
       [room(id) + '/title']: 'Private shopping',
       [room(id) + '/creator']: writer,
     };
+    if (avatar) updates[room(id) + '/photo'] = avatar;
     for (const uid of members) {
       updates[room(id) + '/members/' + uid] = true;
       updates[index(uid, id)] = true;
@@ -308,6 +309,15 @@ test('private groups and their attachments are visible only to selected active m
   await assertFails(create('invalid-room', [writer, reader, 'inactive']));
   await assertFails(owner.ref(path + '/' + index(excluded, 'private')).set(true));
   await assertSucceeds(create('private', [writer, reader, invited]));
+  await assertSucceeds(create('two-members', [writer, reader], 'YWJj'));
+  const photo = path + '/' + room('two-members') + '/photo';
+  assert.equal((await assertSucceeds(member.ref(photo).get())).val(), 'YWJj');
+  await assertFails(other.ref(photo).get());
+  await assertFails(member.ref(photo).set('YWJjZA=='));
+  await assertFails(owner.ref(photo).set('invalid avatar!'));
+  await assertFails(owner.ref(photo).set('A'.repeat(64001)));
+  await assertSucceeds(owner.ref(photo).set('YWJjZA=='));
+  assert.equal((await assertSucceeds(member.ref(photo).get())).val(), 'YWJjZA==');
   assert.equal((await member.ref(path + '/' + index(reader, 'private')).get()).val(), true);
   await assertFails(other.ref(path + '/rooms').get());
   await assertFails(other.ref(path + '/rooms/private').get());
