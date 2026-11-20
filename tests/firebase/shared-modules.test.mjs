@@ -518,3 +518,16 @@ test('video status retains audience restrictions and rejects oversized or mixed 
   await assertFails(ref('profile-owner').child('video').get());
   await assertFails(ref(outsider).child('video').get());
 });
+
+test('secure direct text allows only the two active participants and immutable encrypted records', async () => {
+  const channel = 'familySecureText/familyA/' + writer + '/' + reader;
+  const ref = (uid, path) => env.authenticatedContext(uid).database().ref(path);
+  const payload = { sender: writer, at: { '.sv': 'timestamp' }, ciphertext: 'A'.repeat(40) };
+  await assertFails(ref(writer, channel + '/plain').set({ ...payload, body: 'clear text' }));
+  await assertFails(ref(reader, channel + '/forged').set(payload));
+  await assertSucceeds(ref(writer, channel + '/sealed').set(payload));
+  await assertSucceeds(ref(reader, channel).limitToLast(50).get());
+  await assertFails(ref('profile-owner', channel).get());
+  await assertFails(ref(outsider, channel).get());
+  await assertFails(ref(writer, channel + '/sealed').remove());
+});

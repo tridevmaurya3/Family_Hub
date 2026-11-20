@@ -138,6 +138,9 @@ final class ChatSmartActions {
     void threadActions(FamilyChatStore.ThreadState thread, android.view.View anchor) {
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
+        if (!thread.isGroup() && !thread.peer.equals(store.accountId())) {
+            addAction(labels, actions, "Secure text chat", () -> ChatSecureText.open(fragment, store, thread));
+        }
         addAction(labels, actions, "Search messages", () -> search(thread, false));
         addAction(labels, actions, "Pinned messages", () -> pinned(thread));
         addAction(labels, actions, "Post announcement", () -> newSharedMessage(thread, false));
