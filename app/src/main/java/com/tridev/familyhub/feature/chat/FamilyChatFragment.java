@@ -70,6 +70,7 @@ public final class FamilyChatFragment extends Fragment {
     private LinearLayout screen, rows, bottom;
     private ModuleOverviewView header;
     private ScrollView scroll;
+    private final ChatDictation draftVoice = new ChatDictation(this);
     private EditText search, draft;
     private final ChatStatus chatStatus = new ChatStatus(this, store);
     private MaterialButton send, newGroup, statusButton;
@@ -151,7 +152,7 @@ public final class FamilyChatFragment extends Fragment {
         toolsButton.setLayoutParams(new LinearLayout.LayoutParams(dp(42), dp(48)));
         toolsButton.setOnClickListener(view -> {
             FamilyChatStore.ThreadState thread = store.thread(peer);
-            if (thread != null && store.canUse(thread)) smart.threadActions(thread);
+            if (thread != null && store.canUse(thread)) smart.threadActions(thread, view);
         });
         header.addHeaderAction(toolsButton);
         screen.addView(header);
@@ -194,8 +195,9 @@ public final class FamilyChatFragment extends Fragment {
         bottom.setBackground(card(WHITE, EDGE, 15));
         draft = new EditText(requireContext());
         draft.setHint("Write a message");
-        draft.setTextSize(15);
-        draft.setMaxLines(4);
+        draft.setTextSize(17);
+        draft.setMinHeight(dp(54));
+        draft.setMaxLines(6);
         draft.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -223,20 +225,28 @@ public final class FamilyChatFragment extends Fragment {
         composer.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_CUSTOM);
         composer.setEndIconDrawable(R.drawable.ic_mic);
         composer.setEndIconContentDescription(R.string.family_tasks_voice_add);
+        com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView wave =
+                new com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView(requireContext());
+        wave.setVisibility(View.GONE);
+        android.widget.FrameLayout inputBox = new android.widget.FrameLayout(requireContext());
+        inputBox.addView(composer, new android.widget.FrameLayout.LayoutParams(-1, -2));
+        android.widget.FrameLayout.LayoutParams wavePosition = new android.widget.FrameLayout.LayoutParams(
+                -1, dp(42), Gravity.CENTER_VERTICAL);
+        wavePosition.setMarginEnd(dp(52));
+        inputBox.addView(wave, wavePosition);
+        draftVoice.bind(draft, wave);
         composer.setEndIconOnClickListener(view -> {
-            EditText field = draft;
             FamilyChatStore.ThreadState thread = store.thread(peer);
-            if (thread == null || !store.canUse(thread)) return;
-            com.tridev.familyhub.core.ui.CompactFormStyle.capture(field,
-                    () -> screen != null && draft == field && store.thread(peer) == thread && store.canUse(thread));
+            if (thread != null && store.canUse(thread)) draftVoice.toggle();
         });
         composer.setEndIconOnLongClickListener(view -> {
             FamilyChatStore.ThreadState thread = store.thread(peer);
             if (thread == null || !store.canUse(thread)) return false;
+            draftVoice.stop();
             voiceNotes.record(thread);
             return true;
         });
-        bottom.addView(composer, new LinearLayout.LayoutParams(0, -2, 1));
+        bottom.addView(inputBox, new LinearLayout.LayoutParams(0, -2, 1));
         send = new MaterialButton(requireContext());
         send.setText("Send");
         send.setAllCaps(false);
@@ -345,12 +355,14 @@ public final class FamilyChatFragment extends Fragment {
         avatars().removeListener(avatarObserver);
         attachments.stopPreviews();
         voiceNotes.stop();
+        draftVoice.stop();
         super.onStop();
     }
 
     @Override public void onDestroyView() {
         groupScreens.dismiss();
         chatStatus.dismiss();
+        draftVoice.bind(null, null);
         screen = null;
         bubbles.clear();
         super.onDestroyView();
@@ -437,6 +449,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
+        draftVoice.stop();
         if (destination == null) {
             androidx.core.view.WindowInsetsControllerCompat controller =
                     androidx.core.view.ViewCompat.getWindowInsetsController(screen);
@@ -676,7 +689,7 @@ public final class FamilyChatFragment extends Fragment {
         if (thread.messages.isEmpty()) addLine(text("No messages yet", 14, MUTED, false));
         ChatAttachmentCards cards = new ChatAttachmentCards(requireContext(), attachments);
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int compactWidth = Math.min(dp(250), Math.round(screenWidth * 0.44f));
+        int compactWidth = Math.min(dp(420), Math.round(screenWidth * 0.82f));
         int compactMediaWidth = Math.max(1, compactWidth - dp(20));
         java.util.Map<String, FamilyChatStore.Message> known = new java.util.HashMap<>();
         for (FamilyChatStore.Message item : thread.messages) known.put(item.snapshot.getKey(), item);
@@ -687,7 +700,7 @@ public final class FamilyChatFragment extends Fragment {
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
             bubble.setTag(message.snapshot.getKey());
             bubble.setOnLongClickListener(view -> {
-                smart.messageActions(thread, message);
+                smart.messageActions(thread, message, view);
                 return true;
             });
             if (!own && thread.isGroup()) {
@@ -707,7 +720,7 @@ public final class FamilyChatFragment extends Fragment {
             if (attachment != null) {
                 bubble.addView(attachment, new LinearLayout.LayoutParams(-1, -2));
             } else {
-                TextView messageText = text(message.body, 15, INK, false);
+                TextView messageText = text(message.body, 17, INK, false);
                 messageText.setTextIsSelectable(true);
                 bubble.addView(messageText);
             }
@@ -741,7 +754,7 @@ public final class FamilyChatFragment extends Fragment {
             TextView menu = text("  ⋮", 17, BLUE, true);
             menu.setContentDescription("Message actions");
             menu.setPadding(dp(4), dp(8), dp(4), dp(8));
-            menu.setOnClickListener(view -> smart.messageActions(thread, message));
+            menu.setOnClickListener(view -> smart.messageActions(thread, message, view));
             metadata.addView(menu);
             if (own) {
                 boolean seen = store.acknowledged(thread, message, true);
@@ -752,7 +765,9 @@ public final class FamilyChatFragment extends Fragment {
                 metadata.addView(tick);
             }
             bubble.addView(metadata);
-            int bubbleWidth = attachment == null ? -2 : compactWidth;
+            if (attachment == null) bubble.measure(View.MeasureSpec.makeMeasureSpec(compactWidth, View.MeasureSpec.AT_MOST),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            int bubbleWidth = attachment == null ? Math.min(compactWidth, Math.max(dp(140), bubble.getMeasuredWidth())) : compactWidth;
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(bubbleWidth, -2);
             params.gravity = own ? Gravity.END : Gravity.START;
             params.topMargin = dp(7);

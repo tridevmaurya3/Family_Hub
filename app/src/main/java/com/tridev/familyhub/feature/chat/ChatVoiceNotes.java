@@ -42,6 +42,7 @@ final class ChatVoiceNotes {
     private final FamilyChatFragment fragment;
     private final FamilyChatStore store;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ExecutorService captureWorker = Executors.newSingleThreadExecutor();
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final androidx.activity.result.ActivityResultLauncher<String> permission;
     private FamilyChatStore.ThreadState pendingThread;
@@ -88,11 +89,17 @@ final class ChatVoiceNotes {
         dialog = recordingDialog;
         recordingDialog.setOnDismissListener(ignored -> recording.stopping = true);
         recordingDialog.show();
+        recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        recording.ready = () -> handler.post(() -> {
+            if (current == recording && recordingDialog.isShowing()) {
+                recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+            }
+        });
         recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             recording.stopping = true;
             recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
         });
-        io.execute(() -> {
+        captureWorker.execute(() -> {
             byte[] pcm = capture(recording);
             handler.post(() -> {
                 if (current != recording) return;
@@ -138,6 +145,7 @@ final class ChatVoiceNotes {
             while (!recording.stopping && audio.size() < maxBytes) {
                 int read = microphone.read(buffer, 0, Math.min(buffer.length, maxBytes - audio.size()));
                 if (read < 0) break;
+                if (audio.size() == 0 && read > 0) recording.ready.run();
                 audio.write(buffer, 0, read);
             }
             return audio.toByteArray();
@@ -316,6 +324,7 @@ final class ChatVoiceNotes {
 
     void close() {
         stop();
+        captureWorker.shutdownNow();
         io.shutdownNow();
     }
 
@@ -339,6 +348,7 @@ final class ChatVoiceNotes {
     }
 
     private static final class Recording {
+        Runnable ready;
         int rate = RATE;
         volatile boolean stopping;
         volatile boolean discard;

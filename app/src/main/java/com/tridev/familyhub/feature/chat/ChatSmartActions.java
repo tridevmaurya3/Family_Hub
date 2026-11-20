@@ -36,6 +36,10 @@ final class ChatSmartActions {
     }
 
     void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        messageActions(thread, message, null);
+    }
+
+    void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, android.view.View anchor) {
         if (!ready(thread) || message.deleted()) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
@@ -79,7 +83,7 @@ final class ChatSmartActions {
         if ("poll".equals(message.kind()) && !message.pollClosed() && store.own(message)) {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
-        choose("Message actions", labels, actions);
+        chooseAnchored(anchor, "Message actions", labels, actions);
     }
 
     private void forwardText(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
@@ -131,7 +135,7 @@ final class ChatSmartActions {
         });
     }
 
-    void threadActions(FamilyChatStore.ThreadState thread) {
+    void threadActions(FamilyChatStore.ThreadState thread, android.view.View anchor) {
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         addAction(labels, actions, "Search messages", () -> search(thread, false));
@@ -146,7 +150,7 @@ final class ChatSmartActions {
         addAction(labels, actions, "Chat media", () -> search(thread, true));
         addAction(labels, actions, "Catch up on unread", () -> catchUp(thread));
         addAction(labels, actions, "@Mention a member", () -> mentions(thread));
-        choose("Chat tools", labels, actions);
+        chooseAnchored(anchor, "Chat tools", labels, actions);
     }
 
     private void shareEvent(FamilyChatStore.ThreadState thread) {
@@ -638,9 +642,66 @@ final class ChatSmartActions {
         actions.add(action);
     }
 
+    private android.view.View menuAnchor;
+
+    private void chooseAnchored(android.view.View anchor, String title, List<String> labels, List<Runnable> actions) {
+        if (anchor == null || !anchor.isAttachedToWindow()) {
+            anchor = fragment.getView();
+            if (anchor == null || !anchor.isAttachedToWindow()) return;
+        }
+        menuAnchor = anchor;
+        LinearLayout rows = panel();
+        rows.setBackground(menuShape(0xfff4faf8, 0xffd4dee2, 14));
+        ScrollView scroll = scroll(rows);
+        android.widget.PopupWindow popup = new android.widget.PopupWindow(context());
+        popup.setContentView(scroll);
+        popup.setFocusable(true);
+        popup.setOutsideTouchable(true);
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        popup.setElevation(menuDp(12));
+        int width = 0;
+        for (int i = 0; i < labels.size(); i++) {
+            Runnable action = actions.get(i);
+            TextView row = label(labels.get(i));
+            row.setTextSize(16);
+            row.setTextColor(0xff1f2a31);
+            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            row.setMinHeight(menuDp(46));
+            row.setPadding(menuDp(12), menuDp(6), menuDp(12), menuDp(6));
+            row.setBackground(menuShape(0xfffcffff, 0xffd4dee2, 10));
+            row.setOnClickListener(v -> {
+                popup.dismiss();
+                action.run();
+            });
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+            params.bottomMargin = menuDp(4);
+            rows.addView(row, params);
+            width = Math.max(width, (int) Math.ceil(row.getPaint().measureText(labels.get(i))));
+        }
+        android.graphics.Rect visible = new android.graphics.Rect();
+        anchor.getWindowVisibleDisplayFrame(visible);
+        popup.setWidth(Math.min(visible.width() - menuDp(16), width + menuDp(54)));
+        boolean centered = anchor == fragment.getView();
+        int available = centered ? visible.height() - menuDp(32) : popup.getMaxAvailableHeight(anchor);
+        popup.setHeight(Math.min(Math.max(menuDp(54), available), menuDp(24 + 50 * labels.size())));
+        if (centered) popup.showAtLocation(anchor, android.view.Gravity.CENTER, 0, 0);
+        else popup.showAsDropDown(anchor, 0, menuDp(4), android.view.Gravity.END);
+    }
+
+    private android.graphics.drawable.GradientDrawable menuShape(int fill, int edge, int radius) {
+        android.graphics.drawable.GradientDrawable shape = new android.graphics.drawable.GradientDrawable();
+        shape.setColor(fill);
+        shape.setStroke(menuDp(1), edge);
+        shape.setCornerRadius(menuDp(radius));
+        return shape;
+    }
+
+    private int menuDp(int value) {
+        return Math.round(value * context().getResources().getDisplayMetrics().density);
+    }
+
     private void choose(String title, List<String> labels, List<Runnable> actions) {
-        new ChatFormDialog(context()).setTitle(title).setItems(labels.toArray(new String[0]),
-                (dialog, which) -> actions.get(which).run()).setNegativeButton("Close", null).show();
+        chooseAnchored(menuAnchor, title, labels, actions);
     }
 
     private LinearLayout panel() {
