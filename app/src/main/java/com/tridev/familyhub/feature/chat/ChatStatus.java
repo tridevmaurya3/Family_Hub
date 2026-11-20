@@ -63,8 +63,23 @@ final class ChatStatus {
                 text.setText(member.getValue() + "\n" + body);
                 text.setTextIsSelectable(true);
                 text.setPadding(0, padding / 2, 0, padding / 2);
-                rows.addView(text);
-                rows.postDelayed(() -> rows.removeView(text), remaining);
+                LinearLayout card = new LinearLayout(rows.getContext());
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.addView(text);
+                if (!uid.equals(member.getKey())) {
+                    com.google.android.material.button.MaterialButton reply =
+                            new com.google.android.material.button.MaterialButton(rows.getContext(), null,
+                                    com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                    reply.setText("Reply privately");
+                    reply.setOnClickListener(v -> {
+                        if (!active(family, uid)) return;
+                        listing.dismiss();
+                        host.replyToStatus(member.getKey());
+                    });
+                    card.addView(reply);
+                }
+                rows.addView(card);
+                rows.postDelayed(() -> rows.removeView(card), remaining);
             });
         }
     }
@@ -73,17 +88,50 @@ final class ChatStatus {
         EditText input = new EditText(host.requireContext());
         input.setHint("Write a status");
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(500)});
+        LinearLayout form = new LinearLayout(host.requireContext());
+        form.setOrientation(LinearLayout.VERTICAL);
+        int inset = Math.round(16 * form.getResources().getDisplayMetrics().density);
+        form.setPadding(inset, 0, inset, inset);
+        form.addView(ChatFormDialog.outlined(input));
+        com.google.android.material.checkbox.MaterialCheckBox restricted =
+                new com.google.android.material.checkbox.MaterialCheckBox(host.requireContext());
+        restricted.setText("Only selected family members");
+        form.addView(restricted);
+        LinearLayout people = new LinearLayout(host.requireContext());
+        people.setOrientation(LinearLayout.VERTICAL);
+        form.addView(people);
+        people.setVisibility(android.view.View.GONE);
+        Map<String, Boolean> audience = new LinkedHashMap<>();
+        for (Map.Entry<String, String> member : store.groupCandidates().entrySet()) {
+            com.google.android.material.checkbox.MaterialCheckBox check =
+                    new com.google.android.material.checkbox.MaterialCheckBox(host.requireContext());
+            check.setText(member.getValue());
+            check.setOnCheckedChangeListener((button, checked) -> {
+                if (checked) audience.put(member.getKey(), true);
+                else audience.remove(member.getKey());
+            });
+            people.addView(check);
+        }
+        restricted.setOnCheckedChangeListener((button, checked) ->
+                people.setVisibility(checked ? android.view.View.VISIBLE : android.view.View.GONE));
+        ScrollView scroll = new ScrollView(host.requireContext());
+        scroll.addView(form);
         dialog = new ChatFormDialog(host.requireContext()).setTitle("New text status")
-                .setMessage("Visible to active family members for 24 hours. This replaces your previous status.")
-                .setView(ChatFormDialog.outlined(input))
+                .setMessage("Choose who can see your status for 24 hours.")
+                .setView(scroll)
                 .setNegativeButton("Cancel", null).setPositiveButton("Post", null).show();
         AlertDialog editor = dialog;
         editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             if (!active(family, uid)) return;
             String body = input.getText().toString().trim();
             if (body.isEmpty()) { input.setError("Enter a status"); return; }
+            if (restricted.isChecked() && audience.isEmpty()) {
+                notice("Select at least one family member");
+                return;
+            }
             view.setEnabled(false);
             Map<String, Object> value = new LinkedHashMap<>();
+            if (restricted.isChecked()) value.put("audience", new LinkedHashMap<>(audience));
             value.put("body", body);
             value.put("postedAt", ServerValue.TIMESTAMP);
             path.setValue(value).addOnCompleteListener(task -> {

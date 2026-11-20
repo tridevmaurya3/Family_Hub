@@ -5,7 +5,7 @@
     "familyTextStatus": {
       "$familyId": {
         "$author": {
-          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $author || (root.child('memberships').child($familyId).child($author).child('status').val() === 'ACTIVE' && data.child('postedAt').val() > now - 86400000))",
+          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $author || (root.child('memberships').child($familyId).child($author).child('status').val() === 'ACTIVE' && (!data.child('audience').exists() || data.child('audience').child(auth.uid).val() === true) && data.child('postedAt').val() > now - 86400000))",
           ".write": "auth != null && auth.uid === $author && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
           ".validate": "newData.hasChildren(['body', 'postedAt'])",
           "body": {
@@ -13,6 +13,12 @@
           },
           "postedAt": {
             ".validate": "newData.isNumber() && newData.val() === now"
+          },
+          "audience": {
+            ".validate": "newData.hasChildren()",
+            "$viewer": {
+              ".validate": "newData.val() === true && root.child('memberships').child($familyId).child($viewer).child('status').val() === 'ACTIVE'"
+            }
           },
           "$other": {
             ".validate": false

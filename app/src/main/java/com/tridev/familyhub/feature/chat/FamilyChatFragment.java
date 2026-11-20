@@ -398,6 +398,13 @@ public final class FamilyChatFragment extends Fragment {
         focusDraft();
     }
 
+    void replyToStatus(String author) {
+        FamilyChatStore.ThreadState thread = store.thread(author);
+        if (thread == null || !store.canUse(thread)) return;
+        open(author);
+        focusDraft();
+    }
+
     private void focusDraft() {
         draft.requestFocus();
         androidx.core.view.WindowInsetsControllerCompat controller =
