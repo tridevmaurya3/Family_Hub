@@ -51,6 +51,7 @@ public final class FamilyChatFragment extends Fragment {
     private LinearLayout replyBanner;
     private TextView replyText;
     private MaterialButton toolsButton;
+    private MaterialButton pinBanner;
     private final ChatGroupScreens groupScreens = new ChatGroupScreens(this, store, this::open);
     private final Runnable observer = this::render;
     private final FamilyAvatarStore.Listener avatarObserver = this::render;
@@ -140,6 +141,15 @@ public final class FamilyChatFragment extends Fragment {
         searchParams.topMargin = dp(8);
         screen.addView(search, searchParams);
         search.addTextChangedListener(watcher(this::render));
+        pinBanner = flatButton("Pinned messages");
+        pinBanner.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        pinBanner.setMaxLines(1);
+        pinBanner.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        pinBanner.setOnClickListener(view -> {
+            FamilyChatStore.ThreadState thread = store.thread(peer);
+            if (thread != null && store.canUse(thread)) smart.pinned(thread);
+        });
+        screen.addView(pinBanner, new LinearLayout.LayoutParams(-1, -2));
 
         scroll = new ScrollView(requireContext());
         rows = column();
@@ -412,7 +422,16 @@ public final class FamilyChatFragment extends Fragment {
         newGroup.setVisibility(!inThread && (choosingLiveRecipient || !store.groupCandidates().isEmpty())
                 ? View.VISIBLE : View.GONE);
         newGroup.setEnabled(choosingLiveRecipient || store.online());
-        toolsButton.setVisibility(thread != null && !thread.error ? View.VISIBLE : View.GONE);
+        boolean chatReady = thread != null && !thread.error;
+        toolsButton.setVisibility(chatReady ? View.VISIBLE : View.GONE);
+        pinBanner.setVisibility(chatReady ? View.VISIBLE : View.GONE);
+        pinBanner.setText("Pinned messages");
+        if (chatReady) for (int i = thread.messages.size() - 1; i >= 0; i--) {
+            FamilyChatStore.Message pinned = thread.messages.get(i);
+            if (!pinned.pinned()) continue;
+            pinBanner.setText("Pinned · " + pinned.body);
+            break;
+        }
         headerAvatar.removeAllViews();
         if (thread != null) headerAvatar.addView(threadAvatar(thread, 40));
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);

@@ -103,7 +103,7 @@ final class ChatSmartActions {
         });
     }
 
-    private void pinned(FamilyChatStore.ThreadState thread) {
+    void pinned(FamilyChatStore.ThreadState thread) {
         store.pinned(thread, messages -> {
             if (!ready(thread)) return;
             if (messages == null) {
@@ -221,13 +221,26 @@ final class ChatSmartActions {
                 .setTitle("Pending votes · " + pending.size())
                 .setMessage(names.isEmpty() ? "Everyone else has voted." : String.join("\n", names))
                 .setNegativeButton("Done", null);
-        if (!pending.isEmpty()) builder.setPositiveButton("Send private reminders", (dialog, which) -> {
-            for (String uid : pending) {
-                FamilyChatStore.ThreadState direct = store.thread(uid);
-                if (direct != null) store.send(direct, "Poll reminder in " + store.title(thread) + ": " + message.body,
-                        () -> toast("Unable to remind " + store.name(uid)));
-            }
-        });
+        if (!pending.isEmpty()) builder.setPositiveButton("Send private reminders", (dialog, which) ->
+                store.loadMessage(thread, message.snapshot.getKey(), current -> {
+                    if (!ready(thread)) return;
+                    if (current == null) {
+                        toast("Unable to check current votes");
+                        return;
+                    }
+                    List<String> participants = store.participants(thread);
+                    int sent = 0;
+                    for (String uid : pending) {
+                        if (!participants.contains(uid) || current.snapshot.child("votes").child(uid).exists()) continue;
+                        FamilyChatStore.ThreadState direct = store.thread(uid);
+                        if (direct != null && store.canUse(direct)) {
+                            store.send(direct, "Poll reminder in " + store.title(thread) + ": " + current.body,
+                                    () -> toast("Unable to remind " + store.name(uid)));
+                            sent++;
+                        }
+                    }
+                    if (sent == 0) toast("No selected members still need a reminder");
+                }));
         builder.show();
     }
 
