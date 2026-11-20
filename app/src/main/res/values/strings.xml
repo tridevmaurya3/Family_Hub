@@ -1658,4 +1658,5 @@ Sharing: %12$s</string>
     <string name="grocery_new_store_hint">Store or market name</string>
     <string name="grocery_store_name_required">Enter a store or market name</string>
     <string name="grocery_store_add_action">Add</string>
+    <string name="family_map_shared_chat_pin">Shared location</string>
 </resources>

@@ -508,6 +508,15 @@ final class ChatAttachments {
         }
     }
 
+    void openFamilyMap(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (!store.canUse(thread)) return;
+        Double latitude = message.snapshot.child("lat").getValue(Double.class);
+        Double longitude = message.snapshot.child("lng").getValue(Double.class);
+        if (latitude == null || longitude == null || !Double.isFinite(latitude)
+                || !Double.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return;
+        fragment.startActivity(FamilyMapActivity.createLocationIntent(fragment.requireContext(), latitude, longitude));
+    }
+
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         if (!store.canUse(thread)) return;
         String kind = message.snapshot.child("kind").getValue(String.class);

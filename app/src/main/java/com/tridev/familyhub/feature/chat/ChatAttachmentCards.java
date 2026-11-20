@@ -36,11 +36,6 @@ final class ChatAttachmentCards {
         this.attachments = attachments;
     }
 
-    static boolean isCompactMedia(FamilyChatStore.Message message) {
-        String kind = message.snapshot.child("kind").getValue(String.class);
-        return "photo".equals(kind) || "location".equals(kind) || "live".equals(kind);
-    }
-
     View create(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, int mediaWidth) {
         String kind = message.snapshot.child("kind").getValue(String.class);
         if (kind == null) return null;
@@ -85,7 +80,10 @@ final class ChatAttachmentCards {
                     if (lat != null && lng != null) whenVisible(preview,
                             () -> preview.showPoint(lat, lng, String.format(Locale.ROOT, "%.5f, %.5f", lat, lng)));
                 }
-                card.addView(action("live".equals(kind) ? "Open Family Live" : "Open map", open));
+                card.addView(action("live".equals(kind) ? "Family Map" : "Open map", open));
+                if ("location".equals(kind)) {
+                    card.addView(action("Family Map", () -> attachments.openFamilyMap(thread, message)));
+                }
                 break;
             case "poll":
                 card.addView(label("Poll", false));
@@ -96,17 +94,22 @@ final class ChatAttachmentCards {
                     boolean voted = option.getKey() != null && option.getKey().equals(selected);
                     MaterialCardView row = surface();
                     TextView optionText = label((voted ? "✓  " : "○  ") + value, voted);
-                    optionText.setPadding(dp(10), dp(8), dp(10), dp(8));
+                    optionText.setPadding(dp(8), dp(4), dp(8), dp(4));
                     row.addView(optionText);
                     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
                     params.topMargin = dp(4);
                     card.addView(row, params);
                 }
                 LinearLayout actions = new LinearLayout(context);
-                actions.addView(action(selected == null ? "Vote" : "Change vote", open),
-                        new LinearLayout.LayoutParams(0, -2, 1));
-                actions.addView(action("Results", () -> attachments.showPollResults(message)),
-                        new LinearLayout.LayoutParams(0, -2, 1));
+                MaterialButton vote = action("Vote", open);
+                if (selected != null) vote.setContentDescription("Change vote");
+                MaterialButton results = action("Results", () -> attachments.showPollResults(message));
+                for (MaterialButton button : new MaterialButton[]{vote, results}) {
+                    button.setMinWidth(0);
+                    button.setMinimumWidth(0);
+                    button.setPaddingRelative(dp(3), button.getPaddingTop(), dp(3), button.getPaddingBottom());
+                    actions.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
+                }
                 card.addView(actions);
                 break;
             case "file":

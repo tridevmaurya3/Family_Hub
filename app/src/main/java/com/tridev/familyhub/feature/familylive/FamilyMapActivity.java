@@ -134,6 +134,17 @@ public final class FamilyMapActivity extends AppCompatActivity {
     private boolean fitOnNextRender = true;
     private boolean trafficEnabled;
     private boolean pendingIntentFocus;
+    private static final String EXTRA_SHARED_LATITUDE = "family_map_shared_latitude";
+    private static final String EXTRA_SHARED_LONGITUDE = "family_map_shared_longitude";
+    @Nullable private LatLng sharedLocation;
+    private boolean focusSharedLocation;
+
+    @NonNull
+    public static Intent createLocationIntent(@NonNull Context context, double latitude, double longitude) {
+        return new Intent(context, FamilyMapActivity.class)
+                .putExtra(EXTRA_SHARED_LATITUDE, latitude)
+                .putExtra(EXTRA_SHARED_LONGITUDE, longitude);
+    }
     private int mapType = GoogleMap.MAP_TYPE_NORMAL;
 
     @NonNull
@@ -235,6 +246,13 @@ public final class FamilyMapActivity extends AppCompatActivity {
     }
 
     private void restoreIntentFocus(@Nullable Bundle savedInstanceState) {
+        double latitude = getIntent().getDoubleExtra(EXTRA_SHARED_LATITUDE, Double.NaN);
+        double longitude = getIntent().getDoubleExtra(EXTRA_SHARED_LONGITUDE, Double.NaN);
+        if (validCoordinates(latitude, longitude)) {
+            sharedLocation = new LatLng(latitude, longitude);
+            focusSharedLocation = restoredCamera == null;
+            fitOnNextRender = false;
+        }
         if (savedInstanceState != null) {
             return;
         }
@@ -432,16 +450,18 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
         familyRepository.stopObservingCloudMembers();
         dataReady = false;
-        showLoading();
+        if (sharedLocation == null || !mapReady) showLoading();
         familyRepository.observeCloudMembers(received -> {
             dataReady = true;
             members = new ArrayList<>(received);
             loadMemberPhotos();
         }, error -> {
             dataReady = true;
-            showState(isNetworkAvailable()
-                    ? R.string.family_map_firebase_unavailable
-                    : R.string.family_map_internet_unavailable);
+            if (sharedLocation == null) {
+                showState(isNetworkAvailable()
+                        ? R.string.family_map_firebase_unavailable
+                        : R.string.family_map_internet_unavailable);
+            }
         });
     }
 
@@ -466,6 +486,14 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
 
         renderSafePlaces();
+        if (sharedLocation != null) {
+            map.addMarker(new MarkerOptions().position(sharedLocation)
+                    .title(getString(R.string.family_map_shared_chat_pin)).zIndex(2f));
+            if (focusSharedLocation) {
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(sharedLocation, 15f));
+                focusSharedLocation = false;
+            }
+        }
 
         int authorised = members.size();
         int sharing = 0;
@@ -538,7 +566,9 @@ public final class FamilyMapActivity extends AppCompatActivity {
         }
         loading.setVisibility(View.GONE);
 
-        if (!dataReady) {
+        if (sharedLocation != null) {
+            stateCard.setVisibility(View.GONE);
+        } else if (!dataReady) {
             showLoading();
         } else if (authorised == 0) {
             showState(R.string.family_map_no_authorised);

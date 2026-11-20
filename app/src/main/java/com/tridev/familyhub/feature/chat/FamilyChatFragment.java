@@ -409,7 +409,6 @@ public final class FamilyChatFragment extends Fragment {
         if (thread.messages.isEmpty()) addLine(text("No messages yet", 14, MUTED, false));
         ChatAttachmentCards cards = new ChatAttachmentCards(requireContext(), attachments);
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int richWidth = Math.max(dp(180), Math.min(dp(420), screenWidth - dp(48)));
         int compactWidth = Math.min(dp(250), Math.round(screenWidth * 0.44f));
         int compactMediaWidth = Math.max(1, compactWidth - dp(20));
         for (FamilyChatStore.Message message : thread.messages) {
@@ -441,10 +440,7 @@ public final class FamilyChatFragment extends Fragment {
                 metadata.addView(tick);
             }
             bubble.addView(metadata);
-            int bubbleWidth = -2;
-            if (attachment != null) {
-                bubbleWidth = ChatAttachmentCards.isCompactMedia(message) ? compactWidth : richWidth;
-            }
+            int bubbleWidth = attachment == null ? -2 : compactWidth;
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(bubbleWidth, -2);
             params.gravity = own ? Gravity.END : Gravity.START;
             params.topMargin = dp(7);
