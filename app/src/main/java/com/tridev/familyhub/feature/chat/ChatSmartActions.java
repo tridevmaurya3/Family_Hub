@@ -81,11 +81,106 @@ final class ChatSmartActions {
         List<Runnable> actions = new ArrayList<>();
         addAction(labels, actions, "Search messages", () -> search(thread, false));
         addAction(labels, actions, "Pinned messages", () -> pinned(thread));
+        addAction(labels, actions, "Notifications", () -> notifications(thread));
+        addAction(labels, actions, "Schedule a message", () -> editSchedule(thread, null));
+        addAction(labels, actions, "Scheduled messages", () -> showSchedule(thread));
         addAction(labels, actions, "Saved messages", () -> showSaved(thread));
         addAction(labels, actions, "Chat media", () -> search(thread, true));
         addAction(labels, actions, "Catch up on unread", () -> catchUp(thread));
         addAction(labels, actions, "@Mention a member", () -> mentions(thread));
         choose("Chat tools", labels, actions);
+    }
+
+    private void notifications(FamilyChatStore.ThreadState thread) {
+        String uid = store.accountId();
+        Context context = context();
+        int selected = ChatNotifications.mode(context, uid, thread);
+        new MaterialAlertDialogBuilder(context).setTitle("Chat notifications")
+                .setSingleChoiceItems(new String[]{"All new messages", "Mentions and replies", "Muted"}, selected,
+                        (dialog, choice) -> {
+                            if (!ready(thread) || !java.util.Objects.equals(uid, store.accountId())) return;
+                            ChatNotifications.setMode(context, uid, thread, choice);
+                            dialog.dismiss();
+                            if (choice != ChatNotifications.MUTED) fragment.requestChatNotificationPermission();
+                            toast(choice == ChatNotifications.MUTED ? "Chat muted" : "Preference saved on this device");
+                        })
+                .setNegativeButton("Done", null).show();
+    }
+
+    private void showSchedule(FamilyChatStore.ThreadState thread) {
+        if (!ready(thread)) return;
+        List<ChatScheduledMessages.Entry> entries = ChatScheduledMessages.list(context(), store.accountId(), thread.ref.toString());
+        LinearLayout content = panel();
+        if (entries.isEmpty()) content.addView(label("No scheduled messages on this device."));
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle("Scheduled messages")
+                .setView(scroll(content)).setNegativeButton("Done", null).show();
+        for (ChatScheduledMessages.Entry entry : entries) {
+            MaterialButton item = button(dateTime(entry.due) + (entry.sending ? " · Sending" : entry.due < System.currentTimeMillis() ? " · Due" : "")
+                    + "\n" + entry.body);
+            item.setMaxLines(3);
+            item.setEnabled(!entry.sending);
+            item.setOnClickListener(view -> {
+                dialog.dismiss();
+                choose("Scheduled message", java.util.Arrays.asList("Edit", "Cancel scheduled send"),
+                        java.util.Arrays.asList(() -> editSchedule(thread, entry), () ->
+                                new MaterialAlertDialogBuilder(context()).setTitle("Cancel this scheduled message?")
+                                        .setNegativeButton("Keep", null).setPositiveButton("Cancel send", (d, w) -> {
+                                            if (!ChatScheduledMessages.cancel(context(), entry)) toast("Message is no longer pending");
+                                            showSchedule(thread);
+                                        }).show()));
+            });
+            content.addView(item);
+        }
+    }
+
+    private void editSchedule(FamilyChatStore.ThreadState thread, ChatScheduledMessages.Entry entry) {
+        if (!ready(thread)) return;
+        LinearLayout content = panel();
+        EditText body = new EditText(context());
+        body.setHint("Write a message");
+        body.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
+        if (entry != null) body.setText(entry.body);
+        content.addView(body);
+        long[] due = {entry == null ? 0L : entry.due};
+        MaterialButton select = button(due[0] > 0 ? dateTime(due[0]) : "Choose date and time");
+        select.setOnClickListener(view -> chooseDateTime(due[0], time -> {
+            due[0] = time;
+            select.setText(dateTime(time));
+        }));
+        content.addView(select);
+        content.addView(label("This device sends when it is online and signed in. Android may delay delivery."));
+        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle(entry == null ? "Schedule message" : "Edit scheduled message")
+                .setView(content).setNegativeButton("Cancel", null).setPositiveButton("Save", null).show();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            if (!ready(thread)) return;
+            String text = body.getText().toString().trim();
+            if (text.isEmpty()) { body.setError("Enter a message"); return; }
+            if (due[0] <= System.currentTimeMillis()) { toast("Choose a future time"); return; }
+            if (ChatScheduledMessages.put(context(), store.accountId(), thread.ref.toString(), text, due[0], entry)) {
+                dialog.dismiss();
+                toast("Message scheduled on this device");
+            } else toast("Unable to save scheduled message");
+        });
+    }
+
+    private void chooseDateTime(long initial, java.util.function.LongConsumer selected) {
+        Calendar day = Calendar.getInstance();
+        day.setTimeInMillis(Math.max(initial, System.currentTimeMillis() + 60000L));
+        DatePickerDialog picker = new DatePickerDialog(context(), (date, year, month, number) ->
+                new android.app.TimePickerDialog(context(), (clock, hour, minute) -> {
+                    day.clear();
+                    day.set(year, month, number, hour, minute);
+                    selected.accept(day.getTimeInMillis());
+                }, day.get(Calendar.HOUR_OF_DAY), day.get(Calendar.MINUTE),
+                        DateFormat.is24HourFormat(context())).show(),
+                day.get(Calendar.YEAR), day.get(Calendar.MONTH), day.get(Calendar.DAY_OF_MONTH));
+        picker.getDatePicker().setMinDate(System.currentTimeMillis());
+        picker.show();
+    }
+
+    private String dateTime(long time) {
+        Date date = new Date(time);
+        return DateFormat.getDateFormat(context()).format(date) + " " + DateFormat.getTimeFormat(context()).format(date);
     }
 
     private android.content.SharedPreferences savedPreferences() {

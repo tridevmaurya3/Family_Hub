@@ -24,6 +24,7 @@ public final class FamilyChatStore {
     private static final FamilyChatStore INSTANCE = new FamilyChatStore();
     static FamilyChatStore get() { return INSTANCE; }
 
+    private ChatNotifications notifications;
     private final DatabaseReference root = FirebaseDatabase.getInstance().getReference();
     private final List<Runnable> observers = new ArrayList<>();
     private final Map<String, ThreadState> threads = new LinkedHashMap<>();
@@ -34,6 +35,7 @@ public final class FamilyChatStore {
     private Query membershipQuery;
     private DatabaseReference roomIndex;
     private ValueEventListener roomIndexListener;
+    private final java.util.Set<String> indexedRooms = new java.util.HashSet<>();
     private ValueEventListener sessionListener;
     private ValueEventListener membershipListener;
     private String uid;
@@ -44,7 +46,10 @@ public final class FamilyChatStore {
 
     private FamilyChatStore() {}
 
-    public static void startForApp() { INSTANCE.start(); }
+    public static void startForApp(android.content.Context context) {
+        INSTANCE.notifications = new ChatNotifications(context, INSTANCE);
+        INSTANCE.start();
+    }
 
     private void start() {
         if (started) return;
@@ -54,6 +59,7 @@ public final class FamilyChatStore {
             if (java.util.Objects.equals(signedIn, uid)) return;
             if (sessionQuery != null) sessionQuery.removeEventListener(sessionListener);
             sessionQuery = null;
+            if (notifications != null) notifications.clear();
             clearFamily();
             pending.clear();
             uid = signedIn;
@@ -127,6 +133,13 @@ public final class FamilyChatStore {
         roomIndex = base.child("roomIndex").child(uid);
         DatabaseReference index = roomIndex;
         roomIndexListener = listen(index, snapshot -> {
+            indexedRooms.clear();
+            for (DataSnapshot entry : snapshot.getChildren()) {
+                if (Boolean.TRUE.equals(entry.getValue(Boolean.class))) indexedRooms.add(entry.getKey());
+            }
+            for (String peer : new ArrayList<>(threads.keySet())) {
+                if (peer.startsWith("room:") && !indexedRooms.contains(peer.substring(5))) removeThread(peer);
+            }
             for (DataSnapshot entry : snapshot.getChildren()) {
                 String room = entry.getKey();
                 if (!Boolean.TRUE.equals(entry.getValue(Boolean.class))
@@ -135,17 +148,25 @@ public final class FamilyChatStore {
                 com.google.android.gms.tasks.Task<DataSnapshot> title = details.child("title").get();
                 com.google.android.gms.tasks.Task<DataSnapshot> members = details.child("members").get();
                 com.google.android.gms.tasks.Tasks.whenAllSuccess(title, members).addOnSuccessListener(result -> {
-                    if (roomIndex != index || !expectedFamily.equals(family)) return;
+                    if (roomIndex != index || !expectedFamily.equals(family) || !indexedRooms.contains(room)) return;
                     addRoom(room, details, title.getResult().getValue(String.class), members.getResult());
                 });
             }
-        }, error -> {});
+            notifyObservers();
+        }, error -> {
+            indexedRooms.clear();
+            for (String peer : new ArrayList<>(threads.keySet())) {
+                if (peer.startsWith("room:")) removeThread(peer);
+            }
+            notifyObservers();
+        });
     }
 
     private void stopRooms() {
         if (roomIndex == null) return;
         roomIndex.removeEventListener(roomIndexListener);
         roomIndex = null;
+        indexedRooms.clear();
     }
 
     private void addRoom(String room, DatabaseReference details, String title, DataSnapshot membership) {
@@ -231,6 +252,31 @@ public final class FamilyChatStore {
         threads.put(peer, thread);
         if (thread.members != null) {
             DatabaseReference room = thread.ref.getParent();
+            thread.membersListener = listen(room.child("members"), snapshot -> {
+                if (threads.get(peer) != thread) return;
+                if (!Boolean.TRUE.equals(snapshot.child(uid).getValue(Boolean.class))) {
+                    removeThread(peer);
+                } else {
+                    thread.members.clear();
+                    for (DataSnapshot member : snapshot.getChildren()) thread.members.add(member.getKey());
+                }
+                notifyObservers();
+            }, error -> {
+                if (threads.get(peer) != thread) return;
+                removeThread(peer);
+                notifyObservers();
+            });
+            thread.adminsListener = listen(room.child("admins"), snapshot -> {
+                if (threads.get(peer) != thread) return;
+                thread.admins.clear();
+                for (DataSnapshot member : snapshot.getChildren()) {
+                    if (Boolean.TRUE.equals(member.getValue(Boolean.class))) thread.admins.add(member.getKey());
+                }
+                notifyObservers();
+            }, error -> {
+                thread.admins.clear();
+                if (threads.get(peer) == thread) notifyObservers();
+            });
             thread.titleListener = listen(room.child("title"), snapshot -> {
                 if (threads.get(peer) != thread) return;
                 String title = snapshot.getValue(String.class);
@@ -262,6 +308,7 @@ public final class FamilyChatStore {
                 Message message = parseMessage(child);
                 if (message != null) thread.messages.add(message);
             }
+            if (notifications != null) notifications.onMessages(thread);
             acknowledgeDelivery(thread);
             notifyObservers();
         }, error -> {
@@ -362,7 +409,37 @@ public final class FamilyChatStore {
     }
 
     boolean canEditGroupPhoto(ThreadState thread) {
+        return canUse(thread) && thread.members != null && (uid.equals(thread.creator) || thread.admins.contains(uid));
+    }
+
+    boolean ownsGroup(ThreadState thread) {
         return canUse(thread) && thread.members != null && uid.equals(thread.creator);
+    }
+
+    void changeGroupRole(ThreadState thread, String member, boolean promote, Consumer<Boolean> complete) {
+        if (!ownsGroup(thread) || uid.equals(member) || !thread.members.contains(member)) {
+            complete.accept(false);
+            return;
+        }
+        thread.ref.getParent().child("admins").child(member).setValue(promote ? true : null)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
+    }
+
+    void changeGroupMember(ThreadState thread, String member, boolean add, Consumer<Boolean> complete) {
+        if (!canEditGroupPhoto(thread) || member.equals(thread.creator) || (add && !names.containsKey(member))
+                || (!add && thread.admins.contains(member) && !ownsGroup(thread))) {
+            complete.accept(false);
+            return;
+        }
+        String room = thread.peer.substring(5);
+        Map<String, Object> changes = new HashMap<>();
+        changes.put("rooms/" + room + "/members/" + member, add ? true : null);
+        changes.put("roomIndex/" + member + "/" + room, add ? true : null);
+        if (!add && ownsGroup(thread) && thread.admins.contains(member)) {
+            changes.put("rooms/" + room + "/admins/" + member, null);
+        }
+        root.child("familyChat").child(family).updateChildren(changes)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
     }
 
     void renameGroup(ThreadState thread, String title, Consumer<Boolean> complete) {
@@ -503,6 +580,8 @@ public final class FamilyChatStore {
         thread.query.removeEventListener(thread.listener);
         if (thread.photoListener != null) thread.ref.getParent().child("photo").removeEventListener(thread.photoListener);
         if (thread.titleListener != null) thread.ref.getParent().child("title").removeEventListener(thread.titleListener);
+        if (thread.membersListener != null) thread.ref.getParent().child("members").removeEventListener(thread.membersListener);
+        if (thread.adminsListener != null) thread.ref.getParent().child("admins").removeEventListener(thread.adminsListener);
     }
 
     void observe(Runnable listener) { observers.add(listener); }
@@ -548,6 +627,8 @@ public final class FamilyChatStore {
         final Query query;
         final DatabaseReference files;
         final List<Message> messages = new ArrayList<>();
+        final java.util.Set<String> notificationSeen = new java.util.HashSet<>();
+        boolean notificationsInitialized;
         ValueEventListener listener;
         ValueEventListener photoListener;
         String creator;
@@ -555,6 +636,9 @@ public final class FamilyChatStore {
         boolean error;
         String roomTitle;
         ValueEventListener titleListener;
+        ValueEventListener membersListener;
+        ValueEventListener adminsListener;
+        final java.util.Set<String> admins = new java.util.HashSet<>();
         final List<String> members;
         ThreadState(String peer, DatabaseReference ref, DatabaseReference files, String roomTitle, List<String> members) {
             this.roomTitle = roomTitle;

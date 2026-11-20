@@ -52,6 +52,12 @@ public final class FamilyChatFragment extends Fragment {
     private TextView replyText;
     private MaterialButton toolsButton;
     private MaterialButton pinBanner;
+    private final androidx.activity.result.ActivityResultLauncher<String> chatNotificationPermission =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+                    granted -> {
+                        if (!granted && isAdded()) Toast.makeText(requireContext(),
+                                "Allow notifications in system settings to receive chat alerts", Toast.LENGTH_SHORT).show();
+                    });
     private com.tridev.familyhub.data.repository.FamilyTaskRepository taskRepository;
     private final java.util.Map<String, com.tridev.familyhub.data.local.entity.FamilyTask> linkedTasks =
             new java.util.HashMap<>();
@@ -560,6 +566,14 @@ public final class FamilyChatFragment extends Fragment {
             }
         });
         addLine(row);
+    }
+
+    void requestChatNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            chatNotificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+        }
     }
 
     private void loadLinkedTasks() {

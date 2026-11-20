@@ -183,12 +183,77 @@ final class ChatGroupScreens {
                     else toast("Unable to save group photo");
                 }))));
         page.content.addView(label("Members · " + members.size(), 15, R.color.fh_primary, true));
+        if (store.canEditGroupPhoto(thread)) {
+            hero.addView(button("Add member", false, () -> addMember(thread)));
+        }
         for (String uid : members) {
             String name = uid.equals(store.accountId()) ? "You" : store.name(uid);
-            page.content.addView(memberRow(uid, name, uid.equals(thread.creator) ? "Group creator" : "Family member",
-                    () -> showMember(uid, () -> showGroup(thread))));
+            boolean admin = thread.admins.contains(uid);
+            LinearLayout row = memberRow(uid, name, uid.equals(thread.creator) ? "Group creator"
+                    : admin ? "Admin" : "Family member", () -> showMember(uid, () -> showGroup(thread)));
+            if (store.canEditGroupPhoto(thread) && !uid.equals(thread.creator) && !uid.equals(store.accountId())
+                    && (!admin || store.ownsGroup(thread))) {
+                MaterialButton options = button("⋮", false, () -> memberActions(thread, uid, admin));
+                options.setContentDescription("Manage " + name);
+                options.setMinWidth(0);
+                options.setMinimumWidth(0);
+                options.setPadding(0, 0, 0, 0);
+                row.addView(options, new LinearLayout.LayoutParams(dp(44), dp(48)));
+            }
+            page.content.addView(row);
         }
         page.show();
+    }
+
+    private void addMember(FamilyChatStore.ThreadState thread) {
+        List<String> ids = new ArrayList<>();
+        List<String> labels = new ArrayList<>();
+        store.groupCandidates().forEach((uid, name) -> {
+            if (!thread.members.contains(uid)) {
+                ids.add(uid);
+                labels.add(name);
+            }
+        });
+        if (ids.isEmpty()) { toast("No additional family members available"); return; }
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+                .setTitle("Add to group")
+                .setMessage("New members can read existing group messages.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Choose member", (dialog, which) ->
+                        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+                                .setTitle("Choose family member")
+                                .setItems(labels.toArray(new String[0]), (picker, selected) ->
+                                        store.changeGroupMember(thread, ids.get(selected), true,
+                                                ok -> finishGroupChange(thread, ok)))
+                                .setNegativeButton("Cancel", null).show())
+                .show();
+    }
+
+    private void memberActions(FamilyChatStore.ThreadState thread, String uid, boolean admin) {
+        String name = store.name(uid);
+        List<String> labels = new ArrayList<>();
+        List<Runnable> actions = new ArrayList<>();
+        if (store.ownsGroup(thread)) {
+            labels.add(admin ? "Remove admin role" : "Make admin");
+            actions.add(() -> store.changeGroupRole(thread, uid, !admin, ok -> finishGroupChange(thread, ok)));
+        }
+        labels.add("Remove from group");
+        actions.add(() -> new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+                .setTitle("Remove " + name + "?")
+                .setMessage("They will lose access to this group.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Remove", (dialog, which) ->
+                        store.changeGroupMember(thread, uid, false, ok -> finishGroupChange(thread, ok)))
+                .show());
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context()).setTitle(name)
+                .setItems(labels.toArray(new String[0]), (dialog, which) -> actions.get(which).run())
+                .setNegativeButton("Cancel", null).show();
+    }
+
+    private void finishGroupChange(FamilyChatStore.ThreadState thread, boolean ok) {
+        if (closed || active == null || !fragment.isAdded()) return;
+        if (ok) showGroup(thread);
+        else toast("Unable to update group");
     }
 
     private void renameGroup(FamilyChatStore.ThreadState thread) {

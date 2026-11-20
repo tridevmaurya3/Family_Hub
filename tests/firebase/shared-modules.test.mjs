@@ -418,3 +418,25 @@ test('chat edits, deletion, deadlines and group names enforce ownership', async 
   await assertSucceeds(family.child('rooms/rename-test/title').set('New'));
   assert.equal((await b.root.child('familyChat/familyA/rooms/rename-test/title').get()).val(), 'New');
 });
+
+test('group management updates membership and inbox together and limits admin authority', async () => {
+  const id = 'managed-room';
+  const createBy = env.authenticatedContext(writer).database().ref('familyChat/familyA');
+  const admin = env.authenticatedContext(reader).database().ref('familyChat/familyA');
+  const outsider = 'profile-owner';
+  const invited = env.authenticatedContext(outsider).database().ref('familyChat/familyA');
+  const room = `rooms/${id}`;
+  const entry = `roomIndex/${outsider}/${id}`;
+  await assertSucceeds(createBy.child(room).set({ creator: writer, title: 'Group', members: { [writer]: true, [reader]: true } }));
+  await assertFails(admin.child(`${room}/admins/${reader}`).set(true));
+  await assertSucceeds(createBy.child(`${room}/admins/${reader}`).set(true));
+  await assertFails(admin.child(`${room}/members/${outsider}`).set(true));
+  await assertFails(invited.child(room).get());
+  await assertSucceeds(admin.update({ [`${room}/members/${outsider}`]: true, [entry]: true }));
+  assert.equal((await invited.child(entry).get()).val(), true);
+  await assertSucceeds(invited.child(room).get());
+  await assertFails(admin.update({ [`${room}/members/${writer}`]: null, [`roomIndex/${writer}/${id}`]: null }));
+  await assertSucceeds(admin.update({ [`${room}/members/${outsider}`]: null, [entry]: null }));
+  assert.equal((await invited.child(entry).get()).exists(), false);
+  await assertFails(invited.child(room).get());
+});

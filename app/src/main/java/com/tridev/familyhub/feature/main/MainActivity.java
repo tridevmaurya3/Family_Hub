@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String EXTRA_OPEN_DOCUMENTS_VAULT =
             "open_documents_vault";
     private static final String EXTRA_OPEN_HEALTH = "open_health";
+    public static final String EXTRA_OPEN_CHAT = "open_family_chat";
     public static final String EXTRA_SHARE_LIVE_IN_CHAT = "share_live_in_chat";
     public static final String EXTRA_OPEN_GROCERY = "open_grocery";
     public static final String EXTRA_OPEN_ROUTE = "open_feature_route";
@@ -251,6 +252,11 @@ public class MainActivity extends AppCompatActivity {
         if (intent.hasExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID)
                 && !com.tridev.familyhub.core.security.AccountDataScope.canDeliver(this,
                     intent.getStringExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID))) return false;
+        if (intent.getBooleanExtra(EXTRA_OPEN_CHAT, false)) {
+            intent.removeExtra(EXTRA_OPEN_CHAT);
+            openTab(R.id.nav_chat);
+            return true;
+        }
         if (intent.getBooleanExtra(EXTRA_SHARE_LIVE_IN_CHAT, false)) {
             intent.removeExtra(EXTRA_SHARE_LIVE_IN_CHAT);
             binding.bottomNavigation.setSelectedItemId(R.id.nav_chat);
