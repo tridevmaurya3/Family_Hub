@@ -112,6 +112,10 @@ public final class CompactFormStyle {
     }
 
     private static void capture(EditText input) {
+        capture(input, () -> true);
+    }
+
+    public static void capture(EditText input, java.util.function.BooleanSupplier isCurrent) {
         WeakReference<EditText> target = new WeakReference<>(input);
         int start = Math.max(0, input.getSelectionStart());
         int end = Math.max(start, input.getSelectionEnd());
@@ -119,7 +123,7 @@ public final class CompactFormStyle {
             @Override protected void onReceiveResult(int resultCode, Bundle result) {
                 EditText field = target.get();
                 if (resultCode != 1 || result == null || field == null
-                        || !field.isAttachedToWindow()) return;
+                        || !field.isAttachedToWindow() || !isCurrent.getAsBoolean()) return;
                 String text = result.getString("text", "");
                 if (text.isEmpty() || field.getText() == null) return;
                 int from = Math.min(start, field.length());

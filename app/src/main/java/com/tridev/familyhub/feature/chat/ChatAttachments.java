@@ -128,7 +128,7 @@ final class ChatAttachments {
         addButton(row, sheet, "Poll", R.drawable.ic_family_task, this::choosePoll);
         row = attachmentRow(panel);
         addButton(row, sheet, "Event", R.drawable.ic_planner, this::chooseEvent);
-        addButton(row, sheet, "Voice note", R.drawable.ic_nav_chat, () -> voiceNotes.record(thread));
+        addButton(row, sheet, "Voice note", R.drawable.ic_mic, () -> voiceNotes.record(thread));
         android.widget.ScrollView scroll = new android.widget.ScrollView(context);
         scroll.addView(panel);
         sheet.setContentView(scroll);

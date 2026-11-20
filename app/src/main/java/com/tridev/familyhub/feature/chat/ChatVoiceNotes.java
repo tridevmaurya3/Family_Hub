@@ -38,7 +38,7 @@ import java.util.concurrent.ExecutorService;
 
 final class ChatVoiceNotes {
     private static final int RATE = 16000;
-    private static final int MAX_BYTES = RATE * 2 * 25;
+    private static final int MAX_SECONDS = 25;
     private final FamilyChatFragment fragment;
     private final FamilyChatStore store;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -60,7 +60,9 @@ final class ChatVoiceNotes {
                 allowed -> {
                     FamilyChatStore.ThreadState thread = pendingThread;
                     pendingThread = null;
-                    if (allowed && thread != null && ready(thread)) start(thread);
+                    if (allowed && thread != null) handler.post(() -> {
+                        if (ready(thread)) start(thread);
+                    });
                     else if (!allowed) notice("Microphone permission is required to record a voice note");
                 });
     }
@@ -98,26 +100,44 @@ final class ChatVoiceNotes {
                 boolean show = !recording.discard && recordingDialog.isShowing() && ready(thread);
                 recordingDialog.dismiss();
                 if (!show) return;
-                if (pcm.length == 0) notice("No audio recorded");
-                else review(thread, pcm);
+                if (pcm.length == 0) notice("No audio recorded. Check microphone access or close other recording apps.");
+                else review(thread, pcm, recording.rate);
             });
         });
     }
 
     @android.annotation.SuppressLint("MissingPermission")
     private static byte[] capture(Recording recording) {
-        int minimum = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        for (int rate : new int[]{RATE, 8000}) {
+            for (int source : new int[]{MediaRecorder.AudioSource.MIC, MediaRecorder.AudioSource.DEFAULT}) {
+                if (recording.stopping) return new byte[0];
+                byte[] audio = capture(recording, rate, source);
+                if (audio.length > 0) {
+                    recording.rate = rate;
+                    return audio;
+                }
+            }
+        }
+        return new byte[0];
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private static byte[] capture(Recording recording, int rate, int source) {
+        int minimum = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
         if (minimum <= 0) return new byte[0];
         AudioRecord microphone = null;
         try {
-            microphone = new AudioRecord(MediaRecorder.AudioSource.MIC, RATE,
+            microphone = new AudioRecord(source, rate,
                     AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minimum, 4096));
+            if (microphone.getState() != AudioRecord.STATE_INITIALIZED) return new byte[0];
             microphone.startRecording();
+            if (microphone.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) return new byte[0];
+            int maxBytes = rate * 2 * MAX_SECONDS;
             ByteArrayOutputStream audio = new ByteArrayOutputStream();
             byte[] buffer = new byte[1024];
-            while (!recording.stopping && audio.size() < MAX_BYTES) {
-                int read = microphone.read(buffer, 0, Math.min(buffer.length, MAX_BYTES - audio.size()));
-                if (read <= 0) break;
+            while (!recording.stopping && audio.size() < maxBytes) {
+                int read = microphone.read(buffer, 0, Math.min(buffer.length, maxBytes - audio.size()));
+                if (read < 0) break;
                 audio.write(buffer, 0, read);
             }
             return audio.toByteArray();
@@ -131,7 +151,7 @@ final class ChatVoiceNotes {
         }
     }
 
-    private void review(FamilyChatStore.ThreadState thread, byte[] pcm) {
+    private void review(FamilyChatStore.ThreadState thread, byte[] pcm, int rate) {
         Context context = fragment.requireContext();
         android.widget.LinearLayout content = new android.widget.LinearLayout(context);
         content.setOrientation(android.widget.LinearLayout.VERTICAL);
@@ -140,15 +160,19 @@ final class ChatVoiceNotes {
         EditText transcript = new EditText(context);
         transcript.setHint("Optional transcript");
         transcript.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
+        android.widget.TextView duration = new android.widget.TextView(context);
+        duration.setText(android.text.format.DateUtils.formatElapsedTime(Math.max(1, pcm.length / (2L * rate)))
+                + " · Recorded audio");
+        content.addView(duration);
         content.addView(ChatFormDialog.outlined(transcript));
         com.google.android.material.button.MaterialButton play = new com.google.android.material.button.MaterialButton(context);
         play.setText("Preview recording");
-        play.setOnClickListener(view -> play(wav(pcm)));
+        play.setOnClickListener(view -> play(wav(pcm, rate)));
         content.addView(play);
         if (Build.VERSION.SDK_INT >= 33 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
             com.google.android.material.button.MaterialButton transcribe = new com.google.android.material.button.MaterialButton(context);
             transcribe.setText("Transcribe in Hindi");
-            transcribe.setOnClickListener(view -> transcribe(pcm, transcript));
+            transcribe.setOnClickListener(view -> transcribe(pcm, rate, transcript));
             content.addView(transcribe);
         }
         dialog = new ChatFormDialog(context).setTitle("Voice note")
@@ -159,13 +183,13 @@ final class ChatVoiceNotes {
                     details.put("kind", "voice");
                     details.put("mime", "audio/wav");
                     store.send(thread, text.isEmpty() ? "Voice note" : text, details,
-                            Base64.encodeToString(wav(pcm), Base64.NO_WRAP), () -> notice("Unable to send voice note"));
+                            Base64.encodeToString(wav(pcm, rate), Base64.NO_WRAP), () -> notice("Unable to send voice note"));
                 }).show();
         dialog.setOnDismissListener(ignored -> { stopPlayback(); endRecognition(); });
     }
 
     @androidx.annotation.RequiresApi(33)
-    private void transcribe(byte[] pcm, EditText field) {
+    private void transcribe(byte[] pcm, int rate, EditText field) {
         endRecognition();
         try {
             ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
@@ -198,7 +222,7 @@ final class ChatVoiceNotes {
                     .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
                     .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, audioSource)
                     .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
-                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, RATE)
+                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, rate)
                     .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT);
             io.execute(() -> {
                 try (ParcelFileDescriptor.AutoCloseOutputStream output = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
@@ -295,18 +319,19 @@ final class ChatVoiceNotes {
         io.shutdownNow();
     }
 
-    private static byte[] wav(byte[] pcm) {
+    private static byte[] wav(byte[] pcm, int rate) {
         ByteBuffer wave = ByteBuffer.allocate(44 + pcm.length).order(ByteOrder.LITTLE_ENDIAN);
         wave.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + pcm.length)
                 .put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16)
-                .putShort((short) 1).putShort((short) 1).putInt(RATE).putInt(RATE * 2)
+                .putShort((short) 1).putShort((short) 1).putInt(rate).putInt(rate * 2)
                 .putShort((short) 2).putShort((short) 16)
                 .put("data".getBytes(StandardCharsets.US_ASCII)).putInt(pcm.length).put(pcm);
         return wave.array();
     }
 
     private boolean ready(FamilyChatStore.ThreadState thread) {
-        return fragment.isAdded() && fragment.getView() != null && fragment.isStartedForVoice() && store.canUse(thread);
+        return fragment.isAdded() && fragment.getView() != null && fragment.isStartedForVoice()
+                && fragment.isVoiceThreadOpen(thread) && store.canUse(thread);
     }
 
     private void notice(String text) {
@@ -314,6 +339,7 @@ final class ChatVoiceNotes {
     }
 
     private static final class Recording {
+        int rate = RATE;
         volatile boolean stopping;
         volatile boolean discard;
     }

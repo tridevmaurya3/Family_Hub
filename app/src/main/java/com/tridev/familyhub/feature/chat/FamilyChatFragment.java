@@ -211,7 +211,28 @@ public final class FamilyChatFragment extends Fragment {
             if (thread != null && store.canUse(thread)) attachments.show(thread);
         });
         bottom.addView(attach, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        bottom.addView(draft, new LinearLayout.LayoutParams(0, -2, 1));
+        com.google.android.material.textfield.TextInputLayout composer =
+                new com.google.android.material.textfield.TextInputLayout(requireContext());
+        composer.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_NONE);
+        composer.setHintEnabled(false);
+        composer.addView(draft, new LinearLayout.LayoutParams(-1, -2));
+        composer.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_CUSTOM);
+        composer.setEndIconDrawable(R.drawable.ic_mic);
+        composer.setEndIconContentDescription(R.string.family_tasks_voice_add);
+        composer.setEndIconOnClickListener(view -> {
+            EditText field = draft;
+            FamilyChatStore.ThreadState thread = store.thread(peer);
+            if (thread == null || !store.canUse(thread)) return;
+            com.tridev.familyhub.core.ui.CompactFormStyle.capture(field,
+                    () -> screen != null && draft == field && store.thread(peer) == thread && store.canUse(thread));
+        });
+        composer.setEndIconOnLongClickListener(view -> {
+            FamilyChatStore.ThreadState thread = store.thread(peer);
+            if (thread == null || !store.canUse(thread)) return false;
+            voiceNotes.record(thread);
+            return true;
+        });
+        bottom.addView(composer, new LinearLayout.LayoutParams(0, -2, 1));
         send = new MaterialButton(requireContext());
         send.setText("Send");
         send.setAllCaps(false);
@@ -335,6 +356,10 @@ public final class FamilyChatFragment extends Fragment {
         voiceNotes.close();
         groupScreens.close();
         super.onDestroy();
+    }
+
+    boolean isVoiceThreadOpen(FamilyChatStore.ThreadState thread) {
+        return store.thread(peer) == thread;
     }
 
     boolean isStartedForVoice() {
