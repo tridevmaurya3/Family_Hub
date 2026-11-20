@@ -467,3 +467,23 @@ test('announcements and checklists stay within a chat and bookmarks stay private
   await assertFails(a.ref(key).get());
   await assertSucceeds(b.ref(key).set(false));
 });
+
+test('status audience, receipts and 24-hour expiry', async () => {
+  const status = 'familyTextStatus/familyA/' + writer;
+  const ref = (uid, path) => env.authenticatedContext(uid).database().ref(path);
+  await assertSucceeds(ref(writer, status).set({
+    body: 'Only Bob', postedAt: { '.sv': 'timestamp' }, audience: { [reader]: true }
+  }));
+  const current = await assertSucceeds(ref(reader, status).once('value'));
+  const receipts = 'familyStatusReceipts/familyA/' + writer + '/' + current.val().postedAt;
+  await assertFails(ref('profile-owner', status).once('value'));
+  await assertFails(ref(outsider, status).once('value'));
+  await assertSucceeds(ref(reader, receipts + '/' + reader).set('liked'));
+  await assertSucceeds(ref(writer, receipts).once('value'));
+  await assertFails(ref(reader, receipts).once('value'));
+  await assertFails(ref('profile-owner', receipts + '/profile-owner').set('seen'));
+  await env.withSecurityRulesDisabled(ctx =>
+    ctx.database().ref(status + '/postedAt').set(Date.now() - 86400001));
+  await assertFails(ref(reader, status).once('value'));
+  await assertFails(ref(reader, receipts + '/' + reader).set('seen'));
+});
