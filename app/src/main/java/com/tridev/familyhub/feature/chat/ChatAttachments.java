@@ -24,6 +24,7 @@ import com.google.android.gms.tasks.CancellationTokenSource;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.tridev.familyhub.R;
 import com.tridev.familyhub.feature.familylive.FamilyMapActivity;
 import com.tridev.familyhub.feature.profile.ProfilePhotoCropActivity;
 
@@ -41,6 +42,14 @@ final class ChatAttachments {
     private static final int FILE_LIMIT = 1024 * 1024;
     private final FamilyChatFragment fragment;
     private final FamilyChatStore store;
+    private final android.util.LruCache<String, Bitmap> photoCache = new android.util.LruCache<String, Bitmap>(12 * 1024 * 1024) {
+        @Override protected int sizeOf(String key, Bitmap image) { return image.getByteCount(); }
+    };
+    private final Map<String, java.util.List<java.util.function.Consumer<Bitmap>>> photoRequests = new HashMap<>();
+    private final Map<String, com.tridev.familyhub.data.model.FamilyLiveCloudMember> liveMembers = new HashMap<>();
+    private final Map<String, java.util.List<java.lang.ref.WeakReference<java.util.function.Consumer<com.tridev.familyhub.data.model.FamilyLiveCloudMember>>>> liveCards = new HashMap<>();
+    private com.tridev.familyhub.data.repository.FamilyLiveRepository liveRepository;
+    private android.app.Dialog fullPhoto;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final ActivityResultLauncher<String> gallery;
     private final ActivityResultLauncher<String[]> documents;
@@ -96,31 +105,49 @@ final class ChatAttachments {
         int padding = Math.round(16 * context.getResources().getDisplayMetrics().density);
         panel.setPadding(padding, padding, padding, padding);
         android.widget.TextView title = new android.widget.TextView(context);
-        title.setText("Share in " + store.title(thread));
-        title.setTextSize(18);
+        title.setText("Attach to chat");
+        title.setTextSize(21);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextColor(ContextCompat.getColor(context, R.color.fh_on_surface));
         panel.addView(title);
-        addRow(panel, sheet, "Gallery", () -> gallery.launch("image/*"), "Camera", this::takePhoto);
-        addRow(panel, sheet, "File", () -> documents.launch(new String[]{"*/*"}),
-                "Location", this::chooseLocation);
-        addRow(panel, sheet, "Contact", this::chooseContact, "Poll", this::choosePoll);
-        addRow(panel, sheet, "Event", this::chooseEvent, null, null);
-        sheet.setContentView(panel);
+        android.widget.TextView recipient = new android.widget.TextView(context);
+        recipient.setText(store.title(thread));
+        recipient.setTextColor(ContextCompat.getColor(context, R.color.fh_text_secondary));
+        recipient.setPadding(0, 0, 0, padding);
+        panel.addView(recipient);
+        LinearLayout row = attachmentRow(panel);
+        addButton(row, sheet, "Gallery", R.drawable.ic_document_share, () -> gallery.launch("image/*"));
+        addButton(row, sheet, "Camera", R.drawable.ic_document_camera, this::takePhoto);
+        row = attachmentRow(panel);
+        addButton(row, sheet, "File", R.drawable.ic_document, () -> documents.launch(new String[]{"*/*"}));
+        addButton(row, sheet, "Location", R.drawable.ic_fh_location_pin, this::chooseLocation);
+        row = attachmentRow(panel);
+        addButton(row, sheet, "Contact", R.drawable.ic_profile_person, this::chooseContact);
+        addButton(row, sheet, "Poll", R.drawable.ic_family_task, this::choosePoll);
+        addButton(attachmentRow(panel), sheet, "Event", R.drawable.ic_planner, this::chooseEvent);
+        android.widget.ScrollView scroll = new android.widget.ScrollView(context);
+        scroll.addView(panel);
+        sheet.setContentView(scroll);
         sheet.show();
     }
 
-    private void addRow(LinearLayout panel, BottomSheetDialog sheet,
-                        String first, Runnable firstAction, String second, Runnable secondAction) {
+    private LinearLayout attachmentRow(LinearLayout panel) {
         LinearLayout row = new LinearLayout(panel.getContext());
-        addButton(row, sheet, first, firstAction);
-        if (second != null) addButton(row, sheet, second, secondAction);
         panel.addView(row);
+        return row;
     }
 
-    private void addButton(LinearLayout row, BottomSheetDialog sheet, String title, Runnable action) {
-        MaterialButton button = new MaterialButton(row.getContext(), null,
+    private void addButton(LinearLayout row, BottomSheetDialog sheet, String title, int icon, Runnable action) {
+        Context context = row.getContext();
+        MaterialButton button = new MaterialButton(context, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
         button.setAllCaps(false);
+        button.setIconResource(icon);
+        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(context, R.color.fh_primary_container)));
+        button.setStrokeColor(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(context, R.color.fh_outline)));
         button.setOnClickListener(view -> {
             sheet.dismiss();
             try {
@@ -129,7 +156,10 @@ final class ChatAttachments {
                 notice("No app is available for " + title.toLowerCase(java.util.Locale.ROOT));
             }
         });
-        row.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
+        int density = Math.round(4 * context.getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1);
+        params.setMargins(density, 0, density, density);
+        row.addView(button, params);
     }
 
     private void takePhoto() {
@@ -387,19 +417,99 @@ final class ChatAttachments {
                 }).addOnFailureListener(error -> notice("Current location is unavailable"));
     }
 
-    String action(FamilyChatStore.Message message) {
-        String kind = message.snapshot.child("kind").getValue(String.class);
-        if ("photo".equals(kind)) return "View photo";
-        if ("file".equals(kind)) return "Open file";
-        if ("live".equals(kind)) return "Open Family Live";
-        if ("location".equals(kind)) return "Open map";
-        if ("contact".equals(kind)) return "View contact";
-        if ("event".equals(kind)) return "Add to calendar";
-        if ("poll".equals(kind)) return "Vote or view results";
-        return null;
+    String selectedVote(FamilyChatStore.Message message) { return store.vote(message); }
+
+    void observeLive(String sender, java.util.function.Consumer<com.tridev.familyhub.data.model.FamilyLiveCloudMember> update) {
+        java.util.List<java.lang.ref.WeakReference<java.util.function.Consumer<com.tridev.familyhub.data.model.FamilyLiveCloudMember>>> cards =
+                liveCards.computeIfAbsent(sender, key -> new java.util.ArrayList<>());
+        cards.removeIf(ref -> ref.get() == null);
+        cards.add(new java.lang.ref.WeakReference<>(update));
+        update.accept(liveMembers.get(sender));
+        if (liveRepository != null) return;
+        liveRepository = new com.tridev.familyhub.data.repository.FamilyLiveRepository(fragment.requireContext());
+        liveRepository.observeCloudMembers(members -> {
+            liveMembers.clear();
+            for (com.tridev.familyhub.data.model.FamilyLiveCloudMember member : members) liveMembers.put(member.uid, member);
+            updateLiveCards();
+        }, error -> {
+            liveMembers.clear();
+            updateLiveCards();
+        });
+    }
+
+    private void updateLiveCards() {
+        liveCards.forEach((sender, cards) -> {
+            cards.removeIf(ref -> ref.get() == null);
+            for (java.lang.ref.WeakReference<java.util.function.Consumer<com.tridev.familyhub.data.model.FamilyLiveCloudMember>> ref : cards) {
+                java.util.function.Consumer<com.tridev.familyhub.data.model.FamilyLiveCloudMember> update = ref.get();
+                if (update != null) update.accept(liveMembers.get(sender));
+            }
+        });
+    }
+
+    void stopPreviews() {
+        if (liveRepository != null) liveRepository.close();
+        liveRepository = null;
+        liveCards.clear();
+        liveMembers.clear();
+        photoCache.evictAll();
+        photoRequests.clear();
+        if (fullPhoto != null) fullPhoto.dismiss();
+    }
+
+    void loadPhoto(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
+                   java.util.function.Consumer<Bitmap> result) {
+        if (!store.canUse(thread) || worker.isShutdown()) {
+            result.accept(null);
+            return;
+        }
+        String key = thread.files.child(message.snapshot.getKey()).toString();
+        Bitmap cached = photoCache.get(key);
+        if (cached != null) {
+            result.accept(cached);
+            return;
+        }
+        java.util.List<java.util.function.Consumer<Bitmap>> existing = photoRequests.get(key);
+        if (existing != null) {
+            existing.add(result);
+            return;
+        }
+        java.util.List<java.util.function.Consumer<Bitmap>> requests = new java.util.ArrayList<>();
+        requests.add(result);
+        photoRequests.put(key, requests);
+        Context context = fragment.requireContext().getApplicationContext();
+        thread.files.child(message.snapshot.getKey()).get().addOnCompleteListener(task -> {
+            if (photoRequests.get(key) != requests || worker.isShutdown()) return;
+            String data = task.isSuccessful() ? task.getResult().getValue(String.class) : null;
+            worker.execute(() -> {
+                Bitmap photo = decodePhoto(data);
+                ContextCompat.getMainExecutor(context).execute(() -> {
+                    if (photoRequests.get(key) != requests) return;
+                    photoRequests.remove(key);
+                    Bitmap allowed = store.canUse(thread) ? photo : null;
+                    if (allowed != null) photoCache.put(key, allowed);
+                    for (java.util.function.Consumer<Bitmap> callback : requests) callback.accept(allowed);
+                });
+            });
+        });
+    }
+
+    private static Bitmap decodePhoto(String data) {
+        if (data == null || data.length() > 1_400_000) return null;
+        try {
+            byte[] bytes = Base64.decode(data, Base64.DEFAULT);
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+            if (bounds.outWidth < 1 || bounds.outHeight < 1 || bounds.outWidth > 1600 || bounds.outHeight > 1600) return null;
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (IllegalArgumentException | OutOfMemoryError error) {
+            return null;
+        }
     }
 
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (!store.canUse(thread)) return;
         String kind = message.snapshot.child("kind").getValue(String.class);
         if ("live".equals(kind)) {
             fragment.startActivity(FamilyMapActivity.createIntent(fragment.requireContext(), message.sender));
@@ -424,7 +534,12 @@ final class ChatAttachments {
             if (lat == null || lng == null) return;
             Uri point = Uri.parse("geo:" + lat + "," + lng + "?q=" + lat + "," + lng);
             launch(new Intent(Intent.ACTION_VIEW, point));
-        } else {
+        } else if ("photo".equals(kind)) {
+            loadPhoto(thread, message, bitmap -> {
+                if (bitmap == null) notice("Photo could not be opened");
+                else showFullPhoto(thread, bitmap);
+            });
+        } else if ("file".equals(kind)) {
             thread.files.child(message.snapshot.getKey()).get().addOnSuccessListener(snapshot -> {
                 if (!visible() || !store.canUse(thread)) return;
                 String data = snapshot.getValue(String.class);
@@ -439,11 +554,7 @@ final class ChatAttachments {
                     notice("Attachment could not be read");
                     return;
                 }
-                if ("photo".equals(kind)) {
-                    openPhoto(bytes);
-                } else {
-                    openFile(thread, message, bytes);
-                }
+                openFile(thread, message, bytes);
             }).addOnFailureListener(error -> notice("Attachment is unavailable"));
         }
     }
@@ -451,15 +562,10 @@ final class ChatAttachments {
     private void showPoll(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         java.util.List<String> ids = new java.util.ArrayList<>();
         java.util.List<String> labels = new java.util.ArrayList<>();
-        Map<String, Integer> counts = new HashMap<>();
-        for (com.google.firebase.database.DataSnapshot vote : message.snapshot.child("votes").getChildren()) {
-            String id = vote.getValue(String.class);
-            counts.put(id, counts.getOrDefault(id, 0) + 1);
-        }
         for (com.google.firebase.database.DataSnapshot option : message.snapshot.child("options").getChildren()) {
             String id = option.getKey();
             ids.add(id);
-            labels.add(option.getValue(String.class) + " · " + counts.getOrDefault(id, 0));
+            labels.add(option.getValue(String.class));
         }
         int[] selected = {ids.indexOf(store.vote(message))};
         new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle(message.body)
@@ -471,24 +577,62 @@ final class ChatAttachments {
                 }).show();
     }
 
-    private void openPhoto(byte[] bytes) {
-        BitmapFactory.Options bounds = new BitmapFactory.Options();
-        bounds.inJustDecodeBounds = true;
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
-        if (bounds.outWidth < 1 || bounds.outHeight < 1 || bounds.outWidth > 1600 || bounds.outHeight > 1600) {
-            notice("Photo could not be opened");
-            return;
+    void showPollResults(FamilyChatStore.Message message) {
+        Context context = fragment.requireContext();
+        Map<String, Integer> counts = new HashMap<>();
+        for (com.google.firebase.database.DataSnapshot vote : message.snapshot.child("votes").getChildren()) {
+            String id = vote.getValue(String.class);
+            counts.put(id, counts.getOrDefault(id, 0) + 1);
         }
-        Bitmap image = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-        if (image == null) {
-            notice("Photo could not be opened");
-            return;
+        int total = (int) message.snapshot.child("votes").getChildrenCount();
+        LinearLayout results = new LinearLayout(context);
+        results.setOrientation(LinearLayout.VERTICAL);
+        int padding = Math.round(24 * context.getResources().getDisplayMetrics().density);
+        results.setPadding(padding, padding / 2, padding, padding / 2);
+        for (com.google.firebase.database.DataSnapshot option : message.snapshot.child("options").getChildren()) {
+            int count = counts.getOrDefault(option.getKey(), 0);
+            android.widget.TextView label = new android.widget.TextView(context);
+            label.setText(option.getValue(String.class) + "  ·  " + count + (count == 1 ? " vote" : " votes"));
+            label.setTextSize(15);
+            results.addView(label);
+            com.google.android.material.progressindicator.LinearProgressIndicator bar =
+                    new com.google.android.material.progressindicator.LinearProgressIndicator(context);
+            bar.setMax(Math.max(total, 1));
+            bar.setProgress(count);
+            LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(-1, -2);
+            barParams.bottomMargin = padding / 2;
+            results.addView(bar, barParams);
         }
-        android.widget.ImageView view = new android.widget.ImageView(fragment.requireContext());
-        view.setAdjustViewBounds(true);
-        view.setImageBitmap(image);
-        new MaterialAlertDialogBuilder(fragment.requireContext())
-                .setView(view).setPositiveButton("Close", null).show();
+        new MaterialAlertDialogBuilder(context).setTitle(message.body).setView(results)
+                .setPositiveButton("Done", null).show();
+    }
+
+    void showFullPhoto(FamilyChatStore.ThreadState thread, Bitmap bitmap) {
+        if (!visible() || !fragment.isResumed() || !store.canUse(thread)) return;
+        Context context = fragment.requireContext();
+        if (fullPhoto != null) fullPhoto.dismiss();
+        android.app.Dialog viewer = new android.app.Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        fullPhoto = viewer;
+        android.widget.FrameLayout frame = new android.widget.FrameLayout(context);
+        frame.setBackgroundColor(android.graphics.Color.BLACK);
+        android.widget.ImageView image = new android.widget.ImageView(context);
+        image.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        image.setImageBitmap(bitmap);
+        image.setContentDescription("Shared photo");
+        frame.addView(image, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        MaterialButton close = new MaterialButton(context);
+        close.setText("Close");
+        close.setAllCaps(false);
+        close.setOnClickListener(view -> viewer.dismiss());
+        android.widget.FrameLayout.LayoutParams button =
+                new android.widget.FrameLayout.LayoutParams(-2, -2, android.view.Gravity.TOP | android.view.Gravity.END);
+        int margin = Math.round(16 * context.getResources().getDisplayMetrics().density);
+        button.setMargins(margin, margin, margin, margin);
+        frame.addView(close, button);
+        viewer.setContentView(frame);
+        viewer.setOnDismissListener(dialog -> { if (fullPhoto == viewer) fullPhoto = null; });
+        viewer.show();
+        viewer.getWindow().setLayout(-1, -1);
     }
 
     private void openFile(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, byte[] bytes) {
@@ -616,6 +760,7 @@ final class ChatAttachments {
     }
 
     void close() {
+        stopPreviews();
         if (locationRequest != null) locationRequest.cancel();
         worker.shutdown();
     }

@@ -21,12 +21,14 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private CropView crop;
     private MaterialButton save;
+    private TextView hint;
     private Uri source;
     private int turns;
     private boolean chatPhoto;
     private boolean mirrored;
     private int cropFormat;
-    private static final String[] CROP_FORMATS = {"Original", "Square", "Landscape 4:3", "Portrait 3:4"};
+    private static final int FREE_CROP = 4;
+    private static final String[] CROP_FORMATS = {"Original", "Square", "Landscape 4:3", "Portrait 3:4", "Free crop"};
     private boolean busy;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -40,7 +42,9 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         root.setPadding(dp(16),dp(16),dp(16),dp(16));
         root.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this,com.tridev.familyhub.R.color.fh_background));
         TextView title=new TextView(this);title.setText(chatPhoto ? "Edit chat photo" : "Crop profile photo");title.setTextSize(20);root.addView(title);
-        TextView hint=new TextView(this);hint.setText(chatPhoto ? "Choose a crop shape, then drag or pinch to frame your photo." : "Drag to position • Pinch to zoom • Rotate to adjust");root.addView(hint);
+        hint = new TextView(this);
+        updateCropHint();
+        root.addView(hint);
         crop=new CropView();root.addView(crop,new LinearLayout.LayoutParams(-1,0,1));
         if (chatPhoto) addChatEditingActions(root);
         LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);
@@ -83,6 +87,7 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
                         cropFormat = selected;
                         format.setText("Crop: " + CROP_FORMATS[selected]);
                         crop.updateFrame();
+                        updateCropHint();
                         dialog.dismiss();
                     })
                     .setNegativeButton("Cancel", null)
@@ -96,10 +101,20 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         editing.addView(flip, new LinearLayout.LayoutParams(0, -2, 1));
         MaterialButton reset = button("Recenter");
         reset.setOnClickListener(v -> {
-            if (!busy) crop.reset();
+            if (!busy) crop.updateFrame();
         });
         editing.addView(reset, new LinearLayout.LayoutParams(0, -2, 1));
         root.addView(editing);
+    }
+
+    private void updateCropHint() {
+        if (!chatPhoto) {
+            hint.setText("Drag to position • Pinch to zoom • Rotate to adjust");
+        } else if (cropFormat == FREE_CROP) {
+            hint.setText("Drag any edge or corner to resize. Drag inside to pan the photo.");
+        } else {
+            hint.setText("Choose a crop shape, then drag or pinch to frame your photo.");
+        }
     }
 
     private void saveCrop(){
@@ -124,6 +139,8 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
     private MaterialButton button(String text){MaterialButton b=new MaterialButton(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);return b;}
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private final class CropView extends View {
+        private static final int LEFT = 1, TOP = 2, RIGHT = 4, BOTTOM = 8;
+        private int resizeEdges;
         Bitmap photo;float scale,minScale,x,y,lastX,lastY;final RectF frame=new RectF();final Paint paint=new Paint(3);
         final ScaleGestureDetector pinch=new ScaleGestureDetector(ProfilePhotoCropActivity.this,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
             @Override public boolean onScale(ScaleGestureDetector d){float old=scale;scale=Math.max(minScale,Math.min(minScale*8,scale*d.getScaleFactor()));float ratio=scale/old;x=d.getFocusX()+(x-d.getFocusX())*ratio;y=d.getFocusY()+(y-d.getFocusY())*ratio;clamp();invalidate();return true;}});
@@ -135,7 +152,7 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         void updateFrame() {
             float aspect = 1f;
             if (chatPhoto) {
-                if (cropFormat == 0 && photo != null) aspect = (float) photo.getWidth() / photo.getHeight();
+                if ((cropFormat == 0 || cropFormat == FREE_CROP) && photo != null) aspect = (float) photo.getWidth() / photo.getHeight();
                 else if (cropFormat == 2) aspect = 4f / 3f;
                 else if (cropFormat == 3) aspect = 3f / 4f;
             }
@@ -204,9 +221,74 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
             paint.setStrokeWidth(dp(2));
             canvas.drawRect(frame, paint);
             paint.setStyle(Paint.Style.FILL);
+            if (chatPhoto && cropFormat == FREE_CROP && photo != null) {
+                paint.setColor(0xff60ddbf);
+                float radius = dp(5);
+                canvas.drawCircle(frame.left, frame.top, radius, paint);
+                canvas.drawCircle(frame.right, frame.top, radius, paint);
+                canvas.drawCircle(frame.left, frame.bottom, radius, paint);
+                canvas.drawCircle(frame.right, frame.bottom, radius, paint);
+            }
         }
 
-        @Override public boolean onTouchEvent(MotionEvent e){if(photo==null||busy)return true;pinch.onTouchEvent(e);if(e.getActionMasked()==MotionEvent.ACTION_DOWN){lastX=e.getX();lastY=e.getY();}else if(e.getActionMasked()==MotionEvent.ACTION_MOVE){if(!pinch.isInProgress()&&e.getPointerCount()==1){x+=e.getX()-lastX;y+=e.getY()-lastY;clamp();invalidate();}lastX=e.getX();lastY=e.getY();}else if(e.getActionMasked()==MotionEvent.ACTION_POINTER_UP){int remaining=e.getActionIndex()==0?1:0;lastX=e.getX(remaining);lastY=e.getY(remaining);}return true;}
+        @Override public boolean onTouchEvent(MotionEvent event) {
+            if (photo == null || busy) return true;
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                lastX = event.getX();
+                lastY = event.getY();
+                resizeEdges = chatPhoto && cropFormat == FREE_CROP ? edgeAt(lastX, lastY) : 0;
+            }
+            if (action == MotionEvent.ACTION_POINTER_DOWN) resizeEdges = 0;
+            pinch.onTouchEvent(event);
+            if (action == MotionEvent.ACTION_MOVE && event.getPointerCount() == 1 && !pinch.isInProgress()) {
+                float dx = event.getX() - lastX;
+                float dy = event.getY() - lastY;
+                if (resizeEdges != 0) resize(dx, dy);
+                else {
+                    x += dx;
+                    y += dy;
+                    clamp();
+                }
+                invalidate();
+            }
+            int pointer = action == MotionEvent.ACTION_POINTER_UP && event.getActionIndex() == 0 ? 1 : 0;
+            lastX = event.getX(pointer);
+            lastY = event.getY(pointer);
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) resizeEdges = 0;
+            return true;
+        }
+
+        private int edgeAt(float touchX, float touchY) {
+            float hit = dp(20);
+            if (touchX < frame.left - hit || touchX > frame.right + hit
+                    || touchY < frame.top - hit || touchY > frame.bottom + hit) return 0;
+            int edges = 0;
+            if (Math.abs(touchX - frame.left) < hit) edges |= LEFT;
+            else if (Math.abs(touchX - frame.right) < hit) edges |= RIGHT;
+            if (Math.abs(touchY - frame.top) < hit) edges |= TOP;
+            else if (Math.abs(touchY - frame.bottom) < hit) edges |= BOTTOM;
+            return edges;
+        }
+
+        private void resize(float dx, float dy) {
+            float minWidth = Math.min(dp(56), frame.width());
+            float minHeight = Math.min(dp(56), frame.height());
+            float boundLeft = Math.max(dp(4), x);
+            float boundTop = Math.max(dp(4), y);
+            float boundRight = Math.min(getWidth() - dp(4), x + photo.getWidth() * scale);
+            float boundBottom = Math.min(getHeight() - dp(4), y + photo.getHeight() * scale);
+            if ((resizeEdges & LEFT) != 0) frame.left = bounded(frame.left + dx, boundLeft, frame.right - minWidth);
+            if ((resizeEdges & RIGHT) != 0) frame.right = bounded(frame.right + dx, frame.left + minWidth, boundRight);
+            if ((resizeEdges & TOP) != 0) frame.top = bounded(frame.top + dy, boundTop, frame.bottom - minHeight);
+            if ((resizeEdges & BOTTOM) != 0) frame.bottom = bounded(frame.bottom + dy, frame.top + minHeight, boundBottom);
+            minScale = Math.max(frame.width() / photo.getWidth(), frame.height() / photo.getHeight());
+        }
+
+        private float bounded(float value, float min, float max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
         Bitmap render() {
             int longestEdge = chatPhoto ? 960 : 640;
             float ratio = longestEdge / Math.max(frame.width(), frame.height());

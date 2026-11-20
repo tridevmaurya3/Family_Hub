@@ -208,6 +208,7 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onStop() {
         store.removeObserver(observer);
+        attachments.stopPreviews();
         super.onStop();
     }
 
@@ -406,6 +407,7 @@ public final class FamilyChatFragment extends Fragment {
         boolean goToBottom = !java.util.Objects.equals(lastMessageKey, latestKey);
         lastMessageKey = latestKey;
         if (thread.messages.isEmpty()) addLine(text("No messages yet", 14, MUTED, false));
+        ChatAttachmentCards cards = new ChatAttachmentCards(requireContext(), attachments);
         for (FamilyChatStore.Message message : thread.messages) {
             boolean own = store.own(message);
             LinearLayout bubble = column();
@@ -414,17 +416,13 @@ public final class FamilyChatFragment extends Fragment {
             if (!own && thread.isGroup()) {
                 bubble.addView(text(store.name(message.sender), 13, GREEN, true));
             }
-            TextView messageText = text(message.body, 15, INK, false);
-            messageText.setTextIsSelectable(true);
-            bubble.addView(messageText);
-            String action = attachments.action(message);
-            if (action != null) {
-                MaterialButton openAttachment = new MaterialButton(requireContext(), null,
-                        com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                openAttachment.setAllCaps(false);
-                openAttachment.setText(action);
-                openAttachment.setOnClickListener(v -> attachments.open(thread, message));
-                bubble.addView(openAttachment);
+            View attachment = cards.create(thread, message);
+            if (attachment != null) {
+                bubble.addView(attachment, new LinearLayout.LayoutParams(-1, -2));
+            } else {
+                TextView messageText = text(message.body, 15, INK, false);
+                messageText.setTextIsSelectable(true);
+                bubble.addView(messageText);
             }
             LinearLayout metadata = new LinearLayout(requireContext());
             metadata.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -439,7 +437,9 @@ public final class FamilyChatFragment extends Fragment {
                 metadata.addView(tick);
             }
             bubble.addView(metadata);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+            int richWidth = Math.max(dp(180), Math.min(dp(420),
+                    getResources().getDisplayMetrics().widthPixels - dp(48)));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(attachment != null ? richWidth : -2, -2);
             params.gravity = own ? Gravity.END : Gravity.START;
             params.topMargin = dp(7);
             if (own) params.setMarginStart(dp(24));
