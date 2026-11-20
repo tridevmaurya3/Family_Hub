@@ -41,7 +41,16 @@ public final class FamilyChatFragment extends Fragment {
     private static final int EDGE = 0xffd1dade;
     private static final int WHITE = 0xffffffff;
     private final FamilyChatStore store = FamilyChatStore.get();
-    private final ChatAttachments attachments = new ChatAttachments(this, store);
+    private final ChatVoiceNotes voiceNotes = new ChatVoiceNotes(this, store);
+    private final ChatAttachments attachments = new ChatAttachments(this, store, voiceNotes);
+    private final ChatSmartActions smart = new ChatSmartActions(this, store, attachments);
+    private final java.util.Map<String, String> mentions = new java.util.LinkedHashMap<>();
+    private final java.util.Set<String> unreadOnOpen = new java.util.HashSet<>();
+    private String replyKey;
+    private String replyPreview;
+    private LinearLayout replyBanner;
+    private TextView replyText;
+    private MaterialButton toolsButton;
     private final ChatGroupScreens groupScreens = new ChatGroupScreens(this, store, this::open);
     private final Runnable observer = this::render;
     private final FamilyAvatarStore.Listener avatarObserver = this::render;
@@ -78,6 +87,9 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putString("chat_peer", peer);
+        out.putString("chat_reply_key", replyKey);
+        out.putString("chat_reply_preview", replyPreview);
+        out.putStringArrayList("chat_mentions", new ArrayList<>(mentions.keySet()));
         out.putBoolean("share_live", choosingLiveRecipient);
         attachments.saveState(out);
         if (draft != null) out.putString("chat_draft", draft.getText().toString());
@@ -105,6 +117,17 @@ public final class FamilyChatFragment extends Fragment {
         header.addHeaderAction(newGroup);
         headerAvatar = new LinearLayout(requireContext());
         header.addHeaderAction(headerAvatar);
+        toolsButton = flatButton("⋮");
+        toolsButton.setContentDescription("Chat tools");
+        toolsButton.setMinWidth(0);
+        toolsButton.setMinimumWidth(0);
+        toolsButton.setPadding(0, 0, 0, 0);
+        toolsButton.setLayoutParams(new LinearLayout.LayoutParams(dp(42), dp(48)));
+        toolsButton.setOnClickListener(view -> {
+            FamilyChatStore.ThreadState thread = store.thread(peer);
+            if (thread != null && store.canUse(thread)) smart.threadActions(thread);
+        });
+        header.addHeaderAction(toolsButton);
         screen.addView(header);
 
         search = new EditText(requireContext());
@@ -163,8 +186,27 @@ public final class FamilyChatFragment extends Fragment {
         send.setAllCaps(false);
         send.setContentDescription("Send message");
         bottom.addView(send);
+        replyBanner = new LinearLayout(requireContext());
+        replyBanner.setGravity(Gravity.CENTER_VERTICAL);
+        replyBanner.setPadding(dp(10), dp(2), dp(4), dp(2));
+        replyBanner.setBackground(card(0xffe5f2fa, EDGE, 12));
+        replyText = text("", 13, BLUE, true);
+        replyText.setMaxLines(2);
+        replyBanner.addView(replyText, new LinearLayout.LayoutParams(0, -2, 1));
+        MaterialButton cancelReply = flatButton("×");
+        cancelReply.setContentDescription("Cancel reply");
+        cancelReply.setOnClickListener(view -> clearReply());
+        replyBanner.addView(cancelReply, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        screen.addView(replyBanner);
         screen.addView(bottom);
-        if (state != null) draft.setText(state.getString("chat_draft", ""));
+        if (state != null) {
+            draft.setText(state.getString("chat_draft", ""));
+            replyKey = state.getString("chat_reply_key");
+            replyPreview = state.getString("chat_reply_preview");
+            ArrayList<String> ids = state.getStringArrayList("chat_mentions");
+            if (ids != null) for (String id : ids) mentions.put(id, null);
+        }
+        updateReplyBanner();
         screen.setFocusableInTouchMode(true);
         screen.requestFocus();
 
@@ -172,10 +214,30 @@ public final class FamilyChatFragment extends Fragment {
             FamilyChatStore.ThreadState thread = store.thread(peer);
             String message = draft.getText().toString().trim();
             if (thread == null || thread.error || message.isEmpty()) return;
+            java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+            String savedReply = replyKey;
+            String savedPreview = replyPreview;
+            java.util.Map<String, String> savedMentions = new java.util.LinkedHashMap<>(mentions);
+            if (replyKey != null) metadata.put("replyTo", replyKey);
+            java.util.Map<String, Boolean> targets = new java.util.HashMap<>();
+            for (String id : store.participants(thread)) {
+                if (!mentions.containsKey(id) || id.equals(store.accountId())) continue;
+                String name = mentions.get(id);
+                if (message.contains("@" + (name == null ? store.name(id) : name))) targets.put(id, true);
+            }
+            if (!targets.isEmpty()) metadata.put("mentions", targets);
             draft.setText("");
-            store.send(thread, message, () -> {
+            mentions.clear();
+            clearReply();
+            store.send(thread, message, metadata, null, () -> {
                 if (screen == null) return;
-                if (thread.peer.equals(peer) && draft.getText().length() == 0) draft.setText(message);
+                if (thread.peer.equals(peer) && draft.getText().length() == 0) {
+                    draft.setText(message);
+                    replyKey = savedReply;
+                    replyPreview = savedPreview;
+                    mentions.putAll(savedMentions);
+                    updateReplyBanner();
+                }
                 Toast.makeText(requireContext(), "Unable to send message", Toast.LENGTH_SHORT).show();
             });
         });
@@ -217,6 +279,7 @@ public final class FamilyChatFragment extends Fragment {
         store.removeObserver(observer);
         avatars().removeListener(avatarObserver);
         attachments.stopPreviews();
+        voiceNotes.stop();
         super.onStop();
     }
 
@@ -229,12 +292,71 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onDestroy() {
         attachments.close();
+        voiceNotes.close();
         groupScreens.close();
         super.onDestroy();
     }
 
+    boolean isStartedForVoice() {
+        return getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED);
+    }
+
     public boolean isConversationOpen() {
         return peer != null;
+    }
+
+    private MaterialButton flatButton(String title) {
+        MaterialButton button = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        button.setText(title);
+        button.setAllCaps(false);
+        return button;
+    }
+
+    void replyTo(FamilyChatStore.Message message) {
+        replyKey = message.snapshot.getKey();
+        replyPreview = store.name(message.sender) + ": " + message.body;
+        updateReplyBanner();
+        focusDraft();
+    }
+
+    void mention(String uid) {
+        String name = store.name(uid);
+        mentions.put(uid, name);
+        int cursor = Math.max(0, draft.getSelectionStart());
+        draft.getText().insert(cursor, "@" + name + " ");
+        focusDraft();
+    }
+
+    private void focusDraft() {
+        draft.requestFocus();
+        androidx.core.view.WindowInsetsControllerCompat controller =
+                androidx.core.view.ViewCompat.getWindowInsetsController(draft);
+        if (controller != null) controller.show(androidx.core.view.WindowInsetsCompat.Type.ime());
+    }
+
+    private void clearReply() {
+        replyKey = null;
+        replyPreview = null;
+        updateReplyBanner();
+    }
+
+    private void updateReplyBanner() {
+        if (replyBanner == null) return;
+        replyBanner.setVisibility(replyKey != null && peer != null ? View.VISIBLE : View.GONE);
+        replyText.setText("Replying to " + replyPreview);
+    }
+
+    boolean reveal(String key) {
+        View bubble = rows.findViewWithTag(key);
+        if (bubble == null) return false;
+        scroll.smoothScrollTo(0, bubble.getTop());
+        bubble.announceForAccessibility("Original message");
+        return true;
+    }
+
+    boolean wasUnread(FamilyChatStore.Message message) {
+        return unreadOnOpen.contains(message.snapshot.getKey()) || store.unread(message);
     }
 
     private void open(@Nullable String destination) {
@@ -245,6 +367,13 @@ public final class FamilyChatFragment extends Fragment {
             draft.clearFocus();
         }
         peer = destination;
+        unreadOnOpen.clear();
+        FamilyChatStore.ThreadState opening = store.thread(peer);
+        if (opening != null) for (FamilyChatStore.Message message : opening.messages) {
+            if (store.unread(message)) unreadOnOpen.add(message.snapshot.getKey());
+        }
+        mentions.clear();
+        clearReply();
         if (requireActivity() instanceof com.tridev.familyhub.feature.main.MainActivity) {
             ((com.tridev.familyhub.feature.main.MainActivity) requireActivity()).refreshChatInsets();
         }
@@ -283,6 +412,7 @@ public final class FamilyChatFragment extends Fragment {
         newGroup.setVisibility(!inThread && (choosingLiveRecipient || !store.groupCandidates().isEmpty())
                 ? View.VISIBLE : View.GONE);
         newGroup.setEnabled(choosingLiveRecipient || store.online());
+        toolsButton.setVisibility(thread != null && !thread.error ? View.VISIBLE : View.GONE);
         headerAvatar.removeAllViews();
         if (thread != null) headerAvatar.addView(threadAvatar(thread, 40));
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
@@ -411,13 +541,30 @@ public final class FamilyChatFragment extends Fragment {
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int compactWidth = Math.min(dp(250), Math.round(screenWidth * 0.44f));
         int compactMediaWidth = Math.max(1, compactWidth - dp(20));
+        java.util.Map<String, FamilyChatStore.Message> known = new java.util.HashMap<>();
+        for (FamilyChatStore.Message item : thread.messages) known.put(item.snapshot.getKey(), item);
         for (FamilyChatStore.Message message : thread.messages) {
             boolean own = store.own(message);
             LinearLayout bubble = column();
             bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
+            bubble.setTag(message.snapshot.getKey());
+            bubble.setOnLongClickListener(view -> {
+                smart.messageActions(thread, message);
+                return true;
+            });
             if (!own && thread.isGroup()) {
                 bubble.addView(text(store.name(message.sender), 13, GREEN, true));
+            }
+            String target = message.snapshot.child("replyTo").getValue(String.class);
+            if (target != null) {
+                FamilyChatStore.Message original = known.get(target);
+                String quote = original == null ? "View original message" : store.name(original.sender) + ": " + original.body;
+                TextView quoted = text("↪ " + quote, 13, BLUE, true);
+                quoted.setMaxLines(2);
+                quoted.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                quoted.setOnClickListener(view -> smart.openReply(thread, target));
+                bubble.addView(quoted);
             }
             View attachment = cards.create(thread, message, compactMediaWidth);
             if (attachment != null) {
@@ -427,9 +574,27 @@ public final class FamilyChatFragment extends Fragment {
                 messageText.setTextIsSelectable(true);
                 bubble.addView(messageText);
             }
+            if (store.accountId() != null && message.snapshot.child("mentions").child(store.accountId()).exists()) {
+                bubble.addView(text("Mentioned you", 12, BLUE, true));
+            }
+            java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+            for (com.google.firebase.database.DataSnapshot reaction : message.snapshot.child("reactions").getChildren()) {
+                String emoji = reaction.getValue(String.class);
+                if (emoji != null) counts.put(emoji, counts.getOrDefault(emoji, 0) + 1);
+            }
+            if (!counts.isEmpty()) {
+                List<String> summary = new ArrayList<>();
+                counts.forEach((emoji, count) -> summary.add(emoji + " " + count));
+                bubble.addView(text(String.join("  ", summary), 13, MUTED, false));
+            }
             LinearLayout metadata = new LinearLayout(requireContext());
             metadata.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-            metadata.addView(text(dateTime(message.at), 11, MUTED, false));
+            metadata.addView(text(message.pinned() ? "Pinned · " + dateTime(message.at) : dateTime(message.at), 11, MUTED, false));
+            TextView menu = text("  ⋮", 17, BLUE, true);
+            menu.setContentDescription("Message actions");
+            menu.setPadding(dp(4), dp(8), dp(4), dp(8));
+            menu.setOnClickListener(view -> smart.messageActions(thread, message));
+            metadata.addView(menu);
             if (own) {
                 boolean seen = store.acknowledged(thread, message, true);
                 boolean delivered = seen || store.acknowledged(thread, message, false);

@@ -228,6 +228,8 @@ public final class ReminderWorkspace {
     }
 
     public void add() { showReminderEditor(null); }
+
+    void addFromChat(String title) { showReminderEditor(null, title); }
     public void reload() { if (binding != null) loadReminders(binding.reminderSearchInput.getText().toString()); }
     public void toggleSearch() {
         if (binding == null) return;
@@ -429,6 +431,10 @@ public final class ReminderWorkspace {
     }
 
     private void showReminderEditor(@Nullable Reminder existingReminder) {
+        showReminderEditor(existingReminder, "");
+    }
+
+    private void showReminderEditor(@Nullable Reminder existingReminder, String titleDraft) {
         DialogReminderBinding dialogBinding = DialogReminderBinding.inflate(getLayoutInflater());
         com.tridev.familyhub.core.ui.CompactFormStyle.apply(dialogBinding.getRoot());
         String[] repeatLabels = {getString(R.string.reminder_once),
@@ -486,6 +492,7 @@ public final class ReminderWorkspace {
         });
         boolean isNewReminder = existingReminder == null || existingReminder.id == 0;
         final boolean quickDraft = existingReminder != null && existingReminder.id == 0;
+        if (existingReminder == null && !titleDraft.isEmpty()) dialogBinding.reminderTitleInput.setText(titleDraft);
         Calendar selectedTime = Calendar.getInstance();
         selectedTime.add(Calendar.HOUR_OF_DAY, 1);
         selectedTime.set(Calendar.SECOND, 0);

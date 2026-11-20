@@ -251,12 +251,8 @@ public final class FamilyChatStore {
             thread.messages.clear();
             thread.error = false;
             for (DataSnapshot child : snapshot.getChildren()) {
-                String sender = child.child("sender").getValue(String.class);
-                String body = child.child("body").getValue(String.class);
-                Long at = child.child("at").getValue(Long.class);
-                if (sender != null && body != null && at != null) {
-                    thread.messages.add(new Message(child, sender, body, at));
-                }
+                Message message = parseMessage(child);
+                if (message != null) thread.messages.add(message);
             }
             acknowledgeDelivery(thread);
             notifyObservers();
@@ -266,6 +262,81 @@ public final class FamilyChatStore {
             thread.error = true;
             notifyObservers();
         });
+    }
+
+    private static Message parseMessage(DataSnapshot data) {
+        String sender = data.child("sender").getValue(String.class);
+        String body = data.child("body").getValue(String.class);
+        Long at = data.child("at").getValue(Long.class);
+        return sender != null && body != null && at != null ? new Message(data, sender, body, at) : null;
+    }
+
+    void loadMessage(ThreadState thread, String key, Consumer<Message> callback) {
+        if (!canUse(thread) || key == null || !key.matches("[A-Za-z0-9_-]{1,128}")) {
+            callback.accept(null);
+            return;
+        }
+        thread.ref.child(key).get().addOnCompleteListener(task ->
+                callback.accept(task.isSuccessful() && canUse(thread) ? parseMessage(task.getResult()) : null));
+    }
+
+    void history(ThreadState thread, Message before, long from, long to,
+                 Consumer<List<Message>> callback) {
+        if (!canUse(thread)) {
+            callback.accept(null);
+            return;
+        }
+        Query query = thread.ref.orderByChild("at").startAt(from);
+        query = before == null ? query.endAt(to) : query.endBefore(before.at, before.snapshot.getKey());
+        query.limitToLast(100).get().addOnCompleteListener(task -> {
+            if (!task.isSuccessful() || !canUse(thread)) {
+                callback.accept(null);
+                return;
+            }
+            List<Message> messages = new ArrayList<>();
+            for (DataSnapshot snapshot : task.getResult().getChildren()) {
+                Message message = parseMessage(snapshot);
+                if (message != null) messages.add(0, message);
+            }
+            callback.accept(messages);
+        });
+    }
+
+    void pinned(ThreadState thread, Consumer<List<Message>> callback) {
+        if (!canUse(thread)) {
+            callback.accept(null);
+            return;
+        }
+        thread.ref.orderByChild("pinned").equalTo(true).limitToLast(50).get().addOnCompleteListener(task -> {
+            if (!task.isSuccessful() || !canUse(thread)) {
+                callback.accept(null);
+                return;
+            }
+            List<Message> messages = new ArrayList<>();
+            for (DataSnapshot snapshot : task.getResult().getChildren()) {
+                Message message = parseMessage(snapshot);
+                if (message != null) messages.add(0, message);
+            }
+            callback.accept(messages);
+        });
+    }
+
+    void pin(ThreadState thread, Message message, Consumer<Boolean> complete) {
+        if (!canUse(thread)) return;
+        message.snapshot.getRef().child("pinned").setValue(message.pinned() ? null : true)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
+    }
+
+    void react(ThreadState thread, Message message, String reaction, Consumer<Boolean> complete) {
+        if (!canUse(thread)) return;
+        String previous = message.snapshot.child("reactions").child(uid).getValue(String.class);
+        message.snapshot.getRef().child("reactions").child(uid).setValue(reaction.equals(previous) ? null : reaction)
+                .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
+    }
+
+    List<String> participants(ThreadState thread) {
+        if (thread.isGroup()) return groupMembers(thread);
+        return java.util.Arrays.asList(uid, thread.peer);
     }
 
     static android.graphics.Bitmap decodeGroupPhoto(String encoded) {
@@ -479,6 +550,13 @@ public final class FamilyChatStore {
             this.body = body;
             this.at = at;
         }
+        boolean pinned() { return Boolean.TRUE.equals(snapshot.child("pinned").getValue(Boolean.class)); }
+
+        String kind() {
+            String type = snapshot.child("kind").getValue(String.class);
+            return type == null ? "text" : type;
+        }
+
         boolean received(String recipient, boolean read) {
             return snapshot.child("receipts").child(recipient)
                     .child(read ? "readAt" : "deliveredAt").exists();

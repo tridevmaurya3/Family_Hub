@@ -111,9 +111,15 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
 
     @NonNull
     public static FamilyTasksFragment forNewTask() {
+        return forNewTask("");
+    }
+
+    @NonNull
+    public static FamilyTasksFragment forNewTask(@NonNull String title) {
         FamilyTasksFragment fragment = new FamilyTasksFragment();
         Bundle args = new Bundle();
         args.putBoolean(ARG_OPEN_NEW_TASK, true);
+        args.putString("new_task_title", title);
         fragment.setArguments(args);
         return fragment;
     }
@@ -214,8 +220,10 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
         Bundle args = getArguments();
         if (args != null && args.getBoolean(ARG_OPEN_NEW_TASK, false)) {
             args.remove(ARG_OPEN_NEW_TASK);
+            String title = args.getString("new_task_title", "");
+            args.remove("new_task_title");
             view.post(() -> {
-                if (binding != null) prepareEditor(null);
+                if (binding != null) prepareEditor(null, title);
             });
         }
     }
@@ -899,12 +907,16 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
     }
 
     private void prepareEditor(@Nullable FamilyTask existing) {
+        prepareEditor(existing, "");
+    }
+
+    private void prepareEditor(@Nullable FamilyTask existing, @NonNull String draftTitle) {
         memberRepository.loadMembers("", members -> {
-            if (binding != null) showEditor(existing, members);
+            if (binding != null) showEditor(existing, members, draftTitle);
         });
     }
 
-    private void showEditor(@Nullable FamilyTask existing, @NonNull List<FamilyMember> members) {
+    private void showEditor(@Nullable FamilyTask existing, @NonNull List<FamilyMember> members, @NonNull String draftTitle) {
         DialogFamilyTaskBinding form = DialogFamilyTaskBinding.inflate(getLayoutInflater());
         com.tridev.familyhub.core.ui.CompactFormStyle.apply(form.getRoot());
         FamilyTask task = existing == null ? new FamilyTask() : existing;
@@ -953,7 +965,7 @@ public final class FamilyTasksFragment extends Fragment implements AddActionHost
                 ? R.string.family_tasks_add : R.string.family_tasks_edit);
         form.saveTaskButton.setText(existing == null
                 ? R.string.family_tasks_save : R.string.family_tasks_update);
-        form.taskTitleInput.setText(task.title);
+        form.taskTitleInput.setText(existing == null ? draftTitle : task.title);
         form.taskTitleLayout.setEndIconOnClickListener(v ->
                 requestVoiceCapture(form.taskTitleInput, form.taskEditorVoiceWave));
         FamilyTaskSubtasks.Content taskContent = FamilyTaskSubtasks.decode(task.notes);

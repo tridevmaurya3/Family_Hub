@@ -42,6 +42,7 @@ final class ChatAttachments {
     private static final int FILE_LIMIT = 1024 * 1024;
     private final FamilyChatFragment fragment;
     private final FamilyChatStore store;
+    private final ChatVoiceNotes voiceNotes;
     private final android.util.LruCache<String, Bitmap> photoCache = new android.util.LruCache<String, Bitmap>(12 * 1024 * 1024) {
         @Override protected int sizeOf(String key, Bitmap image) { return image.getByteCount(); }
     };
@@ -64,9 +65,10 @@ final class ChatAttachments {
     private File captureFile;
     private CancellationTokenSource locationRequest;
 
-    ChatAttachments(FamilyChatFragment fragment, FamilyChatStore store) {
+    ChatAttachments(FamilyChatFragment fragment, FamilyChatStore store, ChatVoiceNotes voiceNotes) {
         this.fragment = fragment;
         this.store = store;
+        this.voiceNotes = voiceNotes;
         gallery = fragment.registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
             if (uri != null) edit(uri);
         });
@@ -124,7 +126,9 @@ final class ChatAttachments {
         row = attachmentRow(panel);
         addButton(row, sheet, "Contact", R.drawable.ic_profile_person, this::chooseContact);
         addButton(row, sheet, "Poll", R.drawable.ic_family_task, this::choosePoll);
-        addButton(attachmentRow(panel), sheet, "Event", R.drawable.ic_planner, this::chooseEvent);
+        row = attachmentRow(panel);
+        addButton(row, sheet, "Event", R.drawable.ic_planner, this::chooseEvent);
+        addButton(row, sheet, "Voice note", R.drawable.ic_nav_chat, () -> voiceNotes.record(thread));
         android.widget.ScrollView scroll = new android.widget.ScrollView(context);
         scroll.addView(panel);
         sheet.setContentView(scroll);
@@ -520,7 +524,9 @@ final class ChatAttachments {
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         if (!store.canUse(thread)) return;
         String kind = message.snapshot.child("kind").getValue(String.class);
-        if ("live".equals(kind)) {
+        if ("voice".equals(kind)) {
+            voiceNotes.open(thread, message);
+        } else if ("live".equals(kind)) {
             fragment.startActivity(FamilyMapActivity.createIntent(fragment.requireContext(), message.sender));
         } else if ("contact".equals(kind)) {
             String number = message.snapshot.child("phone").getValue(String.class);

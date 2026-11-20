@@ -7,10 +7,11 @@
         "group": {
           ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
           ".indexOn": [
-            "at"
+            "at",
+            "pinned"
           ],
           "$message": {
-            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes')",
+            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes') && !newData.hasChild('reactions') && !newData.hasChild('pinned')",
             ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().child('files').child('group').child($message).exists())",
             "sender": {
               ".validate": "newData.isString() && newData.val() === auth.uid"
@@ -40,7 +41,7 @@
               ".validate": false
             },
             "kind": {
-              ".validate": "newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
+              ".validate": "newData.val() === 'voice' || newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
             },
             "phone": {
               ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
@@ -66,7 +67,25 @@
               ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
             },
             "mime": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && newData.val() === 'audio/wav') || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+            },
+            "replyTo": {
+              ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
+            },
+            "mentions": {
+              "$member": {
+                ".validate": "newData.val() === true && $member !== auth.uid && root.child('memberships').child($familyId).child($member).child('status').val() === 'ACTIVE'"
+              }
+            },
+            "reactions": {
+              "$reactor": {
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && auth.uid === $reactor && data.parent().parent().child('sender').exists()",
+                ".validate": "newData.val() === '👍' || newData.val() === '❤️' || newData.val() === '😂' || newData.val() === '🙏'"
+              }
+            },
+            "pinned": {
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && data.parent().child('sender').exists()",
+              ".validate": "newData.val() === true"
             }
           }
         },
@@ -75,10 +94,11 @@
             "$second": {
               ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE'",
               ".indexOn": [
-                "at"
+                "at",
+                "pinned"
               ],
               "$message": {
-                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes')",
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes') && !newData.hasChild('reactions') && !newData.hasChild('pinned')",
                 ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().parent().parent().child('files').child('direct').child($first).child($second).child($message).exists())",
                 "sender": {
                   ".validate": "newData.isString() && newData.val() === auth.uid"
@@ -108,7 +128,7 @@
                   ".validate": false
                 },
                 "kind": {
-                  ".validate": "newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
+                  ".validate": "newData.val() === 'voice' || newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
                 },
                 "phone": {
                   ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
@@ -134,7 +154,25 @@
                   ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
                 },
                 "mime": {
-                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && newData.val() === 'audio/wav') || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                },
+                "replyTo": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
+                },
+                "mentions": {
+                  "$member": {
+                    ".validate": "newData.val() === true && $member !== auth.uid && root.child('memberships').child($familyId).child($member).child('status').val() === 'ACTIVE' && ($member === $first || $member === $second)"
+                  }
+                },
+                "reactions": {
+                  "$reactor": {
+                    ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && auth.uid === $reactor && data.parent().parent().child('sender').exists()",
+                    ".validate": "newData.val() === '👍' || newData.val() === '❤️' || newData.val() === '😂' || newData.val() === '🙏'"
+                  }
+                },
+                "pinned": {
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && data.parent().child('sender').exists()",
+                  ".validate": "newData.val() === true"
                 }
               }
             }
@@ -158,10 +196,11 @@
             },
             "messages": {
               ".indexOn": [
-                "at"
+                "at",
+                "pinned"
               ],
               "$message": {
-                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes')",
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes') && !newData.hasChild('reactions') && !newData.hasChild('pinned')",
                 ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().parent().parent().child('files').child('rooms').child($room).child($message).exists())",
                 "sender": {
                   ".validate": "newData.isString() && newData.val() === auth.uid"
@@ -191,7 +230,7 @@
                   ".validate": false
                 },
                 "kind": {
-                  ".validate": "newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
+                  ".validate": "newData.val() === 'voice' || newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
                 },
                 "phone": {
                   ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
@@ -217,7 +256,25 @@
                   ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
                 },
                 "mime": {
-                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && newData.val() === 'audio/wav') || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                },
+                "replyTo": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
+                },
+                "mentions": {
+                  "$member": {
+                    ".validate": "newData.val() === true && $member !== auth.uid && root.child('memberships').child($familyId).child($member).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child($member).val() === true"
+                  }
+                },
+                "reactions": {
+                  "$reactor": {
+                    ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && auth.uid === $reactor && data.parent().parent().child('sender').exists()",
+                    ".validate": "newData.val() === '👍' || newData.val() === '❤️' || newData.val() === '😂' || newData.val() === '🙏'"
+                  }
+                },
+                "pinned": {
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && data.parent().child('sender').exists()",
+                  ".validate": "newData.val() === true"
                 }
               }
             },

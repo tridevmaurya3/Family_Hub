@@ -362,3 +362,34 @@ test('polls accept only a conversation member’s own vote for an existing optio
   await assertSucceeds(receiver.child('votes').child(reader).set('1'));
   assert.equal((await sender.child('votes').child(reader).get()).val(), '1');
 });
+
+test('chat tools validate replies, mentions, reaction ownership and pins', async () => {
+  const path = `familyChat/familyA/direct/${writer}/${reader}`;
+  const a = env.authenticatedContext(writer).database().ref(path);
+  const b = env.authenticatedContext(reader).database().ref(path);
+  const outsiderRef = env.authenticatedContext(outsider).database().ref(path);
+  const stamp = { '.sv': 'timestamp' };
+  await assertSucceeds(a.child('chat-tools-original').set({ sender: writer, body: 'Original', at: stamp }));
+  const message = { sender: reader, body: 'Reply', at: stamp, replyTo: 'chat-tools-original', mentions: { [writer]: true } };
+  await assertFails(b.child('chat-tools-bad-reply').set({ ...message, replyTo: 'missing' }));
+  await assertFails(b.child('chat-tools-bad-mention').set({ ...message, mentions: { 'profile-owner': true } }));
+  await assertFails(b.child('chat-tools-forged').set({ ...message, pinned: true }));
+  await assertSucceeds(b.child('chat-tools-reply').set(message));
+  const reaction = `chat-tools-original/reactions/${reader}`;
+  await assertFails(a.child(reaction).set('👍'));
+  await assertFails(b.child(reaction).set('invalid'));
+  await assertSucceeds(b.child(reaction).set('👍'));
+  await assertSucceeds(b.child(reaction).remove());
+  await assertFails(outsiderRef.child('chat-tools-original/pinned').set(true));
+  await assertSucceeds(b.child('chat-tools-original/pinned').set(true));
+  assert.equal((await a.orderByChild('pinned').equalTo(true).get()).numChildren(), 1);
+  await assertSucceeds(a.child('chat-tools-original/pinned').remove());
+  const family = a.root.child('familyChat/familyA');
+  const voicePath = `direct/${writer}/${reader}/voice-note`;
+  const audioPath = `files/direct/${writer}/${reader}/voice-note`;
+  const voice = { sender: writer, body: 'Voice note', at: stamp, kind: 'voice', mime: 'audio/wav' };
+  await assertFails(family.update({ [voicePath]: { ...voice, mime: 'audio/mpeg' }, [audioPath]: 'UklGRg==' }));
+  await assertSucceeds(family.update({ [voicePath]: voice, [audioPath]: 'UklGRg==' }));
+  assert.equal((await b.root.child('familyChat/familyA/' + audioPath).get()).val(), 'UklGRg==');
+  await assertFails(outsiderRef.root.child('familyChat/familyA/' + audioPath).get());
+});
