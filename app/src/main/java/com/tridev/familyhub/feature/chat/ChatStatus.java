@@ -1,6 +1,14 @@
 package com.tridev.familyhub.feature.chat;
 
+import android.content.res.ColorStateList;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.text.InputFilter;
+import android.view.View;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -18,6 +26,12 @@ import java.util.Map;
 import java.util.Objects;
 
 final class ChatStatus {
+    private static final int INK = 0xff1f2a31;
+    private static final int GREEN = 0xff0f6c59;
+    private static final int MUTED = 0xff4c626c;
+    private static final int BLUE = 0xff0f6cbd;
+    private static final int EDGE = 0xffc7d5dc;
+
     private final FamilyChatFragment host;
     private final FamilyChatStore store;
     private AlertDialog dialog;
@@ -38,7 +52,7 @@ final class ChatStatus {
         rows.setPadding(padding, 0, padding, padding);
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(rows);
-        dialog = new ChatFormDialog(host.requireContext()).setTitle("Family Status").setView(scroll)
+        dialog = statusDialog("Family Status", scroll)
                 .setNeutralButton("Remove mine", (d, w) -> {
                     if (active(family, uid)) statuses.child(uid).removeValue()
                             .addOnFailureListener(error -> notice("Unable to remove status"));
@@ -47,7 +61,10 @@ final class ChatStatus {
                 .setPositiveButton("New status", (d, w) -> {
                     if (active(family, uid)) compose(statuses.child(uid), family, uid);
                 }).show();
+        styleWindow(dialog);
         AlertDialog listing = dialog;
+        TextView empty = section("No active statuses", 15, MUTED);
+        rows.addView(empty);
         Map<String, String> members = new LinkedHashMap<>();
         members.put(uid, "You");
         members.putAll(store.groupCandidates());
@@ -63,12 +80,16 @@ final class ChatStatus {
                         .child(family).child(member.getKey()).child(Long.toString(postedAt));
                 String time = android.text.format.DateUtils.getRelativeTimeSpanString(
                         postedAt, System.currentTimeMillis(), 60000).toString();
-                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + time, () -> {
+                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + time, false, () -> {
                     if (!active(family, uid) || postedAt + 86400000L <= System.currentTimeMillis()) return;
                     listing.dismiss();
                     showStatus(family, uid, member.getKey(), member.getValue(), body, receipts);
                 });
-                rows.postDelayed(() -> rows.removeView(entry), remaining);
+                empty.setVisibility(View.GONE);
+                rows.postDelayed(() -> {
+                    rows.removeView(entry);
+                    if (rows.getChildCount() == 1) empty.setVisibility(View.VISIBLE);
+                }, remaining);
             });
         }
     }
@@ -83,24 +104,26 @@ final class ChatStatus {
         content.setOrientation(LinearLayout.VERTICAL);
         int inset = Math.round(16 * content.getResources().getDisplayMetrics().density);
         content.setPadding(inset, inset, inset, inset);
-        TextView post = new TextView(content.getContext());
+        TextView post = section("", 24, GREEN);
         post.setText(body);
-        post.setTextSize(22);
+        post.setBackground(surface(16, EDGE, 0xffe2f4ee, 0xfff6fcfa));
+        post.setPadding(dp(16), dp(20), dp(16), dp(20));
         post.setGravity(android.view.Gravity.CENTER);
         post.setMinHeight(8 * inset);
         post.setTextIsSelectable(true);
         content.addView(post, new LinearLayout.LayoutParams(-1, -2));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(content);
-        dialog = new ChatFormDialog(host.requireContext()).setTitle(name).setView(scroll)
+        dialog = statusDialog(name, scroll)
                 .setNegativeButton("Back to statuses", (d, w) -> {
                     if (active(family, uid)) open();
                 }).show();
+        styleWindow(dialog);
         AlertDialog viewer = dialog;
         if (mine) {
-            TextView feedback = new TextView(content.getContext());
-            feedback.setText("Viewers and reactions");
-            content.addView(feedback);
+            TextView feedback = section("Viewers and reactions", 15, INK);
+            feedback.setBackground(surface(12, EDGE, 0xffffffff, 0xfff4f9fc));
+            content.addView(feedback, cardSpacing());
             receipts.get().addOnSuccessListener(data -> {
                 if (!viewer.isShowing() || !active(family, uid)) return;
                 StringBuilder result = new StringBuilder("Viewers and reactions");
@@ -130,7 +153,9 @@ final class ChatStatus {
         com.google.android.material.chip.ChipGroup reactions =
                 new com.google.android.material.chip.ChipGroup(content.getContext());
         reactions.setSingleSelection(true);
-        content.addView(reactions);
+        reactions.setPadding(dp(8), 0, dp(8), 0);
+        reactions.setBackground(surface(12, EDGE, 0xffffffff, 0xfff4f9fc));
+        content.addView(reactions, cardSpacing());
         com.google.android.material.chip.Chip[] chips = new com.google.android.material.chip.Chip[EMOJI.length];
         for (int i = 0; i < EMOJI.length; i++) {
             final int index = i;
@@ -139,6 +164,11 @@ final class ChatStatus {
             chip.setText(EMOJI[i]);
             chip.setContentDescription(new String[]{"Heart", "Laugh", "Surprised", "Sad", "Applause", "Fire"}[i]);
             chip.setCheckable(true);
+            chip.setChipBackgroundColor(new ColorStateList(
+                    new int[][]{new int[]{android.R.attr.state_checked}, new int[0]},
+                    new int[]{0xffcaeee0, 0xfff4faf8}));
+            chip.setChipStrokeColor(ColorStateList.valueOf(EDGE));
+            chip.setChipStrokeWidth(dp(1));
             chips[i] = chip;
             reactions.addView(chip);
             chip.setOnClickListener(v -> {
@@ -161,8 +191,8 @@ final class ChatStatus {
         EditText reply = new EditText(content.getContext());
         reply.setHint("Reply privately");
         reply.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1000)});
-        content.addView(ChatFormDialog.outlined(reply));
-        addAction(content, "Send reply", () -> {
+        content.addView(statusField(reply), cardSpacing());
+        addAction(content, "Send reply", true, () -> {
             if (!active(family, uid) || !store.canUse(direct)) return;
             String message = reply.getText().toString().trim();
             if (message.isEmpty()) return;
@@ -171,13 +201,20 @@ final class ChatStatus {
         });
     }
 
-    private android.view.View addAction(LinearLayout row, String title, Runnable action) {
+    private View addAction(LinearLayout row, String title, boolean primary, Runnable action) {
         com.google.android.material.button.MaterialButton button = new com.google.android.material.button.MaterialButton(
                 row.getContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
         button.setAllCaps(false);
+        button.setTextSize(15);
+        button.setTextColor(primary ? 0xffffffff : GREEN);
+        button.setGravity(primary ? android.view.Gravity.CENTER : android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
+        button.setMinHeight(dp(48));
+        button.setPadding(dp(14), dp(8), dp(14), dp(8));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x24106c59),
+                primary ? surface(12, BLUE, BLUE) : surface(12, EDGE, 0xffffffff, 0xffeff8f5), null));
         button.setOnClickListener(view -> action.run());
-        row.addView(button);
+        row.addView(button, cardSpacing());
         return button;
     }
 
@@ -189,11 +226,16 @@ final class ChatStatus {
         form.setOrientation(LinearLayout.VERTICAL);
         int inset = Math.round(16 * form.getResources().getDisplayMetrics().density);
         form.setPadding(inset, 0, inset, inset);
-        form.addView(ChatFormDialog.outlined(input));
+        input.setMinLines(3);
+        form.addView(statusField(input));
+        form.addView(section("Choose who can see your status for 24 hours.", 14, MUTED));
         com.google.android.material.checkbox.MaterialCheckBox restricted =
                 new com.google.android.material.checkbox.MaterialCheckBox(host.requireContext());
         restricted.setText("Only selected family members");
-        form.addView(restricted);
+        restricted.setTextColor(INK);
+        restricted.setButtonTintList(ColorStateList.valueOf(GREEN));
+        restricted.setBackground(surface(12, EDGE, 0xffe5f6ef, 0xfff4fbf8));
+        form.addView(restricted, cardSpacing());
         LinearLayout people = new LinearLayout(host.requireContext());
         people.setOrientation(LinearLayout.VERTICAL);
         form.addView(people);
@@ -203,6 +245,8 @@ final class ChatStatus {
             com.google.android.material.checkbox.MaterialCheckBox check =
                     new com.google.android.material.checkbox.MaterialCheckBox(host.requireContext());
             check.setText(member.getValue());
+            check.setTextColor(INK);
+            check.setButtonTintList(ColorStateList.valueOf(GREEN));
             check.setOnCheckedChangeListener((button, checked) -> {
                 if (checked) audience.put(member.getKey(), true);
                 else audience.remove(member.getKey());
@@ -213,10 +257,9 @@ final class ChatStatus {
                 people.setVisibility(checked ? android.view.View.VISIBLE : android.view.View.GONE));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(form);
-        dialog = new ChatFormDialog(host.requireContext()).setTitle("New text status")
-                .setMessage("Choose who can see your status for 24 hours.")
-                .setView(scroll)
+        dialog = statusDialog("New text status", scroll)
                 .setNegativeButton("Cancel", null).setPositiveButton("Post", null).show();
+        styleWindow(dialog);
         AlertDialog editor = dialog;
         editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             if (!active(family, uid)) return;
@@ -237,6 +280,83 @@ final class ChatStatus {
                 else { view.setEnabled(true); notice("Unable to publish status"); }
             });
         });
+    }
+
+    private ChatFormDialog statusDialog(String title, ScrollView content) {
+        TextView heading = section(title, 23, GREEN);
+        heading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        androidx.core.view.ViewCompat.setAccessibilityHeading(heading, true);
+        heading.setBackground(surface(16, EDGE, 0xffe2f4ee, 0xfff4fbf8));
+        FrameLayout cover = new FrameLayout(host.requireContext());
+        cover.setPadding(dp(16), dp(16), dp(16), dp(8));
+        cover.addView(heading, new FrameLayout.LayoutParams(-1, -2));
+        ChatFormDialog builder = new ChatFormDialog(host.requireContext());
+        builder.setCustomTitle(cover);
+        builder.setView(content);
+        return builder;
+    }
+
+    private void styleWindow(AlertDialog value) {
+        Window window = value.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(surface(20, EDGE, 0xffeffaf3, 0xfffff4f5, 0xffeef6fd));
+            int width = host.getResources().getDisplayMetrics().widthPixels;
+            window.setLayout(Math.min(dp(520), width - dp(24)), -2);
+        }
+        for (int type : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL}) {
+            Button button = value.getButton(type);
+            if (button == null) continue;
+            boolean primary = type == AlertDialog.BUTTON_POSITIVE;
+            button.setAllCaps(false);
+            button.setTextSize(14);
+            button.setMinHeight(dp(44));
+            button.setTextColor(primary ? 0xffffffff : GREEN);
+            button.setPadding(dp(12), 0, dp(12), 0);
+            button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33106c59),
+                    primary ? surface(18, BLUE, BLUE) : surface(18, EDGE, 0xffe6f6ef), null));
+        }
+    }
+
+    private View statusField(EditText input) {
+        input.setTextColor(INK);
+        input.setHintTextColor(MUTED);
+        input.setTextSize(16);
+        com.google.android.material.textfield.TextInputLayout field = ChatFormDialog.outlined(input);
+        field.setBoxBackgroundColor(0xfff9fcfd);
+        field.setBoxStrokeColor(BLUE);
+        field.setDefaultHintTextColor(ColorStateList.valueOf(MUTED));
+        return field;
+    }
+
+    private TextView section(String label, int size, int color) {
+        TextView view = new TextView(host.requireContext());
+        view.setText(label);
+        view.setTextSize(size);
+        view.setTextColor(color);
+        view.setPadding(dp(14), dp(12), dp(14), dp(12));
+        return view;
+    }
+
+    private LinearLayout.LayoutParams cardSpacing() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(8);
+        return params;
+    }
+
+    private GradientDrawable surface(int radius, int stroke, int... colors) {
+        GradientDrawable shape = new GradientDrawable();
+        if (colors.length == 1) shape.setColor(colors[0]);
+        else {
+            shape.setOrientation(GradientDrawable.Orientation.TL_BR);
+            shape.setColors(colors);
+        }
+        shape.setCornerRadius(dp(radius));
+        shape.setStroke(dp(1), stroke);
+        return shape;
+    }
+
+    private int dp(int value) {
+        return Math.round(value * host.getResources().getDisplayMetrics().density);
     }
 
     private boolean active(String family, String uid) {
