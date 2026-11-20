@@ -21,12 +21,15 @@
         "$author": {
           ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && (auth.uid === $author || (root.child('memberships').child($familyId).child($author).child('status').val() === 'ACTIVE' && (!data.child('audience').exists() || data.child('audience').child(auth.uid).val() === true) && data.child('postedAt').val() > now - 86400000))",
           ".write": "auth != null && auth.uid === $author && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
-          ".validate": "newData.hasChildren(['body', 'postedAt']) && (newData.child('body').val() !== '' || newData.hasChild('photo'))",
+          ".validate": "newData.hasChildren(['body', 'postedAt']) && (newData.child('body').val() !== '' || newData.hasChild('photo') || newData.hasChild('video')) && !(newData.hasChild('photo') && newData.hasChild('video'))",
           "body": {
             ".validate": "newData.isString() && newData.val().length <= 500"
           },
           "photo": {
             ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 524288 && newData.val().beginsWith('/9j/')"
+          },
+          "video": {
+            ".validate": "newData.isString() && newData.val().length >= 16 && newData.val().length <= 1048576"
           },
           "postedAt": {
             ".validate": "newData.isNumber() && newData.val() === now"

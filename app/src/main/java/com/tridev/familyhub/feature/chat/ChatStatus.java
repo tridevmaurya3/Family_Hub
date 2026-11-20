@@ -49,16 +49,20 @@ final class ChatStatus {
     private static final int MAX_PHOTO_BYTES = 384 * 1024;
     private static final int MAX_PHOTO_LENGTH = MAX_PHOTO_BYTES / 3 * 4;
     private static final int MAX_IMAGE_SIDE = 1280;
-    private final ActivityResultLauncher<String> photoPicker;
-    private java.util.function.Consumer<Uri> photoSelection;
+    private static final int MAX_VIDEO_BYTES = 768 * 1024;
+    private static final int MAX_VIDEO_LENGTH = MAX_VIDEO_BYTES / 3 * 4;
+    private static final int MAX_VIDEO_DURATION_MS = 15000;
+    private final ActivityResultLauncher<String> mediaPicker;
+    private java.util.function.Consumer<Uri> mediaSelection;
     private AlertDialog dialog;
+    private AlertDialog videoPlayback;
 
     ChatStatus(FamilyChatFragment host, FamilyChatStore store) {
         this.host = host;
         this.store = store;
-        photoPicker = host.registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-            java.util.function.Consumer<Uri> selection = photoSelection;
-            photoSelection = null;
+        mediaPicker = host.registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            java.util.function.Consumer<Uri> selection = mediaSelection;
+            mediaSelection = null;
             if (uri != null && selection != null) selection.accept(uri);
         });
     }
@@ -95,6 +99,7 @@ final class ChatStatus {
                 if (!listing.isShowing() || !active(family, uid)) return;
                 String body = snapshot.child("body").getValue(String.class);
                 String photo = snapshot.child("photo").getValue(String.class);
+                String video = snapshot.child("video").getValue(String.class);
                 Long postedAt = snapshot.child("postedAt").getValue(Long.class);
                 if (body == null || postedAt == null) return;
                 long remaining = postedAt + 86400000L - System.currentTimeMillis();
@@ -103,10 +108,10 @@ final class ChatStatus {
                         .child(family).child(member.getKey()).child(Long.toString(postedAt));
                 String time = android.text.format.DateUtils.getRelativeTimeSpanString(
                         postedAt, System.currentTimeMillis(), 60000).toString();
-                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + (photo == null ? "" : "Photo  ·  ") + time, false, () -> {
+                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + (video != null ? "Video  ·  " : photo != null ? "Photo  ·  " : "") + time, false, () -> {
                     if (!active(family, uid) || postedAt + 86400000L <= System.currentTimeMillis()) return;
                     listing.dismiss();
-                    showStatus(family, uid, member.getKey(), member.getValue(), body, photo, receipts);
+                    showStatus(family, uid, member.getKey(), member.getValue(), body, photo, video, receipts);
                 });
                 empty.setVisibility(View.GONE);
                 rows.postDelayed(() -> {
@@ -121,7 +126,7 @@ final class ChatStatus {
     private static final String[] EMOJI = {"❤️", "😂", "😮", "😢", "👏", "🔥"};
 
     private void showStatus(String family, String uid, String author, String name, String body,
-                            String photo, DatabaseReference receipts) {
+                            String photo, String video, DatabaseReference receipts) {
         boolean mine = uid.equals(author);
         LinearLayout content = new LinearLayout(host.requireContext());
         content.setOrientation(LinearLayout.VERTICAL);
@@ -134,6 +139,12 @@ final class ChatStatus {
         post.setGravity(android.view.Gravity.CENTER);
         post.setMinHeight(8 * inset);
         post.setTextIsSelectable(true);
+        if (video != null) {
+            addAction(content, "Play video", true, () -> {
+                if (active(family, uid)) playVideo(video, dialog);
+            });
+            post.setMinHeight(0);
+        }
         if (photo != null) {
             ImageView image = statusImage();
             content.addView(image, new LinearLayout.LayoutParams(-1, dp(270)));
@@ -249,7 +260,7 @@ final class ChatStatus {
 
     private void compose(DatabaseReference path, String family, String uid) {
         EditText input = new EditText(host.requireContext());
-        input.setHint("Status text or photo caption");
+        input.setHint("Status text or media caption");
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(500)});
         LinearLayout form = new LinearLayout(host.requireContext());
         form.setOrientation(LinearLayout.VERTICAL);
@@ -263,37 +274,79 @@ final class ChatStatus {
         previewSize.topMargin = dp(8);
         form.addView(preview, previewSize);
         String[] selectedPhoto = {null};
-        boolean[] loadingPhoto = {false};
+        String[] selectedVideo = {null};
+        TextView videoSelection = section("Video selected", 15, GREEN);
+        videoSelection.setVisibility(View.GONE);
+        form.addView(videoSelection, cardSpacing());
+        boolean[] loadingMedia = {false};
         addAction(form, "Choose photo", false, () -> {
             AlertDialog owner = dialog;
-            if (loadingPhoto[0] || !active(family, uid)) return;
-            photoSelection = uri -> {
+            if (loadingMedia[0] || !active(family, uid)) return;
+            mediaSelection = uri -> {
                 if (!owner.isShowing() || !active(family, uid)) return;
-                loadingPhoto[0] = true;
+                loadingMedia[0] = true;
                 owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
                 android.content.ContentResolver resolver = form.getContext().getContentResolver();
                 java.util.concurrent.CompletableFuture.supplyAsync(() -> encodePhoto(resolver, uri))
                         .thenAccept(encoded -> form.post(() -> {
                             if (!owner.isShowing() || !active(family, uid)) return;
-                            loadingPhoto[0] = false;
+                            loadingMedia[0] = false;
                             owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
                             if (encoded == null) {
                                 notice("Unable to prepare photo. Try another image.");
                                 return;
                             }
                             selectedPhoto[0] = encoded;
+                            selectedVideo[0] = null;
+                            videoSelection.setVisibility(View.GONE);
                             preview.setVisibility(View.VISIBLE);
                             loadPreview(preview, encoded);
                         }));
             };
-            try { photoPicker.launch("image/*"); } catch (android.content.ActivityNotFoundException unavailable) {
-                photoSelection = null;
+            try { mediaPicker.launch("image/*"); } catch (android.content.ActivityNotFoundException unavailable) {
+                mediaSelection = null;
                 notice("No photo picker is available");
             }
         });
-        addAction(form, "Remove photo", false, () -> {
-            if (loadingPhoto[0]) return;
+        addAction(form, "Choose video", false, () -> {
+            AlertDialog owner = dialog;
+            if (loadingMedia[0] || !active(family, uid)) return;
+            mediaSelection = uri -> {
+                if (!owner.isShowing() || !active(family, uid)) return;
+                loadingMedia[0] = true;
+                owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                android.content.Context app = host.requireContext().getApplicationContext();
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> encodeVideo(app, uri))
+                        .thenAccept(encoded -> form.post(() -> {
+                            if (!owner.isShowing() || !active(family, uid)) return;
+                            loadingMedia[0] = false;
+                            owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            if (encoded == null) {
+                                notice("Choose an MP4 up to 15 seconds and 768 KB");
+                                return;
+                            }
+                            selectedVideo[0] = encoded;
+                            selectedPhoto[0] = null;
+                            preview.setTag(null);
+                            preview.setImageDrawable(null);
+                            preview.setVisibility(View.GONE);
+                            videoSelection.setVisibility(View.VISIBLE);
+                        }));
+            };
+            try { mediaPicker.launch("video/mp4"); } catch (android.content.ActivityNotFoundException unavailable) {
+                mediaSelection = null;
+                notice("No video picker is available");
+            }
+        });
+        addAction(form, "Preview video", false, () -> {
+            if (selectedVideo[0] != null) playVideo(selectedVideo[0], dialog);
+            else notice("Choose a video first");
+        });
+        addAction(form, "Remove media", false, () -> {
+            if (loadingMedia[0]) return;
             selectedPhoto[0] = null;
+            selectedVideo[0] = null;
+            videoSelection.setVisibility(View.GONE);
             preview.setTag(null);
             preview.setImageDrawable(null);
             preview.setVisibility(View.GONE);
@@ -334,7 +387,7 @@ final class ChatStatus {
         editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             if (!active(family, uid)) return;
             String body = input.getText().toString().trim();
-            if (body.isEmpty() && selectedPhoto[0] == null) { input.setError("Enter text or choose a photo"); return; }
+            if (body.isEmpty() && selectedPhoto[0] == null && selectedVideo[0] == null) { input.setError("Enter text or choose media"); return; }
             if (restricted.isChecked() && audience.isEmpty()) {
                 notice("Select at least one family member");
                 return;
@@ -343,6 +396,7 @@ final class ChatStatus {
             Map<String, Object> value = new LinkedHashMap<>();
             if (restricted.isChecked()) value.put("audience", new LinkedHashMap<>(audience));
             value.put("body", body);
+            if (selectedVideo[0] != null) value.put("video", selectedVideo[0]);
             if (selectedPhoto[0] != null) value.put("photo", selectedPhoto[0]);
             value.put("postedAt", ServerValue.TIMESTAMP);
             path.setValue(value).addOnCompleteListener(task -> {
@@ -351,6 +405,79 @@ final class ChatStatus {
                 else { view.setEnabled(true); notice("Unable to publish status"); }
             });
         });
+    }
+
+    private static String encodeVideo(android.content.Context context, Uri uri) {
+        try (InputStream input = context.getContentResolver().openInputStream(uri)) {
+            if (input == null) return null;
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            byte[] buffer = new byte[16384];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                if (count > MAX_VIDEO_BYTES - bytes.size()) return null;
+                bytes.write(buffer, 0, count);
+            }
+            byte[] video = bytes.toByteArray();
+            if (video.length < 12 || video[4] != 'f' || video[5] != 't' || video[6] != 'y' || video[7] != 'p') {
+                return null;
+            }
+            android.media.MediaMetadataRetriever metadata = new android.media.MediaMetadataRetriever();
+            try {
+                metadata.setDataSource(context, uri);
+                String duration = metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION);
+                String videoTrack = metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO);
+                if (duration == null || !"yes".equals(videoTrack)) return null;
+                long millis = Long.parseLong(duration);
+                if (millis <= 0 || millis > MAX_VIDEO_DURATION_MS) return null;
+            } finally {
+                metadata.release();
+            }
+            return Base64.encodeToString(video, Base64.NO_WRAP);
+        } catch (IOException | RuntimeException error) {
+            return null;
+        }
+    }
+
+    private void playVideo(String encoded, AlertDialog owner) {
+        if (owner == null || !owner.isShowing() || encoded.length() > MAX_VIDEO_LENGTH) return;
+        java.io.File clip;
+        try {
+            byte[] payload = Base64.decode(encoded, Base64.NO_WRAP);
+            if (payload.length > MAX_VIDEO_BYTES) return;
+            clip = java.io.File.createTempFile("family-status-", ".mp4", host.requireContext().getCacheDir());
+            try {
+                java.nio.file.Files.write(clip.toPath(), payload);
+            } catch (IOException failure) {
+                clip.delete();
+                throw failure;
+            }
+        } catch (IOException | IllegalArgumentException error) {
+            notice("Unable to open this video");
+            return;
+        }
+        android.widget.VideoView player = new android.widget.VideoView(host.requireContext());
+        FrameLayout frame = new FrameLayout(host.requireContext());
+        frame.addView(player, new FrameLayout.LayoutParams(-1, dp(280), android.view.Gravity.CENTER));
+        ScrollView scroll = new ScrollView(host.requireContext());
+        scroll.addView(frame);
+        AlertDialog playback = statusDialog("Status video", scroll)
+                .setPositiveButton("Close", null).show();
+        styleWindow(playback);
+        playback.setOnDismissListener(d -> {
+            player.stopPlayback();
+            clip.delete();
+            if (videoPlayback == playback) videoPlayback = null;
+        });
+        videoPlayback = playback;
+        player.setOnErrorListener((mp, what, extra) -> {
+            notice("This video cannot be played");
+            playback.dismiss();
+            return true;
+        });
+        android.widget.MediaController controller = new android.widget.MediaController(host.requireContext());
+        player.setMediaController(controller);
+        player.setVideoURI(Uri.fromFile(clip));
+        player.start();
     }
 
     private ImageView statusImage() {
@@ -507,6 +634,7 @@ final class ChatStatus {
     }
 
     void dismiss() {
+        if (videoPlayback != null) videoPlayback.dismiss();
         if (dialog != null) dialog.dismiss();
         dialog = null;
     }

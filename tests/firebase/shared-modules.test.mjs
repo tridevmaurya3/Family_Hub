@@ -504,3 +504,17 @@ test('photo status accepts an optional caption and enforces the selected audienc
   await assertFails(ref('profile-owner').child('photo').get());
   await assertFails(ref(outsider).child('photo').get());
 });
+
+test('video status retains audience restrictions and rejects oversized or mixed media', async () => {
+  const path = 'familyTextStatus/familyA/' + writer;
+  const ref = uid => env.authenticatedContext(uid).database().ref(path);
+  const status = { body: '', postedAt: { '.sv': 'timestamp' }, audience: { [reader]: true } };
+  const video = 'AAAAGGZ0eXBpc29t';
+  await assertFails(ref(writer).set({ ...status, video: 'A'.repeat(1048577) }));
+  await assertFails(ref(writer).set({ ...status, video, photo: '/9j/QUJDREVGR0hJ' }));
+  await assertSucceeds(ref(writer).set({ ...status, video }));
+  const selected = await assertSucceeds(ref(reader).child('video').get());
+  assert.equal(selected.val(), video);
+  await assertFails(ref('profile-owner').child('video').get());
+  await assertFails(ref(outsider).child('video').get());
+});
