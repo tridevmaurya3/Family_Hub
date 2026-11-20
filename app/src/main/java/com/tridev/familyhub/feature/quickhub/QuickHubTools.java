@@ -98,6 +98,7 @@ final class QuickHubTools {
         expressionCard.addView(calculation, new LinearLayout.LayoutParams(0, -2, 1));
         MaterialButton backspace = calculatorButton("⌫", 0xff344564, Color.WHITE);
         backspace.setContentDescription("Delete last character");
+        backspace.setVisibility(View.GONE);
         LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(dp(48), dp(48));
         deleteParams.setMarginStart(dp(8));
         expressionCard.addView(backspace, deleteParams);
@@ -118,12 +119,21 @@ final class QuickHubTools {
         addCalculatorSection(content, modes, 8);
         LinearLayout scientific = column();
         scientific.setVisibility(View.GONE);
+        LinearLayout basicTopRow = column();
+        LinearLayout scientificTopRow = column();
+        scientificTopRow.setVisibility(View.GONE);
         basic.setOnClickListener(v -> {
             scientific.setVisibility(View.GONE);
+            backspace.setVisibility(View.GONE);
+            basicTopRow.setVisibility(View.VISIBLE);
+            scientificTopRow.setVisibility(View.GONE);
             setCalculatorMode(basic, advanced);
         });
         advanced.setOnClickListener(v -> {
             scientific.setVisibility(View.VISIBLE);
+            backspace.setVisibility(View.VISIBLE);
+            basicTopRow.setVisibility(View.GONE);
+            scientificTopRow.setVisibility(View.VISIBLE);
             setCalculatorMode(advanced, basic);
         });
         content.addView(scientific);
@@ -182,8 +192,12 @@ final class QuickHubTools {
         keys(scientific, key, new String[][]{
                 {"sin(", "cos(", "tan("}, {"sqrt(", "log(", "ln("}, {"π", "e", "^"}
         });
+        keys(basicTopRow, key, new String[][]{{"AC", "⌫", "%", "(", "÷"}});
+        keys(scientificTopRow, key, new String[][]{{"AC", "%", "(", "÷"}});
+        content.addView(basicTopRow);
+        content.addView(scientificTopRow);
         keys(content, key, new String[][]{
-                {"AC", "%", "(", "÷"}, {"7", "8", "9", "×"}, {"4", "5", "6", "-"},
+                {"7", "8", "9", "×"}, {"4", "5", "6", "-"},
                 {"1", "2", "3", "+"}, {")", "0", ".", "="}
         });
         content.setBackgroundColor(PANEL);
@@ -483,6 +497,7 @@ final class QuickHubTools {
                 }
                 String label = "sqrt(".equals(value) ? "√" : "-".equals(value) ? "−" : value;
                 MaterialButton key = calculatorButton(label, fill, foreground);
+                if ("⌫".equals(value)) key.setContentDescription("Delete last character");
                 key.setOnClickListener(v -> action.accept(value));
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(52), 1);
                 params.setMargins(dp(3), 0, dp(3), 0);
