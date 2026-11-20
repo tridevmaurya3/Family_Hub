@@ -2,6 +2,88 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "familyChat": {
+      "$familyId": {
+        "group": {
+          ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+          ".indexOn": [
+            "at"
+          ],
+          "$message": {
+            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists()",
+            ".validate": "newData.hasChildren(['sender','body','at'])",
+            "sender": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "body": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "receipts": {
+              "$uid": {
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && auth.uid === $uid && data.parent().parent().child('sender').exists() && data.parent().parent().child('sender').val() !== auth.uid && newData.exists() && (!data.child('deliveredAt').exists() || newData.child('deliveredAt').val() === data.child('deliveredAt').val()) && (!data.child('readAt').exists() || newData.child('readAt').val() === data.child('readAt').val())",
+                ".validate": "newData.hasChild('deliveredAt') && (!newData.hasChild('readAt') || newData.child('readAt').val() >= newData.child('deliveredAt').val())",
+                "deliveredAt": {
+                  ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                },
+                "readAt": {
+                  ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "direct": {
+          "$first": {
+            "$second": {
+              ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE'",
+              ".indexOn": [
+                "at"
+              ],
+              "$message": {
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists()",
+                ".validate": "newData.hasChildren(['sender','body','at'])",
+                "sender": {
+                  ".validate": "newData.isString() && newData.val() === auth.uid"
+                },
+                "body": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
+                },
+                "at": {
+                  ".validate": "newData.isNumber() && newData.val() === now"
+                },
+                "receipts": {
+                  "$uid": {
+                    ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && auth.uid === $uid && data.parent().parent().child('sender').exists() && data.parent().parent().child('sender').val() !== auth.uid && newData.exists() && (!data.child('deliveredAt').exists() || newData.child('deliveredAt').val() === data.child('deliveredAt').val()) && (!data.child('readAt').exists() || newData.child('readAt').val() === data.child('readAt').val())",
+                    ".validate": "newData.hasChild('deliveredAt') && (!newData.hasChild('readAt') || newData.child('readAt').val() >= newData.child('deliveredAt').val())",
+                    "deliveredAt": {
+                      ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                    },
+                    "readAt": {
+                      ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",

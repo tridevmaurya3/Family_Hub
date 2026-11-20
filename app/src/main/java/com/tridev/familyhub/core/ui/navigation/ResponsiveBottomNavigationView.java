@@ -19,7 +19,7 @@ import com.tridev.familyhub.R;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Stable five-item navigation independent of OEM Material measurements. */
+/** Responsive navigation independent of OEM Material measurements. */
 public final class ResponsiveBottomNavigationView extends LinearLayout {
 
     public interface OnItemSelectedListener {
@@ -55,6 +55,7 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
 
         addItem(R.id.nav_home, R.drawable.ic_nav_home_color, "Home");
         addItem(R.id.nav_family, R.drawable.ic_nav_family_color, "Family");
+        addItem(R.id.nav_chat, R.drawable.ic_nav_chat, "Chat");
         addItem(R.id.nav_tasks, R.drawable.ic_family_task,
                 getResources().getString(R.string.dashboard_nav_tasks));
         addItem(R.id.nav_finance, R.drawable.ic_nav_finance_color, "Finance");

@@ -60,6 +60,7 @@ public class FamilyHubApplication extends Application {
         com.tridev.familyhub.core.ui.FormTextEditing.register(this);
 
         enableFirebaseOfflinePersistence();
+        com.tridev.familyhub.feature.chat.FamilyChatStore.startForApp();
         AccountDataScope.legacyOwner(this);
         com.tridev.familyhub.data.repository.FamilySyncOutbox.initialize(this);
         com.tridev.familyhub.feature.profile.AccountProfileSync.get(this);

@@ -26,6 +26,7 @@ import com.tridev.familyhub.feature.auth.AuthActivity;
 import com.tridev.familyhub.feature.dashboard.DashboardFragment;
 import com.tridev.familyhub.feature.documents.DocumentsFragment;
 import com.tridev.familyhub.feature.family.FamilyFragment;
+import com.tridev.familyhub.feature.chat.FamilyChatFragment;
 import com.tridev.familyhub.feature.finance.FinanceFragment;
 import com.tridev.familyhub.feature.grocery.GroceryFragment;
 import com.tridev.familyhub.feature.health.HealthFragment;
@@ -162,7 +163,9 @@ public class MainActivity extends AppCompatActivity {
         Fragment restored = getSupportFragmentManager()
                 .findFragmentById(R.id.main_content);
         int destinationId = R.id.nav_home;
-        if (restored instanceof FamilyFragment) {
+        if (restored instanceof FamilyChatFragment) {
+            destinationId = R.id.nav_chat;
+        } else if (restored instanceof FamilyFragment) {
             destinationId = R.id.nav_family;
         } else if (restored instanceof RemindersFragment) {
             destinationId = R.id.nav_reminders;
@@ -380,6 +383,8 @@ public class MainActivity extends AppCompatActivity {
             fragment = new DashboardFragment();
         } else if (destinationId == R.id.nav_family) {
             fragment = new FamilyFragment();
+        } else if (destinationId == R.id.nav_chat) {
+            fragment = new FamilyChatFragment();
         } else if (destinationId == R.id.nav_reminders) {
             fragment = new RemindersFragment();
         } else if (destinationId == R.id.nav_tasks) {

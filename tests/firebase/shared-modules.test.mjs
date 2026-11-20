@@ -248,3 +248,37 @@ test('family avatars: photo-only realtime reads, isolation and revocation', { ti
   });
   await assertFails(viewer.ref(`users/${owner}/accountPhoto`).once('value'));
 });
+
+test('family chat delivers in realtime and receipts stay owned by the receiver', { timeout: 45000 }, async () => {
+  const path = 'familyChat/familyA/group';
+  const sender = env.authenticatedContext(writer).database();
+  const receiver = env.authenticatedContext(reader).database();
+  const outside = env.authenticatedContext(outsider).database();
+  const stamp = { '.sv': 'timestamp' };
+  const received = new Promise(resolve => receiver.ref(path).on('child_added', resolve));
+  await assertSucceeds(sender.ref(path + '/sample').set({ sender: writer, body: 'Hello family', at: stamp }));
+  assert.equal((await received).child('body').val(), 'Hello family');
+  receiver.ref(path).off('child_added');
+  await assertFails(outside.ref(path).get());
+  await assertFails(receiver.ref(path + '/sample/body').set('Edited'));
+  await assertFails(sender.ref(path + '/sample/receipts/' + reader).set({ deliveredAt: stamp }));
+  await assertSucceeds(receiver.ref(path + '/sample/receipts/' + reader).set({ deliveredAt: stamp }));
+  await assertSucceeds(receiver.ref(path + '/sample/receipts/' + reader + '/readAt').set(stamp));
+  assert.equal((await sender.ref(path + '/sample/receipts/' + reader + '/readAt').get()).exists(), true);
+  await assertFails(receiver.ref(path + '/sample/receipts/' + reader + '/readAt').remove());
+});
+
+test('direct chat accepts only its two active family members', { timeout: 45000 }, async () => {
+  const path = `familyChat/familyA/direct/${writer}/${reader}`;
+  const sender = env.authenticatedContext(writer).database();
+  const receiver = env.authenticatedContext(reader).database();
+  const third = env.authenticatedContext('profile-owner').database();
+  const stamp = { '.sv': 'timestamp' };
+  await assertFails(receiver.ref(path + '/forged').set({ sender: writer, body: 'forged', at: stamp }));
+  await assertSucceeds(sender.ref(path + '/direct').set({ sender: writer, body: 'Private', at: stamp }));
+  assert.equal((await receiver.ref(path + '/direct').get()).child('body').val(), 'Private');
+  await assertFails(third.ref(path).get());
+  await assertFails(third.ref(path + '/other').set({ sender: 'profile-owner', body: 'No', at: stamp }));
+  await assertFails(sender.ref('familyChat/familyA/direct/' + writer + '/inactive/x')
+    .set({ sender: writer, body: 'No', at: stamp }));
+});
