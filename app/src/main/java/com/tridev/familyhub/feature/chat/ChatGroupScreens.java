@@ -215,12 +215,12 @@ final class ChatGroupScreens {
             }
         });
         if (ids.isEmpty()) { toast("No additional family members available"); return; }
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+        new ChatFormDialog(context())
                 .setTitle("Add to group")
                 .setMessage("New members can read existing group messages.")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Choose member", (dialog, which) ->
-                        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+                        new ChatFormDialog(context())
                                 .setTitle("Choose family member")
                                 .setItems(labels.toArray(new String[0]), (picker, selected) ->
                                         store.changeGroupMember(thread, ids.get(selected), true,
@@ -238,14 +238,14 @@ final class ChatGroupScreens {
             actions.add(() -> store.changeGroupRole(thread, uid, !admin, ok -> finishGroupChange(thread, ok)));
         }
         labels.add("Remove from group");
-        actions.add(() -> new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+        actions.add(() -> new ChatFormDialog(context())
                 .setTitle("Remove " + name + "?")
                 .setMessage("They will lose access to this group.")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Remove", (dialog, which) ->
                         store.changeGroupMember(thread, uid, false, ok -> finishGroupChange(thread, ok)))
                 .show());
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(context()).setTitle(name)
+        new ChatFormDialog(context()).setTitle(name)
                 .setItems(labels.toArray(new String[0]), (dialog, which) -> actions.get(which).run())
                 .setNegativeButton("Cancel", null).show();
     }
@@ -262,9 +262,9 @@ final class ChatGroupScreens {
         input.setText(store.title(thread));
         LinearLayout content = column();
         content.setPadding(dp(16), 0, dp(16), 0);
-        content.addView(input);
+        content.addView(ChatFormDialog.outlined(input));
         androidx.appcompat.app.AlertDialog dialog =
-                new com.google.android.material.dialog.MaterialAlertDialogBuilder(context())
+                new ChatFormDialog(context())
                         .setTitle("Rename group").setView(content).setNegativeButton("Cancel", null)
                         .setPositiveButton("Save", null).show();
         dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {

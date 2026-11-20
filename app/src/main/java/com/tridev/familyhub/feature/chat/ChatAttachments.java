@@ -230,8 +230,10 @@ final class ChatAttachments {
     private void confirm(FamilyChatStore.ThreadState thread, String label, Map<String, Object> metadata,
                          String data, byte[] photoOrFile) {
         if (!visible() || !store.canUse(thread)) return;
-        MaterialAlertDialogBuilder dialog = new MaterialAlertDialogBuilder(fragment.requireContext())
-                .setTitle(label)
+        Context context = fragment.requireContext();
+        MaterialAlertDialogBuilder builder = "event".equals(metadata.get("kind"))
+                ? new ChatFormDialog(context) : new MaterialAlertDialogBuilder(context);
+        MaterialAlertDialogBuilder dialog = builder.setTitle(label)
                 .setMessage("Share with " + store.title(thread) + "?")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Send", (d, w) -> store.send(thread, label, metadata, data,
@@ -283,8 +285,12 @@ final class ChatAttachments {
         FamilyChatStore.ThreadState thread = target();
         if (thread == null || !store.canUse(thread)) return;
         android.widget.EditText title = entry("Event title", 180);
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(fragment.requireContext())
-                .setTitle("Share an event").setView(title).setNegativeButton("Cancel", null)
+        android.widget.LinearLayout form = new android.widget.LinearLayout(fragment.requireContext());
+        int padding = Math.round(20 * form.getResources().getDisplayMetrics().density);
+        form.setPadding(padding, padding / 2, padding, 0);
+        form.addView(ChatFormDialog.outlined(title));
+        androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(fragment.requireContext())
+                .setTitle("Share an event").setView(form).setNegativeButton("Cancel", null)
                 .setPositiveButton("Choose date", null).show();
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
             String label = title.getText().toString().trim();
@@ -293,19 +299,12 @@ final class ChatAttachments {
                 return;
             }
             dialog.dismiss();
-            java.util.Calendar start = java.util.Calendar.getInstance();
-            new android.app.DatePickerDialog(fragment.requireContext(), (datePicker, year, month, day) -> {
-                new android.app.TimePickerDialog(fragment.requireContext(), (timePicker, hour, minute) -> {
-                    start.clear();
-                    start.set(year, month, day, hour, minute);
-                    Map<String, Object> details = new HashMap<>();
-                    details.put("kind", "event");
-                    details.put("startsAt", start.getTimeInMillis());
-                    confirm(thread, label, details, null, null);
-                }, start.get(java.util.Calendar.HOUR_OF_DAY), start.get(java.util.Calendar.MINUTE),
-                        android.text.format.DateFormat.is24HourFormat(fragment.requireContext())).show();
-            }, start.get(java.util.Calendar.YEAR), start.get(java.util.Calendar.MONTH),
-                    start.get(java.util.Calendar.DAY_OF_MONTH)).show();
+            ChatDateTimePicker.pickDateTime(fragment, System.currentTimeMillis(), false, start -> {
+                Map<String, Object> details = new HashMap<>();
+                details.put("kind", "event");
+                details.put("startsAt", start);
+                confirm(thread, label, details, null, null);
+            });
         });
     }
 
@@ -323,12 +322,12 @@ final class ChatAttachments {
         LinearLayout form = new LinearLayout(fragment.requireContext());
         form.setOrientation(LinearLayout.VERTICAL);
         android.widget.EditText question = entry("Question", 180);
-        form.addView(question);
+        form.addView(ChatFormDialog.outlined(question));
         java.util.List<android.widget.EditText> choices = new java.util.ArrayList<>();
         for (int i = 1; i <= 4; i++) {
             android.widget.EditText choice = entry("Option " + i + (i > 2 ? " (optional)" : ""), 100);
             choices.add(choice);
-            form.addView(choice);
+            form.addView(ChatFormDialog.outlined(choice));
         }
         long[] closesAt = {0L};
         MaterialButton deadline = new MaterialButton(fragment.requireContext(), null,
@@ -351,7 +350,7 @@ final class ChatAttachments {
         form.addView(clearDeadline);
         android.widget.ScrollView scroll = new android.widget.ScrollView(fragment.requireContext());
         scroll.addView(form);
-        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(fragment.requireContext())
+        androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(fragment.requireContext())
                 .setTitle("Create a poll").setView(scroll).setNegativeButton("Cancel", null)
                 .setPositiveButton("Send", null).show();
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
@@ -385,21 +384,10 @@ final class ChatAttachments {
     }
 
     private void pickPollDeadline(java.util.function.LongConsumer selected) {
-        Context context = fragment.requireContext();
-        java.util.Calendar day = java.util.Calendar.getInstance();
-        day.add(java.util.Calendar.HOUR_OF_DAY, 1);
-        android.app.DatePickerDialog date = new android.app.DatePickerDialog(context, (picker, year, month, dateOfMonth) -> {
-            new android.app.TimePickerDialog(context, (time, hour, minute) -> {
-                day.clear();
-                day.set(year, month, dateOfMonth, hour, minute);
-                long value = day.getTimeInMillis();
-                if (value <= System.currentTimeMillis()) notice("Choose a deadline in the future");
-                else selected.accept(value);
-            }, day.get(java.util.Calendar.HOUR_OF_DAY), day.get(java.util.Calendar.MINUTE),
-                    android.text.format.DateFormat.is24HourFormat(context)).show();
-        }, day.get(java.util.Calendar.YEAR), day.get(java.util.Calendar.MONTH), day.get(java.util.Calendar.DAY_OF_MONTH));
-        date.getDatePicker().setMinDate(System.currentTimeMillis());
-        date.show();
+        ChatDateTimePicker.pickDateTime(fragment, System.currentTimeMillis() + 3600000L, true, value -> {
+            if (value <= System.currentTimeMillis()) notice("Choose a deadline in the future");
+            else selected.accept(value);
+        });
     }
 
     String pollDate(long millis) {
@@ -597,7 +585,7 @@ final class ChatAttachments {
                 if (uid == null || uid.equals(latest.sender)) continue;
                 (latest.snapshot.child("acks").child(uid).exists() ? yes : no).add(store.name(uid));
             }
-            new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Acknowledgments")
+            new ChatFormDialog(fragment.requireContext()).setTitle("Acknowledgments")
                     .setMessage("Got it · " + yes.size() + "\n" + String.join(", ", yes)
                             + "\n\nWaiting · " + no.size() + "\n" + String.join(", ", no))
                     .setPositiveButton("Done", null).show();
@@ -615,7 +603,7 @@ final class ChatAttachments {
                 text.append(message.snapshot.child("checks").child(item.getKey()).exists() ? "✓  " : "○  ")
                         .append(item.getValue(String.class)).append('\n');
             }
-            new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle(message.body)
+            new ChatFormDialog(fragment.requireContext()).setTitle(message.body)
                     .setMessage(text).setPositiveButton("Done", null).show();
         } else if ("voice".equals(kind)) {
             voiceNotes.open(thread, message);
@@ -677,7 +665,7 @@ final class ChatAttachments {
             labels.add(option.getValue(String.class));
         }
         int[] selected = {ids.indexOf(store.vote(message))};
-        new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle(message.body)
+        new ChatFormDialog(fragment.requireContext()).setTitle(message.body)
                 .setSingleChoiceItems(labels.toArray(new String[0]), selected[0], (d, which) -> selected[0] = which)
                 .setNegativeButton("Close", null)
                 .setPositiveButton("Vote", (d, w) -> {
@@ -713,7 +701,7 @@ final class ChatAttachments {
             barParams.bottomMargin = padding / 2;
             results.addView(bar, barParams);
         }
-        new MaterialAlertDialogBuilder(context).setTitle(message.body).setView(results)
+        new ChatFormDialog(context).setTitle(message.body).setView(results)
                 .setPositiveButton("Done", null).show();
     }
 

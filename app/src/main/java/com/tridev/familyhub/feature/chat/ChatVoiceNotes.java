@@ -23,7 +23,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -80,7 +79,7 @@ final class ChatVoiceNotes {
         stop();
         Recording recording = new Recording();
         current = recording;
-        AlertDialog recordingDialog = new MaterialAlertDialogBuilder(fragment.requireContext())
+        AlertDialog recordingDialog = new ChatFormDialog(fragment.requireContext())
                 .setTitle("Recording voice note").setMessage("Speak now. The limit is 25 seconds.")
                 .setNegativeButton("Discard", (dialog, action) -> recording.discard = true)
                 .setPositiveButton("Stop", null).create();
@@ -141,7 +140,7 @@ final class ChatVoiceNotes {
         EditText transcript = new EditText(context);
         transcript.setHint("Optional transcript");
         transcript.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
-        content.addView(transcript);
+        content.addView(ChatFormDialog.outlined(transcript));
         com.google.android.material.button.MaterialButton play = new com.google.android.material.button.MaterialButton(context);
         play.setText("Preview recording");
         play.setOnClickListener(view -> play(wav(pcm)));
@@ -152,7 +151,7 @@ final class ChatVoiceNotes {
             transcribe.setOnClickListener(view -> transcribe(pcm, transcript));
             content.addView(transcribe);
         }
-        dialog = new MaterialAlertDialogBuilder(context).setTitle("Voice note")
+        dialog = new ChatFormDialog(context).setTitle("Voice note")
                 .setView(content).setNegativeButton("Discard", null)
                 .setPositiveButton("Send", (dismissed, action) -> {
                     String text = transcript.getText().toString().trim();
@@ -241,7 +240,7 @@ final class ChatVoiceNotes {
             }
             try {
                 byte[] bytes = Base64.decode(data, Base64.DEFAULT);
-                dialog = new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Voice note")
+                dialog = new ChatFormDialog(fragment.requireContext()).setTitle("Voice note")
                         .setMessage(message.body).setNegativeButton("Close", null)
                         .setPositiveButton("Play", null).show();
                 dialog.setOnDismissListener(ignored -> stopPlayback());

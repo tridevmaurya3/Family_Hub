@@ -1,6 +1,5 @@
 package com.tridev.familyhub.feature.chat;
 
-import android.app.DatePickerDialog;
 import android.content.Context;
 import android.text.format.DateFormat;
 import android.widget.EditText;
@@ -12,7 +11,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
 import com.tridev.familyhub.feature.tasks.FamilyTasksFragment;
@@ -51,7 +49,7 @@ final class ChatSmartActions {
         if ("text".equals(message.kind())) {
             if (store.own(message)) {
                 addAction(labels, actions, "Edit message", () -> editMessage(thread, message));
-                addAction(labels, actions, "Delete message", () -> new MaterialAlertDialogBuilder(context())
+                addAction(labels, actions, "Delete message", () -> new ChatFormDialog(context())
                         .setTitle("Delete this message?")
                         .setMessage("The text will be removed for everyone in this chat.")
                         .setNegativeButton("Cancel", null)
@@ -102,7 +100,7 @@ final class ChatSmartActions {
                 if (!com.tridev.familyhub.data.local.entity.PlannerItem.TYPE_EVENT.equals(item.itemType)
                         || item.startAt <= 0 || item.title.trim().isEmpty()) continue;
                 String label = item.title + " · " + dateTime(item.startAt);
-                addAction(labels, actions, label, () -> new MaterialAlertDialogBuilder(context())
+                addAction(labels, actions, label, () -> new ChatFormDialog(context())
                         .setTitle("Share event?")
                         .setMessage(label)
                         .setNegativeButton("Cancel", null)
@@ -124,16 +122,16 @@ final class ChatSmartActions {
         EditText title = new EditText(context());
         title.setHint(checklist ? "Checklist title" : "Announcement");
         title.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(checklist ? 160 : 2000)});
-        content.addView(title);
+        content.addView(ChatFormDialog.outlined(title));
         EditText entries = new EditText(context());
         if (checklist) {
             entries.setHint("One item per line · up to 8 items");
             entries.setMinLines(3);
             entries.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
             entries.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(1300)});
-            content.addView(entries);
+            content.addView(ChatFormDialog.outlined(entries));
         }
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context())
+        AlertDialog dialog = new ChatFormDialog(context())
                 .setTitle(checklist ? "New checklist" : "New announcement")
                 .setView(scroll(content)).setNegativeButton("Cancel", null).setPositiveButton("Post", null).show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
@@ -165,7 +163,7 @@ final class ChatSmartActions {
         String uid = store.accountId();
         Context context = context();
         int selected = ChatNotifications.mode(context, uid, thread);
-        new MaterialAlertDialogBuilder(context).setTitle("Chat notifications")
+        new ChatFormDialog(context).setTitle("Chat notifications")
                 .setSingleChoiceItems(new String[]{"All new messages", "Mentions and replies", "Muted"}, selected,
                         (dialog, choice) -> {
                             if (!ready(thread) || !java.util.Objects.equals(uid, store.accountId())) return;
@@ -182,7 +180,7 @@ final class ChatSmartActions {
         List<ChatScheduledMessages.Entry> entries = ChatScheduledMessages.list(context(), store.accountId(), thread.ref.toString());
         LinearLayout content = panel();
         if (entries.isEmpty()) content.addView(label("No scheduled messages on this device."));
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle("Scheduled messages")
+        AlertDialog dialog = new ChatFormDialog(context()).setTitle("Scheduled messages")
                 .setView(scroll(content)).setNegativeButton("Done", null).show();
         for (ChatScheduledMessages.Entry entry : entries) {
             MaterialButton item = button(dateTime(entry.due) + (entry.sending ? " · Sending" : entry.due < System.currentTimeMillis() ? " · Due" : "")
@@ -193,7 +191,7 @@ final class ChatSmartActions {
                 dialog.dismiss();
                 choose("Scheduled message", java.util.Arrays.asList("Edit", "Cancel scheduled send"),
                         java.util.Arrays.asList(() -> editSchedule(thread, entry), () ->
-                                new MaterialAlertDialogBuilder(context()).setTitle("Cancel this scheduled message?")
+                                new ChatFormDialog(context()).setTitle("Cancel this scheduled message?")
                                         .setNegativeButton("Keep", null).setPositiveButton("Cancel send", (d, w) -> {
                                             if (!ChatScheduledMessages.cancel(context(), entry)) toast("Message is no longer pending");
                                             showSchedule(thread);
@@ -210,7 +208,7 @@ final class ChatSmartActions {
         body.setHint("Write a message");
         body.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
         if (entry != null) body.setText(entry.body);
-        content.addView(body);
+        content.addView(ChatFormDialog.outlined(body));
         long[] due = {entry == null ? 0L : entry.due};
         MaterialButton select = button(due[0] > 0 ? dateTime(due[0]) : "Choose date and time");
         select.setOnClickListener(view -> chooseDateTime(due[0], time -> {
@@ -219,7 +217,7 @@ final class ChatSmartActions {
         }));
         content.addView(select);
         content.addView(label("This device sends when it is online and signed in. Android may delay delivery."));
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle(entry == null ? "Schedule message" : "Edit scheduled message")
+        AlertDialog dialog = new ChatFormDialog(context()).setTitle(entry == null ? "Schedule message" : "Edit scheduled message")
                 .setView(content).setNegativeButton("Cancel", null).setPositiveButton("Save", null).show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             if (!ready(thread)) return;
@@ -234,18 +232,8 @@ final class ChatSmartActions {
     }
 
     private void chooseDateTime(long initial, java.util.function.LongConsumer selected) {
-        Calendar day = Calendar.getInstance();
-        day.setTimeInMillis(Math.max(initial, System.currentTimeMillis() + 60000L));
-        DatePickerDialog picker = new DatePickerDialog(context(), (date, year, month, number) ->
-                new android.app.TimePickerDialog(context(), (clock, hour, minute) -> {
-                    day.clear();
-                    day.set(year, month, number, hour, minute);
-                    selected.accept(day.getTimeInMillis());
-                }, day.get(Calendar.HOUR_OF_DAY), day.get(Calendar.MINUTE),
-                        DateFormat.is24HourFormat(context())).show(),
-                day.get(Calendar.YEAR), day.get(Calendar.MONTH), day.get(Calendar.DAY_OF_MONTH));
-        picker.getDatePicker().setMinDate(System.currentTimeMillis());
-        picker.show();
+        ChatDateTimePicker.pickDateTime(fragment, Math.max(initial, System.currentTimeMillis() + 60000L),
+                true, selected);
     }
 
     private String dateTime(long time) {
@@ -273,7 +261,7 @@ final class ChatSmartActions {
             String key = message.snapshot.getKey();
             boolean saved = syncedKeys(thread, snapshot).contains(key);
             String action = saved ? "Remove from saved" : "Save to my account";
-            new MaterialAlertDialogBuilder(context()).setTitle("Saved messages")
+            new ChatFormDialog(context()).setTitle("Saved messages")
                     .setMessage(saved ? "This message is saved to your account." : "Save privately across your devices.")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton(action, (dialog, which) -> store.saveForMe(thread, key, !saved,
@@ -307,7 +295,7 @@ final class ChatSmartActions {
         LinearLayout content = panel();
         TextView loading = label(keys.isEmpty() ? "No messages saved in this chat." : "Loading saved messages…");
         content.addView(loading);
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle("Saved messages")
+        AlertDialog dialog = new ChatFormDialog(context()).setTitle("Saved messages")
                 .setView(scroll(content)).setPositiveButton("Done", null).show();
         int[] remaining = {keys.size()};
         for (String key : keys) store.loadMessage(thread, key, message -> {
@@ -328,11 +316,12 @@ final class ChatSmartActions {
     private void editMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         EditText input = new EditText(context());
         input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
+        input.setHint("Message");
         input.setText(message.body);
         input.setSelection(input.length());
         LinearLayout content = panel();
-        content.addView(input);
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle("Edit message")
+        content.addView(ChatFormDialog.outlined(input));
+        AlertDialog dialog = new ChatFormDialog(context()).setTitle("Edit message")
                 .setView(content).setNegativeButton("Cancel", null).setPositiveButton("Save", null).show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             String value = input.getText().toString().trim();
@@ -359,7 +348,7 @@ final class ChatSmartActions {
     }
 
     private void reactions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
-        new MaterialAlertDialogBuilder(context()).setTitle("React to message")
+        new ChatFormDialog(context()).setTitle("React to message")
                 .setItems(REACTIONS, (dialog, which) -> store.react(thread, message, REACTIONS[which],
                         ok -> { if (!ok) toast("Unable to update reaction"); }))
                 .setNegativeButton("Cancel", null).show();
@@ -367,7 +356,7 @@ final class ChatSmartActions {
 
     void openMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         if (!ready(thread) || fragment.reveal(message.snapshot.getKey())) return;
-        new MaterialAlertDialogBuilder(context()).setTitle(store.name(message.sender))
+        new ChatFormDialog(context()).setTitle(store.name(message.sender))
                 .setMessage(time(message) + "\n\n" + message.body)
                 .setPositiveButton("Close", null)
                 .setNeutralButton("text".equals(message.kind()) ? "Actions" : "Open attachment", (dialog, which) -> {
@@ -396,7 +385,7 @@ final class ChatSmartActions {
                 content.addView(resultRow(message, () -> openMessage(thread, message)));
             }
             if (messages.isEmpty()) content.addView(label("No pinned messages. Open a message's actions to pin it."));
-            new MaterialAlertDialogBuilder(context()).setTitle("Pinned messages")
+            new ChatFormDialog(context()).setTitle("Pinned messages")
                     .setView(scroll(content)).setPositiveButton("Done", null).show();
         });
     }
@@ -406,10 +395,10 @@ final class ChatSmartActions {
         EditText input = new EditText(context());
         input.setSingleLine(true);
         input.setHint(media ? "Filter attachments by name" : "Search words or names");
-        form.addView(input);
+        form.addView(ChatFormDialog.outlined(input));
         int[] type = {0};
         MaterialButton chooseType = button(media ? "All attachments" : "All message types");
-        chooseType.setOnClickListener(view -> new MaterialAlertDialogBuilder(context())
+        chooseType.setOnClickListener(view -> new ChatFormDialog(context())
                 .setTitle("Message type").setItems(TYPES, (dialog, which) -> {
                     type[0] = which;
                     chooseType.setText(TYPES[which]);
@@ -417,20 +406,18 @@ final class ChatSmartActions {
         form.addView(chooseType);
         long[] range = {0L, Long.MAX_VALUE};
         MaterialButton chooseDate = button("Any date");
-        chooseDate.setOnClickListener(view -> {
-            Calendar day = Calendar.getInstance();
-            new DatePickerDialog(context(), (picker, year, month, date) -> {
-                day.clear();
-                day.set(year, month, date);
-                range[0] = day.getTimeInMillis();
-                chooseDate.setText(DateFormat.getMediumDateFormat(context()).format(new Date(range[0])));
-                day.add(Calendar.DAY_OF_YEAR, 1);
-                range[1] = day.getTimeInMillis() - 1;
-            }, day.get(Calendar.YEAR), day.get(Calendar.MONTH), day.get(Calendar.DAY_OF_MONTH)).show();
-        });
+        chooseDate.setOnClickListener(view -> ChatDateTimePicker.pickDate(fragment,
+                "Search by date", range[0] > 0 ? range[0] : System.currentTimeMillis(), false, date -> {
+                    Calendar day = Calendar.getInstance();
+                    day.setTimeInMillis(date);
+                    range[0] = date;
+                    chooseDate.setText(DateFormat.getMediumDateFormat(context()).format(new Date(date)));
+                    day.add(Calendar.DAY_OF_YEAR, 1);
+                    range[1] = day.getTimeInMillis() - 1;
+                }));
         form.addView(chooseDate);
         String title = media ? "Chat media" : "Search messages";
-        new MaterialAlertDialogBuilder(context()).setTitle(title).setView(form)
+        new ChatFormDialog(context()).setTitle(title).setView(form)
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton(media ? "Browse" : "Search", (dialog, which) ->
                         showResults(thread, title, input.getText().toString(), type[0], media, range[0], range[1]))
@@ -445,7 +432,7 @@ final class ChatSmartActions {
         content.addView(matches);
         MaterialButton more = button("Load older messages");
         content.addView(more);
-        AlertDialog dialog = new MaterialAlertDialogBuilder(context()).setTitle(title)
+        AlertDialog dialog = new ChatFormDialog(context()).setTitle(title)
                 .setView(scroll(content)).setNegativeButton("Done", null).show();
         FamilyChatStore.Message[] cursor = {null};
         boolean[] first = {true};
@@ -498,7 +485,7 @@ final class ChatSmartActions {
                 names.add(store.name(uid));
             }
         }
-        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context())
+        ChatFormDialog builder = new ChatFormDialog(context())
                 .setTitle("Pending votes · " + pending.size())
                 .setMessage(names.isEmpty() ? "Everyone else has voted." : String.join("\n", names))
                 .setNegativeButton("Done", null);
@@ -551,7 +538,7 @@ final class ChatSmartActions {
                 content.addView(resultRow(message, () -> openMessage(thread, message)));
             }
         }
-        new MaterialAlertDialogBuilder(context()).setTitle("Unread catch-up")
+        new ChatFormDialog(context()).setTitle("Unread catch-up")
                 .setView(scroll(content)).setPositiveButton("Done", null).show();
     }
 
@@ -593,7 +580,7 @@ final class ChatSmartActions {
     }
 
     private void choose(String title, List<String> labels, List<Runnable> actions) {
-        new MaterialAlertDialogBuilder(context()).setTitle(title).setItems(labels.toArray(new String[0]),
+        new ChatFormDialog(context()).setTitle(title).setItems(labels.toArray(new String[0]),
                 (dialog, which) -> actions.get(which).run()).setNegativeButton("Close", null).show();
     }
 
