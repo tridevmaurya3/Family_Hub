@@ -36,7 +36,12 @@ final class ChatAttachmentCards {
         this.attachments = attachments;
     }
 
-    View create(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+    static boolean isCompactMedia(FamilyChatStore.Message message) {
+        String kind = message.snapshot.child("kind").getValue(String.class);
+        return "photo".equals(kind) || "location".equals(kind) || "live".equals(kind);
+    }
+
+    View create(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, int mediaWidth) {
         String kind = message.snapshot.child("kind").getValue(String.class);
         if (kind == null) return null;
         Runnable open = () -> attachments.open(thread, message);
@@ -44,7 +49,7 @@ final class ChatAttachmentCards {
         card.setOrientation(LinearLayout.VERTICAL);
         switch (kind) {
             case "photo":
-                FrameLayout photo = featureArea();
+                FrameLayout photo = featureArea(mediaWidth);
                 ImageView image = new ImageView(context);
                 image.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 image.setContentDescription("Open photo full screen");
@@ -70,8 +75,8 @@ final class ChatAttachmentCards {
                 String heading = "live".equals(kind) ? "Family Live location" : "Shared location";
                 card.addView(label(heading, true));
                 LocationPreview preview = new LocationPreview(context, open);
-                int mapHeight = Math.max(150, context.getResources().getConfiguration().screenHeightDp / 2);
-                card.addView(preview, new LinearLayout.LayoutParams(-1, dp(mapHeight) + dp(36)));
+                int mapHeight = Math.round(mediaWidth * 0.82f);
+                card.addView(preview, new LinearLayout.LayoutParams(-1, mapHeight + dp(36)));
                 if ("live".equals(kind)) {
                     whenVisible(preview, () -> attachments.observeLive(message.sender, preview.liveUpdate));
                 } else {
@@ -140,10 +145,10 @@ final class ChatAttachmentCards {
         card.addView(action(button, open));
     }
 
-    private FrameLayout featureArea() {
+    private FrameLayout featureArea(int height) {
         FrameLayout frame = new FrameLayout(context);
         frame.setBackgroundColor(color(R.color.fh_primary_container));
-        frame.setLayoutParams(new LinearLayout.LayoutParams(-1, previewHeight()));
+        frame.setLayoutParams(new LinearLayout.LayoutParams(-1, height));
         return frame;
     }
 
@@ -184,10 +189,6 @@ final class ChatAttachmentCards {
     }
 
     private int dp(int value) { return Math.round(context.getResources().getDisplayMetrics().density * value); }
-
-    private int previewHeight() {
-        return dp(Math.max(150, Math.min(310, context.getResources().getConfiguration().screenHeightDp / 2)));
-    }
 
     private static void whenVisible(View view, Runnable action) {
         view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
