@@ -747,8 +747,7 @@ public final class FamilyChatFragment extends Fragment {
                 boolean seen = store.acknowledged(thread, message, true);
                 boolean delivered = seen || store.acknowledged(thread, message, false);
                 boolean sending = store.sending(message) && !delivered;
-                TextView tick = text(sending ? "  ◷" : delivered ? "  ✓✓" : "  ✓",
-                        13, seen ? GREEN : MUTED, true);
+                View tick = sending ? text("◷", 13, MUTED, true) : receiptTick(delivered, seen);
                 tick.setContentDescription(seen ? "Seen" : delivered ? "Delivered" : sending ? "Sending" : "Sent");
                 metadata.addView(tick);
             }
@@ -829,6 +828,39 @@ public final class FamilyChatFragment extends Fragment {
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { action.run(); }
             @Override public void afterTextChanged(Editable s) {}
         };
+    }
+
+    private View receiptTick(boolean doubleTick, boolean seen) {
+        View tick = new View(requireContext()) {
+            private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            private final android.graphics.Path path = new android.graphics.Path();
+
+            @Override protected void onDraw(android.graphics.Canvas canvas) {
+                super.onDraw(canvas);
+                canvas.save();
+                canvas.translate(dp(3), (getHeight() - dp(12)) / 2f);
+                float unit = dp(12) / 12f;
+                canvas.scale(unit, unit);
+                paint.setColor(seen ? 0xff005b39 : MUTED);
+                paint.setStyle(android.graphics.Paint.Style.STROKE);
+                paint.setStrokeWidth(1.65f);
+                paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+                path.reset();
+                path.moveTo(1, 6);
+                path.lineTo(4, 9);
+                path.lineTo(11, 2);
+                if (doubleTick) {
+                    path.moveTo(6.5f, 7.5f);
+                    path.lineTo(8, 9);
+                    path.lineTo(15, 2);
+                }
+                canvas.drawPath(path, paint);
+                canvas.restore();
+            }
+        };
+        tick.setLayoutParams(new LinearLayout.LayoutParams(dp(doubleTick ? 20 : 16), dp(16)));
+        return tick;
     }
 
     private int dp(int value) {
