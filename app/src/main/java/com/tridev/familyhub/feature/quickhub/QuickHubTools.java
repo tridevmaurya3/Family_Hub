@@ -102,7 +102,8 @@ final class QuickHubTools {
         LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(dp(48), dp(48));
         deleteParams.setMarginStart(dp(8));
         expressionCard.addView(backspace, deleteParams);
-        addCalculatorSection(content, expressionCard, 8);
+        LinearLayout keypad = column();
+        addCalculatorSection(keypad, expressionCard, 8);
 
         StringBuilder expression = new StringBuilder();
         boolean[] degrees = {true};
@@ -116,7 +117,25 @@ final class QuickHubTools {
         LinearLayout.LayoutParams advancedParams = new LinearLayout.LayoutParams(0, dp(48), 1);
         advancedParams.setMarginStart(dp(6));
         modes.addView(advanced, advancedParams);
+        MaterialButton converterTab = calculatorButton("Converter", ACCENT_SURFACE, INK);
+        basic.setTextSize(13);
+        advanced.setTextSize(13);
+        converterTab.setTextSize(13);
+        LinearLayout.LayoutParams converterParams = new LinearLayout.LayoutParams(0, dp(48), 1);
+        converterParams.setMarginStart(dp(6));
+        modes.addView(converterTab, converterParams);
         addCalculatorSection(content, modes, 8);
+        content.addView(keypad);
+        QuickUnitConverter converter = new QuickUnitConverter(context,
+                text -> calculatorButton(text, ACCENT_SURFACE, INK));
+        converter.setVisibility(View.GONE);
+        content.addView(converter);
+        converterTab.setOnClickListener(v -> {
+            setCalculatorMode(converterTab, basic);
+            setCalculatorMode(converterTab, advanced);
+            keypad.setVisibility(View.GONE);
+            converter.setVisibility(View.VISIBLE);
+        });
         LinearLayout scientific = column();
         scientific.setVisibility(View.GONE);
         LinearLayout basicTopRow = column();
@@ -128,6 +147,9 @@ final class QuickHubTools {
             basicTopRow.setVisibility(View.VISIBLE);
             scientificTopRow.setVisibility(View.GONE);
             setCalculatorMode(basic, advanced);
+            setCalculatorMode(basic, converterTab);
+            converter.setVisibility(View.GONE);
+            keypad.setVisibility(View.VISIBLE);
         });
         advanced.setOnClickListener(v -> {
             scientific.setVisibility(View.VISIBLE);
@@ -135,8 +157,11 @@ final class QuickHubTools {
             basicTopRow.setVisibility(View.GONE);
             scientificTopRow.setVisibility(View.VISIBLE);
             setCalculatorMode(advanced, basic);
+            setCalculatorMode(advanced, converterTab);
+            converter.setVisibility(View.GONE);
+            keypad.setVisibility(View.VISIBLE);
         });
-        content.addView(scientific);
+        keypad.addView(scientific);
 
         Runnable updatePreview = () -> {
             String input = expression.toString();
@@ -194,9 +219,9 @@ final class QuickHubTools {
         });
         keys(basicTopRow, key, new String[][]{{"AC", "⌫", "%", "(", "÷"}});
         keys(scientificTopRow, key, new String[][]{{"AC", "%", "(", "÷"}});
-        content.addView(basicTopRow);
-        content.addView(scientificTopRow);
-        keys(content, key, new String[][]{
+        keypad.addView(basicTopRow);
+        keypad.addView(scientificTopRow);
+        keys(keypad, key, new String[][]{
                 {"7", "8", "9", "×"}, {"4", "5", "6", "-"},
                 {"1", "2", "3", "+"}, {")", "0", ".", "="}
         });
