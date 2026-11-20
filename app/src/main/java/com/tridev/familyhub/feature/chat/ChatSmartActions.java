@@ -46,7 +46,16 @@ final class ChatSmartActions {
                 store.pin(thread, message, ok -> toast(ok ? (message.pinned() ? "Message unpinned" : "Message pinned")
                         : "Unable to change pin")));
         addAction(labels, actions, "Save for me", () -> chooseSavedAction(thread, message));
+        if (store.own(message)) addAction(labels, actions, "Message info", () -> messageInfo(thread, message));
         if ("text".equals(message.kind())) {
+            addAction(labels, actions, "Copy text", () -> {
+                android.content.ClipboardManager clipboard =
+                        context().getSystemService(android.content.ClipboardManager.class);
+                if (clipboard == null) return;
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chat message", message.body));
+                if (android.os.Build.VERSION.SDK_INT < 33) toast("Message copied");
+            });
+            addAction(labels, actions, "Forward text", () -> forwardText(thread, message));
             if (store.own(message)) {
                 addAction(labels, actions, "Edit message", () -> editMessage(thread, message));
                 addAction(labels, actions, "Delete message", () -> new ChatFormDialog(context())
@@ -71,6 +80,55 @@ final class ChatSmartActions {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
         choose("Message actions", labels, actions);
+    }
+
+    private void forwardText(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
+        List<String> labels = new ArrayList<>();
+        List<Runnable> actions = new ArrayList<>();
+        for (FamilyChatStore.ThreadState target : store.threads()) {
+            if (target == source || !store.canUse(target)) continue;
+            String title = store.title(target);
+            addAction(labels, actions, title, () -> new ChatFormDialog(context())
+                    .setTitle("Forward message?")
+                    .setMessage("Send this text to " + title + "?")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Forward", (dialog, which) -> {
+                        if (!ready(source) || !ready(target)) return;
+                        store.loadMessage(source, message.snapshot.getKey(), current -> {
+                            if (!ready(source) || !ready(target)) return;
+                            if (current == null || current.deleted() || !"text".equals(current.kind())) {
+                                toast("Message is no longer available");
+                                return;
+                            }
+                            store.send(target, current.body, () -> toast("Unable to forward message"));
+                        });
+                    }).show());
+        }
+        if (labels.isEmpty()) toast("No other chats available");
+        else choose("Forward to", labels, actions);
+    }
+
+    private void messageInfo(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        store.loadMessage(thread, message.snapshot.getKey(), current -> {
+            if (!ready(thread)) return;
+            if (current == null || current.deleted()) {
+                toast("Message is no longer available");
+                return;
+            }
+            StringBuilder details = new StringBuilder(store.sending(current) ? "Sending…" : "Sent · " + dateTime(current.at));
+            for (String recipient : store.participants(thread)) {
+                if (recipient.equals(current.sender)) continue;
+                com.google.firebase.database.DataSnapshot receipt =
+                        current.snapshot.child("receipts").child(recipient);
+                Long delivered = receipt.child("deliveredAt").getValue(Long.class);
+                Long read = receipt.child("readAt").getValue(Long.class);
+                details.append("\n\n").append(store.name(recipient));
+                details.append("\n").append(delivered == null ? "Awaiting delivery" : "Delivered · " + dateTime(delivered));
+                if (read != null) details.append("\nRead · ").append(dateTime(read));
+            }
+            new ChatFormDialog(context()).setTitle("Message info").setMessage(details)
+                    .setPositiveButton("Done", null).show();
+        });
     }
 
     void threadActions(FamilyChatStore.ThreadState thread) {
