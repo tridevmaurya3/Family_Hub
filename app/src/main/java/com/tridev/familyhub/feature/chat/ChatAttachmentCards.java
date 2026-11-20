@@ -70,7 +70,8 @@ final class ChatAttachmentCards {
                 String heading = "live".equals(kind) ? "Family Live location" : "Shared location";
                 card.addView(label(heading, true));
                 LocationPreview preview = new LocationPreview(context, open);
-                card.addView(preview, new LinearLayout.LayoutParams(-1, previewHeight()));
+                int mapHeight = Math.max(150, context.getResources().getConfiguration().screenHeightDp / 2);
+                card.addView(preview, new LinearLayout.LayoutParams(-1, dp(mapHeight) + dp(36)));
                 if ("live".equals(kind)) {
                     whenVisible(preview, () -> attachments.observeLive(message.sender, preview.liveUpdate));
                 } else {
