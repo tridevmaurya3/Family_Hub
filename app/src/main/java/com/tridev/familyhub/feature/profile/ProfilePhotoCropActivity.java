@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 
 /** Local square avatar editor. Nothing is uploaded until the caller accepts its result. */
 public final class ProfilePhotoCropActivity extends AppCompatActivity {
+    public static final String EXTRA_CHAT_PHOTO = "chat_photo";
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private CropView crop;
     private MaterialButton save;
@@ -31,13 +32,13 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16),dp(16),dp(16),dp(16));
         root.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this,com.tridev.familyhub.R.color.fh_background));
-        TextView title=new TextView(this);title.setText("Crop profile photo");title.setTextSize(20);root.addView(title);
+        TextView title=new TextView(this);title.setText(getIntent().getBooleanExtra(EXTRA_CHAT_PHOTO, false) ? "Crop chat photo" : "Crop profile photo");title.setTextSize(20);root.addView(title);
         TextView hint=new TextView(this);hint.setText("Drag to position • Pinch to zoom • Rotate to adjust");root.addView(hint);
         crop=new CropView();root.addView(crop,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER_VERTICAL);
         MaterialButton cancel=button("Cancel");cancel.setOnClickListener(v->finish());actions.addView(cancel,new LinearLayout.LayoutParams(0,-2,1));
         MaterialButton rotate=button("Rotate ↻");rotate.setOnClickListener(v->{if(!busy&&crop.photo!=null){turns=(turns+1)%4;crop.rotate();}});actions.addView(rotate,new LinearLayout.LayoutParams(0,-2,1));
-        save=button("Save");save.setEnabled(false);save.setOnClickListener(v->saveCrop());actions.addView(save,new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);setContentView(root);
+        save=button(getIntent().getBooleanExtra(EXTRA_CHAT_PHOTO, false) ? "Use photo" : "Save");save.setEnabled(false);save.setOnClickListener(v->saveCrop());actions.addView(save,new LinearLayout.LayoutParams(0,-2,1));root.addView(actions);setContentView(root);
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root,(view,insets)->{
             androidx.core.graphics.Insets safe=insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()|androidx.core.view.WindowInsetsCompat.Type.displayCutout());
             view.setPadding(dp(16)+safe.left,dp(16)+safe.top,dp(16)+safe.right,dp(16)+safe.bottom);return insets;

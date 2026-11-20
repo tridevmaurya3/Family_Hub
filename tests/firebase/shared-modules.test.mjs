@@ -282,3 +282,73 @@ test('direct chat accepts only its two active family members', { timeout: 45000 
   await assertFails(sender.ref('familyChat/familyA/direct/' + writer + '/inactive/x')
     .set({ sender: writer, body: 'No', at: stamp }));
 });
+
+test('private groups and their attachments are visible only to selected active members', { timeout: 45000 }, async () => {
+  const path = 'familyChat/familyA';
+  const invited = 'profile-owner';
+  const excluded = 'profile-guardian';
+  const owner = env.authenticatedContext(writer).database();
+  const member = env.authenticatedContext(reader).database();
+  const other = env.authenticatedContext(excluded).database();
+  const stamp = { '.sv': 'timestamp' };
+  const room = id => `rooms/${id}`;
+  const index = (uid, id) => `roomIndex/${uid}/${id}`;
+  const create = (id, members) => {
+    const updates = {
+      [room(id) + '/title']: 'Private shopping',
+      [room(id) + '/creator']: writer,
+    };
+    for (const uid of members) {
+      updates[room(id) + '/members/' + uid] = true;
+      updates[index(uid, id)] = true;
+    }
+    return owner.ref(path).update(updates);
+  };
+
+  await assertFails(create('invalid-room', [writer, reader, 'inactive']));
+  await assertFails(owner.ref(path + '/' + index(excluded, 'private')).set(true));
+  await assertSucceeds(create('private', [writer, reader, invited]));
+  assert.equal((await member.ref(path + '/' + index(reader, 'private')).get()).val(), true);
+  await assertFails(other.ref(path + '/rooms').get());
+  await assertFails(other.ref(path + '/rooms/private').get());
+  await assertFails(other.ref(path + '/roomIndex/' + reader).get());
+  await assertFails(owner.ref(path + '/rooms/private/members/' + excluded).set(true));
+
+  const message = 'rooms/private/messages/photo';
+  const file = 'files/rooms/private/photo';
+  const attachment = { sender: writer, body: 'Photo', at: stamp, kind: 'photo', mime: 'image/jpeg' };
+  await assertFails(owner.ref(path + '/' + message).set(attachment));
+  await assertFails(owner.ref(path + '/' + file).set('YWJj'));
+  await assertSucceeds(owner.ref(path).update({ [message]: attachment, [file]: 'YWJj' }));
+  assert.equal((await member.ref(path + '/' + file).get()).val(), 'YWJj');
+  await assertFails(other.ref(path + '/' + file).get());
+  await assertFails(other.ref(path + '/' + message + '/receipts/' + excluded).set({ deliveredAt: stamp }));
+  await assertSucceeds(member.ref(path + '/' + message + '/receipts/' + reader).set({ deliveredAt: stamp, readAt: stamp }));
+  await assertFails(member.ref(path + '/' + file).set('YWJjZA=='));
+  await env.withSecurityRulesDisabled(async context => {
+    await context.database().ref(`memberships/familyA/${invited}/status`).set('INACTIVE');
+  });
+  try {
+    await assertFails(env.authenticatedContext(invited).database().ref(path + '/' + file).get());
+  } finally {
+    await env.withSecurityRulesDisabled(async context => {
+      await context.database().ref(`memberships/familyA/${invited}/status`).set('ACTIVE');
+    });
+  }
+});
+
+test('polls accept only a conversation member’s own vote for an existing option', { timeout: 45000 }, async () => {
+  const path = `familyChat/familyA/direct/${writer}/${reader}/poll`;
+  const sender = env.authenticatedContext(writer).database().ref(path);
+  const receiver = env.authenticatedContext(reader).database().ref(path);
+  const other = env.authenticatedContext('profile-owner').database().ref(path);
+  await assertSucceeds(sender.set({
+    sender: writer, body: 'Dinner?', kind: 'poll', at: { '.sv': 'timestamp' },
+    options: { '0': 'Home', '1': 'Out' }
+  }));
+  await assertFails(receiver.child('votes').child(writer).set('1'));
+  await assertFails(receiver.child('votes').child(reader).set('3'));
+  await assertFails(other.child('votes').child('profile-owner').set('0'));
+  await assertSucceeds(receiver.child('votes').child(reader).set('1'));
+  assert.equal((await sender.child('votes').child(reader).get()).val(), '1');
+});

@@ -12,72 +12,98 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="@dimen/space_8">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            app:cardBackgroundColor="@color/fh_surface"
-            app:cardCornerRadius="@dimen/radius_12"
-            app:cardElevation="0dp">
-
-            <ImageView
-                android:id="@+id/imgHeroIcon"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_gravity="center"
-                android:contentDescription="@string/app_name"
-                android:src="@drawable/ic_family_hub_mark"
-                app:tint="@color/fh_primary" />
-
-        </com.google.android.material.card.MaterialCardView>
-
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/space_8"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                app:cardBackgroundColor="@color/fh_surface"
+                app:cardCornerRadius="@dimen/radius_12"
+                app:cardElevation="0dp">
 
-            <TextView
-                android:id="@+id/txtHeroTitle"
-                style="@style/TextAppearance.FamilyHub.CardTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/family_status"
-                android:textColor="@color/fh_on_primary_container"
-                android:textSize="12sp" />
+                <ImageView
+                    android:id="@+id/imgHeroIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@string/app_name"
+                    android:src="@drawable/ic_family_hub_mark"
+                    app:tint="@color/fh_primary" />
 
-            <TextView
-                android:id="@+id/txtHeroSubtitle"
-                style="@style/TextAppearance.FamilyHub.Body"
-                android:layout_width="wrap_content"
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/space_4"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:text="@string/family_status_detail"
-                android:textColor="@color/fh_on_primary_container"
-                android:textSize="11sp" />
+                android:layout_marginStart="@dimen/space_8"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/txtHeroTitle"
+                    style="@style/TextAppearance.FamilyHub.CardTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/family_status"
+                    android:textColor="@color/fh_on_primary_container"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/txtHeroSubtitle"
+                    style="@style/TextAppearance.FamilyHub.Body"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_4"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:text="@string/family_status_detail"
+                    android:textColor="@color/fh_on_primary_container"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnHeroAction"
-            style="@style/Widget.FamilyHub.Button.Primary"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginStart="@dimen/space_8"
-            android:minWidth="0dp"
-            android:text="@string/family_live"
-            android:textSize="11sp"
-            app:icon="@drawable/ic_arrow_right"
-            app:iconGravity="textEnd"
-            app:iconPadding="@dimen/space_4"
-            app:iconSize="@dimen/icon_size_small" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHeroAction"
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginStart="@dimen/space_4"
+                android:minWidth="0dp"
+                android:text="@string/family_live"
+                android:textSize="11sp"
+                app:icon="@drawable/ic_arrow_right"
+                app:iconGravity="textEnd"
+                app:iconPadding="@dimen/space_4"
+                app:iconSize="@dimen/icon_size_small" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHeroChat"
+                style="@style/Widget.FamilyHub.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="@dimen/button_height"
+                android:layout_marginStart="@dimen/space_4"
+                android:minWidth="0dp"
+                android:text="@string/dashboard_family_chat"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

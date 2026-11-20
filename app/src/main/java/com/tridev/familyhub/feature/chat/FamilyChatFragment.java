@@ -37,25 +37,30 @@ public final class FamilyChatFragment extends Fragment {
     private static final int EDGE = 0xffd1dade;
     private static final int WHITE = 0xffffffff;
     private final FamilyChatStore store = FamilyChatStore.get();
+    private final ChatAttachments attachments = new ChatAttachments(this, store);
     private final Runnable observer = this::render;
     private final List<View> bubbles = new ArrayList<>();
     private LinearLayout screen, header, rows, bottom;
     private ScrollView scroll;
     private EditText search, draft;
     private TextView title, status;
-    private MaterialButton back, send;
+    private MaterialButton back, send, newGroup;
     private OnBackPressedCallback backCallback;
     private String peer;
     private String lastMessageKey;
 
     @Override public void onCreate(@Nullable Bundle state) {
         super.onCreate(state);
-        if (state != null) peer = state.getString("chat_peer");
+        if (state != null) {
+            peer = state.getString("chat_peer");
+            attachments.restoreState(state);
+        }
     }
 
     @Override public void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putString("chat_peer", peer);
+        attachments.saveState(out);
         if (draft != null) out.putString("chat_draft", draft.getText().toString());
     }
 
@@ -79,6 +84,11 @@ public final class FamilyChatFragment extends Fragment {
         headings.addView(title);
         headings.addView(status);
         header.addView(headings, new LinearLayout.LayoutParams(0, -2, 1));
+        newGroup = new MaterialButton(requireContext());
+        newGroup.setText("New group");
+        newGroup.setAllCaps(false);
+        newGroup.setOnClickListener(v -> showCreateGroup());
+        header.addView(newGroup);
         screen.addView(header);
 
         search = new EditText(requireContext());
@@ -96,6 +106,12 @@ public final class FamilyChatFragment extends Fragment {
         rows = column();
         scroll.addView(rows);
         screen.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        scroll.addOnLayoutChangeListener((v, l, t, r, b, oldL, oldT, oldR, oldB) -> {
+            if (peer != null && b - t < oldB - oldT
+                    && rows.getHeight() - scroll.getScrollY() <= oldB - oldT + dp(12)) {
+                scroll.post(() -> { if (screen != null && peer != null) scroll.scrollTo(0, rows.getHeight()); });
+            }
+        });
         scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> markVisibleRead());
 
         bottom = new LinearLayout(requireContext());
@@ -112,6 +128,17 @@ public final class FamilyChatFragment extends Fragment {
         draft.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2000)});
         draft.setBackground(null);
         draft.setPadding(dp(6), dp(8), dp(6), dp(8));
+        MaterialButton attach = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        attach.setText("+");
+        attach.setTextSize(20);
+        attach.setContentDescription("Add attachment");
+        attach.setPadding(0, 0, 0, 0);
+        attach.setOnClickListener(v -> {
+            FamilyChatStore.ThreadState thread = store.thread(peer);
+            if (thread != null && store.canUse(thread)) attachments.show(thread);
+        });
+        bottom.addView(attach, new LinearLayout.LayoutParams(dp(48), dp(48)));
         bottom.addView(draft, new LinearLayout.LayoutParams(0, -2, 1));
         send = new MaterialButton(requireContext());
         send.setText("Send");
@@ -175,8 +202,26 @@ public final class FamilyChatFragment extends Fragment {
         super.onDestroyView();
     }
 
+    @Override public void onDestroy() {
+        attachments.close();
+        super.onDestroy();
+    }
+
+    public boolean isConversationOpen() {
+        return peer != null;
+    }
+
     private void open(@Nullable String destination) {
+        if (destination == null) {
+            androidx.core.view.WindowInsetsControllerCompat controller =
+                    androidx.core.view.ViewCompat.getWindowInsetsController(screen);
+            if (controller != null) controller.hide(androidx.core.view.WindowInsetsCompat.Type.ime());
+            draft.clearFocus();
+        }
         peer = destination;
+        if (requireActivity() instanceof com.tridev.familyhub.feature.main.MainActivity) {
+            ((com.tridev.familyhub.feature.main.MainActivity) requireActivity()).refreshChatInsets();
+        }
         backCallback.setEnabled(peer != null);
         lastMessageKey = null;
         draft.setText("");
@@ -194,6 +239,8 @@ public final class FamilyChatFragment extends Fragment {
         boolean inThread = peer != null;
         FamilyChatStore.ThreadState thread = store.thread(peer);
         back.setVisibility(inThread ? View.VISIBLE : View.GONE);
+        newGroup.setVisibility(!inThread && store.groupCandidates().size() >= 2 ? View.VISIBLE : View.GONE);
+        newGroup.setEnabled(store.online());
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
         bottom.setVisibility(inThread && thread != null && !thread.error ? View.VISIBLE : View.GONE);
         title.setText(thread == null ? "Family Chat" : store.title(thread));
@@ -218,19 +265,70 @@ public final class FamilyChatFragment extends Fragment {
     private void renderList() {
         String filter = search.getText().toString().trim().toLowerCase(Locale.ROOT);
         List<FamilyChatStore.ThreadState> direct = new ArrayList<>();
+        List<FamilyChatStore.ThreadState> groups = new ArrayList<>();
         for (FamilyChatStore.ThreadState thread : store.threads()) {
             if (!store.title(thread).toLowerCase(Locale.ROOT).contains(filter)) continue;
             if (FamilyChatStore.GROUP.equals(thread.peer)) {
                 addLine(text("Group", 14, BLUE, true));
                 addConversation(thread);
-            } else direct.add(thread);
+            } else if (thread.isGroup()) groups.add(thread);
+            else direct.add(thread);
         }
+        groups.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
+        if (!groups.isEmpty()) addLine(text("Private groups", 14, BLUE, true));
+        for (FamilyChatStore.ThreadState thread : groups) addConversation(thread);
         direct.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
         if (!direct.isEmpty()) addLine(text("Direct messages", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : direct) addConversation(thread);
         if (rows.getChildCount() == 0 && store.status().isEmpty()) {
             addLine(text("No matching chats", 14, MUTED, false));
         }
+    }
+
+    private void showCreateGroup() {
+        java.util.Map<String, String> candidates = store.groupCandidates();
+        List<String> ids = new ArrayList<>(candidates.keySet());
+        boolean[] checked = new boolean[ids.size()];
+        String[] labels = candidates.values().toArray(new String[0]);
+        androidx.appcompat.app.AlertDialog selector =
+                new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Choose group members")
+                        .setMultiChoiceItems(labels, checked, (dialog, which, selected) -> checked[which] = selected)
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Next", null).show();
+        selector.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+            List<String> selected = new ArrayList<>();
+            for (int i = 0; i < ids.size(); i++) if (checked[i]) selected.add(ids.get(i));
+            if (selected.size() < 2) {
+                Toast.makeText(requireContext(), "Select at least two members", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            selector.dismiss();
+            EditText name = new EditText(requireContext());
+            name.setSingleLine(true);
+            name.setHint("Group name");
+            name.setFilters(new InputFilter[]{new InputFilter.LengthFilter(60)});
+            androidx.appcompat.app.AlertDialog naming =
+                    new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Name your private group").setView(name)
+                            .setNegativeButton("Cancel", null).setPositiveButton("Create", null).show();
+            View create = naming.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+            create.setOnClickListener(button -> {
+                String value = name.getText().toString().trim();
+                if (value.isEmpty()) {
+                    name.setError("Enter a group name");
+                    return;
+                }
+                create.setEnabled(false);
+                store.createRoom(value, selected, destination -> {
+                    naming.dismiss();
+                    if (screen != null) open(destination);
+                }, () -> {
+                    create.setEnabled(true);
+                    if (screen != null) Toast.makeText(requireContext(), "Unable to create group", Toast.LENGTH_SHORT).show();
+                });
+            });
+        });
     }
 
     private void addConversation(FamilyChatStore.ThreadState thread) {
@@ -272,12 +370,21 @@ public final class FamilyChatFragment extends Fragment {
             LinearLayout bubble = column();
             bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
-            if (!own && FamilyChatStore.GROUP.equals(thread.peer)) {
+            if (!own && thread.isGroup()) {
                 bubble.addView(text(store.name(message.sender), 13, GREEN, true));
             }
             TextView messageText = text(message.body, 15, INK, false);
             messageText.setTextIsSelectable(true);
             bubble.addView(messageText);
+            String action = attachments.action(message);
+            if (action != null) {
+                MaterialButton openAttachment = new MaterialButton(requireContext(), null,
+                        com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                openAttachment.setAllCaps(false);
+                openAttachment.setText(action);
+                openAttachment.setOnClickListener(v -> attachments.open(thread, message));
+                bubble.addView(openAttachment);
+            }
             LinearLayout metadata = new LinearLayout(requireContext());
             metadata.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
             metadata.addView(text(dateTime(message.at), 11, MUTED, false));

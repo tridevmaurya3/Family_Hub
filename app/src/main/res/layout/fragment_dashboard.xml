@@ -416,32 +416,35 @@
                     android:id="@+id/action_live_map" android:layout_width="0dp"
                     android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
                 <com.tridev.familyhub.core.ui.cards.ActionCardView
-                    android:id="@+id/action_documents" android:layout_width="0dp"
+                    android:id="@+id/action_family_chat" android:layout_width="0dp"
                     android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
                 android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_documents" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
                 <com.tridev.familyhub.core.ui.cards.ActionCardView
                     android:id="@+id/action_sos_entries" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
+                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
                 <com.tridev.familyhub.core.ui.cards.ActionCardView
                     android:id="@+id/action_safe_places" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
-                android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
-                <com.tridev.familyhub.core.ui.cards.ActionCardView
-                    android:id="@+id/action_vehicles" android:layout_width="0dp"
                     android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
                 <com.tridev.familyhub.core.ui.cards.ActionCardView
-                    android:id="@+id/action_notes" android:layout_width="0dp"
+                    android:id="@+id/action_vehicles" android:layout_width="0dp"
                     android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="96dp"
                 android:layout_marginTop="@dimen/space_8" android:orientation="horizontal">
                 <com.tridev.familyhub.core.ui.cards.ActionCardView
+                    android:id="@+id/action_notes" android:layout_width="0dp"
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginEnd="@dimen/space_4" />
+                <com.tridev.familyhub.core.ui.cards.ActionCardView
                     android:id="@+id/action_family_live" android:layout_width="0dp"
-                    android:layout_height="match_parent" android:layout_weight="1"  />
+                    android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="@dimen/space_4" />
             </LinearLayout>
         </LinearLayout>
         <LinearLayout

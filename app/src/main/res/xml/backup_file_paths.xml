@@ -10,4 +10,5 @@
     <cache-path name="document_reports" path="document_reports/" />
     <cache-path name="finance_reports" path="finance_reports/" />
     <cache-path name="profile_crops" path="profile_crops/" />
+    <cache-path name="chat_attachments" path="chat_attachments/" />
 </paths>

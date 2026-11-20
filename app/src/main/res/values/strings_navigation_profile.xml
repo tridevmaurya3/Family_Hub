@@ -47,6 +47,9 @@
     <string name="dashboard_shortcut_reports">Location Reports</string>
     <string name="dashboard_shortcut_reports_value">Charts • Insights</string>
     <string name="dashboard_shortcut_reports_detail">PDF • Excel</string>
+    <string name="dashboard_family_chat">Family Chat</string>
+    <string name="dashboard_family_chat_value">Messages</string>
+    <string name="dashboard_family_chat_detail">Family conversations</string>
     <string name="dashboard_shortcut_routines">Smart Routines</string>
     <string name="dashboard_shortcut_routines_value">Arrival • Sharing</string>
     <string name="dashboard_shortcut_routines_detail">Family automation</string>

@@ -10,8 +10,8 @@
             "at"
           ],
           "$message": {
-            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists()",
-            ".validate": "newData.hasChildren(['sender','body','at'])",
+            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes')",
+            ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().child('files').child('group').child($message).exists())",
             "sender": {
               ".validate": "newData.isString() && newData.val() === auth.uid"
             },
@@ -38,6 +38,35 @@
             },
             "$other": {
               ".validate": false
+            },
+            "kind": {
+              ".validate": "newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
+            },
+            "phone": {
+              ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+            },
+            "startsAt": {
+              ".validate": "newData.parent().child('kind').val() === 'event' && newData.isNumber() && newData.val() > 0 && newData.val() <= 4102444800000"
+            },
+            "options": {
+              ".validate": "newData.parent().child('kind').val() === 'poll' && newData.hasChildren(['0','1'])",
+              "$option": {
+                ".validate": "$option.matches(/^[0-3]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+              }
+            },
+            "votes": {
+              "$voter": {
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && auth.uid === $voter && data.parent().parent().child('kind').val() === 'poll' && newData.isString() && newData.val().matches(/^[0-3]$/) && data.parent().parent().child('options').child(newData.val()).exists()"
+              }
+            },
+            "lat": {
+              ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90 && newData.parent().child('kind').val() === 'location'"
+            },
+            "lng": {
+              ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
+            },
+            "mime": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
             }
           }
         },
@@ -49,8 +78,8 @@
                 "at"
               ],
               "$message": {
-                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists()",
-                ".validate": "newData.hasChildren(['sender','body','at'])",
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes')",
+                ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().parent().parent().child('files').child('direct').child($first).child($second).child($message).exists())",
                 "sender": {
                   ".validate": "newData.isString() && newData.val() === auth.uid"
                 },
@@ -77,7 +106,159 @@
                 },
                 "$other": {
                   ".validate": false
+                },
+                "kind": {
+                  ".validate": "newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
+                },
+                "phone": {
+                  ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+                },
+                "startsAt": {
+                  ".validate": "newData.parent().child('kind').val() === 'event' && newData.isNumber() && newData.val() > 0 && newData.val() <= 4102444800000"
+                },
+                "options": {
+                  ".validate": "newData.parent().child('kind').val() === 'poll' && newData.hasChildren(['0','1'])",
+                  "$option": {
+                    ".validate": "$option.matches(/^[0-3]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+                  }
+                },
+                "votes": {
+                  "$voter": {
+                    ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && auth.uid === $voter && data.parent().parent().child('kind').val() === 'poll' && newData.isString() && newData.val().matches(/^[0-3]$/) && data.parent().parent().child('options').child(newData.val()).exists()"
+                  }
+                },
+                "lat": {
+                  ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90 && newData.parent().child('kind').val() === 'location'"
+                },
+                "lng": {
+                  ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
+                },
+                "mime": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
                 }
+              }
+            }
+          }
+        },
+        "rooms": {
+          "$room": {
+            ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true",
+            ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.child('creator').val() === auth.uid && newData.child('members').child(auth.uid).val() === true && !newData.child('messages').exists()",
+            ".validate": "newData.hasChildren(['creator', 'title', 'members'])",
+            "creator": {
+              ".validate": "newData.val() === auth.uid"
+            },
+            "title": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+            },
+            "members": {
+              "$member": {
+                ".validate": "newData.val() === true && root.child('memberships').child($familyId).child($member).child('status').val() === 'ACTIVE'"
+              }
+            },
+            "messages": {
+              ".indexOn": [
+                "at"
+              ],
+              "$message": {
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes')",
+                ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().parent().parent().child('files').child('rooms').child($room).child($message).exists())",
+                "sender": {
+                  ".validate": "newData.isString() && newData.val() === auth.uid"
+                },
+                "body": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
+                },
+                "at": {
+                  ".validate": "newData.isNumber() && newData.val() === now"
+                },
+                "receipts": {
+                  "$uid": {
+                    ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && auth.uid === $uid && data.parent().parent().child('sender').exists() && data.parent().parent().child('sender').val() !== auth.uid && newData.exists() && (!data.child('deliveredAt').exists() || newData.child('deliveredAt').val() === data.child('deliveredAt').val()) && (!data.child('readAt').exists() || newData.child('readAt').val() === data.child('readAt').val())",
+                    ".validate": "newData.hasChild('deliveredAt') && (!newData.hasChild('readAt') || newData.child('readAt').val() >= newData.child('deliveredAt').val())",
+                    "deliveredAt": {
+                      ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                    },
+                    "readAt": {
+                      ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
+                },
+                "$other": {
+                  ".validate": false
+                },
+                "kind": {
+                  ".validate": "newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll'"
+                },
+                "phone": {
+                  ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+                },
+                "startsAt": {
+                  ".validate": "newData.parent().child('kind').val() === 'event' && newData.isNumber() && newData.val() > 0 && newData.val() <= 4102444800000"
+                },
+                "options": {
+                  ".validate": "newData.parent().child('kind').val() === 'poll' && newData.hasChildren(['0','1'])",
+                  "$option": {
+                    ".validate": "$option.matches(/^[0-3]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+                  }
+                },
+                "votes": {
+                  "$voter": {
+                    ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && auth.uid === $voter && data.parent().parent().child('kind').val() === 'poll' && newData.isString() && newData.val().matches(/^[0-3]$/) && data.parent().parent().child('options').child(newData.val()).exists()"
+                  }
+                },
+                "lat": {
+                  ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90 && newData.parent().child('kind').val() === 'location'"
+                },
+                "lng": {
+                  ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
+                },
+                "mime": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                }
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "roomIndex": {
+          "$member": {
+            ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && auth.uid === $member",
+            "$room": {
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.val() === true && newData.parent().parent().parent().child('rooms').child($room).child('creator').val() === auth.uid && newData.parent().parent().parent().child('rooms').child($room).child('members').child($member).val() === true"
+            }
+          }
+        },
+        "files": {
+          "group": {
+            "$message": {
+              ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE'",
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && !data.exists() && newData.exists() && newData.parent().parent().parent().child('group').child($message).child('sender').val() === auth.uid && newData.parent().parent().parent().child('group').child($message).child('mime').exists()",
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1398104"
+            }
+          },
+          "direct": {
+            "$first": {
+              "$second": {
+                "$message": {
+                  ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE'",
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && !data.exists() && newData.exists() && newData.parent().parent().parent().parent().parent().child('direct').child($first).child($second).child($message).child('sender').val() === auth.uid && newData.parent().parent().parent().parent().parent().child('direct').child($first).child($second).child($message).child('mime').exists()",
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1398104"
+                }
+              }
+            }
+          },
+          "rooms": {
+            "$room": {
+              "$message": {
+                ".read": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true",
+                ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && !data.exists() && newData.exists() && newData.parent().parent().parent().parent().child('rooms').child($room).child('messages').child($message).child('sender').val() === auth.uid && newData.parent().parent().parent().parent().child('rooms').child($room).child('messages').child($message).child('mime').exists()",
+                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1398104"
               }
             }
           }

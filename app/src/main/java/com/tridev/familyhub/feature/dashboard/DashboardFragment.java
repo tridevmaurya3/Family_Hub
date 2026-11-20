@@ -493,6 +493,7 @@ public class DashboardFragment extends Fragment {
                 R.drawable.ic_family_hub_mark,
                 getString(R.string.family_live)
         ));
+        binding.dashboardHeroCard.showChatAction(v -> openTab(R.id.nav_chat));
         binding.dashboardHeroCard.setOnActionClickListener(
                 this::openFamilyLive
         );
@@ -552,6 +553,12 @@ public class DashboardFragment extends Fragment {
 
     /** Dashboard shortcuts preserve existing destinations and add Notes. */
     private void setupActionCards() {
+        binding.actionFamilyChat.setOnClickListener(v -> openTab(R.id.nav_chat));
+        binding.actionFamilyChat.setValueTextCentered(true);
+        binding.actionFamilyChat.setModel(new ActionCardModel(
+                getString(R.string.dashboard_family_chat), getString(R.string.dashboard_family_chat_value),
+                getString(R.string.dashboard_family_chat_detail), R.drawable.ic_nav_chat,
+                R.color.fh_primary, R.color.fh_primary_container));
         binding.actionLiveMap.setOnClickListener(v -> openFamilyLive());
         binding.actionSosEntries.setOnClickListener(v -> openActivity(FamilySosActivity.class));
         binding.actionSafePlaces.setOnClickListener(v -> openActivity(SafePlacesActivity.class));

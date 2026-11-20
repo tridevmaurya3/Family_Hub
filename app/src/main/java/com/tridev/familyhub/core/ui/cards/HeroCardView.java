@@ -112,6 +112,12 @@ public class HeroCardView extends FrameLayout {
         }
     }
 
+    public void showChatAction(@NonNull View.OnClickListener listener) {
+        MaterialButton chatButton = findViewById(R.id.btnHeroChat);
+        chatButton.setVisibility(View.VISIBLE);
+        chatButton.setOnClickListener(listener);
+    }
+
     public void setOnActionClickListener(
             @Nullable OnActionClickListener listener
     ) {

@@ -32,6 +32,8 @@ public final class FamilyChatStore {
     private final Map<String, Boolean> writingReceipts = new HashMap<>();
     private Query sessionQuery;
     private Query membershipQuery;
+    private DatabaseReference roomIndex;
+    private ValueEventListener roomIndexListener;
     private ValueEventListener sessionListener;
     private ValueEventListener membershipListener;
     private String uid;
@@ -94,6 +96,7 @@ public final class FamilyChatStore {
                 names.put(member.getKey(), name == null || name.trim().isEmpty() ? "Family member" : name);
             }
             if (!names.containsKey(uid)) {
+                stopRooms();
                 clearThreads();
                 names.clear();
                 status = "Active family membership is required";
@@ -102,8 +105,9 @@ public final class FamilyChatStore {
             }
             status = "";
             for (String peer : new ArrayList<>(threads.keySet())) {
-                if (!GROUP.equals(peer) && !names.containsKey(peer)) removeThread(peer);
+                if (!GROUP.equals(peer) && !peer.startsWith("room:") && !names.containsKey(peer)) removeThread(peer);
             }
+            watchRooms();
             addThread(GROUP);
             for (String peer : names.keySet()) if (!peer.equals(uid)) addThread(peer);
             notifyObservers();
@@ -116,18 +120,113 @@ public final class FamilyChatStore {
         });
     }
 
+    private void watchRooms() {
+        if (roomIndex != null) return;
+        String expectedFamily = family;
+        DatabaseReference base = root.child("familyChat").child(family);
+        roomIndex = base.child("roomIndex").child(uid);
+        DatabaseReference index = roomIndex;
+        roomIndexListener = listen(index, snapshot -> {
+            for (DataSnapshot entry : snapshot.getChildren()) {
+                String room = entry.getKey();
+                if (!Boolean.TRUE.equals(entry.getValue(Boolean.class))
+                        || threads.containsKey("room:" + room)) continue;
+                DatabaseReference details = base.child("rooms").child(room);
+                com.google.android.gms.tasks.Task<DataSnapshot> title = details.child("title").get();
+                com.google.android.gms.tasks.Task<DataSnapshot> members = details.child("members").get();
+                com.google.android.gms.tasks.Tasks.whenAllSuccess(title, members).addOnSuccessListener(result -> {
+                    if (roomIndex != index || !expectedFamily.equals(family)) return;
+                    addRoom(room, details, title.getResult().getValue(String.class), members.getResult());
+                });
+            }
+        }, error -> {});
+    }
+
+    private void stopRooms() {
+        if (roomIndex == null) return;
+        roomIndex.removeEventListener(roomIndexListener);
+        roomIndex = null;
+    }
+
+    private void addRoom(String room, DatabaseReference details, String title, DataSnapshot membership) {
+        String key = "room:" + room;
+        if (threads.containsKey(key) || title == null
+                || !Boolean.TRUE.equals(membership.child(uid).getValue(Boolean.class))) return;
+        List<String> members = new ArrayList<>();
+        for (DataSnapshot member : membership.getChildren()) members.add(member.getKey());
+        watchThread(new ThreadState(key, details.child("messages"), roomFiles(room), title, members));
+        notifyObservers();
+    }
+
+    private DatabaseReference roomFiles(String room) {
+        return root.child("familyChat").child(family).child("files").child("rooms").child(room);
+    }
+
+    Map<String, String> groupCandidates() {
+        Map<String, String> candidates = new LinkedHashMap<>(names);
+        candidates.remove(uid);
+        return candidates;
+    }
+
+    void createRoom(String title, List<String> selected, Consumer<String> success, Runnable failed) {
+        if (uid == null || family == null || !names.containsKey(uid) || selected.size() < 2
+                || !names.keySet().containsAll(selected)) {
+            failed.run();
+            return;
+        }
+        String expectedFamily = family;
+        String creator = uid;
+        DatabaseReference base = root.child("familyChat").child(family);
+        DatabaseReference room = base.child("rooms").push();
+        String roomId = room.getKey();
+        if (roomId == null) {
+            failed.run();
+            return;
+        }
+        Map<String, Object> changes = new HashMap<>();
+        String path = "rooms/" + roomId + "/";
+        changes.put(path + "title", title);
+        changes.put(path + "creator", creator);
+        List<String> members = new ArrayList<>(selected);
+        members.add(creator);
+        for (String member : members) {
+            changes.put(path + "members/" + member, true);
+            changes.put("roomIndex/" + member + "/" + roomId, true);
+        }
+        base.updateChildren(changes).addOnCompleteListener(task -> {
+            if (!expectedFamily.equals(family) || !creator.equals(uid)) return;
+            if (!task.isSuccessful()) {
+                failed.run();
+                return;
+            }
+            String key = "room:" + roomId;
+            if (!threads.containsKey(key)) {
+                watchThread(new ThreadState(key, room.child("messages"), roomFiles(roomId), title, members));
+            }
+            success.accept(key);
+            notifyObservers();
+        });
+    }
+
     private void addThread(String peer) {
         if (threads.containsKey(peer)) return;
         DatabaseReference base = root.child("familyChat").child(family);
         DatabaseReference messages;
+        DatabaseReference files;
         if (GROUP.equals(peer)) {
             messages = base.child("group");
+            files = base.child("files").child("group");
         } else {
             String first = uid.compareTo(peer) < 0 ? uid : peer;
             String second = first.equals(uid) ? peer : uid;
             messages = base.child("direct").child(first).child(second);
+            files = base.child("files").child("direct").child(first).child(second);
         }
-        ThreadState thread = new ThreadState(peer, messages);
+        watchThread(new ThreadState(peer, messages, files, null, null));
+    }
+
+    private void watchThread(ThreadState thread) {
+        String peer = thread.peer;
         threads.put(peer, thread);
         thread.listener = listen(thread.query, snapshot -> {
             if (threads.get(peer) != thread) return;
@@ -174,7 +273,14 @@ public final class FamilyChatStore {
     }
 
     void send(ThreadState thread, String body, Runnable failed) {
-        if (uid == null || threads.get(thread.peer) != thread || thread.error) return;
+        send(thread, body, java.util.Collections.emptyMap(), null, failed);
+    }
+
+    void send(ThreadState thread, String body, Map<String, Object> details, String file, Runnable failed) {
+        if (uid == null || threads.get(thread.peer) != thread || thread.error) {
+            failed.run();
+            return;
+        }
         DatabaseReference message = thread.ref.push();
         String key = message.getKey();
         if (key == null) return;
@@ -184,14 +290,50 @@ public final class FamilyChatStore {
         payload.put("sender", sender);
         payload.put("body", body);
         payload.put("at", ServerValue.TIMESTAMP);
-        message.setValue(payload).addOnCompleteListener(task -> {
+        payload.putAll(details);
+        com.google.android.gms.tasks.Task<Void> write;
+        if (file == null) {
+            write = message.setValue(payload);
+        } else {
+            Map<String, Object> changes = new HashMap<>();
+            changes.put(relativePath(message), payload);
+            changes.put(relativePath(thread.files.child(key)), file);
+            write = root.updateChildren(changes);
+        }
+        write.addOnCompleteListener(task -> {
             pending.remove(key);
             if (!task.isSuccessful() && sender.equals(uid)) failed.run();
             notifyObservers();
         });
     }
 
+    private String relativePath(DatabaseReference ref) {
+        List<String> parts = new ArrayList<>();
+        for (DatabaseReference node = ref; node.getParent() != null; node = node.getParent()) {
+            parts.add(node.getKey());
+        }
+        java.util.Collections.reverse(parts);
+        return String.join("/", parts);
+    }
+
+    String vote(Message message) {
+        return uid == null ? null : message.snapshot.child("votes").child(uid).getValue(String.class);
+    }
+
+    void vote(ThreadState thread, Message message, String option, Runnable failed) {
+        if (!canUse(thread)) return;
+        message.snapshot.getRef().child("votes").child(uid).setValue(option)
+                .addOnFailureListener(error -> failed.run());
+    }
+
+    String accountId() { return uid; }
+
+    boolean canUse(ThreadState thread) {
+        return uid != null && threads.get(thread.peer) == thread && !thread.error;
+    }
+
     private void clearFamily() {
+        stopRooms();
         if (membershipQuery != null) membershipQuery.removeEventListener(membershipListener);
         membershipQuery = null;
         clearThreads();
@@ -220,7 +362,10 @@ public final class FamilyChatStore {
     boolean online() { return connected; }
     String status() { return status; }
     String name(String id) { return names.getOrDefault(id, "Family member"); }
-    String title(ThreadState thread) { return GROUP.equals(thread.peer) ? "Family Group" : name(thread.peer); }
+    String title(ThreadState thread) {
+        if (thread.roomTitle != null) return thread.roomTitle;
+        return GROUP.equals(thread.peer) ? "Family Group" : name(thread.peer);
+    }
     boolean unread(Message message) { return !own(message) && uid != null && !message.received(uid, true); }
     long listTime(Message message) {
         if (own(message) || uid == null) return message.at;
@@ -231,9 +376,10 @@ public final class FamilyChatStore {
     boolean sending(Message message) { return pending.contains(message.snapshot.getKey()); }
 
     boolean acknowledged(ThreadState thread, Message message, boolean read) {
-        if (!GROUP.equals(thread.peer)) return message.received(thread.peer, read);
+        if (!thread.isGroup()) return message.received(thread.peer, read);
         boolean hasRecipient = false;
-        for (String recipient : names.keySet()) {
+        for (String recipient : thread.members == null ? names.keySet() : thread.members) {
+            if (!names.containsKey(recipient)) continue;
             if (recipient.equals(message.sender)) continue;
             hasRecipient = true;
             if (!message.received(recipient, read)) return false;
@@ -245,13 +391,23 @@ public final class FamilyChatStore {
         final String peer;
         final DatabaseReference ref;
         final Query query;
+        final DatabaseReference files;
         final List<Message> messages = new ArrayList<>();
         ValueEventListener listener;
         boolean error;
-        ThreadState(String peer, DatabaseReference ref) {
+        final String roomTitle;
+        final List<String> members;
+        ThreadState(String peer, DatabaseReference ref, DatabaseReference files, String roomTitle, List<String> members) {
+            this.roomTitle = roomTitle;
+            this.members = members;
             this.peer = peer;
             this.ref = ref;
+            this.files = files;
             query = ref.orderByChild("at").limitToLast(60);
+        }
+
+        boolean isGroup() {
+            return GROUP.equals(peer) || members != null;
         }
     }
 

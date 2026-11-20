@@ -179,6 +179,10 @@ public class MainActivity extends AppCompatActivity {
         binding.bottomNavigation.setSelectedItemId(destinationId);
     }
 
+    public void refreshChatInsets() {
+        ViewCompat.requestApplyInsets(binding.getRoot());
+    }
+
     private void applySystemBarInsets() {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         ViewCompat.setOnApplyWindowInsetsListener(
@@ -188,6 +192,11 @@ public class MainActivity extends AppCompatActivity {
                             WindowInsetsCompat.Type.systemBars()
                                     | WindowInsetsCompat.Type.displayCutout()
                     );
+                    Fragment current = getSupportFragmentManager().findFragmentById(R.id.main_content);
+                    boolean chatKeyboard = current instanceof FamilyChatFragment
+                            && ((FamilyChatFragment) current).isConversationOpen()
+                            && windowInsets.isVisible(WindowInsetsCompat.Type.ime());
+                    binding.bottomNavigation.setVisibility(chatKeyboard ? View.GONE : View.VISIBLE);
                     binding.mainContent.setPadding(
                             safeInsets.left,
                             safeInsets.top,
@@ -211,8 +220,12 @@ public class MainActivity extends AppCompatActivity {
                     );
                     navigationParams.leftMargin = navigationMargin;
                     navigationParams.rightMargin = navigationMargin;
-                    navigationParams.bottomMargin =
-                            safeInsets.bottom + navigationMargin;
+                    navigationParams.bottomMargin = safeInsets.bottom + navigationMargin;
+                    int keyboardBottom = chatKeyboard
+                            ? windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom : 0;
+                    if (view.getPaddingBottom() != keyboardBottom) {
+                        view.setPadding(0, 0, 0, keyboardBottom);
+                    }
                     binding.bottomNavigation.setLayoutParams(
                             navigationParams
                     );
