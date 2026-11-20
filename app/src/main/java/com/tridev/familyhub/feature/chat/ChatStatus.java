@@ -44,7 +44,7 @@ final class ChatStatus {
                             .addOnFailureListener(error -> notice("Unable to remove status"));
                 })
                 .setNegativeButton("Close", null)
-                .setPositiveButton("Post text", (d, w) -> {
+                .setPositiveButton("New status", (d, w) -> {
                     if (active(family, uid)) compose(statuses.child(uid), family, uid);
                 }).show();
         AlertDialog listing = dialog;
@@ -59,77 +59,126 @@ final class ChatStatus {
                 if (body == null || postedAt == null) return;
                 long remaining = postedAt + 86400000L - System.currentTimeMillis();
                 if (remaining <= 0) return;
-                TextView text = new TextView(rows.getContext());
-                text.setText(member.getValue() + "\n" + body);
-                text.setTextIsSelectable(true);
-                text.setPadding(0, padding / 2, 0, padding / 2);
-                LinearLayout card = new LinearLayout(rows.getContext());
-                card.setOrientation(LinearLayout.VERTICAL);
-                card.addView(text);
                 DatabaseReference receipts = statuses.getRoot().child("familyStatusReceipts")
                         .child(family).child(member.getKey()).child(Long.toString(postedAt));
-                if (uid.equals(member.getKey())) {
-                    addAction(card, "Viewers and likes", () -> receipts.get().addOnSuccessListener(data -> {
-                        if (!listing.isShowing() || !active(family, uid)) return;
-                        StringBuilder list = new StringBuilder();
-                        for (com.google.firebase.database.DataSnapshot viewer : data.getChildren()) {
-                            String id = viewer.getKey();
-                            if (id == null) continue;
-                            if (list.length() > 0) list.append("\n");
-                            list.append(store.name(id));
-                            if ("liked".equals(viewer.getValue(String.class))) list.append("  ♥");
-                        }
-                        new ChatFormDialog(host.requireContext()).setTitle("Viewers and likes")
-                                .setMessage(list.length() == 0 ? "No views yet" : list.toString())
-                                .setPositiveButton("Close", null).show();
-                    }).addOnFailureListener(error -> notice("Unable to load viewers")));
-                } else {
-                    // A receipt records opening the post. Keep an existing like when reopening.
-                    text.setText(member.getValue());
-                    addAction(card, "View status", () -> {
-                        if (!active(family, uid)) return;
-                        text.setText(member.getValue() + "\n" + body);
-                        receipts.child(uid).runTransaction(new com.google.firebase.database.Transaction.Handler() {
-                            public com.google.firebase.database.Transaction.Result doTransaction(
-                                    com.google.firebase.database.MutableData current) {
-                                if (current.getValue() == null) current.setValue("seen");
-                                return com.google.firebase.database.Transaction.success(current);
-                            }
-                            public void onComplete(com.google.firebase.database.DatabaseError error,
-                                    boolean committed, com.google.firebase.database.DataSnapshot value) {
-                                if (error != null) notice("View receipt unavailable");
-                            }
-                        });
-                    });
-                    addAction(card, "Like status", () -> receipts.child(uid).setValue("liked")
-                            .addOnSuccessListener(done -> notice("Status liked"))
-                            .addOnFailureListener(error -> notice("Unable to like status")));
-                }
-                if (!uid.equals(member.getKey())) {
-                    com.google.android.material.button.MaterialButton reply =
-                            new com.google.android.material.button.MaterialButton(rows.getContext(), null,
-                                    com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                    reply.setText("Reply privately");
-                    reply.setOnClickListener(v -> {
-                        if (!active(family, uid)) return;
-                        listing.dismiss();
-                        host.replyToStatus(member.getKey());
-                    });
-                    card.addView(reply);
-                }
-                rows.addView(card);
-                rows.postDelayed(() -> rows.removeView(card), remaining);
+                String time = android.text.format.DateUtils.getRelativeTimeSpanString(
+                        postedAt, System.currentTimeMillis(), 60000).toString();
+                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + time, () -> {
+                    if (!active(family, uid) || postedAt + 86400000L <= System.currentTimeMillis()) return;
+                    listing.dismiss();
+                    showStatus(family, uid, member.getKey(), member.getValue(), body, receipts);
+                });
+                rows.postDelayed(() -> rows.removeView(entry), remaining);
             });
         }
     }
 
-    private void addAction(LinearLayout row, String title, Runnable action) {
+    private static final String[] REACTIONS = {"liked", "laugh", "wow", "sad", "clap", "fire"};
+    private static final String[] EMOJI = {"❤️", "😂", "😮", "😢", "👏", "🔥"};
+
+    private void showStatus(String family, String uid, String author, String name, String body,
+                            DatabaseReference receipts) {
+        boolean mine = uid.equals(author);
+        LinearLayout content = new LinearLayout(host.requireContext());
+        content.setOrientation(LinearLayout.VERTICAL);
+        int inset = Math.round(16 * content.getResources().getDisplayMetrics().density);
+        content.setPadding(inset, inset, inset, inset);
+        TextView post = new TextView(content.getContext());
+        post.setText(body);
+        post.setTextSize(22);
+        post.setGravity(android.view.Gravity.CENTER);
+        post.setMinHeight(8 * inset);
+        post.setTextIsSelectable(true);
+        content.addView(post, new LinearLayout.LayoutParams(-1, -2));
+        ScrollView scroll = new ScrollView(host.requireContext());
+        scroll.addView(content);
+        dialog = new ChatFormDialog(host.requireContext()).setTitle(name).setView(scroll)
+                .setNegativeButton("Back to statuses", (d, w) -> {
+                    if (active(family, uid)) open();
+                }).show();
+        AlertDialog viewer = dialog;
+        if (mine) {
+            TextView feedback = new TextView(content.getContext());
+            feedback.setText("Viewers and reactions");
+            content.addView(feedback);
+            receipts.get().addOnSuccessListener(data -> {
+                if (!viewer.isShowing() || !active(family, uid)) return;
+                StringBuilder result = new StringBuilder("Viewers and reactions");
+                for (com.google.firebase.database.DataSnapshot item : data.getChildren()) {
+                    if (item.getKey() == null) continue;
+                    result.append("\n").append(store.name(item.getKey()));
+                    String reaction = item.getValue(String.class);
+                    for (int i = 0; i < REACTIONS.length; i++) {
+                        if (REACTIONS[i].equals(reaction)) result.append("  ").append(EMOJI[i]);
+                    }
+                }
+                if (!data.hasChildren()) result.append("\nNo views yet");
+                feedback.setText(result);
+            }).addOnFailureListener(error -> feedback.setText("Unable to load viewers"));
+            return;
+        }
+        DatabaseReference receipt = receipts.child(uid);
+        receipt.runTransaction(new com.google.firebase.database.Transaction.Handler() {
+            public com.google.firebase.database.Transaction.Result doTransaction(
+                    com.google.firebase.database.MutableData current) {
+                if (current.getValue() == null) current.setValue("seen");
+                return com.google.firebase.database.Transaction.success(current);
+            }
+            public void onComplete(com.google.firebase.database.DatabaseError error,
+                                   boolean committed, com.google.firebase.database.DataSnapshot value) {}
+        });
+        com.google.android.material.chip.ChipGroup reactions =
+                new com.google.android.material.chip.ChipGroup(content.getContext());
+        reactions.setSingleSelection(true);
+        content.addView(reactions);
+        com.google.android.material.chip.Chip[] chips = new com.google.android.material.chip.Chip[EMOJI.length];
+        for (int i = 0; i < EMOJI.length; i++) {
+            final int index = i;
+            com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(content.getContext());
+            chip.setId(android.view.View.generateViewId());
+            chip.setText(EMOJI[i]);
+            chip.setContentDescription(new String[]{"Heart", "Laugh", "Surprised", "Sad", "Applause", "Fire"}[i]);
+            chip.setCheckable(true);
+            chips[i] = chip;
+            reactions.addView(chip);
+            chip.setOnClickListener(v -> {
+                if (!active(family, uid)) return;
+                receipt.setValue(chip.isChecked() ? REACTIONS[index] : "seen")
+                        .addOnFailureListener(error -> {
+                            reactions.clearCheck();
+                            notice("Unable to save reaction");
+                        });
+            });
+        }
+        receipt.get().addOnSuccessListener(snapshot -> {
+            if (!viewer.isShowing() || reactions.getCheckedChipId() != android.view.View.NO_ID) return;
+            for (int i = 0; i < REACTIONS.length; i++) {
+                if (REACTIONS[i].equals(snapshot.getValue(String.class))) reactions.check(chips[i].getId());
+            }
+        });
+        FamilyChatStore.ThreadState direct = store.thread(author);
+        if (direct == null || !store.canUse(direct)) return;
+        EditText reply = new EditText(content.getContext());
+        reply.setHint("Reply privately");
+        reply.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1000)});
+        content.addView(ChatFormDialog.outlined(reply));
+        addAction(content, "Send reply", () -> {
+            if (!active(family, uid) || !store.canUse(direct)) return;
+            String message = reply.getText().toString().trim();
+            if (message.isEmpty()) return;
+            store.send(direct, message, () -> notice("Unable to send reply"));
+            reply.setText("");
+        });
+    }
+
+    private android.view.View addAction(LinearLayout row, String title, Runnable action) {
         com.google.android.material.button.MaterialButton button = new com.google.android.material.button.MaterialButton(
                 row.getContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
         button.setAllCaps(false);
         button.setOnClickListener(view -> action.run());
         row.addView(button);
+        return button;
     }
 
     private void compose(DatabaseReference path, String family, String uid) {
