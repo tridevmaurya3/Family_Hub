@@ -10,6 +10,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.util.Base64;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -128,7 +129,7 @@ final class ChatAttachments {
         addButton(row, sheet, "Poll", R.drawable.ic_family_task, this::choosePoll);
         row = attachmentRow(panel);
         addButton(row, sheet, "Event", R.drawable.ic_planner, this::chooseEvent);
-        addButton(row, sheet, "Voice note", R.drawable.ic_mic, () -> voiceNotes.record(thread));
+        addButton(row, sheet, "Voice typing", R.drawable.ic_mic, () -> fragment.toggleVoiceTyping(thread));
         android.widget.ScrollView scroll = new android.widget.ScrollView(context);
         scroll.addView(panel);
         sheet.setContentView(scroll);
@@ -590,6 +591,10 @@ final class ChatAttachments {
                             + "\n\nWaiting · " + no.size() + "\n" + String.join(", ", no))
                     .setPositiveButton("Done", null).show();
         });
+    }
+
+    View voiceMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        return voiceNotes.messageView(thread, message);
     }
 
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {

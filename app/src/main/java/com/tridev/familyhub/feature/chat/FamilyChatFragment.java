@@ -73,7 +73,7 @@ public final class FamilyChatFragment extends Fragment {
     private final ChatDictation draftVoice = new ChatDictation(this);
     private EditText search, draft;
     private final ChatStatus chatStatus = new ChatStatus(this, store);
-    private MaterialButton send, newGroup, statusButton;
+    private MaterialButton send, mic, newGroup, statusButton;
     private OnBackPressedCallback backCallback;
     private String peer;
     private String lastMessageKey;
@@ -217,41 +217,42 @@ public final class FamilyChatFragment extends Fragment {
             if (thread != null && store.canUse(thread)) attachments.show(thread);
         });
         bottom.addView(attach, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        com.google.android.material.textfield.TextInputLayout composer =
-                new com.google.android.material.textfield.TextInputLayout(requireContext());
-        composer.setBoxBackgroundMode(com.google.android.material.textfield.TextInputLayout.BOX_BACKGROUND_NONE);
-        composer.setHintEnabled(false);
-        composer.addView(draft, new LinearLayout.LayoutParams(-1, -2));
-        composer.setEndIconMode(com.google.android.material.textfield.TextInputLayout.END_ICON_CUSTOM);
-        composer.setEndIconDrawable(R.drawable.ic_mic);
-        composer.setEndIconContentDescription(R.string.family_tasks_voice_add);
-        com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView wave =
+        com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView dictationWave =
                 new com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView(requireContext());
-        wave.setVisibility(View.GONE);
+        dictationWave.setVisibility(View.GONE);
         android.widget.FrameLayout inputBox = new android.widget.FrameLayout(requireContext());
-        inputBox.addView(composer, new android.widget.FrameLayout.LayoutParams(-1, -2));
-        android.widget.FrameLayout.LayoutParams wavePosition = new android.widget.FrameLayout.LayoutParams(
-                -1, dp(42), Gravity.CENTER_VERTICAL);
-        wavePosition.setMarginEnd(dp(52));
-        inputBox.addView(wave, wavePosition);
-        draftVoice.bind(draft, wave);
-        composer.setEndIconOnClickListener(view -> {
-            FamilyChatStore.ThreadState thread = store.thread(peer);
-            if (thread != null && store.canUse(thread)) draftVoice.toggle();
-        });
-        composer.setEndIconOnLongClickListener(view -> {
-            FamilyChatStore.ThreadState thread = store.thread(peer);
-            if (thread == null || !store.canUse(thread)) return false;
-            draftVoice.stop();
-            voiceNotes.record(thread);
-            return true;
-        });
+        inputBox.addView(draft, new android.widget.FrameLayout.LayoutParams(-1, -2));
+        inputBox.addView(dictationWave, new android.widget.FrameLayout.LayoutParams(-1, dp(42), Gravity.CENTER_VERTICAL));
+        draftVoice.bind(draft, dictationWave);
         bottom.addView(inputBox, new LinearLayout.LayoutParams(0, -2, 1));
         send = new MaterialButton(requireContext());
         send.setText("Send");
         send.setAllCaps(false);
         send.setContentDescription("Send message");
         bottom.addView(send);
+        mic = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        mic.setIconResource(R.drawable.ic_mic);
+        mic.setIconSize(dp(22));
+        mic.setIconPadding(0);
+        mic.setIconTint(android.content.res.ColorStateList.valueOf(ChatVoiceControls.PURPLE));
+        mic.setPadding(dp(12), 0, 0, 0);
+        mic.setContentDescription("Record voice note. Hold and slide down to lock");
+        mic.setOnClickListener(v -> {
+            draftVoice.stop();
+            voiceNotes.record(store.thread(peer));
+        });
+        mic.setOnTouchListener((v, event) -> {
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) draftVoice.stop();
+            return voiceNotes.touch(v, event, store.thread(peer));
+        });
+        bottom.addView(mic, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        LinearLayout voiceComposer = column();
+        voiceComposer.setVisibility(View.GONE);
+        voiceNotes.bind(bottom, voiceComposer);
+        android.widget.FrameLayout composerArea = new android.widget.FrameLayout(requireContext());
+        composerArea.addView(bottom, new android.widget.FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        composerArea.addView(voiceComposer, new android.widget.FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         replyBanner = new LinearLayout(requireContext());
         replyBanner.setGravity(Gravity.CENTER_VERTICAL);
         replyBanner.setPadding(dp(10), dp(2), dp(4), dp(2));
@@ -264,7 +265,7 @@ public final class FamilyChatFragment extends Fragment {
         cancelReply.setOnClickListener(view -> clearReply());
         replyBanner.addView(cancelReply, new LinearLayout.LayoutParams(dp(48), dp(48)));
         screen.addView(replyBanner);
-        screen.addView(bottom);
+        screen.addView(composerArea);
         if (state != null) {
             draft.setText(state.getString("chat_draft", ""));
             replyKey = state.getString("chat_reply_key");
@@ -363,6 +364,7 @@ public final class FamilyChatFragment extends Fragment {
         groupScreens.dismiss();
         chatStatus.dismiss();
         draftVoice.bind(null, null);
+        voiceNotes.bind(null, null);
         screen = null;
         bubbles.clear();
         super.onDestroyView();
@@ -373,6 +375,10 @@ public final class FamilyChatFragment extends Fragment {
         voiceNotes.close();
         groupScreens.close();
         super.onDestroy();
+    }
+
+    void toggleVoiceTyping(FamilyChatStore.ThreadState thread) {
+        if (isVoiceThreadOpen(thread) && store.canUse(thread)) draftVoice.toggle();
     }
 
     boolean isVoiceThreadOpen(FamilyChatStore.ThreadState thread) {
@@ -449,6 +455,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
+        voiceNotes.stop();
         draftVoice.stop();
         if (destination == null) {
             androidx.core.view.WindowInsetsControllerCompat controller =
@@ -475,7 +482,11 @@ public final class FamilyChatFragment extends Fragment {
     private void updateSend() {
         if (send == null || draft == null) return;
         FamilyChatStore.ThreadState thread = store.thread(peer);
-        send.setEnabled(thread != null && !thread.error && !draft.getText().toString().trim().isEmpty());
+        boolean hasText = !draft.getText().toString().trim().isEmpty();
+        send.setEnabled(thread != null && !thread.error && hasText);
+        send.setVisibility(hasText ? View.VISIBLE : View.GONE);
+        mic.setVisibility(hasText ? View.GONE : View.VISIBLE);
+        mic.setEnabled(thread != null && store.canUse(thread));
     }
 
     private void cancelLiveRecipient() {
@@ -527,7 +538,8 @@ public final class FamilyChatFragment extends Fragment {
         if (thread != null) headerAvatar.addView(threadAvatar(thread, 40));
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
-        bottom.setVisibility(inThread && thread != null && !thread.error ? View.VISIBLE : View.GONE);
+        if (!chatReady) voiceNotes.stop();
+        voiceNotes.setInputVisible(chatReady);
         header.setTitle(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
         String currentStatus = store.status();
         header.setDetail(!currentStatus.isEmpty() ? currentStatus

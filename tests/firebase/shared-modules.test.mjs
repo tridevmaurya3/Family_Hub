@@ -392,6 +392,18 @@ test('chat tools validate replies, mentions, reaction ownership and pins', async
   await assertSucceeds(family.update({ [voicePath]: voice, [audioPath]: 'UklGRg==' }));
   assert.equal((await b.root.child('familyChat/familyA/' + audioPath).get()).val(), 'UklGRg==');
   await assertFails(outsiderRef.root.child('familyChat/familyA/' + audioPath).get());
+  const compressed = { ...voice, mime: 'audio/mp4', voiceDuration: 24000, voiceWave: '0123456789abcdef'.repeat(2) };
+  const compressedPath = voicePath + '-compressed';
+  const compressedAudio = audioPath + '-compressed';
+  const sendCompressed = message => family.update({
+    [compressedPath]: message, [compressedAudio]: 'AAAAHGZ0eXBpc29t',
+  });
+  await assertFails(sendCompressed({ ...compressed, voiceWave: 'invalid' }));
+  await assertFails(sendCompressed({ ...compressed, voiceDuration: 0 }));
+  await assertFails(sendCompressed({ ...compressed, kind: 'file' }));
+  await assertSucceeds(sendCompressed(compressed));
+  assert.equal((await b.child('voice-note-compressed/voiceWave').get()).val(), compressed.voiceWave);
+  await assertFails(outsiderRef.root.child('familyChat/familyA/' + compressedAudio).get());
 });
 
 test('chat edits, deletion, deadlines and group names enforce ownership', async () => {

@@ -2,355 +2,617 @@ package com.tridev.familyhub.feature.chat;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.ParcelFileDescriptor;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
+import android.os.SystemClock;
 import android.util.Base64;
-import android.widget.EditText;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
 
-
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
+import java.lang.ref.WeakReference;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static com.tridev.familyhub.feature.chat.ChatVoiceControls.*;
 
 final class ChatVoiceNotes {
-    private static final int RATE = 16000;
-    private static final int MAX_SECONDS = 25;
+    private static final int FILE_BYTES = 1_048_576;
+    private static final int SAMPLE_INTERVAL_MS = 80;
+    private static final String MIME = "audio/mp4";
     private final FamilyChatFragment fragment;
     private final FamilyChatStore store;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService captureWorker = Executors.newSingleThreadExecutor();
     private final ExecutorService io = Executors.newSingleThreadExecutor();
-    private final androidx.activity.result.ActivityResultLauncher<String> permission;
-    private FamilyChatStore.ThreadState pendingThread;
-    private Recording current;
-    private AlertDialog dialog;
+    private final ActivityResultLauncher<String> permission;
+    private final List<WeakReference<VoiceMessage>> visiblePlayers = new ArrayList<>();
+    private final Map<String, Integer> rates = new HashMap<>();
+    private final Runnable recordTick = this::sample;
+    private final Runnable playerTick = this::updatePlayback;
+    private FamilyChatStore.ThreadState awaitingPermission;
+    private FamilyChatStore.ThreadState thread;
+    private LinearLayout composer;
+    private LinearLayout input;
+    private TextView timer;
+    private ChatVoiceControls.Wave liveWave;
+    private MediaRecorder recorder;
+    private File draft;
+    private String waveform;
+    private long started;
+    private int duration;
+    private boolean locked;
+    private boolean sending;
+    private float touchStart;
+    private int pointer = -1;
+    private long playbackRequest;
+    private boolean inputVisible;
+    private final StringBuilder liveLevels = new StringBuilder(BARS);
+    private final StringBuilder levels = new StringBuilder();
+    private int samplesPerLevel = 1;
+    private int sampleCount;
+    private char peak;
     private MediaPlayer player;
-    private File playingFile;
-    private SpeechRecognizer recognizer;
-    private ParcelFileDescriptor audioSource;
-    private Runnable recognitionTimeout;
+    private File playbackFile;
+    private String playingKey;
+    private boolean preparing;
+    private boolean prepared;
+    private ChatVoiceControls preview;
 
     ChatVoiceNotes(FamilyChatFragment fragment, FamilyChatStore store) {
         this.fragment = fragment;
         this.store = store;
-        permission = fragment.registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
-                allowed -> {
-                    FamilyChatStore.ThreadState thread = pendingThread;
-                    pendingThread = null;
-                    if (allowed && thread != null) handler.post(() -> {
-                        if (ready(thread)) start(thread);
-                    });
-                    else if (!allowed) notice("Microphone permission is required to record a voice note");
-                });
+        permission = fragment.registerForActivityResult(new ActivityResultContracts.RequestPermission(), allowed -> {
+            FamilyChatStore.ThreadState requested = awaitingPermission;
+            awaitingPermission = null;
+            if (allowed && ready(requested)) start(requested, true);
+            else if (!allowed && requested != null) notice("Allow microphone access to record a voice note");
+        });
     }
 
-    void record(FamilyChatStore.ThreadState thread) {
-        if (!ready(thread)) return;
+    void bind(LinearLayout input, LinearLayout composer) {
+        this.input = input;
+        this.composer = composer;
+    }
+
+    void setInputVisible(boolean visible) {
+        inputVisible = visible;
+        boolean holding = recorder != null && !locked;
+        input.setVisibility(visible && (draft == null || holding) ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < input.getChildCount() - 2; i++) {
+            input.getChildAt(i).setVisibility(holding ? View.INVISIBLE : View.VISIBLE);
+        }
+    }
+
+    boolean touch(View mic, MotionEvent event, FamilyChatStore.ThreadState selected) {
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                pointer = event.getPointerId(0);
+                touchStart = event.getRawY();
+                record(selected, false);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (pointer == event.getPointerId(0) && recorder != null && !locked
+                        && event.getRawY() - touchStart >= dp(mic.getContext(), 24)) {
+                    locked = true;
+                    renderRecording();
+                }
+                return true;
+            case MotionEvent.ACTION_UP:
+                pointer = -1;
+                if (recorder != null && !locked) finish(false);
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_POINTER_UP:
+                if (event.getActionMasked() == MotionEvent.ACTION_CANCEL
+                        || event.getPointerId(event.getActionIndex()) == pointer) {
+                    pointer = -1;
+                    if (recorder != null && !locked) finish(false);
+                }
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    void record(FamilyChatStore.ThreadState selected) {
+        record(selected, true);
+    }
+
+    private void record(FamilyChatStore.ThreadState selected, boolean handsFree) {
+        if (!ready(selected) || draft != null || awaitingPermission != null) return;
         if (ContextCompat.checkSelfPermission(fragment.requireContext(), Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED) start(thread);
-        else {
-            pendingThread = thread;
+                != PackageManager.PERMISSION_GRANTED) {
+            awaitingPermission = selected;
             permission.launch(Manifest.permission.RECORD_AUDIO);
+            return;
         }
+        start(selected, handsFree);
     }
 
-    private void start(FamilyChatStore.ThreadState thread) {
-        stop();
-        Recording recording = new Recording();
-        current = recording;
-        AlertDialog recordingDialog = new ChatFormDialog(fragment.requireContext())
-                .setTitle("Recording voice note").setMessage("Speak now. The limit is 25 seconds.")
-                .setNegativeButton("Discard", (dialog, action) -> recording.discard = true)
-                .setPositiveButton("Stop", null).create();
-        dialog = recordingDialog;
-        recordingDialog.setOnDismissListener(ignored -> recording.stopping = true);
-        recordingDialog.show();
-        recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-        recording.ready = () -> handler.post(() -> {
-            if (current == recording && recordingDialog.isShowing()) {
-                recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
-            }
-        });
-        recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
-            recording.stopping = true;
-            recordingDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-        });
-        captureWorker.execute(() -> {
-            byte[] pcm = capture(recording);
-            handler.post(() -> {
-                if (current != recording) return;
-                current = null;
-                boolean show = !recording.discard && recordingDialog.isShowing() && ready(thread);
-                recordingDialog.dismiss();
-                if (!show) return;
-                if (pcm.length == 0) notice("No audio recorded. Check microphone access or close other recording apps.");
-                else review(thread, pcm, recording.rate);
-            });
-        });
-    }
-
-    @android.annotation.SuppressLint("MissingPermission")
-    private static byte[] capture(Recording recording) {
-        for (int rate : new int[]{RATE, 8000}) {
-            for (int source : new int[]{MediaRecorder.AudioSource.MIC, MediaRecorder.AudioSource.DEFAULT}) {
-                if (recording.stopping) return new byte[0];
-                byte[] audio = capture(recording, rate, source);
-                if (audio.length > 0) {
-                    recording.rate = rate;
-                    return audio;
-                }
-            }
-        }
-        return new byte[0];
-    }
-
-    @android.annotation.SuppressLint("MissingPermission")
-    private static byte[] capture(Recording recording, int rate, int source) {
-        int minimum = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
-        if (minimum <= 0) return new byte[0];
-        AudioRecord microphone = null;
-        try {
-            microphone = new AudioRecord(source, rate,
-                    AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minimum, 4096));
-            if (microphone.getState() != AudioRecord.STATE_INITIALIZED) return new byte[0];
-            microphone.startRecording();
-            if (microphone.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) return new byte[0];
-            int maxBytes = rate * 2 * MAX_SECONDS;
-            ByteArrayOutputStream audio = new ByteArrayOutputStream();
-            byte[] buffer = new byte[1024];
-            while (!recording.stopping && audio.size() < maxBytes) {
-                int read = microphone.read(buffer, 0, Math.min(buffer.length, maxBytes - audio.size()));
-                if (read < 0) break;
-                if (audio.size() == 0 && read > 0) recording.ready.run();
-                audio.write(buffer, 0, read);
-            }
-            return audio.toByteArray();
-        } catch (IllegalStateException | SecurityException | IllegalArgumentException failure) {
-            return new byte[0];
-        } finally {
-            if (microphone != null) {
-                try { microphone.stop(); } catch (IllegalStateException ignored) {}
-                microphone.release();
-            }
-        }
-    }
-
-    private void review(FamilyChatStore.ThreadState thread, byte[] pcm, int rate) {
+    @SuppressWarnings("deprecation")
+    private void start(FamilyChatStore.ThreadState selected, boolean handsFree) {
+        stopPlayback();
         Context context = fragment.requireContext();
-        android.widget.LinearLayout content = new android.widget.LinearLayout(context);
-        content.setOrientation(android.widget.LinearLayout.VERTICAL);
-        int padding = Math.round(16 * context.getResources().getDisplayMetrics().density);
-        content.setPadding(padding, 0, padding, padding);
-        EditText transcript = new EditText(context);
-        transcript.setHint("Optional transcript");
-        transcript.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(2000)});
-        android.widget.TextView duration = new android.widget.TextView(context);
-        duration.setText(android.text.format.DateUtils.formatElapsedTime(Math.max(1, pcm.length / (2L * rate)))
-                + " · Recorded audio");
-        content.addView(duration);
-        content.addView(ChatFormDialog.outlined(transcript));
-        com.google.android.material.button.MaterialButton play = new com.google.android.material.button.MaterialButton(context);
-        play.setText("Preview recording");
-        play.setOnClickListener(view -> play(wav(pcm, rate)));
-        content.addView(play);
-        if (Build.VERSION.SDK_INT >= 33 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
-            com.google.android.material.button.MaterialButton transcribe = new com.google.android.material.button.MaterialButton(context);
-            transcribe.setText("Transcribe in Hindi");
-            transcribe.setOnClickListener(view -> transcribe(pcm, rate, transcript));
-            content.addView(transcribe);
-        }
-        dialog = new ChatFormDialog(context).setTitle("Voice note")
-                .setView(content).setNegativeButton("Discard", null)
-                .setPositiveButton("Send", (dismissed, action) -> {
-                    String text = transcript.getText().toString().trim();
-                    Map<String, Object> details = new HashMap<>();
-                    details.put("kind", "voice");
-                    details.put("mime", "audio/wav");
-                    store.send(thread, text.isEmpty() ? "Voice note" : text, details,
-                            Base64.encodeToString(wav(pcm, rate), Base64.NO_WRAP), () -> notice("Unable to send voice note"));
-                }).show();
-        dialog.setOnDismissListener(ignored -> { stopPlayback(); endRecognition(); });
-    }
-
-    @androidx.annotation.RequiresApi(33)
-    private void transcribe(byte[] pcm, int rate, EditText field) {
-        endRecognition();
         try {
-            ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
-            audioSource = pipe[0];
-            SpeechRecognizer session = SpeechRecognizer.createOnDeviceSpeechRecognizer(fragment.requireContext());
-            recognizer = session;
-            session.setRecognitionListener(new RecognitionListener() {
-                @Override public void onResults(Bundle results) {
-                    if (recognizer != session) return;
-                    java.util.ArrayList<String> values = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (values != null && !values.isEmpty()) field.setText(values.get(0));
-                    else notice("No Hindi transcript was returned");
-                    endRecognition();
+            draft = File.createTempFile("chat-voice-", ".m4a", context.getCacheDir());
+            recorder = new MediaRecorder();
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioChannels(1);
+            recorder.setAudioSamplingRate(16000);
+            recorder.setAudioEncodingBitRate(24000);
+            // Leave room for the MP4 index within the existing attachment byte budget.
+            recorder.setMaxFileSize(FILE_BYTES - 64 * 1024L);
+            recorder.setOutputFile(draft.getAbsolutePath());
+            recorder.setOnInfoListener((source, what, extra) -> {
+                if (source == recorder && what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED) {
+                    finish(false);
+                    notice("Attachment size reached. Review your recording before sending.");
                 }
-                @Override public void onError(int code) {
-                    if (recognizer != session) return;
-                    notice("Hindi transcription is unavailable on this device");
-                    endRecognition();
+            });
+            recorder.setOnErrorListener((source, what, extra) -> {
+                if (source == recorder) {
+                    clearDraft();
+                    notice("Recording stopped because of a microphone error");
                 }
-                @Override public void onReadyForSpeech(Bundle params) {}
-                @Override public void onBeginningOfSpeech() {}
-                @Override public void onRmsChanged(float rms) {}
-                @Override public void onBufferReceived(byte[] buffer) {}
-                @Override public void onEndOfSpeech() {}
-                @Override public void onPartialResults(Bundle results) {}
-                @Override public void onEvent(int event, Bundle data) {}
             });
-            Intent request = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, audioSource)
-                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, 1)
-                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, rate)
-                    .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, AudioFormat.ENCODING_PCM_16BIT);
-            io.execute(() -> {
-                try (ParcelFileDescriptor.AutoCloseOutputStream output = new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
-                    output.write(pcm);
-                } catch (IOException ignored) {}
-            });
-            session.startListening(request);
-            recognitionTimeout = () -> {
-                notice("Hindi transcription did not complete");
-                endRecognition();
-            };
-            handler.postDelayed(recognitionTimeout, 30000);
+            recorder.prepare();
+            recorder.start();
         } catch (IOException | RuntimeException error) {
-            endRecognition();
-            notice("Unable to start Hindi transcription");
+            clearDraft();
+            notice("Unable to start recording. Check microphone access.");
+            return;
+        }
+        thread = selected;
+        locked = handsFree;
+        started = SystemClock.elapsedRealtime();
+        levels.setLength(0);
+        liveLevels.setLength(0);
+        samplesPerLevel = 1;
+        sampleCount = 0;
+        peak = '0';
+        renderRecording();
+        sample();
+    }
+
+    private void sample() {
+        if (recorder == null) return;
+        if (!ready(thread)) {
+            clearDraft();
+            return;
+        }
+        int amplitude;
+        try {
+            amplitude = recorder.getMaxAmplitude();
+        } catch (IllegalStateException error) {
+            finish(false);
+            return;
+        }
+        char level = Character.forDigit(Math.min(15, Math.round((float) Math.sqrt(amplitude / 32767f) * 19)), 16);
+        peak = (char) Math.max(peak, level);
+        if (++sampleCount == samplesPerLevel) {
+            levels.append(peak);
+            peak = '0';
+            sampleCount = 0;
+        }
+        if (levels.length() == 512) {
+            for (int i = 0; i < 256; i++) {
+                levels.setCharAt(i, (char) Math.max(levels.charAt(i * 2), levels.charAt(i * 2 + 1)));
+            }
+            levels.setLength(256);
+            samplesPerLevel *= 2;
+        }
+        if (liveLevels.length() == BARS) liveLevels.deleteCharAt(0);
+        liveLevels.append(level);
+        liveWave.setSamples(liveLevels.toString(), 0);
+        timer.setText((locked ? "🔒  " : "●  ") + elapsed(SystemClock.elapsedRealtime() - started));
+        handler.postDelayed(recordTick, SAMPLE_INTERVAL_MS);
+    }
+
+    private void renderRecording() {
+        Context context = composer.getContext();
+        composer.removeAllViews();
+        composer.setVisibility(View.VISIBLE);
+        setInputVisible(inputVisible);
+        TextView hint = new TextView(context);
+        hint.setText("↓  Slide down to lock");
+        hint.setTextColor(PURPLE);
+        hint.setGravity(Gravity.END);
+        if (!locked) composer.addView(hint);
+        LinearLayout track = row(context);
+        track.setBackground(surface(context, 0xfff6ecfa));
+        track.setPadding(dp(context, 12), 0, dp(context, 12), 0);
+        timer = new TextView(context);
+        timer.setTextColor(locked ? PURPLE : 0xffaa1735);
+        timer.setText((locked ? "🔒  " : "●  ") + elapsed(SystemClock.elapsedRealtime() - started));
+        track.addView(timer, new LinearLayout.LayoutParams(dp(context, 75), -2));
+        liveWave = new ChatVoiceControls.Wave(context);
+        liveWave.idleColor = PURPLE;
+        liveWave.setSamples(liveLevels.toString(), 0);
+        track.addView(liveWave, new LinearLayout.LayoutParams(0, dp(context, 54), 1));
+        LinearLayout.LayoutParams trackSize = new LinearLayout.LayoutParams(-1, -2);
+        if (!locked) trackSize.setMarginEnd(dp(context, 56));
+        composer.addView(track, trackSize);
+        if (locked) {
+            LinearLayout actions = row(context);
+            action(actions, "Cancel", MUTED, 0xffedf0f3, this::clearDraft);
+            action(actions, "■ Stop", 0xffaa1735, 0xfffbe0e7, () -> finish(false));
+            action(actions, "Send", 0xffffffff, BLUE, () -> finish(true));
+            composer.addView(actions);
         }
     }
 
-    private void endRecognition() {
-        if (recognitionTimeout != null) handler.removeCallbacks(recognitionTimeout);
-        recognitionTimeout = null;
-        SpeechRecognizer session = recognizer;
-        recognizer = null;
-        if (session != null) session.destroy();
-        if (audioSource != null) {
-            try { audioSource.close(); } catch (IOException ignored) {}
+    private void finish(boolean sendNow) {
+        if (recorder == null) return;
+        handler.removeCallbacks(recordTick);
+        try {
+            recorder.stop();
+        } catch (RuntimeException error) {
+            clearDraft();
+            notice("Voice note is too short or could not be recorded");
+            return;
         }
-        audioSource = null;
+        recorder.release();
+        recorder = null;
+        if (draft.length() == 0 || draft.length() > FILE_BYTES) {
+            clearDraft();
+            notice("Voice note could not fit in a chat attachment");
+            return;
+        }
+        duration = (int) Math.max(1, SystemClock.elapsedRealtime() - started);
+        if (sampleCount > 0) levels.append(peak);
+        waveform = summarize(levels);
+        renderPreview();
+        if (sendNow) send();
+    }
+
+    private static String summarize(CharSequence source) {
+        StringBuilder result = new StringBuilder(BARS);
+        for (int i = 0; i < BARS; i++) {
+            int start = i * source.length() / BARS;
+            int end = (i + 1) * source.length() / BARS;
+            char peak = '0';
+            for (int j = start; j < Math.max(start + 1, end) && j < source.length(); j++) {
+                peak = (char) Math.max(peak, source.charAt(j));
+            }
+            result.append(peak);
+        }
+        return result.toString();
+    }
+
+    private void renderPreview() {
+        Context context = composer.getContext();
+        input.setVisibility(View.GONE);
+        composer.setVisibility(View.VISIBLE);
+        composer.removeAllViews();
+        LinearLayout track = row(context);
+        track.setBackground(surface(context, 0xffeef2f7));
+        preview = new ChatVoiceControls(context);
+        preview.speed.setVisibility(View.GONE);
+        preview.play.setOnClickListener(v -> {
+            if ("draft".equals(playingKey)) togglePlayback();
+            else playFile("draft", draft, false);
+        });
+        preview.show(false, false, 0, duration, 0, waveform);
+        track.addView(preview, new LinearLayout.LayoutParams(0, -2, 3));
+        action(track, "Delete", MUTED, 0xffedf0f3, this::clearDraft);
+        action(track, "Send", 0xffffffff, BLUE, this::send);
+        composer.addView(track);
+    }
+
+    private void send() {
+        if (!ready(thread) || draft == null || sending) return;
+        sending = true;
+        File source = draft;
+        FamilyChatStore.ThreadState destination = thread;
+        stopPlayback();
+        Map<String, Object> details = new HashMap<>();
+        details.put("kind", "voice");
+        details.put("mime", MIME);
+        details.put("voiceWave", waveform);
+        details.put("voiceDuration", duration);
+        io.execute(() -> {
+            String encoded;
+            try {
+                encoded = Base64.encodeToString(Files.readAllBytes(source.toPath()), Base64.NO_WRAP);
+            } catch (IOException error) {
+                handler.post(() -> {
+                    if (draft == source) {
+                        sending = false;
+                        notice("Unable to read recording");
+                    }
+                });
+                return;
+            }
+            handler.post(() -> {
+                if (draft != source || !ready(destination)) return;
+                draft = null;
+                clearDraft();
+                store.send(destination, "Voice note", details, encoded, () -> {}, success -> {
+                    if (!success && ready(destination) && draft == null) {
+                        draft = source;
+                        thread = destination;
+                        waveform = (String) details.get("voiceWave");
+                        duration = (Integer) details.get("voiceDuration");
+                        renderPreview();
+                    } else {
+                        source.delete();
+                    }
+                    if (!success && ready(destination)) notice("Unable to send voice note");
+                });
+            });
+        });
+    }
+
+    private LinearLayout row(Context context) {
+        LinearLayout row = new LinearLayout(context);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        return row;
+    }
+
+    private void action(LinearLayout row, String label, int ink, int fill, Runnable click) {
+        Context context = row.getContext();
+        TextView button = button(context, label, label, ink, fill);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(context, 48), 1);
+        params.setMarginStart(dp(context, 4));
+        params.topMargin = dp(context, 3);
+        row.addView(button, params);
+        button.setOnClickListener(v -> click.run());
+    }
+
+    View messageView(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        return new VoiceMessage(thread, message);
     }
 
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
-        if (!ready(thread)) return;
+        if (!ready(thread) || message.deleted() || recorder != null) return;
+        String key = message.snapshot.getRef().toString();
+        if (key.equals(playingKey)) {
+            togglePlayback();
+            return;
+        }
+        stopPlayback();
+        playingKey = key;
+        preparing = true;
+        refreshPlayers();
+        long request = playbackRequest;
         thread.files.child(message.snapshot.getKey()).get().addOnCompleteListener(task -> {
-            if (!ready(thread)) return;
+            if (request != playbackRequest || !ready(thread) || !preparing) return;
             String data = task.isSuccessful() ? task.getResult().getValue(String.class) : null;
-            if (data == null || data.length() > 1_067_000) {
-                notice("Voice note unavailable");
+            if (data == null || data.length() > 1_398_104) {
+                failPlayback("Voice note unavailable");
                 return;
             }
-            try {
-                byte[] bytes = Base64.decode(data, Base64.DEFAULT);
-                dialog = new ChatFormDialog(fragment.requireContext()).setTitle("Voice note")
-                        .setMessage(message.body).setNegativeButton("Close", null)
-                        .setPositiveButton("Play", null).show();
-                dialog.setOnDismissListener(ignored -> stopPlayback());
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> play(bytes));
-                play(bytes);
-            } catch (IllegalArgumentException error) {
-                notice("Unable to read voice note");
-            }
+            File cache = fragment.requireContext().getCacheDir();
+            io.execute(() -> loadPlayback(thread, key, request, cache, data));
         });
     }
 
-    private void play(byte[] bytes) {
-        stopPlayback();
+    private void loadPlayback(FamilyChatStore.ThreadState thread, String key, long request, File cache, String encoded) {
+        File file = null;
         try {
-            playingFile = File.createTempFile("voice-note-", ".wav", fragment.requireContext().getCacheDir());
-            Files.write(playingFile.toPath(), bytes);
+            file = File.createTempFile("chat-play-", ".audio", cache);
+            Files.write(file.toPath(), Base64.decode(encoded, Base64.DEFAULT));
+        } catch (IOException | IllegalArgumentException error) {
+            if (file != null) file.delete();
+            handler.post(() -> { if (request == playbackRequest) failPlayback("Unable to read voice note"); });
+            return;
+        }
+        File audio = file;
+        handler.post(() -> {
+            if (request == playbackRequest && ready(thread) && preparing) playFile(key, audio, true);
+            else audio.delete();
+        });
+    }
+
+    private void playFile(String key, File source, boolean temporary) {
+        stopPlayback();
+        playingKey = key;
+        preparing = true;
+        if (temporary) playbackFile = source;
+        try {
             MediaPlayer audio = new MediaPlayer();
             player = audio;
-            audio.setDataSource(playingFile.getAbsolutePath());
-            audio.setOnPreparedListener(ready -> { if (player == ready) ready.start(); });
-            audio.setOnCompletionListener(ready -> { if (player == ready) stopPlayback(); });
+            audio.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build());
+            try (java.io.FileInputStream stream = new java.io.FileInputStream(source)) {
+                audio.setDataSource(stream.getFD());
+            }
+            audio.setOnPreparedListener(loaded -> {
+                if (player != loaded) return;
+                preparing = false;
+                prepared = true;
+                try {
+                    loaded.start();
+                    applyRate();
+                    updatePlayback();
+                } catch (RuntimeException error) {
+                    failPlayback("Unable to play voice note");
+                }
+            });
+            audio.setOnCompletionListener(finished -> {
+                if (player == finished) stopPlayback();
+            });
             audio.setOnErrorListener((failed, what, extra) -> {
-                stopPlayback();
-                notice("Unable to play voice note");
+                if (player == failed) failPlayback("Unable to play voice note");
                 return true;
             });
             audio.prepareAsync();
+            refreshPlayers();
         } catch (IOException | RuntimeException error) {
-            stopPlayback();
-            notice("Unable to play voice note");
+            failPlayback("Unable to play voice note");
         }
     }
 
+    private void togglePlayback() {
+        if (!prepared) return;
+        try {
+            if (player.isPlaying()) player.pause();
+            else {
+                player.start();
+                applyRate();
+            }
+            updatePlayback();
+        } catch (RuntimeException error) {
+            failPlayback("Unable to play voice note");
+        }
+    }
+
+    private void applyRate() {
+        int rate = rates.getOrDefault(playingKey, 0);
+        player.setPlaybackParams(player.getPlaybackParams().setSpeed(1f + rate * 0.5f));
+    }
+
+    private void updatePlayback() {
+        handler.removeCallbacks(playerTick);
+        refreshPlayers();
+        if (prepared && player.isPlaying()) handler.postDelayed(playerTick, 100);
+    }
+
+    private void refreshPlayers() {
+        Iterator<WeakReference<VoiceMessage>> iterator = visiblePlayers.iterator();
+        while (iterator.hasNext()) {
+            VoiceMessage view = iterator.next().get();
+            if (view == null || !view.isAttachedToWindow()) iterator.remove();
+            else view.update();
+        }
+        if (preview != null) update(preview, "draft", duration, waveform);
+    }
+
+    private void update(ChatVoiceControls view, String key, int duration, String samples) {
+        boolean active = key.equals(playingKey);
+        boolean loaded = active && prepared;
+        view.show(loaded && player.isPlaying(), active && preparing,
+                loaded ? player.getCurrentPosition() : 0, loaded ? player.getDuration() : duration,
+                rates.getOrDefault(key, 0), samples);
+    }
+
+    private void failPlayback(String message) {
+        stopPlayback();
+        notice(message);
+    }
+
     private void stopPlayback() {
+        playbackRequest++;
+        handler.removeCallbacks(playerTick);
         if (player != null) player.release();
         player = null;
-        if (playingFile != null) playingFile.delete();
-        playingFile = null;
+        if (playbackFile != null) playbackFile.delete();
+        playbackFile = null;
+        playingKey = null;
+        prepared = false;
+        preparing = false;
+        refreshPlayers();
+    }
+
+    private void clearDraft() {
+        handler.removeCallbacks(recordTick);
+        if (recorder != null) recorder.release();
+        recorder = null;
+        if ("draft".equals(playingKey)) stopPlayback();
+        if (draft != null) draft.delete();
+        draft = null;
+        thread = null;
+        preview = null;
+        sending = false;
+        if (composer != null) {
+            composer.removeAllViews();
+            composer.setVisibility(View.GONE);
+        }
+        if (input != null) setInputVisible(inputVisible);
     }
 
     void stop() {
-        if (current != null) current.stopping = true;
-        current = null;
-        if (dialog != null) dialog.dismiss();
-        dialog = null;
-        endRecognition();
+        awaitingPermission = null;
+        clearDraft();
         stopPlayback();
+        rates.clear();
     }
 
     void close() {
         stop();
-        captureWorker.shutdownNow();
-        io.shutdownNow();
-    }
-
-    private static byte[] wav(byte[] pcm, int rate) {
-        ByteBuffer wave = ByteBuffer.allocate(44 + pcm.length).order(ByteOrder.LITTLE_ENDIAN);
-        wave.put("RIFF".getBytes(StandardCharsets.US_ASCII)).putInt(36 + pcm.length)
-                .put("WAVEfmt ".getBytes(StandardCharsets.US_ASCII)).putInt(16)
-                .putShort((short) 1).putShort((short) 1).putInt(rate).putInt(rate * 2)
-                .putShort((short) 2).putShort((short) 16)
-                .put("data".getBytes(StandardCharsets.US_ASCII)).putInt(pcm.length).put(pcm);
-        return wave.array();
+        io.shutdown();
     }
 
     private boolean ready(FamilyChatStore.ThreadState thread) {
-        return fragment.isAdded() && fragment.getView() != null && fragment.isStartedForVoice()
-                && fragment.isVoiceThreadOpen(thread) && store.canUse(thread);
+        return thread != null && composer != null && fragment.isAdded() && fragment.getView() != null
+                && fragment.isStartedForVoice() && fragment.isVoiceThreadOpen(thread) && store.canUse(thread);
     }
 
     private void notice(String text) {
         if (fragment.isAdded()) Toast.makeText(fragment.requireContext(), text, Toast.LENGTH_SHORT).show();
     }
 
-    private static final class Recording {
-        Runnable ready;
-        int rate = RATE;
-        volatile boolean stopping;
-        volatile boolean discard;
+    private final class VoiceMessage extends LinearLayout {
+        private final ChatVoiceControls controls;
+        private final String key;
+        private final int duration;
+        private final String waveform;
+
+        VoiceMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+            super(fragment.requireContext());
+            setOrientation(VERTICAL);
+            key = message.snapshot.getRef().toString();
+            Integer millis = message.snapshot.child("voiceDuration").getValue(Integer.class);
+            duration = millis == null ? 0 : millis;
+            waveform = message.snapshot.child("voiceWave").getValue(String.class);
+            controls = new ChatVoiceControls(getContext());
+            controls.play.setOnClickListener(v -> open(thread, message));
+            controls.speed.setOnClickListener(v -> {
+                int old = rates.getOrDefault(key, 0);
+                rates.put(key, (old + 1) % 3);
+                if (key.equals(playingKey) && prepared && player.isPlaying()) {
+                    try {
+                        applyRate();
+                    } catch (RuntimeException error) {
+                        rates.put(key, old);
+                        notice("This playback speed is unavailable");
+                    }
+                }
+                update();
+            });
+            addView(controls, new LayoutParams(-1, -2));
+            if (!"Voice note".equals(message.body)) {
+                TextView transcript = new TextView(getContext());
+                transcript.setText(message.body);
+                addView(transcript);
+            }
+            update();
+        }
+
+        @Override protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            visiblePlayers.add(new WeakReference<>(this));
+            update();
+        }
+
+        @Override protected void onDetachedFromWindow() {
+            visiblePlayers.removeIf(ref -> ref.get() == this || ref.get() == null);
+            super.onDetachedFromWindow();
+        }
+
+        void update() {
+            ChatVoiceNotes.this.update(controls, key, duration, waveform);
+        }
     }
 }

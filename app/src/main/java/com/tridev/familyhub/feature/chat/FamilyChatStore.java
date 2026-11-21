@@ -506,13 +506,23 @@ public final class FamilyChatStore {
     }
 
     void send(ThreadState thread, String body, Map<String, Object> details, String file, Runnable failed) {
+        send(thread, body, details, file, failed, success -> {});
+    }
+
+    void send(ThreadState thread, String body, Map<String, Object> details, String file,
+              Runnable failed, Consumer<Boolean> completed) {
         if (uid == null || threads.get(thread.peer) != thread || thread.error) {
             failed.run();
+            completed.accept(false);
             return;
         }
         DatabaseReference message = thread.ref.push();
         String key = message.getKey();
-        if (key == null) return;
+        if (key == null) {
+            failed.run();
+            completed.accept(false);
+            return;
+        }
         pending.add(key);
         String sender = uid;
         Map<String, Object> payload = new HashMap<>();
@@ -532,6 +542,7 @@ public final class FamilyChatStore {
         write.addOnCompleteListener(task -> {
             pending.remove(key);
             if (!task.isSuccessful() && sender.equals(uid)) failed.run();
+            completed.accept(task.isSuccessful());
             notifyObservers();
         });
     }

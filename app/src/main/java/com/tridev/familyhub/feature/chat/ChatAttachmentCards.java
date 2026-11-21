@@ -143,8 +143,7 @@ final class ChatAttachmentCards {
                 }
                 break;
             case "voice":
-                details(card, "Voice note", message.body, null, "Play", open);
-                break;
+                return attachments.voiceMessage(thread, message);
             case "file":
                 details(card, "File", message.body, message.snapshot.child("mime").getValue(String.class),
                         "Open file", open);

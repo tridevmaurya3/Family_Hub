@@ -137,7 +137,13 @@
               ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
             },
             "mime": {
-              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && newData.val() === 'audio/wav') || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && (newData.val() === 'audio/wav' || newData.val() === 'audio/mp4')) || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+            },
+            "voiceDuration": {
+              ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isNumber() && newData.val() > 0"
+            },
+            "voiceWave": {
+              ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
             },
             "replyTo": {
               ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
@@ -252,7 +258,13 @@
                   ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
                 },
                 "mime": {
-                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && newData.val() === 'audio/wav') || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && (newData.val() === 'audio/wav' || newData.val() === 'audio/mp4')) || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                },
+                "voiceDuration": {
+                  ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isNumber() && newData.val() > 0"
+                },
+                "voiceWave": {
+                  ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
                 },
                 "replyTo": {
                   ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
@@ -384,7 +396,13 @@
                   ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
                 },
                 "mime": {
-                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && newData.val() === 'audio/wav') || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && (newData.val() === 'audio/wav' || newData.val() === 'audio/mp4')) || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+                },
+                "voiceDuration": {
+                  ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isNumber() && newData.val() > 0"
+                },
+                "voiceWave": {
+                  ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
                 },
                 "replyTo": {
                   ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
