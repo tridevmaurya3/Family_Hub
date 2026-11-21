@@ -309,6 +309,26 @@
         </activity>
 
         <activity
+            android:name=".feature.chat.ChatShareActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:icon="@drawable/ic_nav_chat"
+            android:label="Family Chat"
+            android:theme="@style/Theme.FamilyHub.FloatingChat"
+            android:windowSoftInputMode="adjustResize|stateAlwaysHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/*" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".feature.chat.FloatingChatActivity"
             android:exported="false"
             android:excludeFromRecents="true"

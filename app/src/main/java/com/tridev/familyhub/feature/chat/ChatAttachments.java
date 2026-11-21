@@ -838,7 +838,7 @@ final class ChatAttachments {
         }
     }
 
-    private static byte[] readFile(Context context, Uri uri) throws IOException {
+    static byte[] readFile(Context context, Uri uri) throws IOException {
         try (InputStream in = context.getContentResolver().openInputStream(uri);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             if (in == null) throw new IOException("Missing input");
@@ -870,7 +870,7 @@ final class ChatAttachments {
         }
     }
 
-    private static String fileName(Context context, Uri uri) {
+    static String fileName(Context context, Uri uri) {
         try (android.database.Cursor cursor = context.getContentResolver()
                 .query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {

@@ -590,6 +590,11 @@ public final class FamilyChatStore {
 
     void send(ThreadState thread, String body, Map<String, Object> details, String file,
               Runnable failed, Consumer<Boolean> completed) {
+        send(thread, body, details, file, "", failed, completed);
+    }
+
+    void send(ThreadState thread, String body, Map<String, Object> details, String file,
+              String caption, Runnable failed, Consumer<Boolean> completed) {
         if (uid == null || threads.get(thread.peer) != thread || thread.error
                 || (isConnection(thread) && "live".equals(details.get("kind")))) {
             failed.run();
@@ -617,6 +622,14 @@ public final class FamilyChatStore {
             Map<String, Object> changes = new HashMap<>();
             changes.put(relativePath(message), payload);
             changes.put(relativePath(thread.files.child(key)), file);
+            if (!caption.isEmpty()) {
+                DatabaseReference captionRef = thread.ref.push();
+                Map<String, Object> captionMessage = new HashMap<>();
+                captionMessage.put("sender", sender);
+                captionMessage.put("body", caption);
+                captionMessage.put("at", ServerValue.TIMESTAMP);
+                changes.put(relativePath(captionRef), captionMessage);
+            }
             write = root.updateChildren(changes);
         }
         write.addOnCompleteListener(task -> {
