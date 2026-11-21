@@ -281,7 +281,7 @@ final class ChatSmartActions {
         if (!thread.isGroup() && !thread.peer.equals(store.accountId())) {
             addAction(labels, actions, "Secure text chat", () -> ChatSecureText.open(fragment, store, thread));
         }
-        addAction(labels, actions, "Search messages", () -> search(thread, false));
+        addAction(labels, actions, "Search messages", () -> fragment.openMessageSearch());
         addAction(labels, actions, "Pinned messages", () -> pinned(thread));
         addAction(labels, actions, "Post announcement", () -> newSharedMessage(thread, false));
         addAction(labels, actions, "Create checklist", () -> newSharedMessage(thread, true));

@@ -86,13 +86,13 @@ public final class FloatingChatActivity extends AppCompatActivity {
         surface.setOrientation(LinearLayout.VERTICAL);
         surface.setBackground(background);
         surface.setClipToOutline(true);
-        surface.setPadding(dp(8), dp(6), dp(8), dp(14));
+        surface.setPadding(0, 0, 0, dp(14));
         root.addView(surface, new FrameLayout.LayoutParams(-1, -1));
 
         controls = new LinearLayout(this);
         controls.setGravity(Gravity.CENTER_VERTICAL);
-        controls.setPadding(dp(6), 0, dp(1), 0);
-        controls.setBackground(shape(12, 0xffc7d5dc, 0xfff5fcf8, 0xffe6f1f9));
+        controls.setPadding(dp(8), 0, dp(18), 0);
+        controls.setBackground(shape(0, 0xffc7d5dc, 0xfff5fcf8, 0xffe6f1f9));
         TextView drag = label("Family Chat", 13, GREEN);
         drag.setPadding(dp(5), 0, 0, 0);
         drag.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -103,7 +103,6 @@ public final class FloatingChatActivity extends AppCompatActivity {
         addControl("↗", "Open in Family Hub", this::openFullApp);
         addControl("×", "Close floating chat", this::finish);
         LinearLayout.LayoutParams controlRow = new LinearLayout.LayoutParams(-1, dp(38));
-        controlRow.setMargins(dp(14), 0, dp(14), 0);
         surface.addView(controls, controlRow);
 
         content = new FrameLayout(this);

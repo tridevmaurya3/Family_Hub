@@ -80,6 +80,15 @@ public final class FamilyChatFragment extends Fragment {
     private final java.util.Set<String> selectedMessageKeys = new java.util.HashSet<>();
     private ScrollView scroll;
     private final ChatDictation draftVoice = new ChatDictation(this);
+    private LinearLayout searchBar, searchNavigation;
+    private View searchBack, searchClear;
+    private TextView searchCount;
+    private final ChatKeywordSearch keywordSearch = new ChatKeywordSearch(store);
+    private boolean searching, searchLoaded;
+    private String activeMatch;
+    private int searchResultsPerChat = 40;
+    private List<FamilyChatStore.Message> threadMatches = java.util.Collections.emptyList();
+    private final Runnable searchHistory = this::loadSearchHistory;
     private EditText search, draft;
     private LinearLayout chatFilters;
     private ChatFilter chatFilter = ChatFilter.ALL;
@@ -197,7 +206,14 @@ public final class FamilyChatFragment extends Fragment {
         });
         header.addHeaderAction(toolsButton);
         compactHeader(header);
-        screen.addView(header);
+        LinearLayout.LayoutParams headerSize = new LinearLayout.LayoutParams(-1, -2);
+        if (FloatingChatSizing.applies(requireContext())) {
+            headerSize.setMargins(-dp(5), -dp(4), -dp(5), 0);
+            com.google.android.material.card.MaterialCardView surface = header.findViewById(R.id.module_overview_surface);
+            surface.setRadius(0);
+            surface.setStrokeWidth(0);
+        }
+        screen.addView(header, headerSize);
         selectionToolbar = new LinearLayout(requireContext());
         selectionToolbar.setGravity(Gravity.CENTER_VERTICAL);
         selectionToolbar.setPadding(dp(5), dp(3), dp(5), dp(3));
@@ -211,13 +227,45 @@ public final class FamilyChatFragment extends Fragment {
         search = new EditText(requireContext());
         search.setSingleLine();
         search.setTextSize(FloatingChatSizing.text(requireContext(), 15));
-        search.setHint("Search chats");
+        search.setHint("Search messages");
         search.setPadding(space(12), 0, space(12), 0);
-        search.setBackground(card(WHITE, EDGE, 14));
-        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, target(48));
-        searchParams.topMargin = dp(8);
-        screen.addView(search, searchParams);
-        search.addTextChangedListener(watcher(this::render));
+        search.setBackground(null);
+        searchBar = new LinearLayout(requireContext());
+        searchBar.setGravity(Gravity.CENTER_VERTICAL);
+        searchBar.setBackground(card(WHITE, EDGE, 14));
+        searchBack = searchButton("‹", "Close search", this::closeMessageSearch);
+        searchBar.addView(searchBack, new LinearLayout.LayoutParams(target(48), target(48)));
+        searchBar.addView(search, new LinearLayout.LayoutParams(0, target(48), 1));
+        searchClear = searchButton("×", "Clear search", () -> search.setText(""));
+        searchBar.addView(searchClear, new LinearLayout.LayoutParams(target(48), target(48)));
+        screen.addView(searchBar, new LinearLayout.LayoutParams(-1, -2));
+        searchNavigation = new LinearLayout(requireContext());
+        searchNavigation.setGravity(Gravity.CENTER_VERTICAL);
+        searchCount = text("", 13, GREEN, true);
+        searchCount.setPadding(space(8), 0, 0, 0);
+        searchNavigation.addView(searchCount, new LinearLayout.LayoutParams(0, -2, 1));
+        searchNavigation.addView(searchButton("↑", "Previous match", () -> stepSearch(-1)),
+                new LinearLayout.LayoutParams(target(48), target(48)));
+        searchNavigation.addView(searchButton("↓", "Next match", () -> stepSearch(1)),
+                new LinearLayout.LayoutParams(target(48), target(48)));
+        screen.addView(searchNavigation);
+        search.setOnFocusChangeListener((view, focused) -> {
+            if (focused && !searching && peer == null && !choosingLiveRecipient) openMessageSearch();
+        });
+        search.addTextChangedListener(watcher(() -> {
+            if (!searching) {
+                if (choosingLiveRecipient) render();
+                return;
+            }
+            activeMatch = null;
+            searchResultsPerChat = 40;
+            screen.removeCallbacks(searchHistory);
+            if (!searchLoaded && !search.getText().toString().trim().isEmpty()) {
+                screen.postDelayed(searchHistory, 220);
+            }
+            render();
+            revealActiveMatch();
+        }));
         chatFilters = new LinearLayout(requireContext());
         LinearLayout.LayoutParams filterSize = new LinearLayout.LayoutParams(-1, -2);
         filterSize.topMargin = dp(5);
@@ -464,6 +512,7 @@ public final class FamilyChatFragment extends Fragment {
         backCallback = new OnBackPressedCallback(peer != null || choosingLiveRecipient) {
             @Override public void handleOnBackPressed() {
                 if (secondaryBack != null) secondaryBack.run();
+                else if (searching) closeMessageSearch();
                 else if (!selectedMessageKeys.isEmpty()) clearMessageSelection();
                 else if (choosingLiveRecipient) cancelLiveRecipient();
                 else open(null);
@@ -521,9 +570,14 @@ public final class FamilyChatFragment extends Fragment {
         pageRoot = null;
         draftVoice.bind(null, null);
         voiceNotes.bind(null, null, null);
+        screen.removeCallbacks(searchHistory);
         screen = null;
         historicalPin = null;
         displayedMessages = java.util.Collections.emptyList();
+        keywordSearch.clear();
+        searchLoaded = false;
+        activeMatch = null;
+        searching = false;
         bubbles.clear();
         super.onDestroyView();
     }
@@ -694,6 +748,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
+        resetMessageSearch();
         historicalPin = null;
         selectedMessageKeys.clear();
         clearSecondaryPage();
@@ -754,8 +809,11 @@ public final class FamilyChatFragment extends Fragment {
         }
         boolean inThread = peer != null;
         if (secondaryAllowed != null && !secondaryAllowed.getAsBoolean()) clearSecondaryPage();
-        if (backCallback != null) backCallback.setEnabled(secondaryPage != null || inThread || choosingLiveRecipient);
+        if (backCallback != null) backCallback.setEnabled(secondaryPage != null || inThread || choosingLiveRecipient || searching);
         FamilyChatStore.ThreadState thread = store.thread(peer);
+        header.findViewById(R.id.module_overview_icon_container).setVisibility(
+                FloatingChatSizing.applies(requireContext()) && !inThread && !choosingLiveRecipient ? View.GONE : View.VISIBLE);
+        header.findViewById(R.id.module_overview_search).setVisibility(View.GONE);
         if (inThread || choosingLiveRecipient) {
             header.setNavigationAction(R.drawable.ic_arrow_back, R.string.back, v -> {
                 if (inThread) open(null);
@@ -764,9 +822,6 @@ public final class FamilyChatFragment extends Fragment {
         } else {
             header.setNavigationAction(R.drawable.ic_menu_hamburger, R.string.feature_menu_title, v -> {
                 if (requireActivity() instanceof MainActivity) ((MainActivity) requireActivity()).showFeatureMenu();
-                else if (requireActivity() instanceof FloatingChatActivity) {
-                    ((FloatingChatActivity) requireActivity()).showSettings();
-                }
             });
         }
         newGroup.setText(choosingLiveRecipient ? "Cancel" : "New group");
@@ -777,7 +832,8 @@ public final class FamilyChatFragment extends Fragment {
                 ? View.VISIBLE : View.GONE);
         boolean chatReady = thread != null && !thread.error;
         toolsButton.setVisibility(chatReady ? View.VISIBLE : View.GONE);
-        pinBanner.setVisibility(chatReady ? View.VISIBLE : View.GONE);
+        if (chatReady) header.setSearchAction(v -> openMessageSearch());
+        pinBanner.setVisibility(chatReady && !searching ? View.VISIBLE : View.GONE);
         FamilyChatStore.Message latestPin = chatReady ? latestVisiblePin(thread) : null;
         pinBanner.setText(latestPin == null ? "Pinned messages" : "Pinned · " + latestPin.body);
         headerAvatar.removeAllViews();
@@ -787,8 +843,12 @@ public final class FamilyChatFragment extends Fragment {
                     : threadAvatar(thread, size));
         }
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
-        search.setVisibility(inThread ? View.GONE : View.VISIBLE);
-        chatFilters.setVisibility(inThread || choosingLiveRecipient ? View.GONE : View.VISIBLE);
+        searchBar.setVisibility(!inThread || searching ? View.VISIBLE : View.GONE);
+        search.setHint(choosingLiveRecipient ? "Search recipients" : "Search messages");
+        searchBack.setVisibility(searching ? View.VISIBLE : View.GONE);
+        searchClear.setVisibility(searching ? View.VISIBLE : View.GONE);
+        searchNavigation.setVisibility(searching && inThread ? View.VISIBLE : View.GONE);
+        chatFilters.setVisibility(inThread || choosingLiveRecipient || searching ? View.GONE : View.VISIBLE);
         for (ChatFilter filter : ChatFilter.values()) {
             TextView chip = (TextView) chatFilters.getChildAt(filter.ordinal());
             boolean selected = filter == chatFilter;
@@ -821,7 +881,8 @@ public final class FamilyChatFragment extends Fragment {
         bubbles.clear();
         displayedMessages = java.util.Collections.emptyList();
         if (!inThread) {
-            renderList();
+            if (searching && searchPattern() != null) renderSearchResults();
+            else renderList();
             scroll.post(() -> { if (screen != null && peer == null) scroll.scrollTo(0, oldY); });
         } else if (thread != null && !thread.error) {
             renderThread(thread, oldY, atBottom);
@@ -833,8 +894,173 @@ public final class FamilyChatFragment extends Fragment {
         updateJumpToLatest();
     }
 
+    private TextView searchButton(String symbol, String description, Runnable action) {
+        TextView button = text(symbol, 22, GREEN, true);
+        button.setGravity(Gravity.CENTER);
+        button.setContentDescription(description);
+        button.setFocusable(true);
+        button.setOnClickListener(view -> action.run());
+        return button;
+    }
+
+    void openMessageSearch() {
+        if (screen == null || searching) return;
+        clearMessageSelection();
+        searching = true;
+        render();
+        search.requestFocus();
+        search.post(() -> {
+            if (screen == null || !searching) return;
+            androidx.core.view.WindowInsetsControllerCompat controller =
+                    androidx.core.view.ViewCompat.getWindowInsetsController(search);
+            if (controller != null) controller.show(androidx.core.view.WindowInsetsCompat.Type.ime());
+        });
+    }
+
+    private void resetMessageSearch() {
+        if (!searching) return;
+        searching = false;
+        searchLoaded = false;
+        activeMatch = null;
+        threadMatches = java.util.Collections.emptyList();
+        keywordSearch.clear();
+        screen.removeCallbacks(searchHistory);
+        screen.requestFocus();
+        search.setText("");
+        androidx.core.view.WindowInsetsControllerCompat controller =
+                androidx.core.view.ViewCompat.getWindowInsetsController(search);
+        if (controller != null) controller.hide(androidx.core.view.WindowInsetsCompat.Type.ime());
+    }
+
+    private void closeMessageSearch() {
+        resetMessageSearch();
+        render();
+    }
+
+    private java.util.regex.Pattern searchPattern() {
+        String query = search.getText().toString().trim();
+        return query.isEmpty() ? null : ChatKeywordSearch.keyword(query);
+    }
+
+    private void loadSearchHistory() {
+        if (screen == null || !searching || searchLoaded || searchPattern() == null) return;
+        searchLoaded = true;
+        List<FamilyChatStore.ThreadState> scope = new ArrayList<>();
+        for (FamilyChatStore.ThreadState thread : store.threads()) {
+            if ((peer == null || thread.peer.equals(peer)) && store.canUse(thread)) scope.add(thread);
+        }
+        keywordSearch.load(scope, () -> {
+            if (screen == null || !searching) return;
+            boolean reveal = activeMatch == null;
+            render();
+            if (reveal) revealActiveMatch();
+        });
+    }
+
+    private int searchMatchIndex() {
+        for (int i = 0; i < threadMatches.size(); i++) {
+            if (java.util.Objects.equals(activeMatch, threadMatches.get(i).snapshot.getKey())) return i;
+        }
+        return -1;
+    }
+
+    private void stepSearch(int offset) {
+        if (threadMatches.isEmpty()) return;
+        int index = Math.floorMod(searchMatchIndex() + offset, threadMatches.size());
+        activeMatch = threadMatches.get(index).snapshot.getKey();
+        render();
+        revealActiveMatch();
+    }
+
+    private void revealActiveMatch() {
+        String key = activeMatch;
+        if (key != null) scroll.post(() -> {
+            if (screen != null && searching && key.equals(activeMatch)) reveal(key);
+        });
+    }
+
+    private String searchStatus() {
+        if (searchPattern() == null) return "Type a keyword";
+        if (!searchLoaded || keywordSearch.loading) return "Searching messages…";
+        return keywordSearch.incomplete ? "Some chat history could not be searched" : "No matching messages";
+    }
+
+    private void includeHistoricalMessage(FamilyChatStore.Message extra) {
+        if (extra == null || displayedMessages.stream().anyMatch(message ->
+                java.util.Objects.equals(message.snapshot.getKey(), extra.snapshot.getKey()))) return;
+        displayedMessages.add(extra);
+        displayedMessages.sort(java.util.Comparator.comparingLong((FamilyChatStore.Message message) -> message.at)
+                .thenComparing(message -> message.snapshot.getKey()));
+    }
+
+    private void renderSearchResults() {
+        java.util.regex.Pattern keyword = searchPattern();
+        LinearLayout results = column();
+        int count = 0;
+        boolean more = false;
+        for (FamilyChatStore.ThreadState thread : store.threads()) {
+            if (!store.canUse(thread)) continue;
+            List<FamilyChatStore.Message> matches = keywordSearch.matches(thread, keyword, this::hiddenForMe);
+            if (matches.isEmpty()) continue;
+            count += matches.size();
+            TextView heading = text(store.isSelf(thread) ? ownStatusName() + " (You)" : store.title(thread),
+                    16, GREEN, true);
+            heading.setPadding(space(8), space(10), 0, space(3));
+            results.addView(heading);
+            more |= matches.size() > searchResultsPerChat;
+            for (FamilyChatStore.Message message : matches.subList(0, Math.min(matches.size(), searchResultsPerChat))) {
+                LinearLayout row = column();
+                row.setPadding(space(12), space(8), space(12), space(8));
+                row.setBackground(card(WHITE, EDGE, 14));
+                String sender = store.own(message) ? "You" : store.name(message.sender);
+                row.addView(text(sender + " · " + dateTime(message.at), 12, MUTED, true));
+                TextView snippet = text("", 15, INK, false);
+                java.util.regex.Matcher match = keyword.matcher(message.body);
+                if (match.find()) {
+                    int start = Math.max(0, match.start() - 45);
+                    int end = Math.min(message.body.length(), Math.max(match.end(), start + 145));
+                    String excerpt = (start > 0 ? "…" : "") + message.body.substring(start, end)
+                            + (end < message.body.length() ? "…" : "");
+                    snippet.setText(ChatKeywordSearch.highlight(excerpt, keyword));
+                }
+                row.addView(snippet);
+                row.setFocusable(true);
+                row.setOnClickListener(view -> openSearchResult(thread, message.snapshot.getKey()));
+                LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2);
+                size.topMargin = space(5);
+                results.addView(row, size);
+            }
+        }
+        addLine(text(count == 0 ? searchStatus() : "Messages · " + count + (count == 1 ? " match" : " matches")
+                + (keywordSearch.loading || !searchLoaded ? " · Searching…" : keywordSearch.incomplete ? " · Partial" : ""),
+                14, GREEN, true));
+        addLine(results);
+        if (more) {
+            MaterialButton showMore = flatButton("Show more matches");
+            showMore.setOnClickListener(view -> {
+                searchResultsPerChat += 40;
+                render();
+            });
+            addLine(showMore);
+        }
+    }
+
+    private void openSearchResult(FamilyChatStore.ThreadState thread, String key) {
+        String query = search.getText().toString();
+        store.loadMessage(thread, key, message -> {
+            if (screen == null || !searching || peer != null || !store.canUse(thread)
+                    || !query.contentEquals(search.getText())) return;
+            if (message == null || message.deleted() || hiddenForMe(message)) {
+                Toast.makeText(requireContext(), "Message unavailable", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            open(thread.peer);
+            jumpToPin(thread, message);
+        });
+    }
+
     private void renderList() {
-        String filter = search.getText().toString().trim().toLowerCase(Locale.ROOT);
+        String filter = choosingLiveRecipient ? search.getText().toString().trim().toLowerCase(Locale.ROOT) : "";
         ChatFilter category = choosingLiveRecipient ? ChatFilter.ALL : chatFilter;
         String uid = store.accountId();
         String selfName = uid == null ? "" : ownStatusName();
@@ -1300,7 +1526,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void selectMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
-        if (!isVoiceThreadOpen(thread) || message.deleted() || hiddenForMe(message)) return;
+        if (searching || !isVoiceThreadOpen(thread) || message.deleted() || hiddenForMe(message)) return;
         String key = message.snapshot.getKey();
         if (!selectedMessageKeys.add(key)) selectedMessageKeys.remove(key);
         updateMessageSelection();
@@ -1329,11 +1555,12 @@ public final class FamilyChatFragment extends Fragment {
         selectedMessageKeys.retainAll(valid);
         for (View bubble : bubbles) {
             if (bubble == null) continue;
-            boolean highlighted = selectedMessageKeys.contains(bubble.getTag());
+            boolean highlighted = selectedMessageKeys.contains(bubble.getTag())
+                    || (searching && activeMatch != null && activeMatch.equals(bubble.getTag()));
             bubble.setSelected(highlighted);
             bubble.setForeground(highlighted ? card(0x2465ae85, 0xff42977c, 15) : null);
         }
-        header.setVisibility(selected.isEmpty() ? View.VISIBLE : View.GONE);
+        header.setVisibility(selected.isEmpty() && !searching ? View.VISIBLE : View.GONE);
         selectionToolbar.setVisibility(selected.isEmpty() ? View.GONE : View.VISIBLE);
         selectionToolbar.removeAllViews();
         if (selected.isEmpty()) return;
@@ -1364,12 +1591,24 @@ public final class FamilyChatFragment extends Fragment {
         int compactWidth = Math.min(dp(420), Math.round(screenWidth * 0.82f));
         int compactMediaWidth = Math.max(1, compactWidth - dp(20));
         displayedMessages = new ArrayList<>(thread.messages);
-        if (historicalPin != null && displayedMessages.stream().noneMatch(message ->
-                java.util.Objects.equals(message.snapshot.getKey(), historicalPin.snapshot.getKey()))) {
-            displayedMessages.add(historicalPin);
-            displayedMessages.sort(java.util.Comparator.comparingLong((FamilyChatStore.Message message) -> message.at)
-                    .thenComparing(message -> message.snapshot.getKey()));
+        java.util.regex.Pattern keyword = searching ? searchPattern() : null;
+        FamilyChatStore.Message searchHit = null;
+        if (searching) {
+            threadMatches = keyword == null ? java.util.Collections.emptyList()
+                    : keywordSearch.matches(thread, keyword, this::hiddenForMe);
+            int selected = searchMatchIndex();
+            if (!threadMatches.isEmpty()) {
+                searchHit = threadMatches.get(Math.max(0, selected));
+                activeMatch = searchHit.snapshot.getKey();
+            }
+            searchCount.setText(searchHit == null ? searchStatus()
+                    : (Math.max(0, selected) + 1) + " / " + threadMatches.size()
+                            + (keywordSearch.loading ? " · Searching…" : keywordSearch.incomplete ? " · Partial" : ""));
+            searchNavigation.getChildAt(1).setEnabled(threadMatches.size() > 1);
+            searchNavigation.getChildAt(2).setEnabled(threadMatches.size() > 1);
         }
+        includeHistoricalMessage(historicalPin);
+        includeHistoricalMessage(searchHit);
         java.util.Map<String, FamilyChatStore.Message> known = new java.util.HashMap<>();
         for (FamilyChatStore.Message item : displayedMessages) known.put(item.snapshot.getKey(), item);
         for (FamilyChatStore.Message message : displayedMessages) {
@@ -1402,8 +1641,14 @@ public final class FamilyChatFragment extends Fragment {
             View attachment = cards.create(thread, message, compactMediaWidth);
             if (attachment != null) {
                 bubble.addView(attachment, new LinearLayout.LayoutParams(-1, -2));
+                if (keyword != null && !message.deleted() && keyword.matcher(message.body).find()) {
+                    TextView match = text(message.body, 14, INK, false);
+                    match.setText(ChatKeywordSearch.highlight(message.body, keyword));
+                    bubble.addView(match);
+                }
             } else {
                 TextView messageText = text(message.body, 17, INK, false);
+                if (keyword != null && !message.deleted()) messageText.setText(ChatKeywordSearch.highlight(message.body, keyword));
                 messageText.setTextIsSelectable(true);
                 bubble.addView(messageText);
             }
