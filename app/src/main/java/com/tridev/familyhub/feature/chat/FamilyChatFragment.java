@@ -68,6 +68,10 @@ public final class FamilyChatFragment extends Fragment {
     private LinearLayout headerAvatar;
     private final List<View> bubbles = new ArrayList<>();
     private LinearLayout screen, rows, bottom;
+    private android.widget.FrameLayout pageRoot;
+    private View secondaryPage;
+    private Runnable secondaryBack;
+    private java.util.function.BooleanSupplier secondaryAllowed;
     private ModuleOverviewView header;
     private ScrollView scroll;
     private final ChatDictation draftVoice = new ChatDictation(this);
@@ -121,7 +125,9 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                                        @Nullable Bundle state) {
+        pageRoot = new android.widget.FrameLayout(requireContext());
         screen = column();
+        pageRoot.addView(screen, new android.widget.FrameLayout.LayoutParams(-1, -1));
         screen.setPadding(dp(10), dp(8), dp(10), dp(6));
         header = (ModuleOverviewView) inflater.inflate(R.layout.view_family_chat_header, screen, false);
         newGroup = new MaterialButton(requireContext(), null,
@@ -309,13 +315,14 @@ public final class FamilyChatFragment extends Fragment {
             });
         });
         draft.addTextChangedListener(watcher(this::updateSend));
-        return screen;
+        return pageRoot;
     }
 
     @Override public void onViewCreated(@NonNull View view, @Nullable Bundle state) {
         backCallback = new OnBackPressedCallback(peer != null || choosingLiveRecipient) {
             @Override public void handleOnBackPressed() {
-                if (choosingLiveRecipient) cancelLiveRecipient();
+                if (secondaryBack != null) secondaryBack.run();
+                else if (choosingLiveRecipient) cancelLiveRecipient();
                 else open(null);
             }
         };
@@ -355,6 +362,7 @@ public final class FamilyChatFragment extends Fragment {
         linkedTasks.clear();
         avatars().removeListener(avatarObserver);
         attachments.stopPreviews();
+        chatStatus.stopVideo();
         voiceNotes.stop();
         draftVoice.stop();
         super.onStop();
@@ -363,6 +371,8 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onDestroyView() {
         groupScreens.dismiss();
         chatStatus.dismiss();
+        clearSecondaryPage();
+        pageRoot = null;
         draftVoice.bind(null, null);
         voiceNotes.bind(null, null);
         screen = null;
@@ -390,7 +400,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     public boolean isConversationOpen() {
-        return peer != null;
+        return peer != null || secondaryPage != null;
     }
 
     private MaterialButton flatButton(String title) {
@@ -455,6 +465,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
+        clearSecondaryPage();
         voiceNotes.stop();
         draftVoice.stop();
         if (destination == null) {
@@ -506,7 +517,8 @@ public final class FamilyChatFragment extends Fragment {
             }
         }
         boolean inThread = peer != null;
-        if (backCallback != null) backCallback.setEnabled(inThread || choosingLiveRecipient);
+        if (secondaryAllowed != null && !secondaryAllowed.getAsBoolean()) clearSecondaryPage();
+        if (backCallback != null) backCallback.setEnabled(secondaryPage != null || inThread || choosingLiveRecipient);
         FamilyChatStore.ThreadState thread = store.thread(peer);
         if (inThread || choosingLiveRecipient) {
             header.setNavigationAction(R.drawable.ic_arrow_back, R.string.back, v -> {
@@ -541,8 +553,17 @@ public final class FamilyChatFragment extends Fragment {
         if (!chatReady) voiceNotes.stop();
         voiceNotes.setInputVisible(chatReady);
         header.setTitle(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
+        boolean memberDetails = chatReady && !thread.isGroup() && store.groupCandidates().containsKey(thread.peer);
+        View.OnClickListener showDetails = memberDetails ? v -> showMemberDetails(thread) : null;
+        header.setOnClickListener(showDetails);
+        header.setClickable(memberDetails);
+        header.setFocusable(memberDetails);
+        headerAvatar.setOnClickListener(showDetails);
+        headerAvatar.setClickable(memberDetails);
+        headerAvatar.setFocusable(memberDetails);
+        headerAvatar.setContentDescription(memberDetails ? "View member details" : null);
         String currentStatus = store.status();
-        header.setDetail(!currentStatus.isEmpty() ? currentStatus
+        header.setDetail(memberDetails ? "Tap to view details ›" : !currentStatus.isEmpty() ? currentStatus
                 : thread != null && thread.isGroup() ? store.groupMembers(thread).size() + " members · Group info"
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
         updateSend();
@@ -583,6 +604,128 @@ public final class FamilyChatFragment extends Fragment {
         if (rows.getChildCount() == 0 && store.status().isEmpty()) {
             addLine(text("No matching chats", 14, MUTED, false));
         }
+    }
+
+    void showSecondaryPage(String title, ScrollView scroll, Runnable back,
+                           java.util.function.BooleanSupplier allowed) {
+        if (pageRoot == null || !allowed.getAsBoolean()) return;
+        clearSecondaryPage();
+        LinearLayout page = column();
+        page.setBackgroundResource(R.drawable.bg_page_three_tone);
+        page.setPadding(dp(12), dp(8), dp(12), dp(6));
+        ModuleOverviewView pageHeader = (ModuleOverviewView) getLayoutInflater()
+                .inflate(R.layout.view_family_chat_header, page, false);
+        pageHeader.setTitle(title);
+        pageHeader.setDetail("Family Chat");
+        pageHeader.showDashboardActions(false);
+        pageHeader.setNavigationAction(R.drawable.ic_arrow_back, R.string.back, v -> back.run());
+        page.addView(pageHeader);
+        page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        page.setFocusableInTouchMode(true);
+        screen.setVisibility(View.GONE);
+        secondaryPage = page;
+        secondaryBack = back;
+        secondaryAllowed = allowed;
+        pageRoot.addView(page, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        page.requestFocus();
+        if (backCallback != null) backCallback.setEnabled(true);
+    }
+
+    boolean isSecondaryPage(View child) {
+        for (View view = child; view != null; ) {
+            if (view == secondaryPage) return true;
+            view = view.getParent() instanceof View ? (View) view.getParent() : null;
+        }
+        return false;
+    }
+
+    void closeSecondaryPage() {
+        clearSecondaryPage();
+        render();
+    }
+
+    private void clearSecondaryPage() {
+        if (secondaryPage == null) return;
+        androidx.core.view.WindowInsetsControllerCompat controller =
+                androidx.core.view.ViewCompat.getWindowInsetsController(secondaryPage);
+        if (controller != null) controller.hide(androidx.core.view.WindowInsetsCompat.Type.ime());
+        secondaryBack = null;
+        secondaryAllowed = null;
+        View previous = secondaryPage;
+        secondaryPage = null;
+        pageRoot.removeView(previous);
+        screen.setVisibility(View.VISIBLE);
+    }
+
+    String ownStatusName() {
+        String name = com.tridev.familyhub.feature.profile.AccountProfileSync.get(requireContext()).displayName();
+        return name == null || name.trim().isEmpty() ? store.name(store.accountId()) : name;
+    }
+
+    View statusAvatar(String uid, String name, int size, boolean own) {
+        return groupScreens.avatar(name, own ? avatars().ownPhoto() : avatars().photo(uid), size, null);
+    }
+
+    private void showMemberDetails(FamilyChatStore.ThreadState thread) {
+        String uid = thread.peer;
+        java.util.function.BooleanSupplier allowed = () -> store.canUse(thread)
+                && store.groupCandidates().containsKey(uid);
+        if (!allowed.getAsBoolean()) return;
+        voiceNotes.stop();
+        draftVoice.stop();
+        ScrollView profile = new ScrollView(requireContext());
+        LinearLayout content = column();
+        content.setPadding(0, dp(12), 0, dp(12));
+        profile.addView(content);
+        LinearLayout hero = column();
+        hero.setGravity(Gravity.CENTER);
+        hero.setPadding(dp(12), dp(20), dp(12), dp(18));
+        hero.setBackground(card(0xffe2f4ee, EDGE, 18));
+        hero.addView(threadAvatar(thread, 80));
+        TextView name = text(store.name(uid), 23, GREEN, true);
+        name.setGravity(Gravity.CENTER);
+        hero.addView(name);
+        content.addView(hero);
+        LinearLayout details = column();
+        content.addView(details);
+        MaterialButton familyLive = flatButton("View Family Live details ›");
+        familyLive.setOnClickListener(v -> {
+            if (allowed.getAsBoolean()) startActivity(
+                    com.tridev.familyhub.feature.familylive.FamilyMemberDetailActivity.createIntent(requireContext(), uid));
+        });
+        content.addView(familyLive);
+        showSecondaryPage("Member details", profile, this::closeSecondaryPage, allowed);
+        new com.tridev.familyhub.data.repository.FamilyMemberRepository(requireContext())
+                .loadMembers("", members -> {
+                    if (!isSecondaryPage(profile) || !allowed.getAsBoolean()) return;
+                    for (com.tridev.familyhub.data.local.entity.FamilyMember member : members) {
+                        if (!uid.equals(member.cloudUid)) continue;
+                        addMemberField(details, "Relationship", member.relation);
+                        addMemberField(details, "Phone", member.phone);
+                        addMemberField(details, "Email", member.email);
+                        addMemberField(details, "Date of birth", member.dateOfBirth);
+                        addMemberField(details, "Gender", member.gender);
+                        addMemberField(details, "Blood group", member.bloodGroup);
+                        addMemberField(details, "Address", member.address);
+                        addMemberField(details, "Emergency contact", member.emergencyContactName);
+                        addMemberField(details, "Emergency phone", member.emergencyContactPhone);
+                        return;
+                    }
+                });
+    }
+
+    private void addMemberField(LinearLayout details, String label, String value) {
+        if (value == null || value.trim().isEmpty()) return;
+        LinearLayout field = column();
+        field.setBackground(card(WHITE, EDGE, 14));
+        field.setPadding(dp(14), dp(10), dp(14), dp(10));
+        field.addView(text(label, 13, MUTED, false));
+        TextView textValue = text(value, 16, INK, true);
+        textValue.setTextIsSelectable(true);
+        field.addView(textValue);
+        LinearLayout.LayoutParams spacing = new LinearLayout.LayoutParams(-1, -2);
+        spacing.topMargin = dp(8);
+        details.addView(field, spacing);
     }
 
     private FamilyAvatarStore avatars() { return FamilyAvatarStore.get(requireContext()); }
@@ -797,7 +940,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void markVisibleRead() {
-        if (screen == null || !isResumed() || peer == null || !screen.hasWindowFocus()) return;
+        if (screen == null || secondaryPage != null || !isResumed() || peer == null || !screen.hasWindowFocus()) return;
         FamilyChatStore.ThreadState thread = store.thread(peer);
         if (thread == null || bubbles.size() != thread.messages.size()) return;
         android.graphics.Rect viewport = new android.graphics.Rect();

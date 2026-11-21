@@ -18,16 +18,11 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.text.InputFilter;
 import android.view.View;
-import android.view.Window;
-import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.appcompat.app.AlertDialog;
 
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -54,8 +49,8 @@ final class ChatStatus {
     private static final int MAX_VIDEO_DURATION_MS = 15000;
     private final ActivityResultLauncher<String> mediaPicker;
     private java.util.function.Consumer<Uri> mediaSelection;
-    private AlertDialog dialog;
-    private AlertDialog videoPlayback;
+    private android.widget.VideoView videoPlayer;
+    private java.io.File videoFile;
 
     ChatStatus(FamilyChatFragment host, FamilyChatStore store) {
         this.host = host;
@@ -71,32 +66,42 @@ final class ChatStatus {
         String uid = store.accountId();
         String family = store.statusFamily();
         if (uid == null || family == null) return;
+        mediaSelection = null;
         DatabaseReference statuses = FirebaseDatabase.getInstance().getReference("familyTextStatus").child(family);
         LinearLayout rows = new LinearLayout(host.requireContext());
         rows.setOrientation(LinearLayout.VERTICAL);
-        int padding = Math.round(16 * rows.getResources().getDisplayMetrics().density);
-        rows.setPadding(padding, 0, padding, padding);
+        rows.setPadding(0, dp(12), 0, dp(16));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(rows);
-        dialog = statusDialog("Family Status", scroll)
-                .setNeutralButton("Remove mine", (d, w) -> {
-                    if (active(family, uid)) statuses.child(uid).removeValue()
-                            .addOnFailureListener(error -> notice("Unable to remove status"));
-                })
-                .setNegativeButton("Close", null)
-                .setPositiveButton("New status", (d, w) -> {
-                    if (active(family, uid)) compose(statuses.child(uid), family, uid);
-                }).show();
-        styleWindow(dialog);
-        AlertDialog listing = dialog;
-        TextView empty = section("No active statuses", 15, MUTED);
+        host.showSecondaryPage("Family Status", scroll, host::closeSecondaryPage, () -> active(family, uid));
+
+        LinearLayout mine = new LinearLayout(rows.getContext());
+        mine.setOrientation(LinearLayout.VERTICAL);
+        mine.setPadding(dp(12), dp(5), dp(12), dp(10));
+        mine.setBackground(surface(20, EDGE, 0xffdcf3e9, 0xffeef7ff));
+        rows.addView(mine);
+        String ownName = host.ownStatusName();
+        mine.addView(statusRow(uid, ownName, "My status", true, null));
+        addAction(mine, "+ Create new story", true, () -> compose(statuses.child(uid), family, uid));
+
+        rows.addView(section("Family updates", 18, GREEN), cardSpacing());
+        LinearLayout updates = new LinearLayout(rows.getContext());
+        updates.setOrientation(LinearLayout.VERTICAL);
+        rows.addView(updates);
+        TextView empty = section("Loading family updates…", 15, MUTED);
         rows.addView(empty);
-        Map<String, String> members = new LinkedHashMap<>();
-        members.put(uid, "You");
-        members.putAll(store.groupCandidates());
+        Map<String, String> members = new LinkedHashMap<>(store.groupCandidates());
+        members.remove(uid);
+        int[] pending = {members.size()};
+        if (pending[0] == 0) empty.setText("No active family updates");
+        members.put(uid, ownName);
         for (Map.Entry<String, String> member : members.entrySet()) {
-            statuses.child(member.getKey()).get().addOnSuccessListener(snapshot -> {
-                if (!listing.isShowing() || !active(family, uid)) return;
+            boolean own = uid.equals(member.getKey());
+            statuses.child(member.getKey()).get().addOnCompleteListener(task -> {
+                if (!host.isSecondaryPage(scroll) || !active(family, uid)) return;
+                if (!own && --pending[0] == 0) empty.setText("No active family updates");
+                if (!task.isSuccessful()) return;
+                com.google.firebase.database.DataSnapshot snapshot = task.getResult();
                 String body = snapshot.child("body").getValue(String.class);
                 String photo = snapshot.child("photo").getValue(String.class);
                 String video = snapshot.child("video").getValue(String.class);
@@ -104,22 +109,83 @@ final class ChatStatus {
                 if (body == null || postedAt == null) return;
                 long remaining = postedAt + 86400000L - System.currentTimeMillis();
                 if (remaining <= 0) return;
+                String memberId = member.getKey();
                 DatabaseReference receipts = statuses.getRoot().child("familyStatusReceipts")
-                        .child(family).child(member.getKey()).child(Long.toString(postedAt));
+                        .child(family).child(memberId).child(Long.toString(postedAt));
                 String time = android.text.format.DateUtils.getRelativeTimeSpanString(
                         postedAt, System.currentTimeMillis(), 60000).toString();
-                android.view.View entry = addAction(rows, member.getValue() + "  ·  " + (video != null ? "Video  ·  " : photo != null ? "Photo  ·  " : "") + time, false, () -> {
-                    if (!active(family, uid) || postedAt + 86400000L <= System.currentTimeMillis()) return;
-                    listing.dismiss();
-                    showStatus(family, uid, member.getKey(), member.getValue(), body, photo, video, receipts);
-                });
-                empty.setVisibility(View.GONE);
-                rows.postDelayed(() -> {
-                    rows.removeView(entry);
-                    if (rows.getChildCount() == 1) empty.setVisibility(View.VISIBLE);
-                }, remaining);
+                String type = video != null ? "Video" : photo != null ? "Photo" : "Text";
+                Runnable viewStatus = () -> {
+                    if (!active(family, uid) || postedAt + 86400000L <= System.currentTimeMillis()) {
+                        open();
+                        return;
+                    }
+                    if (!own && !store.groupCandidates().containsKey(memberId)) return;
+                    showStatus(family, uid, memberId, member.getValue(), body, photo, video, receipts);
+                };
+                if (own) {
+                    LinearLayout current = new LinearLayout(rows.getContext());
+                    current.setOrientation(LinearLayout.VERTICAL);
+                    mine.addView(current);
+                    addAction(current, "View my story · " + type + " · " + time, false, viewStatus);
+                    addAction(current, "Remove my story", false, () -> {
+                        if (!active(family, uid)) return;
+                        statuses.child(uid).removeValue().addOnCompleteListener(removal -> {
+                            if (!host.isSecondaryPage(scroll) || !active(family, uid)) return;
+                            if (removal.isSuccessful()) open();
+                            else notice("Unable to remove status");
+                        });
+                    });
+                    removeOnExpiry(current, remaining, () -> mine.removeView(current));
+                } else {
+                    View entry = statusRow(memberId, member.getValue(), type + " · " + time, false, viewStatus);
+                    entry.setTag(postedAt);
+                    int index = 0;
+                    while (index < updates.getChildCount()
+                            && (Long) updates.getChildAt(index).getTag() >= postedAt) index++;
+                    updates.addView(entry, index, cardSpacing());
+                    empty.setVisibility(View.GONE);
+                    removeOnExpiry(entry, remaining, () -> {
+                        updates.removeView(entry);
+                        if (updates.getChildCount() == 0) empty.setVisibility(View.VISIBLE);
+                    });
+                }
             });
         }
+    }
+
+    private void removeOnExpiry(View entry, long remaining, Runnable expiry) {
+        entry.postDelayed(expiry, remaining);
+        entry.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View view) {}
+            @Override public void onViewDetachedFromWindow(View view) { view.removeCallbacks(expiry); }
+        });
+    }
+
+    private View statusRow(String uid, String name, String detail, boolean own, Runnable click) {
+        LinearLayout row = new LinearLayout(host.requireContext());
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(8), dp(10), dp(8));
+        if (!own) row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x24106c59),
+                surface(16, EDGE, 0xffffffff, 0xfff0faf7), null));
+        View avatar = host.statusAvatar(uid, name, 48, own);
+        row.addView(avatar);
+        LinearLayout labels = new LinearLayout(row.getContext());
+        labels.setOrientation(LinearLayout.VERTICAL);
+        TextView title = section(name, 17, INK);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        title.setPadding(dp(12), 0, dp(8), 0);
+        labels.addView(title);
+        TextView subtitle = section(detail, 13, MUTED);
+        subtitle.setPadding(dp(12), dp(3), dp(8), 0);
+        labels.addView(subtitle);
+        row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
+        if (click != null) {
+            row.addView(section("›", 20, GREEN));
+            row.setFocusable(true);
+            row.setOnClickListener(view -> click.run());
+        }
+        return row;
     }
 
     private static final String[] REACTIONS = {"liked", "laugh", "wow", "sad", "clap", "fire"};
@@ -140,8 +206,11 @@ final class ChatStatus {
         post.setMinHeight(8 * inset);
         post.setTextIsSelectable(true);
         if (video != null) {
+            LinearLayout videoArea = new LinearLayout(content.getContext());
+            videoArea.setOrientation(LinearLayout.VERTICAL);
+            content.addView(videoArea);
             addAction(content, "Play video", true, () -> {
-                if (active(family, uid)) playVideo(video, dialog);
+                if (active(family, uid)) playVideo(video, videoArea);
             });
             post.setMinHeight(0);
         }
@@ -154,18 +223,14 @@ final class ChatStatus {
         if (!body.isEmpty()) content.addView(post, new LinearLayout.LayoutParams(-1, -2));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(content);
-        dialog = statusDialog(name, scroll)
-                .setNegativeButton("Back to statuses", (d, w) -> {
-                    if (active(family, uid)) open();
-                }).show();
-        styleWindow(dialog);
-        AlertDialog viewer = dialog;
+        host.showSecondaryPage(name, scroll, this::open, () -> active(family, uid)
+                && (mine || store.groupCandidates().containsKey(author)));
         if (mine) {
             TextView feedback = section("Viewers and reactions", 15, INK);
             feedback.setBackground(surface(12, EDGE, 0xffffffff, 0xfff4f9fc));
             content.addView(feedback, cardSpacing());
             receipts.get().addOnSuccessListener(data -> {
-                if (!viewer.isShowing() || !active(family, uid)) return;
+                if (!host.isSecondaryPage(scroll) || !active(family, uid)) return;
                 StringBuilder result = new StringBuilder("Viewers and reactions");
                 for (com.google.firebase.database.DataSnapshot item : data.getChildren()) {
                     if (item.getKey() == null) continue;
@@ -221,7 +286,7 @@ final class ChatStatus {
             });
         }
         receipt.get().addOnSuccessListener(snapshot -> {
-            if (!viewer.isShowing() || reactions.getCheckedChipId() != android.view.View.NO_ID) return;
+            if (!host.isSecondaryPage(scroll) || reactions.getCheckedChipId() != android.view.View.NO_ID) return;
             for (int i = 0; i < REACTIONS.length; i++) {
                 if (REACTIONS[i].equals(snapshot.getValue(String.class))) reactions.check(chips[i].getId());
             }
@@ -279,23 +344,26 @@ final class ChatStatus {
         videoSelection.setVisibility(View.GONE);
         form.addView(videoSelection, cardSpacing());
         boolean[] loadingMedia = {false};
+        boolean[] posting = {false};
+        com.google.android.material.button.MaterialButton postButton =
+                new com.google.android.material.button.MaterialButton(form.getContext());
         addAction(form, "Choose photo", false, () -> {
-            AlertDialog owner = dialog;
-            if (loadingMedia[0] || !active(family, uid)) return;
+            if (loadingMedia[0] || posting[0] || !active(family, uid)) return;
             mediaSelection = uri -> {
-                if (!owner.isShowing() || !active(family, uid)) return;
+                if (!host.isSecondaryPage(form) || !active(family, uid)) return;
                 loadingMedia[0] = true;
-                owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                postButton.setEnabled(false);
                 android.content.ContentResolver resolver = form.getContext().getContentResolver();
                 java.util.concurrent.CompletableFuture.supplyAsync(() -> encodePhoto(resolver, uri))
                         .thenAccept(encoded -> form.post(() -> {
-                            if (!owner.isShowing() || !active(family, uid)) return;
+                            if (!host.isSecondaryPage(form) || !active(family, uid)) return;
                             loadingMedia[0] = false;
-                            owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            postButton.setEnabled(true);
                             if (encoded == null) {
                                 notice("Unable to prepare photo. Try another image.");
                                 return;
                             }
+                            stopVideo();
                             selectedPhoto[0] = encoded;
                             selectedVideo[0] = null;
                             videoSelection.setVisibility(View.GONE);
@@ -309,22 +377,22 @@ final class ChatStatus {
             }
         });
         addAction(form, "Choose video", false, () -> {
-            AlertDialog owner = dialog;
-            if (loadingMedia[0] || !active(family, uid)) return;
+            if (loadingMedia[0] || posting[0] || !active(family, uid)) return;
             mediaSelection = uri -> {
-                if (!owner.isShowing() || !active(family, uid)) return;
+                if (!host.isSecondaryPage(form) || !active(family, uid)) return;
                 loadingMedia[0] = true;
-                owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                postButton.setEnabled(false);
                 android.content.Context app = host.requireContext().getApplicationContext();
                 java.util.concurrent.CompletableFuture.supplyAsync(() -> encodeVideo(app, uri))
                         .thenAccept(encoded -> form.post(() -> {
-                            if (!owner.isShowing() || !active(family, uid)) return;
+                            if (!host.isSecondaryPage(form) || !active(family, uid)) return;
                             loadingMedia[0] = false;
-                            owner.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            postButton.setEnabled(true);
                             if (encoded == null) {
                                 notice("Choose a supported video up to 15 seconds and 5 MB");
                                 return;
                             }
+                            stopVideo();
                             selectedVideo[0] = encoded;
                             selectedPhoto[0] = null;
                             preview.setTag(null);
@@ -338,12 +406,16 @@ final class ChatStatus {
                 notice("No video picker is available");
             }
         });
+        LinearLayout videoArea = new LinearLayout(form.getContext());
+        videoArea.setOrientation(LinearLayout.VERTICAL);
+        form.addView(videoArea);
         addAction(form, "Preview video", false, () -> {
-            if (selectedVideo[0] != null) playVideo(selectedVideo[0], dialog);
+            if (selectedVideo[0] != null) playVideo(selectedVideo[0], videoArea);
             else notice("Choose a video first");
         });
         addAction(form, "Remove media", false, () -> {
-            if (loadingMedia[0]) return;
+            if (loadingMedia[0] || posting[0]) return;
+            stopVideo();
             selectedPhoto[0] = null;
             selectedVideo[0] = null;
             videoSelection.setVisibility(View.GONE);
@@ -380,18 +452,19 @@ final class ChatStatus {
                 people.setVisibility(checked ? android.view.View.VISIBLE : android.view.View.GONE));
         ScrollView scroll = new ScrollView(host.requireContext());
         scroll.addView(form);
-        dialog = statusDialog("New status", scroll)
-                .setNegativeButton("Cancel", null).setPositiveButton("Post", null).show();
-        styleWindow(dialog);
-        AlertDialog editor = dialog;
-        editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
-            if (!active(family, uid)) return;
+        postButton.setText("Post story");
+        postButton.setAllCaps(false);
+        form.addView(postButton, cardSpacing());
+        host.showSecondaryPage("Create new story", scroll, this::open, () -> active(family, uid));
+        postButton.setOnClickListener(view -> {
+            if (!active(family, uid) || !host.isSecondaryPage(form) || loadingMedia[0] || posting[0]) return;
             String body = input.getText().toString().trim();
             if (body.isEmpty() && selectedPhoto[0] == null && selectedVideo[0] == null) { input.setError("Enter text or choose media"); return; }
             if (restricted.isChecked() && audience.isEmpty()) {
                 notice("Select at least one family member");
                 return;
             }
+            posting[0] = true;
             view.setEnabled(false);
             Map<String, Object> value = new LinkedHashMap<>();
             if (restricted.isChecked()) value.put("audience", new LinkedHashMap<>(audience));
@@ -400,9 +473,13 @@ final class ChatStatus {
             if (selectedPhoto[0] != null) value.put("photo", selectedPhoto[0]);
             value.put("postedAt", ServerValue.TIMESTAMP);
             path.setValue(value).addOnCompleteListener(task -> {
-                if (!editor.isShowing()) return;
-                if (task.isSuccessful()) editor.dismiss();
-                else { view.setEnabled(true); notice("Unable to publish status"); }
+                if (!host.isSecondaryPage(form) || !active(family, uid)) return;
+                if (task.isSuccessful()) open();
+                else {
+                    posting[0] = false;
+                    view.setEnabled(true);
+                    notice("Unable to publish status");
+                }
             });
         });
     }
@@ -436,8 +513,9 @@ final class ChatStatus {
         }
     }
 
-    private void playVideo(String encoded, AlertDialog owner) {
-        if (owner == null || !owner.isShowing() || encoded.length() > MAX_VIDEO_LENGTH) return;
+    private void playVideo(String encoded, LinearLayout area) {
+        if (!host.isSecondaryPage(area) || encoded.length() > MAX_VIDEO_LENGTH) return;
+        stopVideo();
         java.io.File clip;
         try {
             byte[] payload = Base64.decode(encoded, Base64.NO_WRAP);
@@ -454,28 +532,44 @@ final class ChatStatus {
             return;
         }
         android.widget.VideoView player = new android.widget.VideoView(host.requireContext());
-        FrameLayout frame = new FrameLayout(host.requireContext());
-        frame.addView(player, new FrameLayout.LayoutParams(-1, dp(280), android.view.Gravity.CENTER));
-        ScrollView scroll = new ScrollView(host.requireContext());
-        scroll.addView(frame);
-        AlertDialog playback = statusDialog("Status video", scroll)
-                .setPositiveButton("Close", null).show();
-        styleWindow(playback);
-        playback.setOnDismissListener(d -> {
-            player.stopPlayback();
-            clip.delete();
-            if (videoPlayback == playback) videoPlayback = null;
+        videoPlayer = player;
+        videoFile = clip;
+        area.addView(player, new LinearLayout.LayoutParams(-1, dp(280)));
+        player.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+            @Override public void onViewAttachedToWindow(View view) {}
+            @Override public void onViewDetachedFromWindow(View view) {
+                if (videoPlayer == player) releaseVideo();
+            }
         });
-        videoPlayback = playback;
         player.setOnErrorListener((mp, what, extra) -> {
-            notice("This video cannot be played");
-            playback.dismiss();
+            if (videoPlayer == player) {
+                notice("This video cannot be played");
+                stopVideo();
+            }
             return true;
         });
         android.widget.MediaController controller = new android.widget.MediaController(host.requireContext());
         player.setMediaController(controller);
         player.setVideoURI(Uri.fromFile(clip));
         player.start();
+    }
+
+    void stopVideo() {
+        if (videoPlayer == null) return;
+        android.widget.VideoView player = videoPlayer;
+        releaseVideo();
+        if (player.getParent() instanceof android.view.ViewGroup) {
+            ((android.view.ViewGroup) player.getParent()).removeView(player);
+        }
+    }
+
+    private void releaseVideo() {
+        android.widget.VideoView player = videoPlayer;
+        videoPlayer = null;
+        player.stopPlayback();
+        player.setMediaController(null);
+        if (videoFile != null) videoFile.delete();
+        videoFile = null;
     }
 
     private ImageView statusImage() {
@@ -549,41 +643,6 @@ final class ChatStatus {
         }
     }
 
-    private ChatFormDialog statusDialog(String title, ScrollView content) {
-        TextView heading = section(title, 23, GREEN);
-        heading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        androidx.core.view.ViewCompat.setAccessibilityHeading(heading, true);
-        heading.setBackground(surface(16, EDGE, 0xffe2f4ee, 0xfff4fbf8));
-        FrameLayout cover = new FrameLayout(host.requireContext());
-        cover.setPadding(dp(16), dp(16), dp(16), dp(8));
-        cover.addView(heading, new FrameLayout.LayoutParams(-1, -2));
-        ChatFormDialog builder = new ChatFormDialog(host.requireContext());
-        builder.setCustomTitle(cover);
-        builder.setView(content);
-        return builder;
-    }
-
-    private void styleWindow(AlertDialog value) {
-        Window window = value.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(surface(20, EDGE, 0xffeffaf3, 0xfffff4f5, 0xffeef6fd));
-            int width = host.getResources().getDisplayMetrics().widthPixels;
-            window.setLayout(Math.min(dp(520), width - dp(24)), -2);
-        }
-        for (int type : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_NEUTRAL}) {
-            Button button = value.getButton(type);
-            if (button == null) continue;
-            boolean primary = type == AlertDialog.BUTTON_POSITIVE;
-            button.setAllCaps(false);
-            button.setTextSize(14);
-            button.setMinHeight(dp(44));
-            button.setTextColor(primary ? 0xffffffff : GREEN);
-            button.setPadding(dp(12), 0, dp(12), 0);
-            button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33106c59),
-                    primary ? surface(18, BLUE, BLUE) : surface(18, EDGE, 0xffe6f6ef), null));
-        }
-    }
-
     private View statusField(EditText input) {
         input.setTextColor(INK);
         input.setHintTextColor(MUTED);
@@ -632,9 +691,8 @@ final class ChatStatus {
     }
 
     void dismiss() {
-        if (videoPlayback != null) videoPlayback.dismiss();
-        if (dialog != null) dialog.dismiss();
-        dialog = null;
+        mediaSelection = null;
+        stopVideo();
     }
 
     private void notice(String message) {
