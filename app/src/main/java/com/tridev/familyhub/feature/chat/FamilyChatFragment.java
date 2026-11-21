@@ -838,10 +838,9 @@ public final class FamilyChatFragment extends Fragment {
         ChatFilter category = choosingLiveRecipient ? ChatFilter.ALL : chatFilter;
         String uid = store.accountId();
         String selfName = uid == null ? "" : ownStatusName();
-        if (!choosingLiveRecipient && uid != null && (category == ChatFilter.ALL || category == ChatFilter.DIRECT)
-                && (selfName + " (You)").toLowerCase(Locale.ROOT).contains(filter)) {
-            addSelfConversation(uid, selfName);
-        }
+        boolean showSelf = !choosingLiveRecipient && uid != null
+                && (category == ChatFilter.ALL || category == ChatFilter.DIRECT)
+                && (selfName + " (You)").toLowerCase(Locale.ROOT).contains(filter);
         List<FamilyChatStore.ThreadState> direct = new ArrayList<>();
         List<FamilyChatStore.ThreadState> groups = new ArrayList<>();
         for (FamilyChatStore.ThreadState thread : store.threads()) {
@@ -860,7 +859,8 @@ public final class FamilyChatFragment extends Fragment {
         if (!groups.isEmpty()) addLine(text("Private groups", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : groups) addConversation(thread);
         direct.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
-        if (!direct.isEmpty()) addLine(text("Direct messages", 14, BLUE, true));
+        if (showSelf || !direct.isEmpty()) addLine(text("Direct messages", 14, BLUE, true));
+        if (showSelf) addLine(selfRow(uid, selfName, true, () -> open(uid)));
         for (FamilyChatStore.ThreadState thread : direct) addConversation(thread);
         if (rows.getChildCount() == 0 && store.status().isEmpty()) {
             addLine(text(category == ChatFilter.UNREAD && filter.isEmpty()
@@ -876,7 +876,7 @@ public final class FamilyChatFragment extends Fragment {
         list.addView(recipients);
         FamilyChatStore.ThreadState self = store.thread(store.accountId());
         if (self != null && self != source && store.canUse(self)) {
-            recipients.addView(selfRow(self.peer, ownStatusName(), () -> {
+            recipients.addView(selfRow(self.peer, ownStatusName(), false, () -> {
                 if (isSecondaryPage(list) && store.canUse(source) && store.canUse(self)) select.accept(self);
             }), new LinearLayout.LayoutParams(-1, -2));
         }
@@ -1062,14 +1062,18 @@ public final class FamilyChatFragment extends Fragment {
         return row;
     }
 
-    private void addSelfConversation(String uid, String name) {
-        addLine(selfRow(uid, name, () -> open(uid)));
-    }
-
-    private LinearLayout selfRow(String uid, String name, Runnable open) {
+    private LinearLayout selfRow(String uid, String name, boolean showPreview, Runnable open) {
         LinearLayout content = column();
         content.addView(text(name + " (You)", 16, GREEN, true));
-        content.addView(text("Message yourself", 13, MUTED, false));
+        FamilyChatStore.ThreadState self = store.thread(uid);
+        if (showPreview && self != null && !self.messages.isEmpty()) {
+            addConversationPreview(content, self.messages.get(self.messages.size() - 1), 0);
+        } else {
+            org.json.JSONObject latest = showPreview ? latestLegacySelfMessage(uid) : null;
+            if (latest == null) content.addView(text("Message yourself", 13, MUTED, false));
+            else addPreview(content, "You: " + latest.optString("body"),
+                    "Sent · " + dateTime(latest.optLong("at")), 0);
+        }
         LinearLayout row = avatarRow(statusAvatar(uid, name, FloatingChatSizing.applies(requireContext()) ? 36 : 44, true), content);
         row.setBackground(card(0xffe5f3ed, 0xffb9d9c9, 16));
         row.setFocusable(true);
@@ -1077,20 +1081,33 @@ public final class FamilyChatFragment extends Fragment {
         return row;
     }
 
-    private void addLegacySelfMessages(String uid) {
+    private org.json.JSONArray legacySelfMessages(String uid) {
         android.content.Context context = requireContext();
         String preferences = com.tridev.familyhub.core.security.AccountDataScope
                 .preferencesName(context, "family_chat_self", uid);
         android.content.SharedPreferences journal = context.getSharedPreferences(preferences,
                 android.content.Context.MODE_PRIVATE);
         try {
-            org.json.JSONArray messages = new org.json.JSONArray(journal.getString("messages", "[]"));
-            for (int i = 0; i < messages.length(); i++) {
-                org.json.JSONObject item = messages.optJSONObject(i);
-                if (item != null) addSelfMessage(rows, item.optString("body"), item.optLong("at"));
-            }
+            return new org.json.JSONArray(journal.getString("messages", "[]"));
         } catch (org.json.JSONException ignored) {
-            // A corrupt local journal must not block the live chat.
+            return new org.json.JSONArray();
+        }
+    }
+
+    private org.json.JSONObject latestLegacySelfMessage(String uid) {
+        org.json.JSONArray messages = legacySelfMessages(uid);
+        for (int i = messages.length() - 1; i >= 0; i--) {
+            org.json.JSONObject item = messages.optJSONObject(i);
+            if (item != null) return item;
+        }
+        return null;
+    }
+
+    private void addLegacySelfMessages(String uid) {
+        org.json.JSONArray messages = legacySelfMessages(uid);
+        for (int i = 0; i < messages.length(); i++) {
+            org.json.JSONObject item = messages.optJSONObject(i);
+            if (item != null) addSelfMessage(rows, item.optString("body"), item.optLong("at"));
         }
     }
 
@@ -1103,12 +1120,32 @@ public final class FamilyChatFragment extends Fragment {
         message.setMaxWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.76f));
         bubble.addView(message);
         TextView time = text(dateTime(at), 11, MUTED, false);
-        time.setGravity(Gravity.END);
-        bubble.addView(time);
+        LinearLayout metadata = new LinearLayout(requireContext());
+        metadata.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        metadata.addView(time);
+        View tick = receiptTick(true, true);
+        tick.setContentDescription("Seen");
+        metadata.addView(tick);
+        bubble.addView(metadata);
         LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-2, -2);
         size.gravity = Gravity.END;
         size.topMargin = dp(7);
         messages.addView(bubble, size);
+    }
+
+    private void addConversationPreview(LinearLayout content, FamilyChatStore.Message latest, int unread) {
+        boolean own = store.own(latest);
+        String sender = own ? "You: " : store.name(latest.sender) + ": ";
+        String direction = own ? (store.sending(latest) ? "Sending · " : "Sent · ") : "Received · ";
+        addPreview(content, sender + latest.body, direction + dateTime(store.listTime(latest)), unread);
+    }
+
+    private void addPreview(LinearLayout content, String preview, String timestamp, int unread) {
+        TextView body = text(preview, 14, MUTED, false);
+        body.setMaxLines(1);
+        body.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        content.addView(body);
+        content.addView(text(timestamp, 12, unread == 0 ? MUTED : BLUE, unread != 0));
     }
 
     private void addConversation(FamilyChatStore.ThreadState thread) {
@@ -1119,17 +1156,7 @@ public final class FamilyChatFragment extends Fragment {
         if (thread.messages.isEmpty()) {
             card.addView(text(thread.error ? "Chat is unavailable" : "Start a conversation", 13, MUTED, false));
         } else {
-            FamilyChatStore.Message latest = thread.messages.get(thread.messages.size() - 1);
-            TextView body = text((store.own(latest) ? "You: " : store.name(latest.sender) + ": ")
-                    + latest.body, 14, MUTED, false);
-            body.setMaxLines(1);
-            body.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            card.addView(body);
-            String direction = store.own(latest)
-                    ? store.sending(latest) ? "Sending · " : "Sent · "
-                    : "Received · ";
-            String detail = direction + dateTime(store.listTime(latest));
-            card.addView(text(detail, 12, unread == 0 ? MUTED : BLUE, unread != 0));
+            addConversationPreview(card, thread.messages.get(thread.messages.size() - 1), unread);
         }
         LinearLayout row = avatarRow(threadAvatar(thread, FloatingChatSizing.applies(requireContext()) ? 36 : 44), card);
         if (unread > 0) {
@@ -1413,7 +1440,8 @@ public final class FamilyChatFragment extends Fragment {
             menu.setOnClickListener(view -> smart.messageActions(thread, message, bubble));
             if (!message.deleted()) metadata.addView(menu);
             if (own) {
-                boolean seen = store.acknowledged(thread, message, true);
+                boolean seen = (store.isSelf(thread) && !store.sending(message))
+                        || store.acknowledged(thread, message, true);
                 boolean delivered = seen || store.acknowledged(thread, message, false);
                 boolean sending = store.sending(message) && !delivered;
                 View tick = sending ? text("◷", 13, MUTED, true) : receiptTick(delivered, seen);
@@ -1539,9 +1567,9 @@ public final class FamilyChatFragment extends Fragment {
                 canvas.translate(dp(3), (getHeight() - dp(12)) / 2f);
                 float unit = dp(12) / 12f;
                 canvas.scale(unit, unit);
-                paint.setColor(seen ? 0xff005b39 : MUTED);
+                paint.setColor(seen ? 0xff00432a : MUTED);
                 paint.setStyle(android.graphics.Paint.Style.STROKE);
-                paint.setStrokeWidth(1.65f);
+                paint.setStrokeWidth(seen ? 2f : 1.65f);
                 paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
                 paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
                 path.reset();
