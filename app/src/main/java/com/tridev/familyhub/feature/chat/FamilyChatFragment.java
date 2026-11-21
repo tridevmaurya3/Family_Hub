@@ -76,6 +76,16 @@ public final class FamilyChatFragment extends Fragment {
     private ScrollView scroll;
     private final ChatDictation draftVoice = new ChatDictation(this);
     private EditText search, draft;
+    private LinearLayout chatFilters;
+    private ChatFilter chatFilter = ChatFilter.ALL;
+
+    private enum ChatFilter {
+        ALL("All"), UNREAD("Unread"), GROUPS("Groups"), DIRECT("Direct");
+
+        final String label;
+
+        ChatFilter(String label) { this.label = label; }
+    }
     private final ChatStatus chatStatus = new ChatStatus(this, store);
     private MaterialButton send, mic, newGroup, statusButton;
     private OnBackPressedCallback backCallback;
@@ -114,6 +124,10 @@ public final class FamilyChatFragment extends Fragment {
         else choosingLiveRecipient = getArguments() != null && getArguments().getBoolean("share_live");
         if (state != null) {
             peer = state.getString("chat_peer");
+            String selectedFilter = state.getString("chat_filter", ChatFilter.ALL.name());
+            for (ChatFilter filter : ChatFilter.values()) {
+                if (filter.name().equals(selectedFilter)) chatFilter = filter;
+            }
             attachments.restoreState(state);
         }
     }
@@ -121,6 +135,7 @@ public final class FamilyChatFragment extends Fragment {
     @Override public void onSaveInstanceState(@NonNull Bundle out) {
         super.onSaveInstanceState(out);
         out.putString("chat_peer", peer);
+        out.putString("chat_filter", chatFilter.name());
         out.putString("chat_notification_ref", pendingNotificationConversation);
         out.putString("chat_reply_key", replyKey);
         out.putString("chat_reply_preview", replyPreview);
@@ -180,6 +195,28 @@ public final class FamilyChatFragment extends Fragment {
         searchParams.topMargin = dp(8);
         screen.addView(search, searchParams);
         search.addTextChangedListener(watcher(this::render));
+        chatFilters = new LinearLayout(requireContext());
+        LinearLayout.LayoutParams filterSize = new LinearLayout.LayoutParams(-1, -2);
+        filterSize.topMargin = dp(5);
+        screen.addView(chatFilters, filterSize);
+        for (ChatFilter filter : ChatFilter.values()) {
+            TextView chip = text(filter.label, 13, GREEN, false);
+            chip.setGravity(Gravity.CENTER);
+            chip.setSingleLine();
+            chip.setMinHeight(dp(44));
+            chip.setFocusable(true);
+            LinearLayout.LayoutParams chipSize = new LinearLayout.LayoutParams(0, -2, 1);
+            if (filter != ChatFilter.ALL) chipSize.setMarginStart(dp(5));
+            chatFilters.addView(chip, chipSize);
+            chip.setOnClickListener(v -> {
+                if (chatFilter == filter) return;
+                chatFilter = filter;
+                render();
+                scroll.post(() -> {
+                    if (screen != null && peer == null) scroll.scrollTo(0, 0);
+                });
+            });
+        }
         pinBanner = flatButton("Pinned messages");
         pinBanner.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         pinBanner.setMaxLines(1);
@@ -611,6 +648,14 @@ public final class FamilyChatFragment extends Fragment {
         if (thread != null) headerAvatar.addView(threadAvatar(thread, 40));
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
+        chatFilters.setVisibility(inThread || choosingLiveRecipient ? View.GONE : View.VISIBLE);
+        for (ChatFilter filter : ChatFilter.values()) {
+            TextView chip = (TextView) chatFilters.getChildAt(filter.ordinal());
+            boolean selected = filter == chatFilter;
+            chip.setSelected(selected);
+            chip.setTypeface(null, selected ? Typeface.BOLD : Typeface.NORMAL);
+            chip.setBackground(card(selected ? 0xffd1eee1 : WHITE, selected ? 0xff98cbb7 : EDGE, 22));
+        }
         if (!chatReady) voiceNotes.stop();
         voiceNotes.setInputVisible(chatReady);
         header.setTitle(choosingLiveRecipient ? "Share to chat" : thread == null ? "Family Chat" : store.title(thread));
@@ -646,10 +691,14 @@ public final class FamilyChatFragment extends Fragment {
 
     private void renderList() {
         String filter = search.getText().toString().trim().toLowerCase(Locale.ROOT);
+        ChatFilter category = choosingLiveRecipient ? ChatFilter.ALL : chatFilter;
         List<FamilyChatStore.ThreadState> direct = new ArrayList<>();
         List<FamilyChatStore.ThreadState> groups = new ArrayList<>();
         for (FamilyChatStore.ThreadState thread : store.threads()) {
             if (!store.title(thread).toLowerCase(Locale.ROOT).contains(filter)) continue;
+            boolean group = FamilyChatStore.GROUP.equals(thread.peer) || thread.isGroup();
+            if ((category == ChatFilter.GROUPS && !group) || (category == ChatFilter.DIRECT && group)
+                    || (category == ChatFilter.UNREAD && (thread.error || unreadCount(thread) == 0))) continue;
             if (FamilyChatStore.GROUP.equals(thread.peer)) {
                 addLine(text("Group", 14, BLUE, true));
                 addConversation(thread);
@@ -660,13 +709,15 @@ public final class FamilyChatFragment extends Fragment {
         if (!groups.isEmpty()) addLine(text("Private groups", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : groups) addConversation(thread);
         direct.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
-        boolean showOwn = !choosingLiveRecipient && store.accountId() != null && store.status().isEmpty()
+        boolean showOwn = !choosingLiveRecipient && (category == ChatFilter.ALL || category == ChatFilter.DIRECT)
+                && store.accountId() != null && store.status().isEmpty()
                 && "you".contains(filter);
         if (!direct.isEmpty() || showOwn) addLine(text("Direct messages", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : direct) addConversation(thread);
         if (showOwn) addOwnProfile();
         if (rows.getChildCount() == 0 && store.status().isEmpty()) {
-            addLine(text("No matching chats", 14, MUTED, false));
+            addLine(text(category == ChatFilter.UNREAD && filter.isEmpty()
+                    ? "No unread chats" : "No matching chats", 14, MUTED, false));
         }
     }
 
@@ -836,8 +887,7 @@ public final class FamilyChatFragment extends Fragment {
             body.setMaxLines(1);
             body.setEllipsize(android.text.TextUtils.TruncateAt.END);
             card.addView(body);
-            int unread = 0;
-            for (FamilyChatStore.Message message : thread.messages) if (store.unread(message)) unread++;
+            int unread = unreadCount(thread);
             String direction = store.own(latest)
                     ? store.sending(latest) ? "Sending · " : "Sent · "
                     : "Received · ";
@@ -965,16 +1015,21 @@ public final class FamilyChatFragment extends Fragment {
         render();
     }
 
+    private int unreadCount(FamilyChatStore.ThreadState thread) {
+        int count = 0;
+        for (FamilyChatStore.Message message : thread.messages) {
+            if (!message.deleted() && store.unread(message) && !hiddenForMe(message)) count++;
+        }
+        return count;
+    }
+
     private void updateJumpToLatest() {
         if (jumpToLatest == null) return;
         FamilyChatStore.ThreadState thread = store.thread(peer);
         boolean visible = thread != null && !thread.error && !scrollingUp && scroll.canScrollVertically(1);
         jumpToLatest.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) return;
-        int unread = 0;
-        for (FamilyChatStore.Message message : thread.messages) {
-            if (!message.deleted() && store.unread(message) && !hiddenForMe(message)) unread++;
-        }
+        int unread = unreadCount(thread);
         newMessageCount.setVisibility(unread == 0 ? View.GONE : View.VISIBLE);
         newMessageCount.setText(Integer.toString(unread));
         jumpToLatest.setContentDescription(unread == 0 ? "Jump to latest message"
