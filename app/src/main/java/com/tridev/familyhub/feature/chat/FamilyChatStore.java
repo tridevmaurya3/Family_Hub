@@ -25,6 +25,9 @@ public final class FamilyChatStore {
     static FamilyChatStore get() { return INSTANCE; }
 
     private ChatNotifications notifications;
+    private android.content.SharedPreferences hiddenMessages;
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener hiddenObserver =
+            (preferences, key) -> notifyObservers();
     private final DatabaseReference root = FirebaseDatabase.getInstance().getReference();
     private final List<Runnable> observers = new ArrayList<>();
     private final Map<String, ThreadState> threads = new LinkedHashMap<>();
@@ -47,6 +50,10 @@ public final class FamilyChatStore {
     private FamilyChatStore() {}
 
     public static void startForApp(android.content.Context context) {
+        if (INSTANCE.hiddenMessages == null) {
+            INSTANCE.hiddenMessages = context.getSharedPreferences("family_chat_hidden_messages", 0);
+            INSTANCE.hiddenMessages.registerOnSharedPreferenceChangeListener(INSTANCE.hiddenObserver);
+        }
         INSTANCE.notifications = new ChatNotifications(context, INSTANCE);
         INSTANCE.start();
     }
@@ -463,6 +470,24 @@ public final class FamilyChatStore {
                 .addOnCompleteListener(task -> complete.accept(task.isSuccessful()));
     }
 
+    void deleteForEveryone(ThreadState thread, List<Message> messages, Consumer<Boolean> completed) {
+        if (!canUse(thread) || messages.isEmpty()) {
+            completed.accept(false);
+            return;
+        }
+        Map<String, Object> updates = new HashMap<>();
+        for (Message message : messages) {
+            if (!own(message) || message.deleted()) {
+                completed.accept(false);
+                return;
+            }
+            String key = message.snapshot.getKey();
+            updates.put(key + "/body", "Message deleted");
+            updates.put(key + "/deletedAt", ServerValue.TIMESTAMP);
+        }
+        thread.ref.updateChildren(updates).addOnCompleteListener(task -> completed.accept(task.isSuccessful()));
+    }
+
     void setGroupPhoto(ThreadState thread, String photo, Consumer<Boolean> complete) {
         if (!canEditGroupPhoto(thread)) {
             complete.accept(false);
@@ -684,6 +709,44 @@ public final class FamilyChatStore {
         if (thread.titleListener != null) thread.ref.getParent().child("title").removeEventListener(thread.titleListener);
         if (thread.membersListener != null) thread.ref.getParent().child("members").removeEventListener(thread.membersListener);
         if (thread.adminsListener != null) thread.ref.getParent().child("admins").removeEventListener(thread.adminsListener);
+    }
+
+    public static void observeUnread(Runnable listener) {
+        INSTANCE.observe(listener);
+        listener.run();
+    }
+
+    public static void removeUnreadObserver(Runnable listener) {
+        INSTANCE.removeObserver(listener);
+    }
+
+    public static int unreadTotal() {
+        int count = 0;
+        for (ThreadState thread : INSTANCE.threads.values()) count += INSTANCE.unreadCount(thread);
+        return count;
+    }
+
+    int unreadCount(ThreadState thread) {
+        int count = 0;
+        for (Message message : thread.messages) {
+            if (!message.deleted() && unread(message) && !hiddenForMe(message)) count++;
+        }
+        return count;
+    }
+
+    private String hiddenKey(Message message) {
+        return uid + "|" + message.snapshot.getRef().toString();
+    }
+
+    boolean hiddenForMe(Message message) {
+        return uid != null && hiddenMessages != null && hiddenMessages.getBoolean(hiddenKey(message), false);
+    }
+
+    void hideMessages(ThreadState thread, List<Message> messages) {
+        if (!canUse(thread) || hiddenMessages == null) return;
+        android.content.SharedPreferences.Editor editor = hiddenMessages.edit();
+        for (Message message : messages) editor.putBoolean(hiddenKey(message), true);
+        editor.apply();
     }
 
     void observe(Runnable listener) { observers.add(listener); }

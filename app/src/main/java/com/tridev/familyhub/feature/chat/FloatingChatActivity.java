@@ -40,6 +40,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
     private LinearLayout controls;
     private FrameLayout content;
     private TextView shortcut;
+    private final Runnable unreadObserver = () -> updateShortcutUnread(FamilyChatStore.unreadTotal());
     private FrameLayout resizeHandles;
     private GradientDrawable background;
     private String account;
@@ -60,7 +61,9 @@ public final class FloatingChatActivity extends AppCompatActivity {
             finish();
             return;
         }
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH);
+        setFinishOnTouchOutside(false);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                 | WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
@@ -121,6 +124,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
         shortcut.setOnClickListener(v -> setCollapsed(false));
         shortcut.setOnTouchListener(windowGesture(0, 0, shortcut::performClick));
         root.addView(shortcut, new FrameLayout.LayoutParams(-1, -1));
+        FamilyChatStore.observeUnread(unreadObserver);
         updateVisibility();
         applyBounds();
 
@@ -148,6 +152,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
+        FamilyChatStore.removeUnreadObserver(unreadObserver);
         if (accountListener != null) FirebaseAuth.getInstance().removeAuthStateListener(accountListener);
         super.onDestroy();
     }
@@ -159,6 +164,14 @@ public final class FloatingChatActivity extends AppCompatActivity {
         state.putInt("width", width);
         state.putInt("height", height);
         state.putBoolean("collapsed", collapsed);
+    }
+
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_OUTSIDE && panelVisible()) {
+            setCollapsed(true);
+            return true;
+        }
+        return super.dispatchTouchEvent(event);
     }
 
     boolean panelVisible() {

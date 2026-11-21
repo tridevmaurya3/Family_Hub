@@ -61,6 +61,8 @@ public final class UniversalFamilyQuickHubService extends Service {
     private LinearLayout selectorContent;
     private FamilyHubDatabase database;
     private com.google.firebase.auth.FirebaseAuth.AuthStateListener countAuthListener;
+    private Button chatChoice;
+    private final Runnable chatUnreadObserver = this::updateChatChoice;
     private Button groceryChoice, taskChoice, notesChoice, remindersChoice, plannerChoice;
     private final Handler countHandler = new Handler(Looper.getMainLooper());
     private final ExecutorService countExecutor = Executors.newSingleThreadExecutor();
@@ -140,7 +142,9 @@ public final class UniversalFamilyQuickHubService extends Service {
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
         Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), reminders=choice("Reminders"), planner=choice("Planner"), opacity=choice("More");
         Button calculator = choice("Calculator"), alarm = choice("Alarm");
-        Button chat = choice("Family Chat");
+        int unread = com.tridev.familyhub.feature.chat.FamilyChatStore.unreadTotal();
+        Button chat = choice(chatChoiceLabel(unread));
+        chatChoice = chat;
         coloredIcon(chat, R.drawable.ic_nav_chat, R.color.fh_primary);
         coloredIcon(calculator, R.drawable.ic_quick_calculator, R.color.fh_primary);
         coloredIcon(alarm, R.drawable.ic_reminder, R.color.fh_module_reminders);
@@ -191,6 +195,8 @@ public final class UniversalFamilyQuickHubService extends Service {
         countGeneration++;
         selector.setOnDismissListener(() -> {
             database.getInvalidationTracker().removeObserver(countObserver);
+            com.tridev.familyhub.feature.chat.FamilyChatStore.removeUnreadObserver(chatUnreadObserver);
+            chatChoice = null;
             notesChoice = null;remindersChoice=null;plannerChoice=null;
             groceryChoice = null;
             taskChoice = null;
@@ -199,8 +205,26 @@ public final class UniversalFamilyQuickHubService extends Service {
             countGeneration++;
         });
         selector.showAsDropDown(anchor, anchor.getWidth() - width, dp(4));
+        com.tridev.familyhub.feature.chat.FamilyChatStore.observeUnread(chatUnreadObserver);
         database.getInvalidationTracker().addObserver(countObserver);
         refreshPendingCounts();
+    }
+
+    private String chatChoiceLabel(int unread) {
+        return "Family Chat" + (unread == 0 ? "" : " (" + unread + ")");
+    }
+
+    private void updateChatChoice() {
+        if (chatChoice == null) return;
+        int unread = com.tridev.familyhub.feature.chat.FamilyChatStore.unreadTotal();
+        String title = chatChoiceLabel(unread);
+        if (title.contentEquals(chatChoice.getText())) return;
+        chatChoice.setText(title);
+        if (selector != null && selector.isShowing() && selectorContent != null
+                && selectorAnchor != null && selectorAnchor.isAttachedToWindow()) {
+            int width = selectorWidth(selectorContent);
+            selector.update(selectorAnchor, selectorAnchor.getWidth() - width, dp(4), width, -1);
+        }
     }
 
     private QuickHubTools quickTools() {

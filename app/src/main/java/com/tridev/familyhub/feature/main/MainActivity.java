@@ -71,6 +71,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean redirectingToAuth;
     private boolean syncingNavigation;
 
+    private final Runnable chatUnreadObserver = this::updateChatUnreadBadge;
+
+    private void updateChatUnreadBadge() {
+        int count = com.tridev.familyhub.feature.chat.FamilyChatStore.unreadTotal();
+        binding.bottomNavigation.setChatUnreadCount(count);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -95,6 +102,7 @@ public class MainActivity extends AppCompatActivity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        com.tridev.familyhub.feature.chat.FamilyChatStore.observeUnread(chatUnreadObserver);
         applySystemBarInsets();
 
         binding.fabAdd.setOnClickListener(v -> {
@@ -417,6 +425,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        com.tridev.familyhub.feature.chat.FamilyChatStore.removeUnreadObserver(chatUnreadObserver);
         binding = null;
         super.onDestroy();
     }

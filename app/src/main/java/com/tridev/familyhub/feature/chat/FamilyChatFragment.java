@@ -76,7 +76,7 @@ public final class FamilyChatFragment extends Fragment {
     private java.util.function.BooleanSupplier secondaryAllowed;
     private ModuleOverviewView header;
     private LinearLayout selectionToolbar;
-    private String selectedMessageKey;
+    private final java.util.Set<String> selectedMessageKeys = new java.util.HashSet<>();
     private ScrollView scroll;
     private final ChatDictation draftVoice = new ChatDictation(this);
     private EditText search, draft;
@@ -204,7 +204,7 @@ public final class FamilyChatFragment extends Fragment {
         selectionToolbar.setVisibility(View.GONE);
         screen.addView(selectionToolbar);
         selectionToolbar.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
-            if (selectedMessageKey != null && right - left != oldRight - oldLeft) updateMessageSelection();
+            if (!selectedMessageKeys.isEmpty() && right - left != oldRight - oldLeft) updateMessageSelection();
         });
 
         search = new EditText(requireContext());
@@ -434,7 +434,7 @@ public final class FamilyChatFragment extends Fragment {
         backCallback = new OnBackPressedCallback(peer != null || choosingLiveRecipient) {
             @Override public void handleOnBackPressed() {
                 if (secondaryBack != null) secondaryBack.run();
-                else if (selectedMessageKey != null) clearMessageSelection();
+                else if (!selectedMessageKeys.isEmpty()) clearMessageSelection();
                 else if (choosingLiveRecipient) cancelLiveRecipient();
                 else open(null);
             }
@@ -641,7 +641,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
-        selectedMessageKey = null;
+        selectedMessageKeys.clear();
         clearSecondaryPage();
         voiceNotes.stop();
         draftVoice.stop();
@@ -774,11 +774,6 @@ public final class FamilyChatFragment extends Fragment {
             addLine(text(thread != null ? "Chat is unavailable" : "Connecting to conversation…", 14, MUTED, false));
         }
         updateJumpToLatest();
-        if (getActivity() instanceof FloatingChatActivity) {
-            int unread = 0;
-            for (FamilyChatStore.ThreadState entry : store.threads()) unread += unreadCount(entry);
-            ((FloatingChatActivity) getActivity()).updateShortcutUnread(unread);
-        }
     }
 
     private void renderList() {
@@ -796,7 +791,7 @@ public final class FamilyChatFragment extends Fragment {
             if (!store.title(thread).toLowerCase(Locale.ROOT).contains(filter)) continue;
             boolean group = FamilyChatStore.GROUP.equals(thread.peer) || thread.isGroup();
             if ((category == ChatFilter.GROUPS && !group) || (category == ChatFilter.DIRECT && group)
-                    || (category == ChatFilter.UNREAD && (thread.error || unreadCount(thread) == 0))) continue;
+                    || (category == ChatFilter.UNREAD && (thread.error || store.unreadCount(thread) == 0))) continue;
             if (FamilyChatStore.GROUP.equals(thread.peer)) {
                 addLine(text("Group", 14, BLUE, true));
                 addConversation(thread);
@@ -1078,6 +1073,7 @@ public final class FamilyChatFragment extends Fragment {
         LinearLayout card = column();
         TextView name = text(store.title(thread), 16, INK, true);
         card.addView(name);
+        int unread = store.unreadCount(thread);
         if (thread.messages.isEmpty()) {
             card.addView(text(thread.error ? "Chat is unavailable" : "Start a conversation", 13, MUTED, false));
         } else {
@@ -1087,14 +1083,22 @@ public final class FamilyChatFragment extends Fragment {
             body.setMaxLines(1);
             body.setEllipsize(android.text.TextUtils.TruncateAt.END);
             card.addView(body);
-            int unread = unreadCount(thread);
             String direction = store.own(latest)
                     ? store.sending(latest) ? "Sending · " : "Sent · "
                     : "Received · ";
-            String detail = direction + dateTime(store.listTime(latest)) + (unread == 0 ? "" : "  ·  " + unread + " new");
+            String detail = direction + dateTime(store.listTime(latest));
             card.addView(text(detail, 12, unread == 0 ? MUTED : BLUE, unread != 0));
         }
         LinearLayout row = avatarRow(threadAvatar(thread, FloatingChatSizing.applies(requireContext()) ? 36 : 44), card);
+        if (unread > 0) {
+            TextView badge = text(Integer.toString(unread), 12, 0xffffffff, true);
+            badge.setGravity(Gravity.CENTER);
+            badge.setMinWidth(dp(24));
+            badge.setPadding(dp(5), dp(3), dp(5), dp(3));
+            badge.setBackground(card(GREEN, GREEN, 12));
+            badge.setContentDescription(unread + " unread messages");
+            row.addView(badge);
+        }
         row.setFocusable(true);
         row.setOnClickListener(v -> {
             if (choosingLiveRecipient) {
@@ -1200,32 +1204,17 @@ public final class FamilyChatFragment extends Fragment {
         return row;
     }
 
-    private String hiddenKey(FamilyChatStore.Message message) {
-        return store.accountId() + "|" + message.snapshot.getRef().toString();
-    }
-
-    private android.content.SharedPreferences hiddenMessages() {
-        return requireContext().getSharedPreferences("family_chat_hidden_messages", android.content.Context.MODE_PRIVATE);
-    }
-
     boolean hiddenForMe(FamilyChatStore.Message message) {
-        return store.accountId() != null && hiddenMessages().getBoolean(hiddenKey(message), false);
+        return store.hiddenForMe(message);
     }
 
-    void deleteForMe(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+    void deleteForMe(FamilyChatStore.ThreadState thread, List<FamilyChatStore.Message> messages) {
         if (!isVoiceThreadOpen(thread) || !store.canUse(thread)) return;
-        hiddenMessages().edit().putBoolean(hiddenKey(message), true).apply();
-        voiceNotes.stopMessagePlayback(message);
-        if (java.util.Objects.equals(replyKey, message.snapshot.getKey())) clearReply();
-        render();
-    }
-
-    private int unreadCount(FamilyChatStore.ThreadState thread) {
-        int count = 0;
-        for (FamilyChatStore.Message message : thread.messages) {
-            if (!message.deleted() && store.unread(message) && !hiddenForMe(message)) count++;
+        for (FamilyChatStore.Message message : messages) {
+            voiceNotes.stopMessagePlayback(message);
+            if (java.util.Objects.equals(replyKey, message.snapshot.getKey())) clearReply();
         }
-        return count;
+        store.hideMessages(thread, messages);
     }
 
     private void updateJumpToLatest() {
@@ -1234,7 +1223,7 @@ public final class FamilyChatFragment extends Fragment {
         boolean visible = thread != null && !thread.error && !scrollingUp && scroll.canScrollVertically(1);
         jumpToLatest.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) return;
-        int unread = unreadCount(thread);
+        int unread = store.unreadCount(thread);
         newMessageCount.setVisibility(unread == 0 ? View.GONE : View.VISIBLE);
         newMessageCount.setText(Integer.toString(unread));
         jumpToLatest.setContentDescription(unread == 0 ? "Jump to latest message"
@@ -1243,39 +1232,42 @@ public final class FamilyChatFragment extends Fragment {
 
     private void selectMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         if (!isVoiceThreadOpen(thread) || message.deleted() || hiddenForMe(message)) return;
-        selectedMessageKey = message.snapshot.getKey();
+        String key = message.snapshot.getKey();
+        if (!selectedMessageKeys.add(key)) selectedMessageKeys.remove(key);
         updateMessageSelection();
     }
 
     void clearMessageSelection() {
-        if (selectedMessageKey == null) return;
-        selectedMessageKey = null;
+        if (selectedMessageKeys.isEmpty()) return;
+        selectedMessageKeys.clear();
         updateMessageSelection();
     }
 
     private void updateMessageSelection() {
         if (screen == null || selectionToolbar == null) return;
         FamilyChatStore.ThreadState thread = store.thread(peer);
-        FamilyChatStore.Message selected = null;
-        if (selectedMessageKey != null && thread != null && store.canUse(thread)) {
+        List<FamilyChatStore.Message> selected = new ArrayList<>();
+        java.util.Set<String> valid = new java.util.HashSet<>();
+        if (!selectedMessageKeys.isEmpty() && thread != null && store.canUse(thread)) {
             for (FamilyChatStore.Message message : thread.messages) {
-                if (selectedMessageKey.equals(message.snapshot.getKey()) && !message.deleted() && !hiddenForMe(message)) {
-                    selected = message;
-                    break;
+                String key = message.snapshot.getKey();
+                if (selectedMessageKeys.contains(key) && !message.deleted() && !hiddenForMe(message)) {
+                    selected.add(message);
+                    valid.add(key);
                 }
             }
         }
-        if (selected == null) selectedMessageKey = null;
+        selectedMessageKeys.retainAll(valid);
         for (View bubble : bubbles) {
             if (bubble == null) continue;
-            boolean highlighted = selectedMessageKey != null && selectedMessageKey.equals(bubble.getTag());
+            boolean highlighted = selectedMessageKeys.contains(bubble.getTag());
             bubble.setSelected(highlighted);
             bubble.setForeground(highlighted ? card(0x2465ae85, 0xff42977c, 15) : null);
         }
-        header.setVisibility(selected == null ? View.VISIBLE : View.GONE);
-        selectionToolbar.setVisibility(selected == null ? View.GONE : View.VISIBLE);
+        header.setVisibility(selected.isEmpty() ? View.VISIBLE : View.GONE);
+        selectionToolbar.setVisibility(selected.isEmpty() ? View.GONE : View.VISIBLE);
         selectionToolbar.removeAllViews();
-        if (selected == null) return;
+        if (selected.isEmpty()) return;
         android.widget.ImageButton back = new android.widget.ImageButton(requireContext());
         back.setImageResource(R.drawable.ic_arrow_back);
         back.setImageTintList(android.content.res.ColorStateList.valueOf(GREEN));
@@ -1283,10 +1275,10 @@ public final class FamilyChatFragment extends Fragment {
         back.setContentDescription("Clear message selection");
         back.setOnClickListener(view -> clearMessageSelection());
         selectionToolbar.addView(back, new LinearLayout.LayoutParams(dp(40), dp(46)));
-        TextView count = text("1", 17, GREEN, true);
+        TextView count = text(Integer.toString(selected.size()), 17, GREEN, true);
         count.setGravity(Gravity.CENTER_VERTICAL);
         count.setMinWidth(dp(22));
-        count.setContentDescription("1 message selected");
+        count.setContentDescription(selected.size() + " messages selected");
         selectionToolbar.addView(count, new LinearLayout.LayoutParams(0, -1, 1));
         smart.selectionActions(thread, selected, selectionToolbar);
     }
@@ -1311,12 +1303,13 @@ public final class FamilyChatFragment extends Fragment {
             boolean own = store.own(message);
             if (message.deleted()) voiceNotes.stopMessagePlayback(message);
             LinearLayout bubble = new ChatMessageBubble(requireContext(), (view, touch) ->
-                    selectMessage(thread, message));
+                    selectMessage(thread, message), () -> !selectedMessageKeys.isEmpty(),
+                    () -> selectMessage(thread, message));
             bubble.setOrientation(LinearLayout.VERTICAL);
             bubble.setPadding(space(10), space(7), space(10), space(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
             bubble.setTag(message.snapshot.getKey());
-            if (selectedMessageKey != null && selectedMessageKey.equals(bubble.getTag())) {
+            if (selectedMessageKeys.contains(bubble.getTag())) {
                 bubble.setSelected(true);
                 bubble.setForeground(card(0x2465ae85, 0xff42977c, 15));
             }
@@ -1426,8 +1419,10 @@ public final class FamilyChatFragment extends Fragment {
         if (!scroll.getGlobalVisibleRect(viewport)) return;
         for (int i = 0; i < bubbles.size(); i++) {
             android.graphics.Rect bounds = new android.graphics.Rect();
-            if (bubbles.get(i) != null && bubbles.get(i).getGlobalVisibleRect(bounds) && android.graphics.Rect.intersects(viewport, bounds)) {
-                store.receipt(thread, thread.messages.get(i), true);
+            FamilyChatStore.Message message = thread.messages.get(i);
+            if (!message.deleted() && store.unread(message) && bubbles.get(i) != null
+                    && bubbles.get(i).getGlobalVisibleRect(bounds) && android.graphics.Rect.intersects(viewport, bounds)) {
+                store.receipt(thread, message, true);
             }
         }
     }

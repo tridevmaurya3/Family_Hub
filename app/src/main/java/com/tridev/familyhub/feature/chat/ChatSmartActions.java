@@ -48,8 +48,34 @@ final class ChatSmartActions {
         buildMessageActions(thread, message, anchor, touch, null);
     }
 
-    void selectionActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, LinearLayout toolbar) {
-        buildMessageActions(thread, message, toolbar, null, toolbar);
+    void selectionActions(FamilyChatStore.ThreadState thread, List<FamilyChatStore.Message> messages,
+                          LinearLayout toolbar) {
+        if (!ready(thread)) return;
+        if (messages.size() == 1) {
+            buildMessageActions(thread, messages.get(0), toolbar, null, toolbar);
+            return;
+        }
+        List<String> labels = new ArrayList<>();
+        List<Runnable> actions = new ArrayList<>();
+        addAction(labels, actions, "Forward", () -> forwardMessages(thread, messages));
+        addAction(labels, actions, "Delete", () -> deleteOptions(thread, messages));
+        if (messages.stream().allMatch(message -> "text".equals(message.kind()))) {
+            addAction(labels, actions, "Copy text", () -> copyText(messages));
+        }
+        showSelectionActions(toolbar, labels, actions);
+    }
+
+    private void copyText(List<FamilyChatStore.Message> messages) {
+        android.content.ClipboardManager clipboard =
+                context().getSystemService(android.content.ClipboardManager.class);
+        if (clipboard == null) return;
+        StringBuilder text = new StringBuilder();
+        for (FamilyChatStore.Message message : messages) {
+            if (text.length() > 0) text.append('\n');
+            text.append(message.body);
+        }
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chat messages", text));
+        if (android.os.Build.VERSION.SDK_INT < 33) toast(messages.size() == 1 ? "Message copied" : "Messages copied");
     }
 
     private void buildMessageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
@@ -59,7 +85,7 @@ final class ChatSmartActions {
         List<Runnable> actions = new ArrayList<>();
         addAction(labels, actions, "Reply", () -> fragment.replyTo(message));
         addAction(labels, actions, "React", () -> reactions(thread, message));
-        addAction(labels, actions, "Forward", () -> forwardMessage(thread, message));
+        addAction(labels, actions, "Forward", () -> forwardMessages(thread, java.util.Collections.singletonList(message)));
         addAction(labels, actions, message.pinned() ? "Unpin" : "Pin for this chat", () ->
                 store.pin(thread, message, ok -> toast(ok ? (message.pinned() ? "Message unpinned" : "Message pinned")
                         : "Unable to change pin")));
@@ -68,13 +94,8 @@ final class ChatSmartActions {
         if ("text".equals(message.kind())) {
             List<String> extraLabels = new ArrayList<>();
             List<Runnable> extraActions = new ArrayList<>();
-            addAction(extraLabels, extraActions, "Copy text", () -> {
-                android.content.ClipboardManager clipboard =
-                        context().getSystemService(android.content.ClipboardManager.class);
-                if (clipboard == null) return;
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chat message", message.body));
-                if (android.os.Build.VERSION.SDK_INT < 33) toast("Message copied");
-            });
+            addAction(extraLabels, extraActions, "Copy text", () ->
+                    copyText(java.util.Collections.singletonList(message)));
             if (store.own(message)) addAction(extraLabels, extraActions, "Edit message", () -> editMessage(thread, message));
             addAction(extraLabels, extraActions, "Save to Family Notes", () ->
                     openFeature(com.tridev.familyhub.feature.notes.NotesFragment.forChatMessage(message.body)));
@@ -96,7 +117,7 @@ final class ChatSmartActions {
         if ("poll".equals(message.kind()) && !message.pollClosed() && store.own(message)) {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
-        addAction(labels, actions, "Delete", () -> deleteOptions(thread, message));
+        addAction(labels, actions, "Delete", () -> deleteOptions(thread, java.util.Collections.singletonList(message)));
         if (toolbar == null) chooseAnchored(anchor, "Message actions", labels, actions, true, touch);
         else showSelectionActions(toolbar, labels, actions);
     }
@@ -151,25 +172,27 @@ final class ChatSmartActions {
         return button;
     }
 
-    private void deleteOptions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+    private void deleteOptions(FamilyChatStore.ThreadState thread, List<FamilyChatStore.Message> messages) {
         if (!ready(thread)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
-        if (store.own(message)) addAction(labels, actions, "Delete for everyone", () ->
+        boolean single = messages.size() == 1;
+        if (messages.stream().allMatch(store::own)) addAction(labels, actions, "Delete for everyone", () ->
                 new ChatFormDialog(context()).setTitle("Delete for everyone?")
-                        .setMessage("This message will be removed from the chat for all participants.")
+                        .setMessage(single ? "This message will be removed from the chat for all participants."
+                                : "These messages will be removed from the chat for all participants.")
                         .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Delete", (dialog, which) -> store.editText(thread, message, "", true,
-                                ok -> { if (!ok) toast("Unable to delete message for everyone"); }))
+                        .setPositiveButton("Delete", (dialog, which) -> store.deleteForEveryone(thread, messages,
+                                ok -> { if (!ok) toast("Unable to delete for everyone"); }))
                         .show());
-        addAction(labels, actions, "Delete for me", () -> fragment.deleteForMe(thread, message));
+        addAction(labels, actions, "Delete for me", () -> fragment.deleteForMe(thread, messages));
         addAction(labels, actions, "Delete", () -> new ChatFormDialog(context())
                 .setTitle("Delete from this device?")
                 .setMessage("Only your view of this chat on this device will change.")
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton("Delete", (dialog, which) -> fragment.deleteForMe(thread, message))
+                .setPositiveButton("Delete", (dialog, which) -> fragment.deleteForMe(thread, messages))
                 .show());
-        ChatActionDialog design = new ChatActionDialog(context(), "Delete message?", 0);
+        ChatActionDialog design = new ChatActionDialog(context(), single ? "Delete message?" : "Delete " + messages.size() + " messages?", 0);
         LinearLayout options = new LinearLayout(context());
         design.add(design.content, options, 10);
         AlertDialog dialog = new ChatFormDialog(context()).setView(design.content)
@@ -196,29 +219,41 @@ final class ChatSmartActions {
         dialog.show();
     }
 
-    private void forwardMessage(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
+    private void forwardMessages(FamilyChatStore.ThreadState source, List<FamilyChatStore.Message> messages) {
+        boolean single = messages.size() == 1;
+        boolean polls = messages.stream().anyMatch(message -> "poll".equals(message.kind()));
+        boolean expired = messages.stream().anyMatch(FamilyChatStore.Message::pollClosed);
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         for (FamilyChatStore.ThreadState target : store.threads()) {
             if (target == source || !store.canUse(target)) continue;
             String title = store.title(target);
             addAction(labels, actions, title, () -> ChatSendButton.stylePositive(new ChatFormDialog(context())
-                    .setTitle("Forward message?")
-                    .setMessage("Send this message to " + title + "?"
-                            + ("poll".equals(message.kind()) ? "\nA forwarded poll starts with no votes." : "")
-                            + (message.pollClosed() ? " The expired deadline is cleared." : ""))
+                    .setTitle(single ? "Forward message?" : "Forward " + messages.size() + " messages?")
+                    .setMessage((single ? "Send this message to " : "Send these messages to ") + title + "?"
+                            + (polls ? "\nA forwarded poll starts with no votes." : "")
+                            + (expired ? " The expired deadline is cleared." : ""))
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Forward", (dialog, which) -> {
                         if (!ready(source) || !ready(target)) return;
-                        store.forward(source, target, message.snapshot.getKey(), result -> {
-                            if (!ready(target)) return;
-                            if (!result) toast("Unable to forward message");
-                            else toast("Message forwarded");
-                        });
+                        forwardNext(source, target, messages, 0, 0);
                     }).show()));
         }
         if (labels.isEmpty()) toast("No other chats available");
         else choose("Forward to", labels, actions);
+    }
+
+    private void forwardNext(FamilyChatStore.ThreadState source, FamilyChatStore.ThreadState target,
+                             List<FamilyChatStore.Message> messages, int index, int sent) {
+        if (!ready(source) || !ready(target)) return;
+        if (index == messages.size()) {
+            if (sent == 0) toast("Unable to forward " + (index == 1 ? "message" : "messages"));
+            else if (index == 1) toast("Message forwarded");
+            else toast(sent + " of " + index + " messages forwarded");
+            return;
+        }
+        store.forward(source, target, messages.get(index).snapshot.getKey(), ok ->
+                forwardNext(source, target, messages, index + 1, sent + (ok ? 1 : 0)));
     }
 
     private void messageInfo(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {

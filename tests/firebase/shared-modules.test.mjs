@@ -430,6 +430,28 @@ test('voice notes can use the existing attachment rules in a direct chat', async
   assert.ok(deleted.child('deletedAt').exists());
 });
 
+test('multi-message deletion is atomic and restricted to the sender', async () => {
+  const path = `familyChat/familyA/direct/${writer}/${reader}`;
+  const owner = env.authenticatedContext(writer).database().ref(path);
+  const recipient = env.authenticatedContext(reader).database().ref(path);
+  const stamp = { '.sv': 'timestamp' };
+  for (const key of ['bulk-first', 'bulk-second']) {
+    await assertSucceeds(owner.child(key).set({ sender: writer, body: key, at: stamp }));
+  }
+  await assertSucceeds(recipient.child('bulk-other').set({ sender: reader, body: 'Other sender', at: stamp }));
+  const deleteBatch = (...keys) => Object.fromEntries(keys.flatMap(key => [
+    [key + '/body', 'Message deleted'],
+    [key + '/deletedAt', stamp]
+  ]));
+  await assertFails(owner.update(deleteBatch('bulk-first', 'bulk-other')));
+  assert.equal((await recipient.child('bulk-first/body').get()).val(), 'bulk-first');
+  await assertSucceeds(owner.update(deleteBatch('bulk-first', 'bulk-second')));
+  for (const key of ['bulk-first', 'bulk-second']) {
+    assert.ok((await recipient.child(key + '/deletedAt').get()).exists());
+  }
+  assert.equal((await recipient.child('bulk-other/body').get()).val(), 'Other sender');
+});
+
 test('chat edits, deletion, deadlines and group names enforce ownership', async () => {
   const path = `familyChat/familyA/direct/${writer}/${reader}`;
   const a = env.authenticatedContext(writer).database().ref(path);

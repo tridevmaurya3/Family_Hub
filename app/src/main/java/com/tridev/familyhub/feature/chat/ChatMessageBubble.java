@@ -12,15 +12,24 @@ import java.util.function.BiConsumer;
 final class ChatMessageBubble extends LinearLayout {
     private final GestureDetector gestures;
     private boolean consumedLongPress;
+    private boolean selectionTap;
+    private final java.util.function.BooleanSupplier selecting;
 
-    ChatMessageBubble(Context context, BiConsumer<View, Point> showMenu) {
+    ChatMessageBubble(Context context, BiConsumer<View, Point> showMenu,
+                    java.util.function.BooleanSupplier selecting, Runnable toggle) {
         super(context);
+        this.selecting = selecting;
         setOnLongClickListener(view -> {
             if (!consumedLongPress) showMenu.accept(view, null);
             return true;
         });
         gestures = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override public boolean onDown(MotionEvent event) { return true; }
+
+            @Override public boolean onSingleTapUp(MotionEvent event) {
+                if (selectionTap) toggle.run();
+                return selectionTap;
+            }
 
             @Override public void onLongPress(MotionEvent event) {
                 if (!isAttachedToWindow()) return;
@@ -36,8 +45,11 @@ final class ChatMessageBubble extends LinearLayout {
     }
 
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) consumedLongPress = false;
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            consumedLongPress = false;
+            selectionTap = selecting.getAsBoolean();
+        }
         gestures.onTouchEvent(event);
-        return consumedLongPress || super.dispatchTouchEvent(event);
+        return selectionTap || consumedLongPress || super.dispatchTouchEvent(event);
     }
 }

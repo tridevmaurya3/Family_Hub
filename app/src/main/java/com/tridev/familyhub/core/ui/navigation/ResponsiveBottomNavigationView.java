@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -27,6 +28,7 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
     }
 
     private final Map<Integer, NavItem> items = new LinkedHashMap<>();
+    private TextView chatUnreadBadge;
     @Nullable private OnItemSelectedListener listener;
     @IdRes private int selectedItemId = View.NO_ID;
 
@@ -89,6 +91,13 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
         return selectedItemId;
     }
 
+    public void setChatUnreadCount(int count) {
+        chatUnreadBadge.setVisibility(count > 0 ? VISIBLE : GONE);
+        chatUnreadBadge.setText(count > 99 ? "99+" : Integer.toString(count));
+        items.get(R.id.nav_chat).container.setContentDescription(
+                count > 0 ? "Chat, " + count + " unread messages" : "Chat");
+    }
+
     private void addItem(
             @IdRes int destinationId,
             int iconResource,
@@ -115,7 +124,29 @@ public final class ResponsiveBottomNavigationView extends LinearLayout {
                 ? ColorStateList.valueOf(ContextCompat.getColor(getContext(), R.color.fh_primary))
                 : null);
         icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        item.addView(icon, new LayoutParams(dp(23), dp(23)));
+        if (destinationId == R.id.nav_chat) {
+            FrameLayout iconFrame = new FrameLayout(getContext());
+            iconFrame.addView(icon, new FrameLayout.LayoutParams(dp(23), dp(23), Gravity.CENTER));
+            item.addView(iconFrame, new LayoutParams(LayoutParams.MATCH_PARENT, dp(23)));
+            chatUnreadBadge = new TextView(getContext());
+            chatUnreadBadge.setTextColor(android.graphics.Color.WHITE);
+            chatUnreadBadge.setTextSize(9);
+            chatUnreadBadge.setGravity(Gravity.CENTER);
+            chatUnreadBadge.setIncludeFontPadding(false);
+            chatUnreadBadge.setSingleLine();
+            chatUnreadBadge.setMinWidth(dp(14));
+            chatUnreadBadge.setPadding(dp(2), 0, dp(2), 0);
+            android.graphics.drawable.GradientDrawable badge = new android.graphics.drawable.GradientDrawable();
+            badge.setColor(ContextCompat.getColor(getContext(), R.color.fh_success));
+            badge.setCornerRadius(dp(7));
+            chatUnreadBadge.setBackground(badge);
+            chatUnreadBadge.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            chatUnreadBadge.setVisibility(GONE);
+            iconFrame.addView(chatUnreadBadge, new FrameLayout.LayoutParams(
+                    LayoutParams.WRAP_CONTENT, dp(14), Gravity.TOP | Gravity.END));
+        } else {
+            item.addView(icon, new LayoutParams(dp(23), dp(23)));
+        }
 
         TextView label = new TextView(getContext());
         label.setText(labelText);
