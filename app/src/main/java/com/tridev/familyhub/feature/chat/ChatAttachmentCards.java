@@ -44,7 +44,13 @@ final class ChatAttachmentCards {
         card.setOrientation(LinearLayout.VERTICAL);
         switch (kind) {
             case "photo":
-                FrameLayout photo = featureArea(mediaWidth);
+                int maxPhotoHeight = Math.min(mediaWidth, dp(320));
+                FrameLayout photo = new FrameLayout(context);
+                android.graphics.drawable.GradientDrawable photoSurface = new android.graphics.drawable.GradientDrawable();
+                photoSurface.setColor(color(R.color.fh_primary_container));
+                photoSurface.setCornerRadius(dp(12));
+                photo.setBackground(photoSurface);
+                photo.setClipToOutline(true);
                 ImageView image = new ImageView(context);
                 image.setScaleType(ImageView.ScaleType.FIT_CENTER);
                 image.setContentDescription("Open photo full screen");
@@ -53,13 +59,19 @@ final class ChatAttachmentCards {
                 hint.setGravity(Gravity.CENTER);
                 photo.addView(hint, new FrameLayout.LayoutParams(-1, -1));
                 photo.setOnClickListener(v -> open.run());
-                card.addView(photo);
+                int placeholderWidth = Math.min(mediaWidth, dp(180));
+                card.addView(photo, new LinearLayout.LayoutParams(placeholderWidth, maxPhotoHeight));
                 whenVisible(image, () -> attachments.loadPhoto(thread, message, bitmap -> {
                     if (!image.isAttachedToWindow()) return;
                     if (bitmap == null) {
                         hint.setText("Photo unavailable · Tap to retry");
                         return;
                     }
+                    float scale = Math.min((float) mediaWidth / bitmap.getWidth(),
+                            (float) maxPhotoHeight / bitmap.getHeight());
+                    photo.setLayoutParams(new LinearLayout.LayoutParams(
+                            Math.max(1, Math.round(bitmap.getWidth() * scale)),
+                            Math.max(1, Math.round(bitmap.getHeight() * scale))));
                     image.setImageBitmap(bitmap);
                     hint.setVisibility(View.GONE);
                     photo.setOnClickListener(v -> attachments.showFullPhoto(thread, bitmap));
@@ -70,8 +82,9 @@ final class ChatAttachmentCards {
                 String heading = "live".equals(kind) ? "Family Live location" : "Shared location";
                 card.addView(label(heading, true));
                 LocationPreview preview = new LocationPreview(context, open);
-                int mapHeight = Math.round(mediaWidth * 0.82f);
-                card.addView(preview, new LinearLayout.LayoutParams(-1, mapHeight + dp(36)));
+                int mapWidth = Math.min(mediaWidth, dp(240));
+                int mapHeight = Math.round(mapWidth * 0.82f);
+                card.addView(preview, new LinearLayout.LayoutParams(mapWidth, mapHeight + dp(36)));
                 if ("live".equals(kind)) {
                     whenVisible(preview, () -> attachments.observeLive(message.liveMember(), preview.liveUpdate));
                 } else {
@@ -111,7 +124,7 @@ final class ChatAttachmentCards {
                     button.setMinWidth(0);
                     button.setMinimumWidth(0);
                     button.setPaddingRelative(dp(3), button.getPaddingTop(), dp(3), button.getPaddingBottom());
-                    actions.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
+                    actions.addView(button, new LinearLayout.LayoutParams(-2, -2, 1));
                 }
                 card.addView(actions);
                 break;
@@ -143,7 +156,9 @@ final class ChatAttachmentCards {
                 }
                 break;
             case "voice":
-                return attachments.voiceMessage(thread, message);
+                View voice = attachments.voiceMessage(thread, message);
+                voice.setMinimumWidth(Math.min(mediaWidth, dp(225)));
+                return voice;
             case "file":
                 details(card, "File", message.body, message.snapshot.child("mime").getValue(String.class),
                         "Open file", open);
@@ -178,13 +193,6 @@ final class ChatAttachmentCards {
         panel.addView(contents);
         card.addView(panel);
         card.addView(action(button, open));
-    }
-
-    private FrameLayout featureArea(int height) {
-        FrameLayout frame = new FrameLayout(context);
-        frame.setBackgroundColor(color(R.color.fh_primary_container));
-        frame.setLayoutParams(new LinearLayout.LayoutParams(-1, height));
-        return frame;
     }
 
     private MaterialCardView surface() {

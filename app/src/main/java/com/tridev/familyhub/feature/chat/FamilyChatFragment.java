@@ -1875,7 +1875,6 @@ public final class FamilyChatFragment extends Fragment {
         ChatAttachmentCards cards = new ChatAttachmentCards(requireContext(), attachments);
         int screenWidth = screen.getWidth() > 0 ? screen.getWidth() : getResources().getDisplayMetrics().widthPixels;
         int compactWidth = Math.min(dp(420), Math.round(screenWidth * 0.82f));
-        int compactMediaWidth = Math.max(1, compactWidth - dp(20));
         displayedMessages = new ArrayList<>(thread.messages);
         java.util.regex.Pattern keyword = searching ? searchPattern() : null;
         FamilyChatStore.Message searchHit = null;
@@ -1904,9 +1903,22 @@ public final class FamilyChatFragment extends Fragment {
             }
             boolean own = store.own(message);
             if (message.deleted()) voiceNotes.stopMessagePlayback(message);
-            LinearLayout bubble = column();
+            boolean hasReplyButton = own && !message.deleted();
+            int rowWidth = rows.getWidth() > 0 ? rows.getWidth() : screenWidth - dp(20);
+            int reservedWidth = hasReplyButton ? target(48) : own ? 0 : dp(24);
+            int maxBubbleWidth = Math.max(1, Math.min(compactWidth, rowWidth - reservedWidth));
+            boolean photoMessage = !message.deleted() && "photo".equals(message.kind());
+            int horizontalPadding = space(photoMessage ? 3 : 10);
+            LinearLayout bubble = new LinearLayout(requireContext()) {
+                @Override protected void onMeasure(int widthSpec, int heightSpec) {
+                    int available = View.MeasureSpec.getMode(widthSpec) == View.MeasureSpec.UNSPECIFIED
+                            ? maxBubbleWidth : Math.min(maxBubbleWidth, View.MeasureSpec.getSize(widthSpec));
+                    super.onMeasure(View.MeasureSpec.makeMeasureSpec(available, View.MeasureSpec.AT_MOST), heightSpec);
+                }
+            };
             bubble.setOrientation(LinearLayout.VERTICAL);
-            bubble.setPadding(space(10), space(7), space(10), space(7));
+            bubble.setPadding(horizontalPadding, space(photoMessage ? 3 : 7),
+                    horizontalPadding, space(photoMessage ? 3 : 7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
             bubble.setTag(message.snapshot.getKey());
             if (selectedMessageKeys.contains(bubble.getTag())) {
@@ -1924,7 +1936,7 @@ public final class FamilyChatFragment extends Fragment {
                 quoted.setOnClickListener(view -> smart.openReply(thread, target));
                 bubble.addView(quoted);
             }
-            View attachment = cards.create(thread, message, compactMediaWidth);
+            View attachment = cards.create(thread, message, Math.max(1, maxBubbleWidth - 2 * horizontalPadding));
             if (attachment != null) {
                 bubble.addView(attachment, new LinearLayout.LayoutParams(-1, -2));
                 if (keyword != null && !message.deleted() && keyword.matcher(message.body).find()) {
@@ -1980,9 +1992,6 @@ public final class FamilyChatFragment extends Fragment {
                 metadata.addView(tick);
             }
             bubble.addView(metadata);
-            if (attachment == null) bubble.measure(View.MeasureSpec.makeMeasureSpec(compactWidth, View.MeasureSpec.AT_MOST),
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            int bubbleWidth = attachment == null ? Math.min(compactWidth, Math.max(space(140), bubble.getMeasuredWidth())) : compactWidth;
             Runnable select = () -> selectMessage(thread, message);
             LinearLayout messageRow = new ChatMessageBubble(requireContext(), (view, touch) -> select.run(),
                     () -> !selectedMessageKeys.isEmpty(), select);
@@ -1990,7 +1999,7 @@ public final class FamilyChatFragment extends Fragment {
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
             params.topMargin = space(7);
             if (!own) messageRow.setPaddingRelative(0, 0, dp(24), 0);
-            if (own && !message.deleted()) {
+            if (hasReplyButton) {
                 MaterialButton reply = new MaterialButton(requireContext(), null,
                         com.google.android.material.R.attr.materialButtonOutlinedStyle);
                 reply.setIconResource(R.drawable.ic_chat_reply);
@@ -2001,12 +2010,9 @@ public final class FamilyChatFragment extends Fragment {
                 reply.setPadding(0, 0, 0, 0);
                 reply.setContentDescription("Reply to this message");
                 reply.setOnClickListener(v -> replyTo(message));
-                int maxBubble = Math.max(dp(100), rows.getWidth() > 0
-                        ? rows.getWidth() - target(48) : screenWidth - target(48) - dp(20));
-                bubbleWidth = Math.min(bubbleWidth, maxBubble);
                 messageRow.addView(reply, new LinearLayout.LayoutParams(target(48), target(48)));
             }
-            messageRow.addView(bubble, new LinearLayout.LayoutParams(bubbleWidth, -2));
+            messageRow.addView(bubble, new LinearLayout.LayoutParams(-2, -2));
             rows.addView(messageRow, params);
             bubbles.add(bubble);
         }
