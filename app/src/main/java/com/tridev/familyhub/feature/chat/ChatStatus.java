@@ -84,9 +84,20 @@ final class ChatStatus {
         mine.addView(ownCard, new LinearLayout.LayoutParams(-1, -2));
         View profile = statusRow(uid, ownName, "My status");
         ownCard.addView(profile);
-        View create = addAction(mine, "+ Create new story", true, () -> compose(statuses.child(uid), family, uid));
-        create.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33ffffff),
-                surface(12, GREEN, GREEN), null));
+        com.google.android.material.button.MaterialButton create =
+                new com.google.android.material.button.MaterialButton(rows.getContext());
+        create.setText("+ Create new story");
+        create.setAllCaps(false);
+        create.setTextSize(FloatingChatSizing.text(rows.getContext(), 15));
+        create.setTextColor(0xff165447);
+        create.setMinHeight(FloatingChatSizing.target(rows.getContext(), 48));
+        create.setBackgroundTintList(ColorStateList.valueOf(0xffd9f2e8));
+        create.setStrokeColor(ColorStateList.valueOf(0xff659d8a));
+        create.setStrokeWidth(dp(1));
+        create.setCornerRadius(dp(12));
+        create.setRippleColor(ColorStateList.valueOf(0x24106c59));
+        create.setOnClickListener(view -> compose(statuses.child(uid), family, uid));
+        mine.addView(create, cardSpacing());
 
         rows.addView(section("Family updates", 18, GREEN), cardSpacing());
         android.widget.GridLayout updates = new android.widget.GridLayout(rows.getContext());
