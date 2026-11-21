@@ -60,7 +60,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         manager.lockNavigationInProgress = false;
         manager.markInteractionNow();
         Activity activity = manager.activeActivity.get();
-        if (activity != null && !manager.isEntryOrLockActivity(activity)
+        if (activity != null && !manager.isLockExemptActivity(activity)
                 && AppSecurityStore.isProtectionEnabled(activity)) {
             manager.scheduleTimeout(manager.timeoutMillis(activity));
         }
@@ -93,7 +93,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         manager.markInteractionNow();
         Activity activity = manager.activeActivity.get();
         if (!manager.activeActivityResumed || activity == null
-                || manager.isEntryOrLockActivity(activity)
+                || manager.isLockExemptActivity(activity)
                 || !AppSecurityStore.isProtectionEnabled(activity)
                 || manager.lockNavigationInProgress) {
             return;
@@ -112,12 +112,20 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         manager.lockNow(activity);
     }
 
+    public static void refreshFloatingChatProtection(@NonNull
+            com.tridev.familyhub.feature.chat.FloatingChatActivity activity) {
+        FamilyHubAppLockManager manager = instance;
+        if (manager != null && manager.activeActivityResumed && manager.activeActivity.get() == activity) {
+            manager.onActivityResumed(activity);
+        }
+    }
+
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
         activeActivity = new WeakReference<>(activity);
         activeActivityResumed = true;
 
-        if (isEntryOrLockActivity(activity)) {
+        if (isLockExemptActivity(activity)) {
             if (activity instanceof AppLockActivity) {
                 lockNavigationInProgress = false;
             }
@@ -182,7 +190,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
 
     public void onUserInteraction(@NonNull Activity activity) {
         Activity current = activeActivity.get();
-        if (current != activity || isEntryOrLockActivity(activity)
+        if (current != activity || isLockExemptActivity(activity)
                 || !sessionUnlocked || !currentUid().equals(unlockedUid)
                 || !AppSecurityStore.isProtectionEnabled(activity)
                 || lockNavigationInProgress) {
@@ -194,7 +202,7 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
 
     private void lockNow(@NonNull Activity activity) {
         if (lockNavigationInProgress || activity.isFinishing() || activity.isDestroyed()
-                || isEntryOrLockActivity(activity)
+                || isLockExemptActivity(activity)
                 || !AppSecurityStore.isProtectionEnabled(activity)) {
             return;
         }
@@ -213,9 +221,12 @@ public final class FamilyHubAppLockManager implements Application.ActivityLifecy
         window.setCallback(new InteractionWindowCallback(callback, activity, this));
     }
 
-    private boolean isEntryOrLockActivity(@NonNull Activity activity) {
+    private boolean isLockExemptActivity(@NonNull Activity activity) {
         // Alarm controls expose only the delivered reminder, not protected app pages.
         // Includes FamilyTaskSnoozeActivity, which extends FamilyTaskAlarmActivity.
+        if (activity instanceof com.tridev.familyhub.feature.chat.FloatingChatActivity) {
+            return ((com.tridev.familyhub.feature.chat.FloatingChatActivity) activity).isShowingChatOnly();
+        }
         return activity instanceof com.tridev.familyhub.core.reminders.ReminderAlarmActivity
                 || activity instanceof com.tridev.familyhub.core.tasks.FamilyTaskAlarmActivity
                 || activity instanceof AppLockActivity

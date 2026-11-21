@@ -29,6 +29,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.security.AccountDataScope;
+import com.tridev.familyhub.core.security.FamilyHubAppLockManager;
 import com.tridev.familyhub.feature.main.MainActivity;
 
 public final class FloatingChatActivity extends AppCompatActivity {
@@ -131,6 +132,8 @@ public final class FloatingChatActivity extends AppCompatActivity {
         if (getSupportFragmentManager().findFragmentById(R.id.floating_chat_content) == null) getSupportFragmentManager().beginTransaction()
                 .replace(R.id.floating_chat_content, new FamilyChatFragment(), CHAT_TAG)
                 .commitNow();
+        getSupportFragmentManager().addOnBackStackChangedListener(
+                () -> FamilyHubAppLockManager.refreshFloatingChatProtection(this));
         accountListener = auth -> { if (!authorized()) finish(); };
         FirebaseAuth.getInstance().addAuthStateListener(accountListener);
     }
@@ -172,6 +175,10 @@ public final class FloatingChatActivity extends AppCompatActivity {
             return true;
         }
         return super.dispatchTouchEvent(event);
+    }
+
+    public boolean isShowingChatOnly() {
+        return getSupportFragmentManager().findFragmentById(R.id.floating_chat_content) instanceof FamilyChatFragment;
     }
 
     boolean panelVisible() {
