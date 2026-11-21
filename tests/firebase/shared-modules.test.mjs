@@ -420,6 +420,14 @@ test('voice notes can use the existing attachment rules in a direct chat', async
   assert.equal((await recipient.child(message).get()).child('mime').val(), mime);
   assert.equal((await recipient.child(audio).get()).val(), bytes);
   await assertFails(nonMember.child(audio).get());
+  const stamp = { '.sv': 'timestamp' };
+  const deletion = { body: 'Message deleted', deletedAt: stamp };
+  await assertFails(recipient.child(message).update(deletion));
+  await assertFails(family.child(message).update({ body: 'Edited attachment', editedAt: stamp }));
+  await assertSucceeds(family.child(message).update(deletion));
+  const deleted = await recipient.child(message).get();
+  assert.equal(deleted.child('body').val(), 'Message deleted');
+  assert.ok(deleted.child('deletedAt').exists());
 });
 
 test('chat edits, deletion, deadlines and group names enforce ownership', async () => {

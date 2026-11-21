@@ -49,7 +49,7 @@ public final class FamilyChatFragment extends Fragment {
     private String replyKey;
     private String replyPreview;
     private LinearLayout replyBanner;
-    private TextView replyText;
+    private LinearLayout replyContent;
     private MaterialButton toolsButton;
     private MaterialButton pinBanner;
     private String pendingNotificationConversation;
@@ -236,13 +236,21 @@ public final class FamilyChatFragment extends Fragment {
         send.setMinimumWidth(0);
         send.setPadding(0, 0, 0, 0);
         ChatSendButton.style(send, "Send message");
+        send.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT));
+        send.setIconTint(new android.content.res.ColorStateList(
+                new int[][]{new int[]{-android.R.attr.state_enabled}, new int[0]},
+                new int[]{0xff548570, 0xff087b4b}));
         mic = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         mic.setIconResource(R.drawable.ic_mic);
-        mic.setIconSize(dp(22));
+        mic.setIconSize(dp(25));
+        mic.setStrokeWidth(0);
+        mic.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT));
+        mic.setGravity(Gravity.CENTER);
+        mic.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         mic.setIconPadding(0);
         mic.setIconTint(android.content.res.ColorStateList.valueOf(ChatVoiceControls.PURPLE));
-        mic.setPadding(dp(12), 0, 0, 0);
+        mic.setPadding(0, 0, 0, 0);
         mic.setContentDescription("Record voice note. Hold and slide down to lock");
         mic.setOnClickListener(v -> {
             draftVoice.stop();
@@ -266,9 +274,8 @@ public final class FamilyChatFragment extends Fragment {
         replyBanner.setGravity(Gravity.CENTER_VERTICAL);
         replyBanner.setPadding(dp(10), dp(2), dp(4), dp(2));
         replyBanner.setBackground(card(0xffe5f2fa, EDGE, 12));
-        replyText = text("", 13, BLUE, true);
-        replyText.setMaxLines(2);
-        replyBanner.addView(replyText, new LinearLayout.LayoutParams(0, -2, 1));
+        replyContent = column();
+        replyBanner.addView(replyContent, new LinearLayout.LayoutParams(0, -2, 1));
         MaterialButton cancelReply = flatButton("×");
         cancelReply.setContentDescription("Cancel reply");
         cancelReply.setOnClickListener(view -> clearReply());
@@ -414,9 +421,15 @@ public final class FamilyChatFragment extends Fragment {
         return button;
     }
 
+    String replyTarget() { return replyKey; }
+
+    void completeVoiceReply(FamilyChatStore.ThreadState thread, String target) {
+        if (target != null && isVoiceThreadOpen(thread) && target.equals(replyKey)) clearReply();
+    }
+
     void replyTo(FamilyChatStore.Message message) {
         replyKey = message.snapshot.getKey();
-        replyPreview = store.name(message.sender) + ": " + message.body;
+        replyPreview = replyTitle(message) + ": " + replySummary(message);
         updateReplyBanner();
         focusDraft();
     }
@@ -452,13 +465,21 @@ public final class FamilyChatFragment extends Fragment {
     private void updateReplyBanner() {
         if (replyBanner == null) return;
         replyBanner.setVisibility(replyKey != null && peer != null ? View.VISIBLE : View.GONE);
-        replyText.setText("Replying to " + replyPreview);
+        replyContent.removeAllViews();
+        if (replyKey == null || peer == null) return;
+        FamilyChatStore.ThreadState thread = store.thread(peer);
+        if (thread != null) for (FamilyChatStore.Message message : thread.messages) {
+            if (!replyKey.equals(message.snapshot.getKey())) continue;
+            replyContent.addView(replyQuote(thread, message, true));
+            return;
+        }
+        replyContent.addView(text("Replying to " + replyPreview, 13, BLUE, true));
     }
 
     boolean reveal(String key) {
         View bubble = rows.findViewWithTag(key);
         if (bubble == null) return false;
-        scroll.smoothScrollTo(0, bubble.getTop());
+        scroll.smoothScrollTo(0, ((View) bubble.getParent()).getTop());
         bubble.announceForAccessibility("Original message");
         return true;
     }
@@ -543,7 +564,7 @@ public final class FamilyChatFragment extends Fragment {
         pinBanner.setText("Pinned messages");
         if (chatReady) for (int i = thread.messages.size() - 1; i >= 0; i--) {
             FamilyChatStore.Message pinned = thread.messages.get(i);
-            if (!pinned.pinned() || pinned.deleted()) continue;
+            if (!pinned.pinned() || pinned.deleted() || hiddenForMe(pinned)) continue;
             pinBanner.setText("Pinned · " + pinned.body);
             break;
         }
@@ -568,6 +589,7 @@ public final class FamilyChatFragment extends Fragment {
                 : thread != null && thread.isGroup() ? store.groupMembers(thread).size() + " members · Group info"
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
         updateSend();
+        updateReplyBanner();
         int oldY = scroll.getScrollY();
         rows.removeAllViews();
         bubbles.clear();
@@ -837,6 +859,71 @@ public final class FamilyChatFragment extends Fragment {
         }
     }
 
+    private String replyTitle(FamilyChatStore.Message message) {
+        return store.own(message) ? "You" : store.name(message.sender);
+    }
+
+    private String replySummary(FamilyChatStore.Message message) {
+        if (message.deleted()) return "Message deleted";
+        if (hiddenForMe(message)) return "Message deleted for you";
+        if ("photo".equals(message.kind())) return "Photo";
+        if ("voice".equals(message.kind())) {
+            ChatVoiceAttachment attachment = message.voiceAttachment();
+            Integer millis = message.snapshot.child("voiceDuration").getValue(Integer.class);
+            int duration = attachment != null ? attachment.duration : millis == null ? 0 : millis;
+            return duration <= 0 ? "Voice note" : "Voice note · " + ChatVoiceControls.elapsed(duration);
+        }
+        return message.body;
+    }
+
+    private View replyQuote(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, boolean draft) {
+        LinearLayout row = new LinearLayout(requireContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setBackground(card(0xffe3f1ee, EDGE, 11));
+        row.setPadding(dp(8), dp(6), dp(6), dp(6));
+        View stripe = new View(requireContext());
+        stripe.setBackgroundColor(GREEN);
+        row.addView(stripe, new LinearLayout.LayoutParams(dp(3), dp(36)));
+        LinearLayout words = column();
+        words.setPadding(dp(8), 0, dp(6), 0);
+        words.addView(text((draft ? "Replying to " : "") + replyTitle(message), 12, GREEN, true));
+        TextView summary = text(replySummary(message), 13, INK, false);
+        summary.setMaxLines(2);
+        summary.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        words.addView(summary);
+        row.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
+        if ("photo".equals(message.kind()) && !message.deleted() && !hiddenForMe(message)) {
+            android.widget.ImageView thumbnail = new android.widget.ImageView(requireContext());
+            thumbnail.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+            thumbnail.setContentDescription("Original photo");
+            row.addView(thumbnail, new LinearLayout.LayoutParams(dp(42), dp(42)));
+            attachments.loadPhoto(thread, message, bitmap -> {
+                if (bitmap != null) thumbnail.setImageBitmap(bitmap);
+            });
+        }
+        return row;
+    }
+
+    private String hiddenKey(FamilyChatStore.Message message) {
+        return store.accountId() + "|" + message.snapshot.getRef().toString();
+    }
+
+    private android.content.SharedPreferences hiddenMessages() {
+        return requireContext().getSharedPreferences("family_chat_hidden_messages", android.content.Context.MODE_PRIVATE);
+    }
+
+    boolean hiddenForMe(FamilyChatStore.Message message) {
+        return store.accountId() != null && hiddenMessages().getBoolean(hiddenKey(message), false);
+    }
+
+    void deleteForMe(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (!isVoiceThreadOpen(thread) || !store.canUse(thread)) return;
+        hiddenMessages().edit().putBoolean(hiddenKey(message), true).apply();
+        voiceNotes.stopMessagePlayback(message);
+        if (java.util.Objects.equals(replyKey, message.snapshot.getKey())) clearReply();
+        render();
+    }
+
     private void renderThread(FamilyChatStore.ThreadState thread, int oldY) {
         String latestKey = thread.messages.isEmpty() ? null
                 : thread.messages.get(thread.messages.size() - 1).snapshot.getKey();
@@ -850,7 +937,12 @@ public final class FamilyChatFragment extends Fragment {
         java.util.Map<String, FamilyChatStore.Message> known = new java.util.HashMap<>();
         for (FamilyChatStore.Message item : thread.messages) known.put(item.snapshot.getKey(), item);
         for (FamilyChatStore.Message message : thread.messages) {
+            if (hiddenForMe(message)) {
+                bubbles.add(null);
+                continue;
+            }
             boolean own = store.own(message);
+            if (message.deleted()) voiceNotes.stopMessagePlayback(message);
             LinearLayout bubble = column();
             bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
@@ -863,12 +955,10 @@ public final class FamilyChatFragment extends Fragment {
                 bubble.addView(text(store.name(message.sender), 13, GREEN, true));
             }
             String target = message.snapshot.child("replyTo").getValue(String.class);
-            if (target != null) {
+            if (target != null && !message.deleted()) {
                 FamilyChatStore.Message original = known.get(target);
-                String quote = original == null ? "View original message" : store.name(original.sender) + ": " + original.body;
-                TextView quoted = text("↪ " + quote, 13, BLUE, true);
-                quoted.setMaxLines(2);
-                quoted.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                View quoted = original == null ? text("↪ View original message", 13, BLUE, true)
+                        : replyQuote(thread, original, false);
                 quoted.setOnClickListener(view -> smart.openReply(thread, target));
                 bubble.addView(quoted);
             }
@@ -910,8 +1000,8 @@ public final class FamilyChatFragment extends Fragment {
             TextView menu = text("  ⋮", 17, BLUE, true);
             menu.setContentDescription("Message actions");
             menu.setPadding(dp(4), dp(8), dp(4), dp(8));
-            menu.setOnClickListener(view -> smart.messageActions(thread, message, view));
-            metadata.addView(menu);
+            menu.setOnClickListener(view -> smart.messageActions(thread, message, bubble));
+            if (!message.deleted()) metadata.addView(menu);
             if (own) {
                 boolean seen = store.acknowledged(thread, message, true);
                 boolean delivered = seen || store.acknowledged(thread, message, false);
@@ -924,12 +1014,29 @@ public final class FamilyChatFragment extends Fragment {
             if (attachment == null) bubble.measure(View.MeasureSpec.makeMeasureSpec(compactWidth, View.MeasureSpec.AT_MOST),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
             int bubbleWidth = attachment == null ? Math.min(compactWidth, Math.max(dp(140), bubble.getMeasuredWidth())) : compactWidth;
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(bubbleWidth, -2);
-            params.gravity = own ? Gravity.END : Gravity.START;
+            LinearLayout messageRow = new LinearLayout(requireContext());
+            messageRow.setGravity((own ? Gravity.END : Gravity.START) | Gravity.CENTER_VERTICAL);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
             params.topMargin = dp(7);
-            if (own) params.setMarginStart(dp(24));
-            else params.setMarginEnd(dp(24));
-            rows.addView(bubble, params);
+            if (!own) params.setMarginEnd(dp(24));
+            if (own && !message.deleted()) {
+                MaterialButton reply = new MaterialButton(requireContext(), null,
+                        com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                reply.setIconResource(R.drawable.ic_chat_reply);
+                reply.setIconSize(dp(22));
+                reply.setIconPadding(0);
+                reply.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+                reply.setIconTint(android.content.res.ColorStateList.valueOf(BLUE));
+                reply.setPadding(0, 0, 0, 0);
+                reply.setContentDescription("Reply to this message");
+                reply.setOnClickListener(v -> replyTo(message));
+                int maxBubble = Math.max(dp(100), rows.getWidth() > 0
+                        ? rows.getWidth() - dp(48) : screenWidth - dp(68));
+                bubbleWidth = Math.min(bubbleWidth, maxBubble);
+                messageRow.addView(reply, new LinearLayout.LayoutParams(dp(48), dp(48)));
+            }
+            messageRow.addView(bubble, new LinearLayout.LayoutParams(bubbleWidth, -2));
+            rows.addView(messageRow, params);
             bubbles.add(bubble);
         }
         scroll.post(() -> {
@@ -948,7 +1055,7 @@ public final class FamilyChatFragment extends Fragment {
         if (!scroll.getGlobalVisibleRect(viewport)) return;
         for (int i = 0; i < bubbles.size(); i++) {
             android.graphics.Rect bounds = new android.graphics.Rect();
-            if (bubbles.get(i).getGlobalVisibleRect(bounds) && android.graphics.Rect.intersects(viewport, bounds)) {
+            if (bubbles.get(i) != null && bubbles.get(i).getGlobalVisibleRect(bounds) && android.graphics.Rect.intersects(viewport, bounds)) {
                 store.receipt(thread, thread.messages.get(i), true);
             }
         }

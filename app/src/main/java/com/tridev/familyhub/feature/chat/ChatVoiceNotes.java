@@ -330,6 +330,8 @@ final class ChatVoiceNotes {
         Map<String, Object> details = new HashMap<>();
         String capturedWave = waveform;
         int capturedDuration = duration;
+        String replyTarget = fragment.replyTarget();
+        if (replyTarget != null) details.put("replyTo", replyTarget);
         details.put("kind", "file");
         details.put("mime", ChatVoiceAttachment.contentType(capturedDuration, capturedWave));
         io.execute(() -> {
@@ -359,6 +361,7 @@ final class ChatVoiceNotes {
                     } else {
                         source.delete();
                     }
+                    if (success && ready(destination)) fragment.completeVoiceReply(destination, replyTarget);
                     if (!success && ready(destination)) notice("Unable to send voice note");
                 });
             });
@@ -528,6 +531,10 @@ final class ChatVoiceNotes {
     private void failPlayback(String message) {
         stopPlayback();
         notice(message);
+    }
+
+    void stopMessagePlayback(FamilyChatStore.Message message) {
+        if (message.snapshot.getRef().toString().equals(playingKey)) stopPlayback();
     }
 
     private void stopPlayback() {

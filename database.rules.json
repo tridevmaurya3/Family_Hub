@@ -87,7 +87,7 @@
             },
             "body": {
               ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000",
-              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.exists() && ((newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.exists() && ((!data.parent().child('kind').exists() && newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
             },
             "at": {
               ".validate": "newData.isNumber() && newData.val() === now"
@@ -168,7 +168,7 @@
               ".validate": "newData.isNumber() && newData.val() === now"
             },
             "deletedAt": {
-              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
+              ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
               ".validate": "newData.isNumber() && newData.val() === now"
             },
             "closesAt": {
@@ -208,7 +208,7 @@
                 },
                 "body": {
                   ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000",
-                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.exists() && ((newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.exists() && ((!data.parent().child('kind').exists() && newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
                 },
                 "at": {
                   ".validate": "newData.isNumber() && newData.val() === now"
@@ -289,7 +289,7 @@
                   ".validate": "newData.isNumber() && newData.val() === now"
                 },
                 "deletedAt": {
-                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && $first !== $second && (auth.uid === $first || auth.uid === $second) && root.child('memberships').child($familyId).child($first).child('status').val() === 'ACTIVE' && root.child('memberships').child($familyId).child($second).child('status').val() === 'ACTIVE' && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
                   ".validate": "newData.isNumber() && newData.val() === now"
                 },
                 "closesAt": {
@@ -346,7 +346,7 @@
                 },
                 "body": {
                   ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000",
-                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.exists() && ((newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.exists() && ((!data.parent().child('kind').exists() && newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
                 },
                 "at": {
                   ".validate": "newData.isNumber() && newData.val() === now"
@@ -427,7 +427,7 @@
                   ".validate": "newData.isNumber() && newData.val() === now"
                 },
                 "deletedAt": {
-                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
+                  ".write": "auth != null && root.child('memberships').child($familyId).child(auth.uid).child('status').val() === 'ACTIVE' && root.child('familyChat').child($familyId).child('rooms').child($room).child('members').child(auth.uid).val() === true && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
                   ".validate": "newData.isNumber() && newData.val() === now"
                 },
                 "closesAt": {

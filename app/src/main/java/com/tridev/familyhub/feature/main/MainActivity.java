@@ -69,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
     private boolean redirectingToAuth;
+    private boolean syncingNavigation;
 
     @Override
     protected void onResume() {
@@ -136,29 +137,29 @@ public class MainActivity extends AppCompatActivity {
                 false
         );
 
+        FragmentManager manager = getSupportFragmentManager();
         binding.bottomNavigation.setOnItemSelectedListener(destinationId -> {
-            showDestination(destinationId);
+            if (!syncingNavigation) showDestination(destinationId);
             return true;
         });
-
-        if (savedInstanceState == null) {
-            if (!handleLaunchIntent(getIntent())) {
-                binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
-                getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.main_content, new DashboardFragment())
-                        .commitNow();
+        manager.addOnBackStackChangedListener(this::syncBottomNavigationWithRestoredFragment);
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                manager.executePendingTransactions();
+                if (manager.popBackStackImmediate()) return;
+                if (!(manager.findFragmentById(R.id.main_content) instanceof DashboardFragment)) {
+                    manager.beginTransaction().replace(R.id.main_content, new DashboardFragment()).commitNow();
+                    syncBottomNavigationWithRestoredFragment();
+                } else {
+                    finish();
+                }
             }
-        } else if (getSupportFragmentManager()
-                .findFragmentById(R.id.main_content) == null) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_content, new DashboardFragment())
-                    .commitNow();
-        } else {
-            syncBottomNavigationWithRestoredFragment();
+        });
+        if (manager.findFragmentById(R.id.main_content) == null) {
+            manager.beginTransaction().replace(R.id.main_content, new DashboardFragment()).commitNow();
         }
+        syncBottomNavigationWithRestoredFragment();
+        if (savedInstanceState == null) handleLaunchIntent(getIntent());
     }
 
     /** Keeps restored content and navigation selection aligned after recreation. */
@@ -179,7 +180,9 @@ public class MainActivity extends AppCompatActivity {
         } else if (restored instanceof MoreFragment) {
             destinationId = R.id.nav_more;
         }
+        syncingNavigation = true;
         binding.bottomNavigation.setSelectedItemId(destinationId);
+        syncingNavigation = false;
     }
 
     public void refreshChatInsets() {
@@ -258,21 +261,12 @@ public class MainActivity extends AppCompatActivity {
             String conversation = intent.getStringExtra(EXTRA_CHAT_CONVERSATION);
             intent.removeExtra(EXTRA_CHAT_CONVERSATION);
             if (conversation == null) openTab(R.id.nav_chat);
-            else {
-                clearSecondaryScreens();
-                binding.bottomNavigation.setSelectedItemId(R.id.nav_chat);
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.main_content, FamilyChatFragment.forNotification(conversation)).commit();
-            }
+            else openFeature(FamilyChatFragment.forNotification(conversation));
             return true;
         }
         if (intent.getBooleanExtra(EXTRA_SHARE_LIVE_IN_CHAT, false)) {
             intent.removeExtra(EXTRA_SHARE_LIVE_IN_CHAT);
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_chat);
-            clearSecondaryScreens();
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_content, FamilyChatFragment.forLiveShare())
-                    .commit();
+            openFeature(FamilyChatFragment.forLiveShare());
             return true;
         }
         String route = intent.getStringExtra(EXTRA_OPEN_ROUTE);
@@ -286,11 +280,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (intent.getBooleanExtra(EXTRA_OPEN_GROCERY, false)) {
             intent.removeExtra(EXTRA_OPEN_GROCERY);
-            clearSecondaryScreens();
-            getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.main_content, new GroceryFragment())
-                    .commit();
+            openFeature(new GroceryFragment());
             return true;
         }
         if (intent.getBooleanExtra(EXTRA_OPEN_HEALTH, false)) {
@@ -302,59 +292,34 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
         intent.removeExtra(EXTRA_OPEN_DOCUMENTS_VAULT);
-        clearSecondaryScreens();
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.main_content, new DocumentsFragment())
-                .commit();
+        openFeature(new DocumentsFragment());
         return true;
     }
 
     private void openRoute(@NonNull String route) {
-        clearSecondaryScreens();
-        if (ROUTE_FAMILY.equals(route)) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_family);
-        } else if (ROUTE_REMINDERS.equals(route)) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_content, new RemindersFragment()).commit();
-        } else if (ROUTE_FINANCE.equals(route)) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_finance);
-        } else if (ROUTE_TASKS.equals(route)) {
-            binding.bottomNavigation.setSelectedItemId(R.id.nav_tasks);
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_content, new FamilyTasksFragment()).commit();
-        } else {
-            Fragment fragment;
-            if (ROUTE_GROCERY.equals(route)) fragment = new GroceryFragment();
-            else if (ROUTE_DOCUMENTS.equals(route)) fragment = new DocumentsFragment();
-            else if (ROUTE_HEALTH.equals(route)) fragment = new HealthFragment();
-            else if (ROUTE_VEHICLES.equals(route)) fragment = new VehicleFragment();
-            else if (ROUTE_PROPERTY.equals(route)) fragment = new PropertyFragment();
-            else if (ROUTE_NOTES.equals(route)) fragment = new NotesFragment();
-            else if (ROUTE_PLANNER.equals(route)) fragment = new PlannerFragment();
-            else if (ROUTE_TASKS.equals(route)) fragment = new FamilyTasksFragment();
-            else if (ROUTE_VAULT.equals(route)) fragment = new PasswordVaultFragment();
-            else fragment = new DashboardFragment();
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_content, fragment).commit();
+        switch (route) {
+            case ROUTE_FAMILY: openTab(R.id.nav_family); break;
+            case ROUTE_REMINDERS: openTab(R.id.nav_reminders); break;
+            case ROUTE_FINANCE: openTab(R.id.nav_finance); break;
+            case ROUTE_TASKS: openTab(R.id.nav_tasks); break;
+            case ROUTE_GROCERY: openFeature(new GroceryFragment()); break;
+            case ROUTE_DOCUMENTS: openFeature(new DocumentsFragment()); break;
+            case ROUTE_HEALTH: openFeature(new HealthFragment()); break;
+            case ROUTE_VEHICLES: openFeature(new VehicleFragment()); break;
+            case ROUTE_PROPERTY: openFeature(new PropertyFragment()); break;
+            case ROUTE_NOTES: openFeature(new NotesFragment()); break;
+            case ROUTE_PLANNER: openFeature(new PlannerFragment()); break;
+            case ROUTE_VAULT: openFeature(new PasswordVaultFragment()); break;
+            default: openTab(R.id.nav_home);
         }
     }
 
     private void openTaskEditor() {
-        clearSecondaryScreens();
-        binding.bottomNavigation.setSelectedItemId(R.id.nav_tasks);
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.main_content, FamilyTasksFragment.forNewTask()).commit();
+        openFeature(FamilyTasksFragment.forNewTask());
     }
 
     public void openDocument(long documentId) {
-        if (documentId <= 0L) return;
-        clearSecondaryScreens();
-        getSupportFragmentManager().beginTransaction()
-                .replace(R.id.main_content,
-                        DocumentsFragment.forDocument(documentId))
-                .addToBackStack(null)
-                .commit();
+        if (documentId > 0L) openFeature(DocumentsFragment.forDocument(documentId));
     }
 
     @Override
@@ -366,26 +331,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openTab(@IdRes int destinationId) {
-        if (binding != null) {
-            binding.bottomNavigation.setSelectedItemId(destinationId);
-            showDestination(destinationId);
-        }
+        if (binding != null) showDestination(destinationId);
     }
 
-    /** Returns a secondary module to the primary Home dashboard. */
     public void openHome() {
-        if (binding != null) {
-            FragmentManager manager = getSupportFragmentManager();
-            if (manager.getBackStackEntryCount() > 0) {
-                manager.popBackStack();
-                return;
-            }
-            if (binding.bottomNavigation.getSelectedItemId() != R.id.nav_home) {
-                binding.bottomNavigation.setSelectedItemId(R.id.nav_home);
-            } else {
-                showDestination(R.id.nav_home);
-            }
-        }
+        FragmentManager manager = getSupportFragmentManager();
+        if (binding != null && !manager.popBackStackImmediate()) openTab(R.id.nav_home);
     }
 
     public void openFeature(@NonNull Fragment fragment) {
@@ -413,8 +364,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDestination(@IdRes int destinationId) {
-        clearSecondaryScreens();
-
+        FragmentManager manager = getSupportFragmentManager();
         Fragment fragment;
 
         if (destinationId == R.id.nav_home) {
@@ -433,20 +383,17 @@ public class MainActivity extends AppCompatActivity {
             fragment = new MoreFragment();
         }
 
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.main_content, fragment)
-                .commit();
-    }
-
-    private void clearSecondaryScreens() {
-        FragmentManager fragmentManager = getSupportFragmentManager();
-
-        if (fragmentManager.getBackStackEntryCount() > 0) {
-            fragmentManager.popBackStackImmediate(
-                    null,
-                    FragmentManager.POP_BACK_STACK_INCLUSIVE
-            );
+        manager.executePendingTransactions();
+        Fragment current = manager.findFragmentById(R.id.main_content);
+        if (current != null && current.getClass() == fragment.getClass()) return;
+        if (destinationId == R.id.nav_home) {
+            manager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            if (!(manager.findFragmentById(R.id.main_content) instanceof DashboardFragment)) {
+                manager.beginTransaction().replace(R.id.main_content, fragment).commitNow();
+            }
+            syncBottomNavigationWithRestoredFragment();
+        } else {
+            openFeature(fragment);
         }
     }
 

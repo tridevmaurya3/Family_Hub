@@ -452,7 +452,7 @@ public final class FamilyChatStore {
     }
 
     void editText(ThreadState thread, Message message, String body, boolean delete, Consumer<Boolean> complete) {
-        if (!canUse(thread) || !own(message) || !"text".equals(message.kind()) || message.deleted()) {
+        if (!canUse(thread) || !own(message) || (!delete && !"text".equals(message.kind())) || message.deleted()) {
             complete.accept(false);
             return;
         }

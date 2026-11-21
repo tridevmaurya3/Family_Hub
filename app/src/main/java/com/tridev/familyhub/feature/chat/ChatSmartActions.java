@@ -40,7 +40,7 @@ final class ChatSmartActions {
     }
 
     void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, android.view.View anchor) {
-        if (!ready(thread) || message.deleted()) return;
+        if (!ready(thread) || message.deleted() || fragment.hiddenForMe(message)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         if (message.deleted()) return;
@@ -60,15 +60,7 @@ final class ChatSmartActions {
                 if (android.os.Build.VERSION.SDK_INT < 33) toast("Message copied");
             });
             addAction(labels, actions, "Forward text", () -> forwardText(thread, message));
-            if (store.own(message)) {
-                addAction(labels, actions, "Edit message", () -> editMessage(thread, message));
-                addAction(labels, actions, "Delete message", () -> new ChatFormDialog(context())
-                        .setTitle("Delete this message?")
-                        .setMessage("The text will be removed for everyone in this chat.")
-                        .setNegativeButton("Cancel", null)
-                        .setPositiveButton("Delete", (dialog, which) -> store.editText(thread, message, "", true,
-                                ok -> { if (!ok) toast("Unable to delete message"); })).show());
-            }
+            if (store.own(message)) addAction(labels, actions, "Edit message", () -> editMessage(thread, message));
             addAction(labels, actions, "Save to Family Notes", () ->
                     openFeature(com.tridev.familyhub.feature.notes.NotesFragment.forChatMessage(message.body)));
             addAction(labels, actions, "Add to Grocery List", () ->
@@ -83,7 +75,30 @@ final class ChatSmartActions {
         if ("poll".equals(message.kind()) && !message.pollClosed() && store.own(message)) {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
-        chooseAnchored(anchor, "Message actions", labels, actions);
+        addAction(labels, actions, "Delete message", () -> deleteOptions(thread, message, anchor));
+        chooseAnchored(anchor, "Message actions", labels, actions, true, store.own(message));
+    }
+
+    private void deleteOptions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
+                               android.view.View anchor) {
+        if (!ready(thread)) return;
+        List<String> labels = new ArrayList<>();
+        List<Runnable> actions = new ArrayList<>();
+        if (store.own(message)) addAction(labels, actions, "Delete for everyone", () ->
+                new ChatFormDialog(context()).setTitle("Delete for everyone?")
+                        .setMessage("This message will be removed from the chat for all participants.")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete", (dialog, which) -> store.editText(thread, message, "", true,
+                                ok -> { if (!ok) toast("Unable to delete message for everyone"); }))
+                        .show());
+        addAction(labels, actions, "Delete for me", () -> fragment.deleteForMe(thread, message));
+        addAction(labels, actions, "Delete", () -> new ChatFormDialog(context())
+                .setTitle("Delete from this device?")
+                .setMessage("Only your view of this chat on this device will change.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Delete", (dialog, which) -> fragment.deleteForMe(thread, message))
+                .show());
+        chooseAnchored(anchor, "Delete message", labels, actions, true, store.own(message));
     }
 
     private void forwardText(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
@@ -365,7 +380,7 @@ final class ChatSmartActions {
         int[] remaining = {keys.size()};
         for (String key : keys) store.loadMessage(thread, key, message -> {
             if (!dialog.isShowing() || !ready(thread)) return;
-            if (message != null && !message.deleted()) {
+            if (message != null && !message.deleted() && !fragment.hiddenForMe(message)) {
                 content.addView(resultRow(message, () -> {
                     dialog.dismiss();
                     openMessage(thread, message);
@@ -420,6 +435,7 @@ final class ChatSmartActions {
     }
 
     void openMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (fragment.hiddenForMe(message) || message.deleted()) return;
         if (!ready(thread) || fragment.reveal(message.snapshot.getKey())) return;
         new ChatFormDialog(context()).setTitle(store.name(message.sender))
                 .setMessage(time(message) + "\n\n" + message.body)
@@ -433,7 +449,7 @@ final class ChatSmartActions {
     void openReply(FamilyChatStore.ThreadState thread, String key) {
         store.loadMessage(thread, key, message -> {
             if (!ready(thread)) return;
-            if (message == null) toast("Original message unavailable");
+            if (message == null || fragment.hiddenForMe(message) || message.deleted()) toast("Original message unavailable");
             else openMessage(thread, message);
         });
     }
@@ -447,9 +463,10 @@ final class ChatSmartActions {
             }
             LinearLayout content = panel();
             for (FamilyChatStore.Message message : messages) {
+                if (message.deleted() || fragment.hiddenForMe(message)) continue;
                 content.addView(resultRow(message, () -> openMessage(thread, message)));
             }
-            if (messages.isEmpty()) content.addView(label("No pinned messages. Open a message's actions to pin it."));
+            if (content.getChildCount() == 0) content.addView(label("No pinned messages. Open a message's actions to pin it."));
             new ChatFormDialog(context()).setTitle("Pinned messages")
                     .setView(scroll(content)).setPositiveButton("Done", null).show();
         });
@@ -512,7 +529,7 @@ final class ChatSmartActions {
                 }
                 if (!page.isEmpty()) cursor[0] = page.get(page.size() - 1);
                 for (FamilyChatStore.Message message : page) {
-                    if (!matchesType(message, type, media)) continue;
+                    if (fragment.hiddenForMe(message) || !matchesType(message, type, media)) continue;
                     String searchable = (message.body + " " + store.name(message.sender)).toLowerCase(Locale.ROOT);
                     if (!searchable.contains(query)) continue;
                     matches.addView(resultRow(message, () -> {
@@ -584,7 +601,7 @@ final class ChatSmartActions {
         List<FamilyChatStore.Message> unread = new ArrayList<>();
         for (int i = thread.messages.size() - 1; i >= 0; i--) {
             FamilyChatStore.Message message = thread.messages.get(i);
-            if (fragment.wasUnread(message)) unread.add(message);
+            if (!message.deleted() && !fragment.hiddenForMe(message) && fragment.wasUnread(message)) unread.add(message);
         }
         if (unread.isEmpty()) {
             content.addView(label("No unread messages in the recent chat history."));
@@ -649,6 +666,11 @@ final class ChatSmartActions {
     private android.view.View menuAnchor;
 
     private void chooseAnchored(android.view.View anchor, String title, List<String> labels, List<Runnable> actions) {
+        chooseAnchored(anchor, title, labels, actions, false, false);
+    }
+
+    private void chooseAnchored(android.view.View anchor, String title, List<String> labels,
+                                List<Runnable> actions, boolean beside, boolean outgoing) {
         if (anchor == null || !anchor.isAttachedToWindow()) {
             anchor = fragment.getView();
             if (anchor == null || !anchor.isAttachedToWindow()) return;
@@ -668,11 +690,12 @@ final class ChatSmartActions {
             Runnable action = actions.get(i);
             TextView row = label(labels.get(i));
             row.setTextSize(16);
-            row.setTextColor(0xff1f2a31);
+            boolean destructive = labels.get(i).startsWith("Delete");
+            row.setTextColor(destructive ? 0xffa73142 : 0xff1f2a31);
             row.setGravity(android.view.Gravity.CENTER_VERTICAL);
             row.setMinHeight(menuDp(46));
             row.setPadding(menuDp(12), menuDp(6), menuDp(12), menuDp(6));
-            row.setBackground(menuShape(0xfffcffff, 0xffd4dee2, 10));
+            row.setBackground(menuShape(destructive ? 0xfffff3f4 : 0xfffcffff, 0xffd4dee2, 10));
             row.setOnClickListener(v -> {
                 popup.dismiss();
                 action.run();
@@ -684,7 +707,26 @@ final class ChatSmartActions {
         }
         android.graphics.Rect visible = new android.graphics.Rect();
         anchor.getWindowVisibleDisplayFrame(visible);
-        popup.setWidth(Math.min(visible.width() - menuDp(16), width + menuDp(54)));
+        popup.setWidth(Math.max(1, Math.min(visible.width() - menuDp(16), width + menuDp(54))));
+        if (beside && anchor != fragment.getView()) {
+            int[] point = new int[2];
+            anchor.getLocationOnScreen(point);
+            int height = Math.max(1, Math.min(visible.height() - menuDp(16), menuDp(24 + 50 * labels.size())));
+            popup.setHeight(height);
+            int x = outgoing ? point[0] - popup.getWidth() : point[0] + anchor.getWidth();
+            x = Math.max(visible.left + menuDp(4), Math.min(x, visible.right - popup.getWidth() - menuDp(4)));
+            int y = Math.max(visible.top + menuDp(4), Math.min(
+                    point[1] + (anchor.getHeight() - height) / 2, visible.bottom - height - menuDp(4)));
+            android.view.View source = anchor;
+            android.view.View.OnAttachStateChangeListener listener = new android.view.View.OnAttachStateChangeListener() {
+                @Override public void onViewAttachedToWindow(android.view.View view) {}
+                @Override public void onViewDetachedFromWindow(android.view.View view) { popup.dismiss(); }
+            };
+            source.addOnAttachStateChangeListener(listener);
+            popup.setOnDismissListener(() -> source.removeOnAttachStateChangeListener(listener));
+            popup.showAtLocation(anchor, android.view.Gravity.TOP | android.view.Gravity.LEFT, x, y);
+            return;
+        }
         boolean centered = anchor == fragment.getView();
         int available = centered ? visible.height() - menuDp(32) : popup.getMaxAvailableHeight(anchor);
         popup.setHeight(Math.min(Math.max(menuDp(54), available), menuDp(24 + 50 * labels.size())));
