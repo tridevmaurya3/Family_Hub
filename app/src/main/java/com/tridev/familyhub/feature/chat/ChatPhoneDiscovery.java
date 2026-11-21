@@ -269,7 +269,9 @@ final class ChatPhoneDiscovery {
                         String message = "Mobile discovery is temporarily unavailable";
                         if (error instanceof FirebaseFunctionsException) {
                             FirebaseFunctionsException.Code code = ((FirebaseFunctionsException) error).getCode();
-                            if (code == FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED) {
+                            if (code == FirebaseFunctionsException.Code.NOT_FOUND || code == FirebaseFunctionsException.Code.UNIMPLEMENTED) {
+                                message = "Mobile discovery is not set up on Firebase.";
+                            } else if (code == FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED) {
                                 message = "Too many attempts. Try again later.";
                             } else if (code == FirebaseFunctionsException.Code.FAILED_PRECONDITION) {
                                 message = "Verify your mobile number first.";

@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 final class ConnectionInvites {
@@ -84,17 +85,17 @@ final class ConnectionInvites {
         });
     }
 
-    void create(String name, Consumer<String> done) {
+    void create(String name, BiConsumer<String, DatabaseError> done) {
         String uid = account;
-        if (uid == null) { done.accept(null); return; }
+        if (uid == null) { done.accept(null, null); return; }
         String code = java.util.UUID.randomUUID().toString().replace("-", "");
         Map<String, Object> data = new HashMap<>();
         data.put("owner", uid);
         data.put("ownerName", displayName(name));
         data.put("createdAt", ServerValue.TIMESTAMP);
         data.put("status", "open");
-        invite(code).setValue(data).addOnCompleteListener(task ->
-                done.accept(task.isSuccessful() && uid.equals(account) ? code : null));
+        invite(code).setValue(data, (error, reference) ->
+                done.accept(error == null && uid.equals(account) ? code : null, error));
     }
 
     void claim(String code, String name, Consumer<Invite> done) {

@@ -278,7 +278,6 @@ public final class FamilyChatFragment extends Fragment {
                 new LinearLayout.LayoutParams(target(48), target(48)));
         screen.addView(searchNavigation);
         conversationTabs = new LinearLayout(requireContext());
-        conversationTabs.setBackground(card(WHITE, EDGE, 22));
         conversationTabs.addView(conversationTab("Family Chat", false), new LinearLayout.LayoutParams(0, target(44), 1));
         conversationTabs.addView(conversationTab("Connections", true), new LinearLayout.LayoutParams(0, target(44), 1));
         LinearLayout.LayoutParams tabSize = new LinearLayout.LayoutParams(-1, -2);
@@ -1223,11 +1222,13 @@ public final class FamilyChatFragment extends Fragment {
         copy.setVisibility(View.GONE);
         create.setOnClickListener(view -> {
             create.setEnabled(false);
-            store.connections.create(ownStatusName(), code -> {
+            store.connections.create(ownStatusName(), (code, error) -> {
                 if (!isSecondaryPage(page) || !account.equals(store.accountId())) return;
                 create.setEnabled(true);
                 if (code == null) {
-                    connectionNotice("Could not create an invite");
+                    connectionNotice(error != null && error.getCode() == com.google.firebase.database.DatabaseError.PERMISSION_DENIED
+                            ? "Invite access denied. Check the verified account and Firebase database rules."
+                            : "Could not create an invite");
                     return;
                 }
                 generated.setText(code + "\nExpires in 24 hours");
