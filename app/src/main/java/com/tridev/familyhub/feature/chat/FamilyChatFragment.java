@@ -73,6 +73,8 @@ public final class FamilyChatFragment extends Fragment {
     private Runnable secondaryBack;
     private java.util.function.BooleanSupplier secondaryAllowed;
     private ModuleOverviewView header;
+    private LinearLayout selectionToolbar;
+    private String selectedMessageKey;
     private ScrollView scroll;
     private final ChatDictation draftVoice = new ChatDictation(this);
     private EditText search, draft;
@@ -184,6 +186,15 @@ public final class FamilyChatFragment extends Fragment {
         });
         header.addHeaderAction(toolsButton);
         screen.addView(header);
+        selectionToolbar = new LinearLayout(requireContext());
+        selectionToolbar.setGravity(Gravity.CENTER_VERTICAL);
+        selectionToolbar.setPadding(dp(5), dp(3), dp(5), dp(3));
+        selectionToolbar.setBackground(card(0xffe4f3ec, 0xff16816a, 16));
+        selectionToolbar.setVisibility(View.GONE);
+        screen.addView(selectionToolbar);
+        selectionToolbar.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (selectedMessageKey != null && right - left != oldRight - oldLeft) updateMessageSelection();
+        });
 
         search = new EditText(requireContext());
         search.setSingleLine();
@@ -409,6 +420,7 @@ public final class FamilyChatFragment extends Fragment {
         backCallback = new OnBackPressedCallback(peer != null || choosingLiveRecipient) {
             @Override public void handleOnBackPressed() {
                 if (secondaryBack != null) secondaryBack.run();
+                else if (selectedMessageKey != null) clearMessageSelection();
                 else if (choosingLiveRecipient) cancelLiveRecipient();
                 else open(null);
             }
@@ -569,6 +581,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
+        selectedMessageKey = null;
         clearSecondaryPage();
         voiceNotes.stop();
         draftVoice.stop();
@@ -680,6 +693,7 @@ public final class FamilyChatFragment extends Fragment {
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
         updateSend();
         updateReplyBanner();
+        updateMessageSelection();
         int oldY = scroll.getScrollY();
         boolean atBottom = !scroll.canScrollVertically(1);
         rows.removeAllViews();
@@ -1147,6 +1161,56 @@ public final class FamilyChatFragment extends Fragment {
                 : "Jump to latest message. New messages: " + unread);
     }
 
+    private void selectMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (!isVoiceThreadOpen(thread) || message.deleted() || hiddenForMe(message)) return;
+        selectedMessageKey = message.snapshot.getKey();
+        updateMessageSelection();
+    }
+
+    void clearMessageSelection() {
+        if (selectedMessageKey == null) return;
+        selectedMessageKey = null;
+        updateMessageSelection();
+    }
+
+    private void updateMessageSelection() {
+        if (screen == null || selectionToolbar == null) return;
+        FamilyChatStore.ThreadState thread = store.thread(peer);
+        FamilyChatStore.Message selected = null;
+        if (selectedMessageKey != null && thread != null && store.canUse(thread)) {
+            for (FamilyChatStore.Message message : thread.messages) {
+                if (selectedMessageKey.equals(message.snapshot.getKey()) && !message.deleted() && !hiddenForMe(message)) {
+                    selected = message;
+                    break;
+                }
+            }
+        }
+        if (selected == null) selectedMessageKey = null;
+        for (View bubble : bubbles) {
+            if (bubble == null) continue;
+            boolean highlighted = selectedMessageKey != null && selectedMessageKey.equals(bubble.getTag());
+            bubble.setSelected(highlighted);
+            bubble.setForeground(highlighted ? card(0x2465ae85, 0xff42977c, 15) : null);
+        }
+        header.setVisibility(selected == null ? View.VISIBLE : View.GONE);
+        selectionToolbar.setVisibility(selected == null ? View.GONE : View.VISIBLE);
+        selectionToolbar.removeAllViews();
+        if (selected == null) return;
+        android.widget.ImageButton back = new android.widget.ImageButton(requireContext());
+        back.setImageResource(R.drawable.ic_arrow_back);
+        back.setImageTintList(android.content.res.ColorStateList.valueOf(GREEN));
+        back.setBackground(card(0xfff5fcf8, 0xffe4f3ec, 10));
+        back.setContentDescription("Clear message selection");
+        back.setOnClickListener(view -> clearMessageSelection());
+        selectionToolbar.addView(back, new LinearLayout.LayoutParams(dp(40), dp(46)));
+        TextView count = text("1", 17, GREEN, true);
+        count.setGravity(Gravity.CENTER_VERTICAL);
+        count.setMinWidth(dp(22));
+        count.setContentDescription("1 message selected");
+        selectionToolbar.addView(count, new LinearLayout.LayoutParams(0, -1, 1));
+        smart.selectionActions(thread, selected, selectionToolbar);
+    }
+
     private void renderThread(FamilyChatStore.ThreadState thread, int oldY, boolean atBottom) {
         String latestKey = thread.messages.isEmpty() ? null
                 : thread.messages.get(thread.messages.size() - 1).snapshot.getKey();
@@ -1167,11 +1231,15 @@ public final class FamilyChatFragment extends Fragment {
             boolean own = store.own(message);
             if (message.deleted()) voiceNotes.stopMessagePlayback(message);
             LinearLayout bubble = new ChatMessageBubble(requireContext(), (view, touch) ->
-                    smart.messageActions(thread, message, view, touch));
+                    selectMessage(thread, message));
             bubble.setOrientation(LinearLayout.VERTICAL);
             bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
             bubble.setTag(message.snapshot.getKey());
+            if (selectedMessageKey != null && selectedMessageKey.equals(bubble.getTag())) {
+                bubble.setSelected(true);
+                bubble.setForeground(card(0x2465ae85, 0xff42977c, 15));
+            }
             if (!own && thread.isGroup()) {
                 bubble.addView(text(store.name(message.sender), 13, GREEN, true));
             }

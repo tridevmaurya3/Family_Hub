@@ -45,6 +45,15 @@ final class ChatSmartActions {
 
     void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
                         android.view.View anchor, android.graphics.Point touch) {
+        buildMessageActions(thread, message, anchor, touch, null);
+    }
+
+    void selectionActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, LinearLayout toolbar) {
+        buildMessageActions(thread, message, toolbar, null, toolbar);
+    }
+
+    private void buildMessageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
+                                     android.view.View anchor, android.graphics.Point touch, LinearLayout toolbar) {
         if (!ready(thread) || message.deleted() || fragment.hiddenForMe(message)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
@@ -77,14 +86,69 @@ final class ChatSmartActions {
             if (task == null) addAction(extraLabels, extraActions, "Add to Family To-Do", () ->
                     openFeature(FamilyTasksFragment.forChatMessage(message.body, FamilyChatFragment.taskKey(message))));
             else addAction(extraLabels, extraActions, "Open linked To-Do", () -> fragment.openLinkedTask(task));
-            addAction(labels, actions, "More actions  ›", () ->
+            if (toolbar == null) addAction(labels, actions, "More actions  ›", () ->
                     chooseAnchored(anchor, "More actions", extraLabels, extraActions, true, touch));
+            else {
+                labels.addAll(extraLabels);
+                actions.addAll(extraActions);
+            }
         }
         if ("poll".equals(message.kind()) && !message.pollClosed() && store.own(message)) {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
         addAction(labels, actions, "Delete", () -> deleteOptions(thread, message));
-        chooseAnchored(anchor, "Message actions", labels, actions, true, touch);
+        if (toolbar == null) chooseAnchored(anchor, "Message actions", labels, actions, true, touch);
+        else showSelectionActions(toolbar, labels, actions);
+    }
+
+    private void showSelectionActions(LinearLayout toolbar, List<String> labels, List<Runnable> actions) {
+        int width = toolbar.getWidth() > 0 ? toolbar.getWidth()
+                : context().getResources().getDisplayMetrics().widthPixels - menuDp(20);
+        int iconWidth = menuDp(42);
+        int available = Math.max(0, (width - toolbar.getPaddingLeft() - toolbar.getPaddingRight()
+                - menuDp(62)) / iconWidth - 1);
+        String[] priority = {"Reply", "Save for me", "Message info", "Delete", "Forward"};
+        int[] icons = {R.drawable.ic_chat_reply, R.drawable.ic_document_star_outline,
+                R.drawable.ic_chat_selection_info, R.drawable.ic_profile_photo_delete,
+                R.drawable.ic_chat_selection_forward};
+        List<String> extraLabels = new ArrayList<>(labels);
+        List<Runnable> extraActions = new ArrayList<>(actions);
+        for (int i = 0; i < priority.length && available > 0; i++) {
+            int index = extraLabels.indexOf(priority[i]);
+            if (index < 0) continue;
+            Runnable action = extraActions.remove(index);
+            String label = extraLabels.remove(index);
+            toolbar.addView(selectionButton(icons[i], label,
+                    "Delete".equals(label) ? 0xffa63347 : 0xff146952, action),
+                    new LinearLayout.LayoutParams(iconWidth, menuDp(46)));
+            available--;
+        }
+        List<Runnable> overflow = new ArrayList<>();
+        for (Runnable action : extraActions) overflow.add(() -> {
+            fragment.clearMessageSelection();
+            action.run();
+        });
+        android.widget.ImageButton more = selectionButton(R.drawable.ic_more, "More message actions", 0xff146952, null);
+        more.setOnClickListener(view -> chooseAnchored(view, "Message actions", extraLabels, overflow));
+        toolbar.addView(more, new LinearLayout.LayoutParams(iconWidth, menuDp(46)));
+    }
+
+    private android.widget.ImageButton selectionButton(int icon, String label, int color, Runnable action) {
+        android.widget.ImageButton button = new android.widget.ImageButton(context());
+        button.setImageResource(icon);
+        button.setImageTintList(android.content.res.ColorStateList.valueOf(color));
+        button.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        button.setPadding(menuDp(9), menuDp(10), menuDp(9), menuDp(10));
+        button.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x25146952),
+                menuShape(0xfff5fcf8, 0xffe4f3ec, 10), null));
+        button.setContentDescription(label);
+        androidx.appcompat.widget.TooltipCompat.setTooltipText(button, label);
+        if (action != null) button.setOnClickListener(view -> {
+            fragment.clearMessageSelection();
+            action.run();
+        });
+        return button;
     }
 
     private void deleteOptions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
