@@ -56,6 +56,7 @@ public final class FamilyChatFragment extends Fragment {
     private String pendingInviteCode;
     private boolean connectionsTab;
     private LinearLayout conversationTabs, connectionActions;
+    private final ChatPhoneDiscovery phoneDiscovery = new ChatPhoneDiscovery(this);
     private MaterialButton connectionRequests, headerSearch;
     private final androidx.activity.result.ActivityResultLauncher<String> chatNotificationPermission =
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
@@ -322,13 +323,18 @@ public final class FamilyChatFragment extends Fragment {
                 });
             });
         }
-        connectionActions = new LinearLayout(requireContext());
+        connectionActions = column();
+        MaterialButton findByNumber = flatButton("Find by mobile number");
+        findByNumber.setOnClickListener(view -> phoneDiscovery.showSearch());
+        connectionActions.addView(findByNumber, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout inviteActions = new LinearLayout(requireContext());
+        connectionActions.addView(inviteActions, new LinearLayout.LayoutParams(-1, -2));
         MaterialButton invite = flatButton("+ Invite");
         invite.setOnClickListener(view -> showConnectionInvite(null));
-        connectionActions.addView(invite, new LinearLayout.LayoutParams(0, -2, 1));
+        inviteActions.addView(invite, new LinearLayout.LayoutParams(0, -2, 1));
         connectionRequests = flatButton("Requests");
         connectionRequests.setOnClickListener(view -> showConnectionRequests());
-        connectionActions.addView(connectionRequests, new LinearLayout.LayoutParams(0, -2, 1));
+        inviteActions.addView(connectionRequests, new LinearLayout.LayoutParams(0, -2, 1));
         screen.addView(connectionActions, new LinearLayout.LayoutParams(-1, -2));
         pinBanner = flatButton("Pinned messages");
         pinBanner.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -694,7 +700,7 @@ public final class FamilyChatFragment extends Fragment {
         return peer != null || secondaryPage != null;
     }
 
-    private MaterialButton flatButton(String title) {
+    MaterialButton flatButton(String title) {
         MaterialButton button = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
@@ -1177,7 +1183,7 @@ public final class FamilyChatFragment extends Fragment {
         return peer == null ? store.isConnection(thread) == connectionsTab : thread.peer.equals(peer);
     }
 
-    private boolean verifiedConnectionAccount() {
+    boolean verifiedConnectionAccount() {
         com.google.firebase.auth.FirebaseUser user =
                 com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         return user != null && user.isEmailVerified() && user.getUid().equals(store.accountId());
@@ -1193,7 +1199,7 @@ public final class FamilyChatFragment extends Fragment {
         else for (FamilyChatStore.ThreadState thread : threads) addConversation(thread);
     }
 
-    private void showConnectionInvite(String prefilled) {
+    void showConnectionInvite(String prefilled) {
         if (!verifiedConnectionAccount()) {
             connectionNotice("Sign in with a verified Family Hub account to use invitations");
             return;
@@ -1267,7 +1273,7 @@ public final class FamilyChatFragment extends Fragment {
                 () -> account.equals(store.accountId()) && verifiedConnectionAccount());
     }
 
-    private void showConnectionRequests() {
+    void showConnectionRequests() {
         showConnectionRequests(null);
     }
 
@@ -1324,7 +1330,7 @@ public final class FamilyChatFragment extends Fragment {
                 () -> account.equals(store.accountId()) && verifiedConnectionAccount());
     }
 
-    private void connectionNotice(String message) {
+    void connectionNotice(String message) {
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
     }
 

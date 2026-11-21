@@ -11,3 +11,5 @@ app/build/
 .externalNativeBuild/
 .cxx/
 captures/
+
+/functions/node_modules/
