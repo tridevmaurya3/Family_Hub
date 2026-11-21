@@ -223,12 +223,9 @@ final class ChatSmartActions {
         boolean single = messages.size() == 1;
         boolean polls = messages.stream().anyMatch(message -> "poll".equals(message.kind()));
         boolean expired = messages.stream().anyMatch(FamilyChatStore.Message::pollClosed);
-        List<String> labels = new ArrayList<>();
-        List<Runnable> actions = new ArrayList<>();
-        for (FamilyChatStore.ThreadState target : store.threads()) {
-            if (target == source || !store.canUse(target)) continue;
+        fragment.showForwardRecipients(source, target -> {
             String title = store.title(target);
-            addAction(labels, actions, title, () -> ChatSendButton.stylePositive(new ChatFormDialog(context())
+            ChatSendButton.stylePositive(new ChatFormDialog(context())
                     .setTitle(single ? "Forward message?" : "Forward " + messages.size() + " messages?")
                     .setMessage((single ? "Send this message to " : "Send these messages to ") + title + "?"
                             + (polls ? "\nA forwarded poll starts with no votes." : "")
@@ -236,11 +233,10 @@ final class ChatSmartActions {
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Forward", (dialog, which) -> {
                         if (!ready(source) || !ready(target)) return;
+                        fragment.closeSecondaryPage();
                         forwardNext(source, target, messages, 0, 0);
-                    }).show()));
-        }
-        if (labels.isEmpty()) toast("No other chats available");
-        else choose("Forward to", labels, actions);
+                    }).show());
+        });
     }
 
     private void forwardNext(FamilyChatStore.ThreadState source, FamilyChatStore.ThreadState target,

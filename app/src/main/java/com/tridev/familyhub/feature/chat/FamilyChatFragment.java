@@ -810,6 +810,44 @@ public final class FamilyChatFragment extends Fragment {
         }
     }
 
+    void showForwardRecipients(FamilyChatStore.ThreadState source,
+                               java.util.function.Consumer<FamilyChatStore.ThreadState> select) {
+        ScrollView list = new ScrollView(requireContext());
+        LinearLayout recipients = column();
+        recipients.setPadding(0, space(8), 0, space(8));
+        list.addView(recipients);
+        for (boolean groups : new boolean[]{true, false}) {
+            List<FamilyChatStore.ThreadState> section = new ArrayList<>();
+            for (FamilyChatStore.ThreadState target : store.threads()) {
+                if (target != source && store.canUse(target) && target.isGroup() == groups) section.add(target);
+            }
+            if (section.isEmpty()) continue;
+            section.sort((left, right) -> store.title(left).compareToIgnoreCase(store.title(right)));
+            TextView heading = text(groups ? "Groups" : "Direct messages", 14, BLUE, true);
+            heading.setPadding(space(8), space(8), 0, space(4));
+            recipients.addView(heading);
+            for (FamilyChatStore.ThreadState target : section) {
+                String name = store.title(target);
+                View avatar = groupScreens.avatar(name, groups ? target.photo : avatars().photo(target.peer),
+                        FloatingChatSizing.applies(requireContext()) ? 36 : 44, null);
+                LinearLayout content = column();
+                content.addView(text(name, 16, INK, true));
+                LinearLayout row = avatarRow(avatar, content);
+                row.setFocusable(true);
+                row.setOnClickListener(view -> {
+                    if (isSecondaryPage(list) && store.canUse(source) && store.canUse(target)) select.accept(target);
+                });
+                LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2);
+                size.bottomMargin = space(7);
+                recipients.addView(row, size);
+            }
+        }
+        if (recipients.getChildCount() == 0) {
+            recipients.addView(text("No other chats available", 14, MUTED, false));
+        }
+        showSecondaryPage("Forward to", list, this::closeSecondaryPage, () -> store.canUse(source));
+    }
+
     void showSecondaryPage(String title, ScrollView scroll, Runnable back,
                            java.util.function.BooleanSupplier allowed) {
         showSecondaryPage(title, "Family Chat", scroll, null, null, back, allowed);
@@ -1302,9 +1340,7 @@ public final class FamilyChatFragment extends Fragment {
             }
             boolean own = store.own(message);
             if (message.deleted()) voiceNotes.stopMessagePlayback(message);
-            LinearLayout bubble = new ChatMessageBubble(requireContext(), (view, touch) ->
-                    selectMessage(thread, message), () -> !selectedMessageKeys.isEmpty(),
-                    () -> selectMessage(thread, message));
+            LinearLayout bubble = column();
             bubble.setOrientation(LinearLayout.VERTICAL);
             bubble.setPadding(space(10), space(7), space(10), space(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
@@ -1376,11 +1412,13 @@ public final class FamilyChatFragment extends Fragment {
             if (attachment == null) bubble.measure(View.MeasureSpec.makeMeasureSpec(compactWidth, View.MeasureSpec.AT_MOST),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
             int bubbleWidth = attachment == null ? Math.min(compactWidth, Math.max(space(140), bubble.getMeasuredWidth())) : compactWidth;
-            LinearLayout messageRow = new LinearLayout(requireContext());
+            Runnable select = () -> selectMessage(thread, message);
+            LinearLayout messageRow = new ChatMessageBubble(requireContext(), (view, touch) -> select.run(),
+                    () -> !selectedMessageKeys.isEmpty(), select);
             messageRow.setGravity((own ? Gravity.END : Gravity.START) | Gravity.CENTER_VERTICAL);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
             params.topMargin = space(7);
-            if (!own) params.setMarginEnd(dp(24));
+            if (!own) messageRow.setPaddingRelative(0, 0, dp(24), 0);
             if (own && !message.deleted()) {
                 MaterialButton reply = new MaterialButton(requireContext(), null,
                         com.google.android.material.R.attr.materialButtonOutlinedStyle);
