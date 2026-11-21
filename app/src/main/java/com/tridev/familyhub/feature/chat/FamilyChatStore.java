@@ -29,6 +29,7 @@ public final class FamilyChatStore {
     private final android.content.SharedPreferences.OnSharedPreferenceChangeListener hiddenObserver =
             (preferences, key) -> notifyObservers();
     private final DatabaseReference root = FirebaseDatabase.getInstance().getReference();
+    final ConnectionInvites connections = new ConnectionInvites(root, this::syncConnections);
     private final List<Runnable> observers = new ArrayList<>();
     private final Map<String, ThreadState> threads = new LinkedHashMap<>();
     private final Map<String, String> names = new LinkedHashMap<>();
@@ -69,8 +70,10 @@ public final class FamilyChatStore {
             if (notifications != null) notifications.clear();
             clearFamily();
             if (uid != null) removeThread(uid);
+            for (ThreadState thread : threads()) if (isConnection(thread)) removeThread(thread.peer);
             pending.clear();
             uid = signedIn;
+            connections.bind(uid);
             status = signedIn == null ? "Sign in to use Family Chat" : "Connecting…";
             notifyObservers();
             if (signedIn == null) return;
@@ -121,7 +124,7 @@ public final class FamilyChatStore {
             }
             status = "";
             for (String peer : new ArrayList<>(threads.keySet())) {
-                if (!peer.equals(uid) && !GROUP.equals(peer) && !peer.startsWith("room:") && !names.containsKey(peer)) removeThread(peer);
+                if (!peer.equals(uid) && !peer.startsWith("connection:") && !GROUP.equals(peer) && !peer.startsWith("room:") && !names.containsKey(peer)) removeThread(peer);
             }
             watchRooms();
             addThread(GROUP);
@@ -401,6 +404,7 @@ public final class FamilyChatStore {
 
     List<String> participants(ThreadState thread) {
         if (isSelf(thread)) return java.util.Collections.singletonList(uid);
+        if (isConnection(thread)) return java.util.Arrays.asList(uid, thread.connectionUid);
         if (thread.isGroup()) return groupMembers(thread);
         return java.util.Arrays.asList(uid, thread.peer);
     }
@@ -586,7 +590,8 @@ public final class FamilyChatStore {
 
     void send(ThreadState thread, String body, Map<String, Object> details, String file,
               Runnable failed, Consumer<Boolean> completed) {
-        if (uid == null || threads.get(thread.peer) != thread || thread.error) {
+        if (uid == null || threads.get(thread.peer) != thread || thread.error
+                || (isConnection(thread) && "live".equals(details.get("kind")))) {
             failed.run();
             completed.accept(false);
             return;
@@ -703,7 +708,7 @@ public final class FamilyChatStore {
 
     private void clearThreads() {
         for (String peer : new ArrayList<>(threads.keySet())) {
-            if (!peer.equals(uid)) removeThread(peer);
+            if (!peer.equals(uid) && !peer.startsWith("connection:")) removeThread(peer);
         }
     }
 
@@ -767,6 +772,34 @@ public final class FamilyChatStore {
     boolean online() { return connected; }
     String status() { return status; }
     String name(String id) { return names.getOrDefault(id, "Family member"); }
+    boolean isConnection(ThreadState thread) {
+        return thread != null && thread.connectionUid != null;
+    }
+
+    private void syncConnections() {
+        java.util.Set<String> accepted = new java.util.HashSet<>();
+        for (ConnectionInvites.Invite invite : connections.entries()) {
+            if (!"accepted".equals(invite.status) || uid == null) continue;
+            boolean owner = uid.equals(invite.owner);
+            if (!owner && !uid.equals(invite.recipient)) continue;
+            String other = owner ? invite.recipient : invite.owner;
+            if (other == null) continue;
+            String key = "connection:" + invite.code;
+            accepted.add(key);
+            if (!threads.containsKey(key)) {
+                DatabaseReference path = root.child("chatConnectionThreads").child(invite.code);
+                ThreadState thread = new ThreadState(key, path.child("messages"), path.child("files"),
+                        owner ? invite.recipientName : invite.ownerName, null);
+                thread.connectionUid = other;
+                watchThread(thread);
+            }
+        }
+        for (ThreadState thread : threads()) {
+            if (isConnection(thread) && !accepted.contains(thread.peer)) removeThread(thread.peer);
+        }
+        notifyObservers();
+    }
+
     boolean isSelf(ThreadState thread) { return thread != null && thread.peer.equals(uid); }
 
     String title(ThreadState thread) {
@@ -784,7 +817,7 @@ public final class FamilyChatStore {
     boolean sending(Message message) { return pending.contains(message.snapshot.getKey()); }
 
     boolean acknowledged(ThreadState thread, Message message, boolean read) {
-        if (!thread.isGroup()) return message.received(thread.peer, read);
+        if (!thread.isGroup()) return message.received(isConnection(thread) ? thread.connectionUid : thread.peer, read);
         boolean hasRecipient = false;
         for (String recipient : thread.members == null ? names.keySet() : thread.members) {
             if (!names.containsKey(recipient)) continue;
@@ -809,6 +842,7 @@ public final class FamilyChatStore {
         android.graphics.Bitmap photo;
         boolean error;
         String roomTitle;
+        String connectionUid;
         ValueEventListener titleListener;
         ValueEventListener membersListener;
         ValueEventListener adminsListener;

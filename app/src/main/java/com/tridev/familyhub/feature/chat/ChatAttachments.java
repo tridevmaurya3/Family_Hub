@@ -465,7 +465,7 @@ final class ChatAttachments {
             else locationPermission.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION});
         });
-        addLocationChoice(design, "Family Live", "Share a link to your Family Live map", () -> {
+        if (!store.isConnection(thread)) addLocationChoice(design, "Family Live", "Share a link to your Family Live map", () -> {
             dialog.dismiss();
             confirmLiveShare(thread, () -> {});
         });

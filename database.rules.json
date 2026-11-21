@@ -71,6 +71,163 @@
         }
       }
     },
+    "chatConnectionInvites": {
+      "$code": {
+        ".read": "auth != null && auth.token.email_verified === true && (data.child('owner').val() === auth.uid || data.child('recipient').val() === auth.uid || (data.child('status').val() === 'open' && data.child('createdAt').val() + 86400000 > now))",
+        ".write": "auth != null && auth.token.email_verified === true && $code.matches(/^[0-9a-f]{32}$/) && newData.exists() && ((!data.exists() && newData.child('owner').val() === auth.uid && newData.child('status').val() === 'open' && !newData.hasChild('recipient') && !newData.hasChild('recipientName') && newData.child('createdAt').val() === now) || (data.child('status').val() === 'open' && data.child('owner').val() !== auth.uid && data.child('createdAt').val() + 86400000 > now && newData.child('status').val() === 'pending' && newData.child('recipient').val() === auth.uid && newData.parent().parent().child('chatConnectionIndex').child(auth.uid).child($code).val() === true && newData.parent().parent().child('chatConnectionIndex').child(data.child('owner').val()).child($code).val() === true) || (data.child('status').val() === 'pending' && data.child('recipient').val() === auth.uid && data.child('createdAt').val() + 86400000 > now && (newData.child('status').val() === 'accepted' || newData.child('status').val() === 'declined'))) && (!data.exists() || (newData.child('owner').val() === data.child('owner').val() && newData.child('ownerName').val() === data.child('ownerName').val() && newData.child('createdAt').val() === data.child('createdAt').val())) && (!data.hasChild('recipient') || (newData.child('recipient').val() === data.child('recipient').val() && newData.child('recipientName').val() === data.child('recipientName').val()))",
+        ".validate": "newData.hasChildren(['owner', 'ownerName', 'createdAt', 'status']) && (newData.child('status').val() === 'open' || newData.hasChildren(['recipient','recipientName']))",
+        "owner": {
+          ".validate": "newData.isString() && (!data.exists() || newData.val() === data.val())"
+        },
+        "ownerName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80 && (!data.exists() || newData.val() === data.val())"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && (!data.exists() || newData.val() === data.val())"
+        },
+        "recipient": {
+          ".validate": "newData.isString() && (!data.exists() || newData.val() === data.val())"
+        },
+        "recipientName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80 && (!data.exists() || newData.val() === data.val())"
+        },
+        "status": {
+          ".validate": "newData.isString()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "chatConnectionIndex": {
+      "$user": {
+        ".read": "auth != null && auth.token.email_verified === true && auth.uid === $user",
+        "$code": {
+          ".write": "auth != null && auth.token.email_verified === true && !data.exists() && newData.val() === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'open' && newData.parent().parent().parent().child('chatConnectionInvites').child($code).child('status').val() === 'pending' && newData.parent().parent().parent().child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid && ($user === auth.uid || $user === newData.parent().parent().parent().child('chatConnectionInvites').child($code).child('owner').val())",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
+    "chatConnectionThreads": {
+      "$code": {
+        "messages": {
+          ".read": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid)",
+          ".indexOn": [
+            "at",
+            "pinned"
+          ],
+          "$message": {
+            ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes') && !newData.hasChild('reactions') && !newData.hasChild('pinned') && !newData.hasChild('editedAt') && !newData.hasChild('deletedAt') && !newData.hasChild('acks') && !newData.hasChild('checks')",
+            ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.child('kind').val() === 'announcement' || newData.child('kind').val() === 'checklist' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().child('files').child($message).exists()) && (newData.child('kind').val() !== 'checklist' || newData.child('entries').hasChild('0'))",
+            "sender": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "body": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000",
+              ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.exists() && ((!data.parent().child('kind').exists() && newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "$other": {
+              ".validate": false
+            },
+            "kind": {
+              ".validate": "newData.val() === 'voice' || newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll' || newData.val() === 'announcement' || newData.val() === 'checklist'"
+            },
+            "phone": {
+              ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+            },
+            "startsAt": {
+              ".validate": "newData.parent().child('kind').val() === 'event' && newData.isNumber() && newData.val() > 0 && newData.val() <= 4102444800000"
+            },
+            "options": {
+              ".validate": "newData.parent().child('kind').val() === 'poll' && newData.hasChildren(['0','1'])",
+              "$option": {
+                ".validate": "$option.matches(/^[0-3]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+              }
+            },
+            "votes": {
+              "$voter": {
+                ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && auth.uid === $voter && data.parent().parent().child('kind').val() === 'poll' && newData.isString() && newData.val().matches(/^[0-3]$/) && data.parent().parent().child('options').child(newData.val()).exists() && (!data.parent().parent().child('closesAt').exists() || now < data.parent().parent().child('closesAt').val())"
+              }
+            },
+            "lat": {
+              ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90 && newData.parent().child('kind').val() === 'location'"
+            },
+            "lng": {
+              ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
+            },
+            "mime": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && (newData.val() === 'audio/wav' || newData.val() === 'audio/mp4')) || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+            },
+            "voiceDuration": {
+              ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isNumber() && newData.val() > 0"
+            },
+            "voiceWave": {
+              ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
+            },
+            "replyTo": {
+              ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
+            },
+            "reactions": {
+              "$reactor": {
+                ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && auth.uid === $reactor && data.parent().parent().child('sender').exists() && !data.parent().parent().child('deletedAt').exists()",
+                ".validate": "newData.val() === '👍' || newData.val() === '❤️' || newData.val() === '😂' || newData.val() === '🙏'"
+              }
+            },
+            "pinned": {
+              ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && data.parent().child('sender').exists() && (!data.parent().child('deletedAt').exists() || !newData.exists())",
+              ".validate": "newData.val() === true"
+            },
+            "editedAt": {
+              ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) && newData.parent().child('body').val() !== data.parent().child('body').val()",
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "deletedAt": {
+              ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "closesAt": {
+              ".validate": "newData.parent().child('kind').val() === 'poll' && newData.isNumber() && newData.val() > now && newData.val() <= 4102444800000"
+            },
+            "entries": {
+              ".validate": "newData.parent().child('kind').val() === 'checklist'",
+              "$item": {
+                ".validate": "$item.matches(/^[0-7]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 160"
+              }
+            },
+            "checks": {
+              "$item": {
+                ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && data.parent().parent().child('kind').val() === 'checklist' && data.parent().parent().child('entries').child($item).exists() && (!newData.exists() || newData.val() === auth.uid)"
+              }
+            },
+            "receipts": {
+              "$uid": {
+                ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && auth.uid === $uid && data.parent().parent().child('sender').exists() && data.parent().parent().child('sender').val() !== auth.uid && newData.exists() && (!data.child('deliveredAt').exists() || newData.child('deliveredAt').val() === data.child('deliveredAt').val()) && (!data.child('readAt').exists() || newData.child('readAt').val() === data.child('readAt').val()) && (root.child('chatConnectionInvites').child($code).child('owner').val() === $uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === $uid)",
+                ".validate": "newData.hasChild('deliveredAt') && (!newData.hasChild('readAt') || newData.child('readAt').val() >= newData.child('deliveredAt').val())",
+                "deliveredAt": {
+                  ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                },
+                "readAt": {
+                  ".validate": "newData.isNumber() && (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            }
+          }
+        },
+        "files": {
+          ".read": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid)",
+          "$message": {
+            ".write": "auth != null && auth.token.email_verified === true && root.child('chatConnectionInvites').child($code).child('status').val() === 'accepted' && (root.child('chatConnectionInvites').child($code).child('owner').val() === auth.uid || root.child('chatConnectionInvites').child($code).child('recipient').val() === auth.uid) && !data.exists() && newData.exists() && newData.parent().parent().child('messages').child($message).child('sender').val() === auth.uid && newData.parent().parent().child('messages').child($message).child('mime').exists()",
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1398104"
+          }
+        }
+      }
+    },
     "familyPrivateChat": {
       "$owner": {
         "messages": {

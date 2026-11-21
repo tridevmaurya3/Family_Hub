@@ -616,3 +616,75 @@ test('secure direct text allows only the two active participants and immutable e
   await assertFails(ref(outsider, channel).get());
   await assertFails(ref(writer, channel + '/sealed').remove());
 });
+
+test('chat invites require the recipient to accept before enabling a private cross-family thread', async () => {
+  const code = 'ad17f000111122223333444455556666';
+  const target = 'outside-contact';
+  const db = uid => env.authenticatedContext(uid, { email_verified: true }).database().ref();
+  const sender = db(writer);
+  const recipient = db(target);
+  const thirdParty = db(reader);
+  const invitation = 'chatConnectionInvites/' + code;
+  const chat = 'chatConnectionThreads/' + code;
+  const stamp = { '.sv': 'timestamp' };
+  await assertSucceeds(sender.child(invitation).set({
+    owner: writer, ownerName: 'Alex', createdAt: stamp, status: 'open'
+  }));
+  await assertFails(thirdParty.child('chatConnectionInvites').get());
+  await assertFails(env.unauthenticatedContext().database().ref(invitation).get());
+  await assertFails(env.authenticatedContext(target).database().ref(invitation).get());
+  assert.equal((await recipient.child(invitation).get()).child('ownerName').val(), 'Alex');
+  await assertFails(recipient.child(invitation).update({
+    recipient: target, recipientName: 'Aditi', status: 'pending'
+  }));
+  const claim = {
+    [invitation + '/recipient']: target,
+    [invitation + '/recipientName']: 'Aditi',
+    [invitation + '/status']: 'pending',
+    ['chatConnectionIndex/' + target + '/' + code]: true,
+    ['chatConnectionIndex/' + writer + '/' + code]: true
+  };
+  await assertFails(recipient.update({ ...claim, [invitation + '/ownerName']: 'Forged' }));
+  await assertSucceeds(recipient.update(claim));
+  await assertFails(thirdParty.child(invitation).get());
+  await assertFails(thirdParty.child('chatConnectionIndex/' + target).get());
+  await assertFails(sender.child(invitation + '/status').set('accepted'));
+  const message = { sender: writer, body: 'Hi Aditi', at: stamp };
+  await assertFails(sender.child(chat + '/messages/hello').set(message));
+  await assertFails(recipient.child(chat + '/messages').get());
+  await assertSucceeds(recipient.child(invitation + '/status').set('accepted'));
+  assert.equal((await sender.child('chatConnectionIndex/' + writer + '/' + code).get()).val(), true);
+  await assertSucceeds(sender.child(chat + '/messages/hello').set(message));
+  assert.equal((await recipient.child(chat + '/messages/hello/body').get()).val(), 'Hi Aditi');
+  await assertSucceeds(recipient.child(chat + '/messages/hello/receipts/' + target).set({
+    deliveredAt: stamp, readAt: stamp
+  }));
+  await assertFails(thirdParty.child(chat + '/messages').get());
+  await assertFails(thirdParty.child(chat + '/messages/injected').set({ ...message, sender: reader }));
+  await assertFails(sender.child(chat + '/messages/live').set({ ...message, kind: 'live' }));
+  await assertSucceeds(sender.child(chat).update({
+    'messages/photo': { ...message, kind: 'photo', mime: 'image/jpeg' },
+    'files/photo': 'YWJj'
+  }));
+  assert.equal((await recipient.child(chat + '/files/photo').get()).val(), 'YWJj');
+  await assertFails(thirdParty.child(chat + '/files/photo').get());
+  await assertFails(recipient.child('familyChat/familyA/group').get());
+  await assertFails(recipient.update(claim));
+});
+
+test('expired and declined chat invites cannot open a thread', async () => {
+  const target = 'declining-contact';
+  const db = uid => env.authenticatedContext(uid, { email_verified: true }).database().ref();
+  const recipient = db(target);
+  const expired = '10000000111122223333444455556666';
+  const pending = '20000000111122223333444455556666';
+  await env.withSecurityRulesDisabled(context => context.database().ref('chatConnectionInvites').update({
+    [expired]: { owner: writer, ownerName: 'Alex', status: 'open', createdAt: 1 },
+    [pending]: { owner: writer, ownerName: 'Alex', status: 'pending', createdAt: Date.now(),
+      recipient: target, recipientName: 'Aditi' }
+  }));
+  await assertFails(recipient.child('chatConnectionInvites/' + expired).get());
+  await assertSucceeds(recipient.child('chatConnectionInvites/' + pending + '/status').set('declined'));
+  await assertFails(recipient.child('chatConnectionInvites/' + pending + '/status').set('accepted'));
+  await assertFails(recipient.child('chatConnectionThreads/' + pending + '/messages').get());
+});

@@ -53,6 +53,10 @@ public final class FamilyChatFragment extends Fragment {
     private MaterialButton toolsButton;
     private MaterialButton pinBanner;
     private String pendingNotificationConversation;
+    private String pendingInviteCode;
+    private boolean connectionsTab;
+    private LinearLayout conversationTabs, connectionActions;
+    private MaterialButton connectionRequests, headerSearch;
     private final androidx.activity.result.ActivityResultLauncher<String> chatNotificationPermission =
             registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
                     granted -> {
@@ -127,6 +131,14 @@ public final class FamilyChatFragment extends Fragment {
         return result;
     }
 
+    public static FamilyChatFragment forInvite(String code) {
+        FamilyChatFragment fragment = new FamilyChatFragment();
+        Bundle arguments = new Bundle();
+        arguments.putString("chat_invite", code);
+        fragment.setArguments(arguments);
+        return fragment;
+    }
+
     public static FamilyChatFragment forNotification(String conversation) {
         FamilyChatFragment fragment = new FamilyChatFragment();
         Bundle args = new Bundle();
@@ -139,6 +151,9 @@ public final class FamilyChatFragment extends Fragment {
         super.onCreate(state);
         Bundle args = state != null ? state : getArguments();
         pendingNotificationConversation = args == null ? null : args.getString("chat_notification_ref");
+        pendingInviteCode = state == null ? (args == null ? null : args.getString("chat_invite"))
+                : state.getString("chat_invite");
+        connectionsTab = pendingInviteCode != null || (state != null && state.getBoolean("connections_tab"));
         if (state != null) choosingLiveRecipient = state.getBoolean("share_live");
         else choosingLiveRecipient = getArguments() != null && getArguments().getBoolean("share_live");
         if (state != null) {
@@ -156,6 +171,8 @@ public final class FamilyChatFragment extends Fragment {
         out.putString("chat_peer", peer);
         out.putString("chat_filter", chatFilter.name());
         out.putString("chat_notification_ref", pendingNotificationConversation);
+        out.putString("chat_invite", pendingInviteCode);
+        out.putBoolean("connections_tab", connectionsTab);
         out.putString("chat_reply_key", replyKey);
         out.putString("chat_reply_preview", replyPreview);
         out.putStringArrayList("chat_mentions", new ArrayList<>(mentions.keySet()));
@@ -184,7 +201,7 @@ public final class FamilyChatFragment extends Fragment {
         newGroup.setTextSize(FloatingChatSizing.text(requireContext(), 12));
         newGroup.setMaxLines(2);
         newGroup.setMinWidth(0);
-        newGroup.setText("New group");
+        styleHeaderIcon(newGroup, R.drawable.ic_chat_new_group, "New group");
         newGroup.setAllCaps(false);
         newGroup.setOnClickListener(v -> {
             if (choosingLiveRecipient) {
@@ -194,9 +211,14 @@ public final class FamilyChatFragment extends Fragment {
             }
         });
         header.addHeaderAction(newGroup);
-        statusButton = flatButton("Status");
+        statusButton = flatButton("");
+        styleHeaderIcon(statusButton, R.drawable.ic_chat_status_ring, "Status");
         statusButton.setOnClickListener(v -> chatStatus.open());
         header.addHeaderAction(statusButton);
+        headerSearch = flatButton("");
+        styleHeaderIcon(headerSearch, R.drawable.ic_search, "Search messages");
+        headerSearch.setOnClickListener(view -> openMessageSearch());
+        header.addHeaderAction(headerSearch);
         headerAvatar = new LinearLayout(requireContext());
         header.addHeaderAction(headerAvatar);
         toolsButton = flatButton("⋮");
@@ -254,6 +276,13 @@ public final class FamilyChatFragment extends Fragment {
         searchNavigation.addView(searchButton("↓", "Next match", () -> stepSearch(1)),
                 new LinearLayout.LayoutParams(target(48), target(48)));
         screen.addView(searchNavigation);
+        conversationTabs = new LinearLayout(requireContext());
+        conversationTabs.setBackground(card(WHITE, EDGE, 22));
+        conversationTabs.addView(conversationTab("Family Chat", false), new LinearLayout.LayoutParams(0, target(44), 1));
+        conversationTabs.addView(conversationTab("Connections", true), new LinearLayout.LayoutParams(0, target(44), 1));
+        LinearLayout.LayoutParams tabSize = new LinearLayout.LayoutParams(-1, -2);
+        tabSize.topMargin = space(6);
+        screen.addView(conversationTabs, tabSize);
         search.setOnFocusChangeListener((view, focused) -> {
             if (focused && !searching && peer == null && !choosingLiveRecipient) openMessageSearch();
         });
@@ -293,6 +322,14 @@ public final class FamilyChatFragment extends Fragment {
                 });
             });
         }
+        connectionActions = new LinearLayout(requireContext());
+        MaterialButton invite = flatButton("+ Invite");
+        invite.setOnClickListener(view -> showConnectionInvite(null));
+        connectionActions.addView(invite, new LinearLayout.LayoutParams(0, -2, 1));
+        connectionRequests = flatButton("Requests");
+        connectionRequests.setOnClickListener(view -> showConnectionRequests());
+        connectionActions.addView(connectionRequests, new LinearLayout.LayoutParams(0, -2, 1));
+        screen.addView(connectionActions, new LinearLayout.LayoutParams(-1, -2));
         pinBanner = flatButton("Pinned messages");
         pinBanner.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         pinBanner.setMaxLines(1);
@@ -763,6 +800,7 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void open(@Nullable String destination) {
+        if (destination != null) connectionsTab = store.isConnection(store.thread(destination));
         resetMessageSearch();
         scroll.removeCallbacks(clearPinnedHighlight);
         highlightedPinKey = null;
@@ -810,6 +848,11 @@ public final class FamilyChatFragment extends Fragment {
 
     private void render() {
         if (screen == null) return;
+        if (pendingInviteCode != null && verifiedConnectionAccount()) {
+            String code = pendingInviteCode;
+            pendingInviteCode = null;
+            if (ConnectionInvites.validCode(code)) showConnectionInvite(code);
+        }
         if (SELF_CONVERSATION.equals(pendingNotificationConversation) && store.thread(store.accountId()) != null) {
             pendingNotificationConversation = null;
             open(store.accountId());
@@ -841,7 +884,13 @@ public final class FamilyChatFragment extends Fragment {
                 if (requireActivity() instanceof MainActivity) ((MainActivity) requireActivity()).showFeatureMenu();
             });
         }
-        newGroup.setText(choosingLiveRecipient ? "Cancel" : "New group");
+        int groupIcon = choosingLiveRecipient ? R.drawable.ic_family_map_close : R.drawable.ic_chat_new_group;
+        if (!java.util.Objects.equals(newGroup.getTag(), groupIcon)) {
+            newGroup.setTag(groupIcon);
+            newGroup.setIconResource(groupIcon);
+            newGroup.setContentDescription(choosingLiveRecipient ? "Cancel" : "New group");
+        }
+        headerSearch.setVisibility(!inThread && !choosingLiveRecipient ? View.VISIBLE : View.GONE);
         newGroup.setVisibility(!inThread && (choosingLiveRecipient || !store.groupCandidates().isEmpty())
                 ? View.VISIBLE : View.GONE);
         newGroup.setEnabled(choosingLiveRecipient || store.online());
@@ -858,13 +907,27 @@ public final class FamilyChatFragment extends Fragment {
             headerAvatar.addView(store.isSelf(thread) ? statusAvatar(thread.peer, ownStatusName(), size, true)
                     : threadAvatar(thread, size));
         }
-        header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
-        searchBar.setVisibility(!inThread || searching ? View.VISIBLE : View.GONE);
+        header.showDashboardActions(false);
+        searchBar.setVisibility(searching || choosingLiveRecipient ? View.VISIBLE : View.GONE);
+        boolean showTabs = !inThread && !choosingLiveRecipient;
+        conversationTabs.setVisibility(showTabs ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < conversationTabs.getChildCount(); i++) {
+            View tab = conversationTabs.getChildAt(i);
+            boolean selected = connectionsTab == (i == 1);
+            tab.setSelected(selected);
+            tab.setBackground(card(selected ? 0xffd1eee1 : WHITE, selected ? 0xff98cbb7 : WHITE, 22));
+        }
+        connectionActions.setVisibility(showTabs && connectionsTab ? View.VISIBLE : View.GONE);
+        int requests = 0;
+        for (ConnectionInvites.Invite invite : store.connections.entries()) {
+            if (invite.pendingFor(store.accountId())) requests++;
+        }
+        connectionRequests.setText(requests == 0 ? "Requests" : "Requests " + requests);
         search.setHint(choosingLiveRecipient ? "Search recipients" : "Search messages");
         searchBack.setVisibility(searching ? View.VISIBLE : View.GONE);
         searchClear.setVisibility(searching ? View.VISIBLE : View.GONE);
         searchNavigation.setVisibility(searching && inThread ? View.VISIBLE : View.GONE);
-        chatFilters.setVisibility(inThread || choosingLiveRecipient || searching ? View.GONE : View.VISIBLE);
+        chatFilters.setVisibility(inThread || choosingLiveRecipient || searching || connectionsTab ? View.GONE : View.VISIBLE);
         for (ChatFilter filter : ChatFilter.values()) {
             TextView chip = (TextView) chatFilters.getChildAt(filter.ordinal());
             boolean selected = filter == chatFilter;
@@ -886,7 +949,7 @@ public final class FamilyChatFragment extends Fragment {
         headerAvatar.setFocusable(memberDetails);
         headerAvatar.setContentDescription(memberDetails ? "View member details" : null);
         String currentStatus = store.status();
-        header.setDetail(store.isSelf(thread) ? "Message yourself" : memberDetails ? "Tap to view details ›" : !currentStatus.isEmpty() ? currentStatus
+        header.setDetail(store.isSelf(thread) ? "Message yourself" : store.isConnection(thread) ? "Connection" : memberDetails ? "Tap to view details ›" : !currentStatus.isEmpty() ? currentStatus
                 : thread != null && thread.isGroup() ? store.groupMembers(thread).size() + " members · Group info"
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
         updateSend();
@@ -898,6 +961,7 @@ public final class FamilyChatFragment extends Fragment {
         displayedMessages = java.util.Collections.emptyList();
         if (!inThread) {
             if (searching && searchPattern() != null) renderSearchResults();
+            else if (connectionsTab && !choosingLiveRecipient) renderConnectionList();
             else renderList();
             scroll.post(() -> { if (screen != null && peer == null) scroll.scrollTo(0, oldY); });
         } else if (thread != null && !thread.error) {
@@ -963,7 +1027,7 @@ public final class FamilyChatFragment extends Fragment {
         searchLoaded = true;
         List<FamilyChatStore.ThreadState> scope = new ArrayList<>();
         for (FamilyChatStore.ThreadState thread : store.threads()) {
-            if ((peer == null || thread.peer.equals(peer)) && store.canUse(thread)) scope.add(thread);
+            if (inSearchScope(thread) && store.canUse(thread)) scope.add(thread);
         }
         keywordSearch.load(scope, () -> {
             if (screen == null || !searching) return;
@@ -1015,7 +1079,7 @@ public final class FamilyChatFragment extends Fragment {
         int count = 0;
         boolean more = false;
         for (FamilyChatStore.ThreadState thread : store.threads()) {
-            if (!store.canUse(thread)) continue;
+            if (!inSearchScope(thread) || !store.canUse(thread)) continue;
             List<FamilyChatStore.Message> matches = keywordSearch.matches(thread, keyword, this::hiddenForMe);
             if (matches.isEmpty()) continue;
             count += matches.size();
@@ -1028,7 +1092,7 @@ public final class FamilyChatFragment extends Fragment {
                 LinearLayout row = column();
                 row.setPadding(space(12), space(8), space(12), space(8));
                 row.setBackground(card(WHITE, EDGE, 14));
-                String sender = store.own(message) ? "You" : store.name(message.sender);
+                String sender = store.own(message) ? "You" : store.isConnection(thread) ? store.title(thread) : store.name(message.sender);
                 row.addView(text(sender + " · " + dateTime(message.at), 12, MUTED, true));
                 TextView snippet = text("", 15, INK, false);
                 java.util.regex.Matcher match = keyword.matcher(message.body);
@@ -1075,6 +1139,195 @@ public final class FamilyChatFragment extends Fragment {
         });
     }
 
+    private void styleHeaderIcon(MaterialButton button, int icon, String label) {
+        button.setText("");
+        button.setIconResource(icon);
+        button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        button.setIconPadding(0);
+        button.setIconSize(space(21));
+        button.setIconTint(android.content.res.ColorStateList.valueOf(GREEN));
+        button.setContentDescription(label);
+        button.setMinWidth(0);
+        button.setMinimumWidth(0);
+        button.setPadding(0, 0, 0, 0);
+        button.setLayoutParams(new LinearLayout.LayoutParams(dp(36), target(44)));
+    }
+
+    private TextView conversationTab(String label, boolean connections) {
+        TextView tab = text(label, 14, GREEN, true);
+        tab.setGravity(Gravity.CENTER);
+        tab.setFocusable(true);
+        tab.setOnClickListener(view -> {
+            if (connectionsTab == connections) return;
+            connectionsTab = connections;
+            if (searching) {
+                screen.removeCallbacks(searchHistory);
+                keywordSearch.clear();
+                searchLoaded = false;
+                searchResultsPerChat = 40;
+                loadSearchHistory();
+            }
+            scroll.scrollTo(0, 0);
+            render();
+        });
+        return tab;
+    }
+
+    private boolean inSearchScope(FamilyChatStore.ThreadState thread) {
+        return peer == null ? store.isConnection(thread) == connectionsTab : thread.peer.equals(peer);
+    }
+
+    private boolean verifiedConnectionAccount() {
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        return user != null && user.isEmailVerified() && user.getUid().equals(store.accountId());
+    }
+
+    private void renderConnectionList() {
+        List<FamilyChatStore.ThreadState> threads = new ArrayList<>();
+        for (FamilyChatStore.ThreadState thread : store.threads()) {
+            if (store.isConnection(thread)) threads.add(thread);
+        }
+        threads.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
+        if (threads.isEmpty()) addLine(text("No connections yet", 14, MUTED, false));
+        else for (FamilyChatStore.ThreadState thread : threads) addConversation(thread);
+    }
+
+    private void showConnectionInvite(String prefilled) {
+        if (!verifiedConnectionAccount()) {
+            connectionNotice("Sign in with a verified Family Hub account to use invitations");
+            return;
+        }
+        String account = store.accountId();
+        ScrollView page = new ScrollView(requireContext());
+        LinearLayout body = column();
+        body.setPadding(0, space(12), 0, space(10));
+        page.addView(body);
+        body.addView(text("Share an invite with another Family Hub user.", 15, MUTED, false));
+        MaterialButton create = flatButton("Create invite");
+        body.addView(create);
+        TextView generated = text("", 14, GREEN, true);
+        generated.setTextIsSelectable(true);
+        body.addView(generated);
+        MaterialButton share = flatButton("Share invite link");
+        MaterialButton copy = flatButton("Copy code");
+        body.addView(share);
+        body.addView(copy);
+        share.setVisibility(View.GONE);
+        copy.setVisibility(View.GONE);
+        create.setOnClickListener(view -> {
+            create.setEnabled(false);
+            store.connections.create(ownStatusName(), code -> {
+                if (!isSecondaryPage(page) || !account.equals(store.accountId())) return;
+                create.setEnabled(true);
+                if (code == null) {
+                    connectionNotice("Could not create an invite");
+                    return;
+                }
+                generated.setText(code + "\nExpires in 24 hours");
+                share.setVisibility(View.VISIBLE);
+                copy.setVisibility(View.VISIBLE);
+                share.setOnClickListener(button -> {
+                    android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(android.content.Intent.EXTRA_TEXT,
+                            "Connect with me on Family Hub\nfamilyhub://chat-invite/" + code + "\nInvite code: " + code);
+                    startActivity(android.content.Intent.createChooser(shareIntent, "Share chat invite"));
+                });
+                copy.setOnClickListener(button -> {
+                    android.content.ClipboardManager clipboard = requireContext().getSystemService(android.content.ClipboardManager.class);
+                    if (clipboard != null) clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chat invite", code));
+                });
+            });
+        });
+
+        EditText input = new EditText(requireContext());
+        input.setSingleLine(true);
+        input.setHint("Enter invite code");
+        if (prefilled != null) input.setText(prefilled);
+        body.addView(ChatFormDialog.outlined(input));
+        MaterialButton acceptCode = flatButton("Continue");
+        body.addView(acceptCode);
+        acceptCode.setOnClickListener(view -> {
+            String code = input.getText().toString().trim().toLowerCase(Locale.ROOT);
+            if (!ConnectionInvites.validCode(code)) {
+                input.setError("Enter a valid invite code");
+                return;
+            }
+            acceptCode.setEnabled(false);
+            store.connections.claim(code, ownStatusName(), entry -> {
+                if (!isSecondaryPage(page) || !account.equals(store.accountId())) return;
+                acceptCode.setEnabled(true);
+                if (entry == null) connectionNotice("Invite unavailable, expired or already used");
+                else if (entry.pendingFor(account)) showConnectionRequests(entry);
+                else closeSecondaryPage();
+            });
+        });
+        showSecondaryPage("Connect by invite", page, this::closeSecondaryPage,
+                () -> account.equals(store.accountId()) && verifiedConnectionAccount());
+    }
+
+    private void showConnectionRequests() {
+        showConnectionRequests(null);
+    }
+
+    private void showConnectionRequests(ConnectionInvites.Invite justClaimed) {
+        if (!verifiedConnectionAccount()) {
+            connectionNotice("Sign in with a verified Family Hub account to view requests");
+            return;
+        }
+        String account = store.accountId();
+        ScrollView page = new ScrollView(requireContext());
+        LinearLayout body = column();
+        page.addView(body);
+        List<ConnectionInvites.Invite> requests = store.connections.entries();
+        if (justClaimed != null && requests.stream().noneMatch(item -> item.code.equals(justClaimed.code))) {
+            requests.add(justClaimed);
+        }
+        for (ConnectionInvites.Invite invite : requests) {
+            if (!invite.pendingFor(account)) continue;
+            LinearLayout card = column();
+            card.setPadding(space(10), space(8), space(10), space(8));
+            card.setBackground(card(WHITE, EDGE, 16));
+            card.addView(text(invite.ownerName + " wants to chat", 16, GREEN, true));
+            card.addView(text("Direct chat only", 13, MUTED, false));
+            LinearLayout actions = new LinearLayout(requireContext());
+            MaterialButton accept = flatButton("Accept");
+            MaterialButton decline = flatButton("Decline");
+            actions.addView(accept, new LinearLayout.LayoutParams(0, -2, 1));
+            actions.addView(decline, new LinearLayout.LayoutParams(0, -2, 1));
+            View.OnClickListener answer = view -> {
+                accept.setEnabled(false);
+                decline.setEnabled(false);
+                store.connections.respond(invite, view == accept, ok -> {
+                    if (!isSecondaryPage(page) || !account.equals(store.accountId())) return;
+                    if (ok) {
+                        body.removeView(card);
+                        if (view == accept) closeSecondaryPage();
+                        else if (body.getChildCount() == 0) body.addView(text("No pending requests", 14, MUTED, false));
+                    } else {
+                        accept.setEnabled(true);
+                        decline.setEnabled(true);
+                        connectionNotice("Could not update this request");
+                    }
+                });
+            };
+            accept.setOnClickListener(answer);
+            decline.setOnClickListener(answer);
+            card.addView(actions);
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2);
+            size.topMargin = space(8);
+            body.addView(card, size);
+        }
+        if (body.getChildCount() == 0) body.addView(text("No pending requests", 14, MUTED, false));
+        showSecondaryPage("Requests", page, this::closeSecondaryPage,
+                () -> account.equals(store.accountId()) && verifiedConnectionAccount());
+    }
+
+    private void connectionNotice(String message) {
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+    }
+
     private void renderList() {
         String filter = choosingLiveRecipient ? search.getText().toString().trim().toLowerCase(Locale.ROOT) : "";
         ChatFilter category = choosingLiveRecipient ? ChatFilter.ALL : chatFilter;
@@ -1086,7 +1339,7 @@ public final class FamilyChatFragment extends Fragment {
         List<FamilyChatStore.ThreadState> direct = new ArrayList<>();
         List<FamilyChatStore.ThreadState> groups = new ArrayList<>();
         for (FamilyChatStore.ThreadState thread : store.threads()) {
-            if (store.isSelf(thread)) continue;
+            if (store.isSelf(thread) || store.isConnection(thread)) continue;
             if (!store.title(thread).toLowerCase(Locale.ROOT).contains(filter)) continue;
             boolean group = FamilyChatStore.GROUP.equals(thread.peer) || thread.isGroup();
             if ((category == ChatFilter.GROUPS && !group) || (category == ChatFilter.DIRECT && group)
@@ -1122,19 +1375,22 @@ public final class FamilyChatFragment extends Fragment {
                 if (isSecondaryPage(list) && store.canUse(source) && store.canUse(self)) select.accept(self);
             }), new LinearLayout.LayoutParams(-1, -2));
         }
-        for (boolean groups : new boolean[]{true, false}) {
+        for (int sectionIndex = 0; sectionIndex < 3; sectionIndex++) {
+            boolean groups = sectionIndex == 0;
+            boolean connections = sectionIndex == 2;
             List<FamilyChatStore.ThreadState> section = new ArrayList<>();
             for (FamilyChatStore.ThreadState target : store.threads()) {
-                if (target != source && !store.isSelf(target) && store.canUse(target) && target.isGroup() == groups) section.add(target);
+                if (target != source && !store.isSelf(target) && store.canUse(target) && target.isGroup() == groups
+                        && store.isConnection(target) == connections) section.add(target);
             }
             if (section.isEmpty()) continue;
             section.sort((left, right) -> store.title(left).compareToIgnoreCase(store.title(right)));
-            TextView heading = text(groups ? "Groups" : "Direct messages", 14, BLUE, true);
+            TextView heading = text(connections ? "Connections" : groups ? "Groups" : "Direct messages", 14, BLUE, true);
             heading.setPadding(space(8), space(8), 0, space(4));
             recipients.addView(heading);
             for (FamilyChatStore.ThreadState target : section) {
                 String name = store.title(target);
-                View avatar = groupScreens.avatar(name, groups ? target.photo : avatars().photo(target.peer),
+                View avatar = groupScreens.avatar(name, connections ? null : groups ? target.photo : avatars().photo(target.peer),
                         FloatingChatSizing.applies(requireContext()) ? 36 : 44, null);
                 LinearLayout content = column();
                 content.addView(text(name, 16, INK, true));
@@ -1287,6 +1543,7 @@ public final class FamilyChatFragment extends Fragment {
     private FamilyAvatarStore avatars() { return FamilyAvatarStore.get(requireContext()); }
 
     private View threadAvatar(FamilyChatStore.ThreadState thread, int size) {
+        if (store.isConnection(thread)) return groupScreens.avatar(store.title(thread), null, size, null);
         Runnable openInfo = thread.isGroup() ? () -> groupScreens.showGroup(thread)
                 : () -> groupScreens.showMember(thread.peer, groupScreens::dismiss);
         return groupScreens.avatar(store.title(thread), thread.isGroup() ? thread.photo : avatars().photo(thread.peer),
@@ -1398,7 +1655,11 @@ public final class FamilyChatFragment extends Fragment {
         if (thread.messages.isEmpty()) {
             card.addView(text(thread.error ? "Chat is unavailable" : "Start a conversation", 13, MUTED, false));
         } else {
-            addConversationPreview(card, thread.messages.get(thread.messages.size() - 1), unread);
+            FamilyChatStore.Message latest = thread.messages.get(thread.messages.size() - 1);
+            if (store.isConnection(thread) && !store.own(latest)) {
+                addPreview(card, store.title(thread) + ": " + latest.body,
+                        "Received · " + dateTime(store.listTime(latest)), unread);
+            } else addConversationPreview(card, latest, unread);
         }
         LinearLayout row = avatarRow(threadAvatar(thread, FloatingChatSizing.applies(requireContext()) ? 36 : 44), card);
         if (unread > 0) {

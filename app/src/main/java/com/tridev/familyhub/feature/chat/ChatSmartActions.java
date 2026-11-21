@@ -278,7 +278,7 @@ final class ChatSmartActions {
     void threadActions(FamilyChatStore.ThreadState thread, android.view.View anchor) {
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
-        if (!thread.isGroup() && !thread.peer.equals(store.accountId())) {
+        if (!store.isConnection(thread) && !thread.isGroup() && !thread.peer.equals(store.accountId())) {
             addAction(labels, actions, "Secure text chat", () -> ChatSecureText.open(fragment, store, thread));
         }
         addAction(labels, actions, "Search messages", () -> fragment.openMessageSearch());
@@ -292,7 +292,7 @@ final class ChatSmartActions {
         addAction(labels, actions, "Saved messages", () -> showSaved(thread));
         addAction(labels, actions, "Chat media", () -> search(thread, true));
         addAction(labels, actions, "Catch up on unread", () -> catchUp(thread));
-        addAction(labels, actions, "@Mention a member", () -> mentions(thread));
+        if (!store.isConnection(thread)) addAction(labels, actions, "@Mention a member", () -> mentions(thread));
         chooseAnchored(anchor, "Chat tools", labels, actions);
     }
 

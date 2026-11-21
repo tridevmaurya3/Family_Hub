@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
             "open_documents_vault";
     private static final String EXTRA_OPEN_HEALTH = "open_health";
     public static final String EXTRA_CHAT_CONVERSATION = "family_chat_conversation";
+    public static final String EXTRA_CHAT_INVITE = "family_chat_invite";
     public static final String EXTRA_OPEN_CHAT = "open_family_chat";
     public static final String EXTRA_SHARE_LIVE_IN_CHAT = "share_live_in_chat";
     public static final String EXTRA_OPEN_GROCERY = "open_grocery";
@@ -264,6 +265,12 @@ public class MainActivity extends AppCompatActivity {
         if (intent.hasExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID)
                 && !com.tridev.familyhub.core.security.AccountDataScope.canDeliver(this,
                     intent.getStringExtra(com.tridev.familyhub.core.security.AccountDataScope.EXTRA_UID))) return false;
+        String invite = intent.getStringExtra(EXTRA_CHAT_INVITE);
+        if (invite != null) {
+            intent.removeExtra(EXTRA_CHAT_INVITE);
+            openFeature(FamilyChatFragment.forInvite(invite));
+            return true;
+        }
         if (intent.getBooleanExtra(EXTRA_OPEN_CHAT, false)) {
             intent.removeExtra(EXTRA_OPEN_CHAT);
             String conversation = intent.getStringExtra(EXTRA_CHAT_CONVERSATION);
