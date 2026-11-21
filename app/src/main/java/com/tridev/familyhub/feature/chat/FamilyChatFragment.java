@@ -70,6 +70,8 @@ public final class FamilyChatFragment extends Fragment {
     private LinearLayout screen, rows, bottom;
     private android.widget.FrameLayout pageRoot;
     private View secondaryPage;
+    private View selfConversation;
+    private static final String SELF_CONVERSATION = "familyhub:self";
     private Runnable secondaryBack;
     private java.util.function.BooleanSupplier secondaryAllowed;
     private ModuleOverviewView header;
@@ -153,6 +155,14 @@ public final class FamilyChatFragment extends Fragment {
         screen = column();
         pageRoot.addView(screen, new android.widget.FrameLayout.LayoutParams(-1, -1));
         screen.setPadding(dp(10), dp(8), dp(10), dp(6));
+        if (getActivity() instanceof FloatingChatActivity) {
+            screen.setPadding(dp(5), dp(4), dp(5), dp(4));
+            screen.addOnLayoutChangeListener((view, l, t, r, bottom, oldL, oldT, oldR, oldBottom) -> {
+                if (r - l != oldR - oldL) view.post(() -> {
+                    if (screen == view) render();
+                });
+            });
+        }
         header = (ModuleOverviewView) inflater.inflate(R.layout.view_family_chat_header, screen, false);
         newGroup = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
@@ -333,15 +343,18 @@ public final class FamilyChatFragment extends Fragment {
         mic.setIconPadding(0);
         mic.setIconTint(android.content.res.ColorStateList.valueOf(ChatVoiceControls.PURPLE));
         mic.setPadding(0, 0, 0, 0);
-        mic.setContentDescription("Record voice note. Hold and slide down to lock");
-        mic.setOnClickListener(v -> {
-            draftVoice.stop();
-            voiceNotes.record(store.thread(peer));
-        });
-        mic.setOnTouchListener((v, event) -> {
-            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) draftVoice.stop();
-            return voiceNotes.touch(v, event, store.thread(peer));
-        });
+        if (getActivity() instanceof FloatingChatActivity) bindFloatingMicrophone();
+        else {
+            mic.setContentDescription("Record voice note. Hold and slide down to lock");
+            mic.setOnClickListener(v -> {
+                draftVoice.stop();
+                voiceNotes.record(store.thread(peer));
+            });
+            mic.setOnTouchListener((v, event) -> {
+                if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) draftVoice.stop();
+                return voiceNotes.touch(v, event, store.thread(peer));
+            });
+        }
         bottom.addView(mic, new LinearLayout.LayoutParams(dp(48), dp(48)));
         LinearLayout.LayoutParams sendSize = new LinearLayout.LayoutParams(dp(48), dp(48));
         sendSize.setMarginStart(dp(4));
@@ -489,6 +502,49 @@ public final class FamilyChatFragment extends Fragment {
         super.onDestroy();
     }
 
+    private void bindFloatingMicrophone() {
+        mic.setContentDescription("Tap to dictate. Hold to record a voice note");
+        mic.setOnClickListener(v -> {
+            FamilyChatStore.ThreadState thread = store.thread(peer);
+            if (thread != null && store.canUse(thread)) draftVoice.toggle();
+        });
+        androidx.core.view.ViewCompat.addAccessibilityAction(mic, "Record a voice note", (view, args) -> {
+            draftVoice.stop();
+            voiceNotes.record(store.thread(peer));
+            return true;
+        });
+        android.view.GestureDetector press = new android.view.GestureDetector(requireContext(),
+                new android.view.GestureDetector.SimpleOnGestureListener() {
+                    @Override public boolean onDown(android.view.MotionEvent event) { return true; }
+                    @Override public boolean onSingleTapUp(android.view.MotionEvent event) {
+                        return mic.performClick();
+                    }
+                    @Override public void onLongPress(android.view.MotionEvent event) {
+                        if (!isStartedForVoice()) return;
+                        draftVoice.stop();
+                        voiceNotes.beginHeldRecording(store.thread(peer), event.getRawY(), event.getPointerId(0));
+                    }
+                });
+        mic.setOnTouchListener((view, event) -> {
+            press.onTouchEvent(event);
+            if (event.getActionMasked() != android.view.MotionEvent.ACTION_DOWN) {
+                voiceNotes.touch(view, event, store.thread(peer));
+            }
+            return true;
+        });
+    }
+
+    void stopFloatingAudio() {
+        draftVoice.stop();
+        voiceNotes.stop();
+    }
+
+    String openConversationReference() {
+        if (selfConversation != null && isSecondaryPage(selfConversation)) return SELF_CONVERSATION;
+        FamilyChatStore.ThreadState thread = store.thread(peer);
+        return thread == null ? null : thread.ref.toString();
+    }
+
     void toggleVoiceTyping(FamilyChatStore.ThreadState thread) {
         if (isVoiceThreadOpen(thread) && store.canUse(thread)) draftVoice.toggle();
     }
@@ -498,7 +554,9 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     boolean isStartedForVoice() {
-        return getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED);
+        return getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+                && (!(getActivity() instanceof FloatingChatActivity)
+                    || ((FloatingChatActivity) getActivity()).panelVisible());
     }
 
     public boolean isConversationOpen() {
@@ -624,6 +682,10 @@ public final class FamilyChatFragment extends Fragment {
 
     private void render() {
         if (screen == null) return;
+        if (SELF_CONVERSATION.equals(pendingNotificationConversation) && store.accountId() != null) {
+            pendingNotificationConversation = null;
+            openSelfConversation(store.accountId(), ownStatusName());
+        }
         if (pendingNotificationConversation != null) {
             for (FamilyChatStore.ThreadState candidate : store.threads()) {
                 if (pendingNotificationConversation.equals(candidate.ref.toString()) && store.canUse(candidate)) {
@@ -645,6 +707,9 @@ public final class FamilyChatFragment extends Fragment {
         } else {
             header.setNavigationAction(R.drawable.ic_menu_hamburger, R.string.feature_menu_title, v -> {
                 if (requireActivity() instanceof MainActivity) ((MainActivity) requireActivity()).showFeatureMenu();
+                else if (requireActivity() instanceof FloatingChatActivity) {
+                    ((FloatingChatActivity) requireActivity()).showSettings();
+                }
             });
         }
         newGroup.setText(choosingLiveRecipient ? "Cancel" : "New group");
@@ -707,6 +772,11 @@ public final class FamilyChatFragment extends Fragment {
             addLine(text(thread != null ? "Chat is unavailable" : "Connecting to conversation…", 14, MUTED, false));
         }
         updateJumpToLatest();
+        if (getActivity() instanceof FloatingChatActivity) {
+            int unread = 0;
+            for (FamilyChatStore.ThreadState entry : store.threads()) unread += unreadCount(entry);
+            ((FloatingChatActivity) getActivity()).updateShortcutUnread(unread);
+        }
     }
 
     private void renderList() {
@@ -753,7 +823,7 @@ public final class FamilyChatFragment extends Fragment {
         if (pageRoot == null || !allowed.getAsBoolean()) return;
         clearSecondaryPage();
         LinearLayout page = column();
-        page.setBackgroundResource(R.drawable.bg_page_three_tone);
+        if (!(getActivity() instanceof FloatingChatActivity)) page.setBackgroundResource(R.drawable.bg_page_three_tone);
         page.setPadding(dp(12), dp(8), dp(12), dp(6));
         ModuleOverviewView pageHeader = (ModuleOverviewView) getLayoutInflater()
                 .inflate(R.layout.view_family_chat_header, page, false);
@@ -797,6 +867,7 @@ public final class FamilyChatFragment extends Fragment {
         secondaryAllowed = null;
         View previous = secondaryPage;
         secondaryPage = null;
+        selfConversation = null;
         pageRoot.removeView(previous);
         screen.setVisibility(View.VISIBLE);
     }
@@ -979,6 +1050,7 @@ public final class FamilyChatFragment extends Fragment {
         });
         showSecondaryPage(name + " (You)", "Message yourself", history, composer,
                 statusAvatar(uid, name, 40, true), this::closeSecondaryPage, allowed);
+        if (isSecondaryPage(history)) selfConversation = history;
         history.post(() -> history.scrollTo(0, messagesView.getHeight()));
     }
 
@@ -1069,9 +1141,14 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     void openLinkedTask(com.tridev.familyhub.data.local.entity.FamilyTask task) {
+        openLinkedFeature(com.tridev.familyhub.feature.tasks.FamilyTasksFragment.forLinkedTask(task.cloudId));
+    }
+
+    void openLinkedFeature(Fragment feature) {
         if (getActivity() instanceof MainActivity) {
-            ((MainActivity) getActivity()).openFeature(
-                    com.tridev.familyhub.feature.tasks.FamilyTasksFragment.forLinkedTask(task.cloudId));
+            ((MainActivity) getActivity()).openFeature(feature);
+        } else if (getActivity() instanceof FloatingChatActivity) {
+            ((FloatingChatActivity) getActivity()).openLinkedFeature(feature);
         }
     }
 
@@ -1218,7 +1295,7 @@ public final class FamilyChatFragment extends Fragment {
         lastMessageKey = latestKey;
         if (thread.messages.isEmpty()) addLine(text("No messages yet", 14, MUTED, false));
         ChatAttachmentCards cards = new ChatAttachmentCards(requireContext(), attachments);
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int screenWidth = screen.getWidth() > 0 ? screen.getWidth() : getResources().getDisplayMetrics().widthPixels;
         int compactWidth = Math.min(dp(420), Math.round(screenWidth * 0.82f));
         int compactMediaWidth = Math.max(1, compactWidth - dp(20));
         java.util.Map<String, FamilyChatStore.Message> known = new java.util.HashMap<>();
@@ -1338,7 +1415,8 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private void markVisibleRead() {
-        if (screen == null || secondaryPage != null || !isResumed() || peer == null || !screen.hasWindowFocus()) return;
+        if (screen == null || secondaryPage != null || !isResumed() || peer == null
+                || !screen.isShown() || !screen.hasWindowFocus()) return;
         FamilyChatStore.ThreadState thread = store.thread(peer);
         if (thread == null || bubbles.size() != thread.messages.size()) return;
         android.graphics.Rect viewport = new android.graphics.Rect();
@@ -1383,8 +1461,12 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     private GradientDrawable card(int fill, int edge, int radius) {
-        GradientDrawable drawable = new GradientDrawable();
-        drawable.setColor(fill);
+        boolean floating = getActivity() instanceof FloatingChatActivity;
+        GradientDrawable drawable = floating && (fill == WHITE || fill == 0xffe5f2fa)
+                ? new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                        new int[]{fill, fill == WHITE ? 0xfff4f9fc : 0xffdbeef9})
+                : new GradientDrawable();
+        if (!floating || (fill != WHITE && fill != 0xffe5f2fa)) drawable.setColor(fill);
         drawable.setCornerRadius(dp(radius));
         drawable.setStroke(dp(1), edge);
         return drawable;

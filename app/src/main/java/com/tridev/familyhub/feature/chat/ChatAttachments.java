@@ -134,6 +134,9 @@ final class ChatAttachments {
         scroll.addView(panel);
         sheet.setContentView(scroll);
         sheet.show();
+        if (fragment.getActivity() instanceof FloatingChatActivity) {
+            ((FloatingChatActivity) fragment.getActivity()).fitDialog(sheet, false);
+        }
     }
 
     private LinearLayout attachmentRow(LinearLayout panel) {
@@ -232,7 +235,8 @@ final class ChatAttachments {
                          String data, byte[] photoOrFile) {
         if (!visible() || !store.canUse(thread)) return;
         Context context = fragment.requireContext();
-        MaterialAlertDialogBuilder builder = "event".equals(metadata.get("kind"))
+        MaterialAlertDialogBuilder builder = fragment.getActivity() instanceof FloatingChatActivity
+                || "event".equals(metadata.get("kind"))
                 ? new ChatFormDialog(context) : new MaterialAlertDialogBuilder(context);
         MaterialAlertDialogBuilder dialog = builder.setTitle(label)
                 .setMessage("Share with " + store.title(thread) + "?")
@@ -799,7 +803,9 @@ final class ChatAttachments {
         viewer.setContentView(frame);
         viewer.setOnDismissListener(dialog -> { if (fullPhoto == viewer) fullPhoto = null; });
         viewer.show();
-        viewer.getWindow().setLayout(-1, -1);
+        if (fragment.getActivity() instanceof FloatingChatActivity) {
+            ((FloatingChatActivity) fragment.getActivity()).fitDialog(viewer, true);
+        } else viewer.getWindow().setLayout(-1, -1);
     }
 
     private void openFile(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, byte[] bytes) {

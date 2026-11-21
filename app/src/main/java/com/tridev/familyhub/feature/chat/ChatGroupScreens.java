@@ -564,7 +564,9 @@ final class ChatGroupScreens {
             active = dialog;
             dialog.show();
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-            dialog.getWindow().setLayout(-1, -1);
+            if (fragment.getActivity() instanceof FloatingChatActivity) {
+                ((FloatingChatActivity) fragment.getActivity()).fitDialog(dialog, true);
+            } else dialog.getWindow().setLayout(-1, -1);
             dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         }
     }

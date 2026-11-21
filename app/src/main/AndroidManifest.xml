@@ -297,6 +297,15 @@
         </activity>
 
         <activity
+            android:name=".feature.chat.FloatingChatActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.tridev.familyhub.floatingchat"
+            android:theme="@style/Theme.FamilyHub.FloatingChat"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".feature.main.MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

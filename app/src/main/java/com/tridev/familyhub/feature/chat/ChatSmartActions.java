@@ -12,7 +12,6 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.button.MaterialButton;
 import com.tridev.familyhub.R;
-import com.tridev.familyhub.feature.main.MainActivity;
 import com.tridev.familyhub.feature.reminders.RemindersFragment;
 import com.tridev.familyhub.feature.tasks.FamilyTasksFragment;
 
@@ -750,7 +749,7 @@ final class ChatSmartActions {
     }
 
     private void openFeature(androidx.fragment.app.Fragment feature) {
-        if (fragment.getActivity() instanceof MainActivity) ((MainActivity) fragment.getActivity()).openFeature(feature);
+        fragment.openLinkedFeature(feature);
     }
 
     private static void addAction(List<String> labels, List<Runnable> actions, String label, Runnable action) {

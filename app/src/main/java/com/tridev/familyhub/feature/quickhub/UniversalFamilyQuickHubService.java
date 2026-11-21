@@ -140,6 +140,8 @@ public final class UniversalFamilyQuickHubService extends Service {
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(6),dp(6),dp(6),dp(6));box.setBackground(round(Color.WHITE,Color.rgb(184,207,199),16));
         Button grocery=choice("Grocery"), tasks=choice("To-Do"), notes=choice("Notes"), reminders=choice("Reminders"), planner=choice("Planner"), opacity=choice("More");
         Button calculator = choice("Calculator"), alarm = choice("Alarm");
+        Button chat = choice("Family Chat");
+        coloredIcon(chat, R.drawable.ic_nav_chat, R.color.fh_primary);
         coloredIcon(calculator, R.drawable.ic_quick_calculator, R.color.fh_primary);
         coloredIcon(alarm, R.drawable.ic_reminder, R.color.fh_module_reminders);
         coloredIcon(grocery, R.drawable.ic_grocery, R.color.fh_success);
@@ -147,7 +149,7 @@ public final class UniversalFamilyQuickHubService extends Service {
         coloredIcon(opacity, R.drawable.ic_transparency, R.color.fh_primary);
         coloredIcon(planner, R.drawable.ic_planner, R.color.fh_module_planner);
         coloredIcon(reminders, R.drawable.ic_reminder, R.color.fh_module_reminders);
-        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(planner,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(calculator,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
+        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(planner,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(chat,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(calculator,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
         selectorAnchor = anchor;
         selectorContent = box;
         int width = selectorWidth(box);
@@ -157,6 +159,10 @@ public final class UniversalFamilyQuickHubService extends Service {
         selector=new PopupWindow(menuScroll,width,height,true);selector.setOutsideTouchable(true);selector.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));selector.setElevation(dp(12));
         grocery.setOnClickListener(v->{open(GroceryOverlayService.class,GroceryOverlayService.ACTION_OPEN_PANEL,FamilyTaskOverlayService.class);selector.dismiss();});
         tasks.setOnClickListener(v->{open(FamilyTaskOverlayService.class,FamilyTaskOverlayService.ACTION_OPEN_PANEL,GroceryOverlayService.class);selector.dismiss();});
+        chat.setOnClickListener(v -> {
+            selector.dismiss();
+            startActivity(com.tridev.familyhub.feature.chat.FloatingChatActivity.launchIntent(this));
+        });
         calculator.setOnClickListener(v -> { selector.dismiss(); quickTools().calculator(); });
         alarm.setOnClickListener(v -> { selector.dismiss(); quickTools().alarm(); });
         opacity.setOnClickListener(v->{selector.dismiss();showOpacity(anchor);});

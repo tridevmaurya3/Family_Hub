@@ -23,9 +23,11 @@ final class ChatFormDialog extends MaterialAlertDialogBuilder {
     private DialogInterface.OnClickListener selection;
     private boolean singleChoice;
     private int checked;
+    private final FloatingChatActivity floating;
 
     ChatFormDialog(Context context) {
         super(context, R.style.ThemeOverlay_FamilyHub_FormDialog);
+        floating = context instanceof FloatingChatActivity ? (FloatingChatActivity) context : null;
     }
 
     @NonNull @Override public ChatFormDialog setItems(@NonNull CharSequence[] items,
@@ -46,7 +48,7 @@ final class ChatFormDialog extends MaterialAlertDialogBuilder {
     }
 
     @NonNull @Override public AlertDialog create() {
-        if (options == null) return super.create();
+        if (options == null) return fitToFloatingPanel(super.create());
         Context context = getContext();
         // Keep actions reachable in landscape and on short screens.
         int screenHeight = context.getResources().getConfiguration().screenHeightDp;
@@ -94,6 +96,11 @@ final class ChatFormDialog extends MaterialAlertDialogBuilder {
             params.bottomMargin = dp(context, 4);
             choices.addView(option, params);
         }
+        return fitToFloatingPanel(dialog);
+    }
+
+    private AlertDialog fitToFloatingPanel(AlertDialog dialog) {
+        if (floating != null) dialog.setOnShowListener(ignored -> floating.fitDialog(dialog, false));
         return dialog;
     }
 

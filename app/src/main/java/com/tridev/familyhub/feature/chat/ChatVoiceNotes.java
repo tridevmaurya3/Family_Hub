@@ -106,9 +106,7 @@ final class ChatVoiceNotes {
     boolean touch(View mic, MotionEvent event, FamilyChatStore.ThreadState selected) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                pointer = event.getPointerId(0);
-                touchStart = event.getRawY();
-                record(selected, false);
+                beginHeldRecording(selected, event.getRawY(), event.getPointerId(0));
                 return true;
             case MotionEvent.ACTION_MOVE:
                 if (pointer == event.getPointerId(0) && recorder != null && !locked
@@ -132,6 +130,12 @@ final class ChatVoiceNotes {
             default:
                 return true;
         }
+    }
+
+    void beginHeldRecording(FamilyChatStore.ThreadState thread, float rawY, int pointerId) {
+        pointer = pointerId;
+        touchStart = rawY;
+        record(thread, false);
     }
 
     void record(FamilyChatStore.ThreadState selected) {
