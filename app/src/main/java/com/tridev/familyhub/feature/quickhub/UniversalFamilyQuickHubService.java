@@ -40,9 +40,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import com.tridev.familyhub.feature.grocery.overlay.GroceryOverlayService;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.chat.FamilyChatStore;
+import com.tridev.familyhub.feature.chat.FloatingChatActivity;
 import com.tridev.familyhub.feature.tasks.overlay.FamilyTaskOverlayService;
 
-/** Launcher only; Grocery and To-Do behavior remains in their existing services. */
+/** Hosts the Quick Hub launcher and the minimized Family Chat shortcut. */
 public final class UniversalFamilyQuickHubService extends Service {
     public static final String ACTION_SHOW = "com.tridev.familyhub.action.SHOW_QUICK_HUB";
     public static final String ACTION_HIDE = "com.tridev.familyhub.action.HIDE_QUICK_HUB";
@@ -54,7 +56,11 @@ public final class UniversalFamilyQuickHubService extends Service {
     private static final int NOTIFICATION_ID = 4218;
     private WindowManager manager;
     private WindowManager.LayoutParams params;
+    private static UniversalFamilyQuickHubService running;
     private View icon;
+    private TextView chatShortcut;
+    private String shortcutAccount;
+    private final Runnable shortcutUnreadObserver = this::refreshChatShortcut;
     private PopupWindow selector;
     private QuickHubTools tools;
     private View selectorAnchor;
@@ -77,9 +83,11 @@ public final class UniversalFamilyQuickHubService extends Service {
 
     @Override public void onCreate() {
         super.onCreate();
+        running = this;
         database = FamilyHubDatabase.getInstance(this);
         countAuthListener = auth -> {
             if (destroyed) return;
+            if (chatShortcut != null && !isShortcutAccount(shortcutAccount)) removeChatShortcut();
             FamilyHubDatabase current = FamilyHubDatabase.getInstance(this);
             if (current == database) return;
             database.getInvalidationTracker().removeObserver(countObserver);
@@ -107,8 +115,121 @@ public final class UniversalFamilyQuickHubService extends Service {
         String action = intent == null ? ACTION_SHOW : intent.getAction();
         if (ACTION_STOP.equals(action)) { stopSelf(); return START_NOT_STICKY; }
         if (icon == null && Settings.canDrawOverlays(this)) showIcon();
-        if (icon != null) icon.setVisibility(ACTION_HIDE.equals(action) ? View.GONE : View.VISIBLE);
+        int visibility = ACTION_HIDE.equals(action) ? View.GONE : View.VISIBLE;
+        if (icon != null) icon.setVisibility(visibility);
+        if (chatShortcut != null) chatShortcut.setVisibility(visibility);
         return START_STICKY;
+    }
+
+    public static boolean showChatShortcut(String account, int x, int y) {
+        UniversalFamilyQuickHubService service = running;
+        return service != null && service.attachChatShortcut(account, x, y);
+    }
+
+    public static void clearChatShortcut() {
+        UniversalFamilyQuickHubService service = running;
+        if (service != null) service.removeChatShortcut();
+    }
+
+    private boolean isShortcutAccount(String account) {
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        return user != null && user.isEmailVerified() && user.getUid().equals(account);
+    }
+
+    private boolean attachChatShortcut(String account, int x, int y) {
+        if (destroyed || manager == null || !Settings.canDrawOverlays(this) || !isShortcutAccount(account)) return false;
+        removeChatShortcut();
+
+        TextView shortcut = new TextView(this);
+        shortcut.setGravity(Gravity.CENTER);
+        shortcut.setTextSize(13);
+        shortcut.setTextColor(Color.WHITE);
+        shortcut.setBackground(round(0xff0f6cbd, 0xff58a3cb, 16));
+        shortcut.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_nav_chat, 0, 0);
+        shortcut.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+        shortcut.setPadding(0, dp(6), 0, dp(3));
+        shortcut.setElevation(dp(8));
+        shortcut.setOnClickListener(view -> {
+            if (!isShortcutAccount(shortcutAccount)) {
+                removeChatShortcut();
+                return;
+            }
+            try {
+                startActivity(FloatingChatActivity.launchIntent(this));
+            } catch (RuntimeException error) {
+                android.widget.Toast.makeText(this, "Could not reopen Family Chat", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        WindowManager.LayoutParams position = overlayParams(dp(58), dp(52));
+        position.gravity = Gravity.TOP | Gravity.LEFT;
+        position.x = clamp(x, 0, getResources().getDisplayMetrics().widthPixels - position.width);
+        position.y = clamp(y, 0, getResources().getDisplayMetrics().heightPixels - position.height);
+        shortcut.setOnTouchListener(new View.OnTouchListener() {
+            private float downX, downY;
+            private int startX, startY;
+            private boolean moved;
+
+            @Override public boolean onTouch(View view, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = event.getRawX();
+                        downY = event.getRawY();
+                        startX = position.x;
+                        startY = position.y;
+                        moved = false;
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        int dx = Math.round(event.getRawX() - downX);
+                        int dy = Math.round(event.getRawY() - downY);
+                        moved |= Math.abs(dx) > dp(4) || Math.abs(dy) > dp(4);
+                        if (moved && view.isAttachedToWindow()) {
+                            position.x = clamp(startX + dx, 0, getResources().getDisplayMetrics().widthPixels - position.width);
+                            position.y = clamp(startY + dy, 0, getResources().getDisplayMetrics().heightPixels - position.height);
+                            manager.updateViewLayout(view, position);
+                        }
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        if (!moved) view.performClick();
+                        return true;
+                    case MotionEvent.ACTION_CANCEL:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
+        try {
+            manager.addView(shortcut, position);
+        } catch (WindowManager.BadTokenException | SecurityException error) {
+            return false;
+        }
+        chatShortcut = shortcut;
+        shortcutAccount = account;
+        FamilyChatStore.observeUnread(shortcutUnreadObserver);
+        refreshChatShortcut();
+        return true;
+    }
+
+    private void refreshChatShortcut() {
+        if (chatShortcut == null) return;
+        int count = FamilyChatStore.unreadTotal();
+        chatShortcut.setText(count == 0 ? "Chat" : count > 99 ? "99+" : Integer.toString(count));
+        chatShortcut.setContentDescription(count == 0 ? "Restore floating Family Chat"
+                : "Restore floating Family Chat. Unread messages: " + count);
+    }
+
+    private void removeChatShortcut() {
+        if (chatShortcut == null) return;
+        FamilyChatStore.removeUnreadObserver(shortcutUnreadObserver);
+        try {
+            manager.removeView(chatShortcut);
+        } catch (IllegalArgumentException ignored) {
+            // Android may have removed the overlay when permission changed.
+        }
+        chatShortcut = null;
+        shortcutAccount = null;
     }
 
     private void showIcon() {
@@ -153,7 +274,7 @@ public final class UniversalFamilyQuickHubService extends Service {
         coloredIcon(opacity, R.drawable.ic_transparency, R.color.fh_primary);
         coloredIcon(planner, R.drawable.ic_planner, R.color.fh_module_planner);
         coloredIcon(reminders, R.drawable.ic_reminder, R.color.fh_module_reminders);
-        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(planner,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(chat,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(calculator,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
+        coloredIcon(notes, R.drawable.ic_note, R.color.fh_module_notes); box.addView(chat,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(grocery,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(tasks,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(notes,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(reminders,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(planner,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(calculator,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(alarm,new LinearLayout.LayoutParams(-1,dp(36)));box.addView(opacity,new LinearLayout.LayoutParams(-1,dp(36)));
         selectorAnchor = anchor;
         selectorContent = box;
         int width = selectorWidth(box);
@@ -315,7 +436,7 @@ public final class UniversalFamilyQuickHubService extends Service {
     private WindowManager.LayoutParams overlayParams(int w,int h){return new WindowManager.LayoutParams(w,h,Build.VERSION.SDK_INT>=26?WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:WindowManager.LayoutParams.TYPE_PHONE,WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,PixelFormat.TRANSLUCENT);}
     private GradientDrawable round(int fill,int stroke,int radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));d.setStroke(dp(1),stroke);return d;}
     private int dp(int v){return Math.round(v*getResources().getDisplayMetrics().density);} private int clamp(int v,int a,int b){return Math.max(a,Math.min(b,v));}
-    @Override public void onDestroy(){destroyed=true;if(tools!=null)tools.dismiss();if(countAuthListener!=null)com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(countAuthListener);countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
+    @Override public void onDestroy(){destroyed=true;if(running==this)running=null;removeChatShortcut();if(tools!=null)tools.dismiss();if(countAuthListener!=null)com.google.firebase.auth.FirebaseAuth.getInstance().removeAuthStateListener(countAuthListener);countExecutor.shutdown();countHandler.removeCallbacksAndMessages(null);if(selector!=null)selector.dismiss();if(icon!=null&&manager!=null)try{manager.removeView(icon);}catch(RuntimeException ignored){}getSharedPreferences(PREFS,MODE_PRIVATE).edit().putBoolean(KEY_ENABLED,false).apply();super.onDestroy();}
     @Nullable @Override public IBinder onBind(Intent intent){return null;}
     private void createChannel(){if(Build.VERSION.SDK_INT>=26){NotificationManager n=getSystemService(NotificationManager.class);if(n!=null)n.createNotificationChannel(new NotificationChannel(CHANNEL,"Family Quick Hub",NotificationManager.IMPORTANCE_LOW));}}
 }

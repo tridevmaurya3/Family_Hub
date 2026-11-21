@@ -31,6 +31,7 @@ import com.tridev.familyhub.R;
 import com.tridev.familyhub.core.security.AccountDataScope;
 import com.tridev.familyhub.core.security.FamilyHubAppLockManager;
 import com.tridev.familyhub.feature.main.MainActivity;
+import com.tridev.familyhub.feature.quickhub.UniversalFamilyQuickHubService;
 
 public final class FloatingChatActivity extends AppCompatActivity {
     private static final int GREEN = 0xff146553;
@@ -40,13 +41,11 @@ public final class FloatingChatActivity extends AppCompatActivity {
     private LinearLayout surface;
     private LinearLayout controls;
     private FrameLayout content;
-    private TextView shortcut;
-    private final Runnable unreadObserver = () -> updateShortcutUnread(FamilyChatStore.unreadTotal());
     private FrameLayout resizeHandles;
     private GradientDrawable background;
     private String account;
     private int x, y, width, height;
-    private boolean collapsed;
+    private boolean parked;
     private FirebaseAuth.AuthStateListener accountListener;
 
     public static Intent launchIntent(Context context) {
@@ -76,7 +75,6 @@ public final class FloatingChatActivity extends AppCompatActivity {
         height = saved == null ? preferences.getInt("height", dp(620)) : saved.getInt("height");
         x = saved == null ? preferences.getInt("x", Math.max(0, area.width() - width - dp(10))) : saved.getInt("x");
         y = saved == null ? preferences.getInt("y", dp(42)) : saved.getInt("y");
-        collapsed = saved != null && saved.getBoolean("collapsed");
 
         background = shape(20, 0xffc7d5dc, 0xffeffaf3, 0xfffff4f5, 0xffeef6fd);
         background.setAlpha(preferences.getInt("opacity", 100) * 255 / 100);
@@ -99,7 +97,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
         controls.addView(drag, new LinearLayout.LayoutParams(0, dp(38), 1));
         drag.setOnTouchListener(windowGesture(0, 0, null));
         addControl("⋮", "Panel settings", this::showSettings);
-        addControl("−", "Minimize floating chat", () -> setCollapsed(true));
+        addControl("−", "Minimize floating chat", this::minimize);
         addControl("↗", "Open in Family Hub", this::openFullApp);
         addControl("×", "Close floating chat", this::finish);
         LinearLayout.LayoutParams controlRow = new LinearLayout.LayoutParams(-1, dp(38));
@@ -115,17 +113,6 @@ public final class FloatingChatActivity extends AppCompatActivity {
         addResizeHandle(-1, 1, "bottom left");
         addResizeHandle(1, 1, "bottom right");
 
-        shortcut = label("Chat", 13, Color.WHITE);
-        shortcut.setBackground(shape(16, 0xff58a3cb, 0xff2489ca, BLUE));
-        shortcut.setCompoundDrawablesWithIntrinsicBounds(0, R.drawable.ic_nav_chat, 0, 0);
-        shortcut.setCompoundDrawableTintList(ColorStateList.valueOf(Color.WHITE));
-        shortcut.setPadding(0, dp(6), 0, dp(3));
-        shortcut.setContentDescription("Restore floating Family Chat");
-        shortcut.setOnClickListener(v -> setCollapsed(false));
-        shortcut.setOnTouchListener(windowGesture(0, 0, shortcut::performClick));
-        root.addView(shortcut, new FrameLayout.LayoutParams(-1, -1));
-        FamilyChatStore.observeUnread(unreadObserver);
-        updateVisibility();
         applyBounds();
 
         if (getSupportFragmentManager().findFragmentById(R.id.floating_chat_content) == null) getSupportFragmentManager().beginTransaction()
@@ -144,17 +131,23 @@ public final class FloatingChatActivity extends AppCompatActivity {
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (authorized() && account.equals(intent.getStringExtra(AccountDataScope.EXTRA_UID))) setCollapsed(false);
-        else finish();
+        if (authorized() && account.equals(intent.getStringExtra(AccountDataScope.EXTRA_UID))) {
+            parked = false;
+            UniversalFamilyQuickHubService.clearChatShortcut();
+        } else finish();
     }
 
     @Override protected void onStart() {
         super.onStart();
-        if (!authorized()) finish();
+        if (!authorized()) {
+            finish();
+            return;
+        }
+        parked = false;
+        UniversalFamilyQuickHubService.clearChatShortcut();
     }
 
     @Override protected void onDestroy() {
-        FamilyChatStore.removeUnreadObserver(unreadObserver);
         if (accountListener != null) FirebaseAuth.getInstance().removeAuthStateListener(accountListener);
         super.onDestroy();
     }
@@ -165,12 +158,11 @@ public final class FloatingChatActivity extends AppCompatActivity {
         state.putInt("y", y);
         state.putInt("width", width);
         state.putInt("height", height);
-        state.putBoolean("collapsed", collapsed);
     }
 
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_OUTSIDE && panelVisible()) {
-            setCollapsed(true);
+            minimize();
             return true;
         }
         return super.dispatchTouchEvent(event);
@@ -181,14 +173,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
     }
 
     boolean panelVisible() {
-        return !collapsed && !isFinishing();
-    }
-
-    void updateShortcutUnread(int count) {
-        if (shortcut == null) return;
-        shortcut.setText(count == 0 ? "Chat" : count > 99 ? "99+" : Integer.toString(count));
-        shortcut.setContentDescription(count == 0 ? "Restore floating Family Chat"
-                : "Restore floating Family Chat. Unread messages: " + count);
+        return !parked && !isFinishing();
     }
 
     private FamilyChatFragment chat() {
@@ -254,28 +239,21 @@ public final class FloatingChatActivity extends AppCompatActivity {
         new ChatFormDialog(this).setView(design.content).setPositiveButton("Done", null).show();
     }
 
-    private void setCollapsed(boolean value) {
-        if (collapsed == value) return;
-        if (value) {
-            FamilyChatFragment chat = chat();
-            if (chat != null) chat.stopFloatingAudio();
-            View focus = getCurrentFocus();
-            if (focus != null) {
-                getSystemService(InputMethodManager.class).hideSoftInputFromWindow(focus.getWindowToken(), 0);
-                focus.clearFocus();
-            }
+    private void minimize() {
+        if (!panelVisible() || !authorized()) return;
+        if (!UniversalFamilyQuickHubService.showChatShortcut(account, x, y)) {
+            Toast.makeText(this, "Floating shortcut is unavailable", Toast.LENGTH_SHORT).show();
+            return;
         }
-        collapsed = value;
-        updateVisibility();
-        applyBounds();
-    }
-
-    private void updateVisibility() {
-        surface.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-        resizeHandles.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-        shortcut.setVisibility(collapsed ? View.VISIBLE : View.GONE);
-        if (collapsed) getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
-        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        FamilyChatFragment chat = chat();
+        if (chat != null) chat.stopFloatingAudio();
+        View focus = getCurrentFocus();
+        if (focus != null) {
+            getSystemService(InputMethodManager.class).hideSoftInputFromWindow(focus.getWindowToken(), 0);
+            focus.clearFocus();
+        }
+        parked = true;
+        if (!moveTaskToBack(true)) finish();
     }
 
     private void addControl(String symbol, String description, Runnable action) {
@@ -353,8 +331,8 @@ public final class FloatingChatActivity extends AppCompatActivity {
         Rect area = displayArea();
         width = clamp(width, dp(285), area.width());
         height = clamp(height, dp(310), area.height());
-        int windowWidth = collapsed ? dp(58) : width;
-        int windowHeight = collapsed ? dp(52) : height;
+        int windowWidth = width;
+        int windowHeight = height;
         x = clamp(x, 0, area.width() - windowWidth);
         y = clamp(y, 0, area.height() - windowHeight);
         Window window = getWindow();
