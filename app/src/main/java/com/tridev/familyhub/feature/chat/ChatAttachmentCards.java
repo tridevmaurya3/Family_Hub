@@ -73,7 +73,7 @@ final class ChatAttachmentCards {
                 int mapHeight = Math.round(mediaWidth * 0.82f);
                 card.addView(preview, new LinearLayout.LayoutParams(-1, mapHeight + dp(36)));
                 if ("live".equals(kind)) {
-                    whenVisible(preview, () -> attachments.observeLive(message.sender, preview.liveUpdate));
+                    whenVisible(preview, () -> attachments.observeLive(message.liveMember(), preview.liveUpdate));
                 } else {
                     Double lat = message.snapshot.child("lat").getValue(Double.class);
                     Double lng = message.snapshot.child("lng").getValue(Double.class);

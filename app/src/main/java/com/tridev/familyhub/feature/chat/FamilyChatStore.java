@@ -501,6 +501,52 @@ public final class FamilyChatStore {
         });
     }
 
+    void forward(ThreadState source, ThreadState target, String key, Consumer<Boolean> completed) {
+        if (!canUse(source) || !canUse(target)) {
+            completed.accept(false);
+            return;
+        }
+        loadMessage(source, key, current -> {
+            if (current == null || current.deleted() || !canUse(source) || !canUse(target)) {
+                completed.accept(false);
+                return;
+            }
+            Map<String, Object> details = new HashMap<>();
+            for (String field : new String[]{"kind", "mime", "lat", "lng", "phone", "startsAt",
+                    "options", "entries", "voiceWave", "voiceDuration"}) {
+                Object value = current.snapshot.child(field).getValue();
+                if (value != null) details.put(field, value);
+            }
+            Long deadline = current.pollDeadline();
+            if (deadline != null && deadline > System.currentTimeMillis()) details.put("closesAt", deadline);
+            if (!details.containsKey("mime")) {
+                String body = "live".equals(current.kind())
+                        ? Message.LIVE_LOCATION_LABEL + "\n" + current.liveMember() : current.body;
+                send(target, body, details, null, () -> {}, completed);
+                return;
+            }
+            // Keep the destination message and its attachment in the same atomic write.
+            source.files.child(key).get().addOnCompleteListener(task -> {
+                if (!task.isSuccessful() || !canUse(source) || !canUse(target)) {
+                    completed.accept(false);
+                    return;
+                }
+                Object value = task.getResult().getValue();
+                if (!(value instanceof String) || ((String) value).isEmpty() || ((String) value).length() > 1_398_104) {
+                    completed.accept(false);
+                    return;
+                }
+                loadMessage(source, key, confirmed -> {
+                    if (confirmed == null || confirmed.deleted() || !canUse(source) || !canUse(target)) {
+                        completed.accept(false);
+                        return;
+                    }
+                    send(target, confirmed.body, details, (String) value, () -> {}, completed);
+                });
+            });
+        });
+    }
+
     void send(ThreadState thread, String body, Runnable failed) {
         send(thread, body, java.util.Collections.emptyMap(), null, failed);
     }
@@ -711,6 +757,9 @@ public final class FamilyChatStore {
     }
 
     static final class Message {
+        private static final String LIVE_LOCATION_LABEL = "Family Live location";
+        private static final java.util.regex.Pattern LIVE_MEMBER =
+                java.util.regex.Pattern.compile("Family Live location\\n([A-Za-z0-9_-]{1,128})");
         final DataSnapshot snapshot;
         final String sender;
         final String body;
@@ -718,7 +767,8 @@ public final class FamilyChatStore {
         Message(DataSnapshot snapshot, String sender, String body, long at) {
             this.snapshot = snapshot;
             this.sender = sender;
-            this.body = body;
+            this.body = "live".equals(snapshot.child("kind").getValue(String.class))
+                    && LIVE_MEMBER.matcher(body).matches() ? LIVE_LOCATION_LABEL : body;
             this.at = at;
         }
         boolean deleted() { return snapshot.hasChild("deletedAt"); }
@@ -738,6 +788,13 @@ public final class FamilyChatStore {
             String type = snapshot.child("kind").getValue(String.class);
             if ("file".equals(type) && voiceAttachment() != null) return "voice";
             return type == null ? "text" : type;
+        }
+
+        String liveMember() {
+            String raw = snapshot.child("body").getValue(String.class);
+            if (raw == null) return sender;
+            java.util.regex.Matcher match = LIVE_MEMBER.matcher(raw);
+            return match.matches() ? match.group(1) : sender;
         }
 
         ChatVoiceAttachment voiceAttachment() {

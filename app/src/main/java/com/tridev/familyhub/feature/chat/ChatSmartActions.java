@@ -48,39 +48,42 @@ final class ChatSmartActions {
         if (!ready(thread) || message.deleted() || fragment.hiddenForMe(message)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
-        if (message.deleted()) return;
         addAction(labels, actions, "Reply", () -> fragment.replyTo(message));
         addAction(labels, actions, "React", () -> reactions(thread, message));
+        addAction(labels, actions, "Forward", () -> forwardMessage(thread, message));
         addAction(labels, actions, message.pinned() ? "Unpin" : "Pin for this chat", () ->
                 store.pin(thread, message, ok -> toast(ok ? (message.pinned() ? "Message unpinned" : "Message pinned")
                         : "Unable to change pin")));
         addAction(labels, actions, "Save for me", () -> chooseSavedAction(thread, message));
         if (store.own(message)) addAction(labels, actions, "Message info", () -> messageInfo(thread, message));
         if ("text".equals(message.kind())) {
-            addAction(labels, actions, "Copy text", () -> {
+            List<String> extraLabels = new ArrayList<>();
+            List<Runnable> extraActions = new ArrayList<>();
+            addAction(extraLabels, extraActions, "Copy text", () -> {
                 android.content.ClipboardManager clipboard =
                         context().getSystemService(android.content.ClipboardManager.class);
                 if (clipboard == null) return;
                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chat message", message.body));
                 if (android.os.Build.VERSION.SDK_INT < 33) toast("Message copied");
             });
-            addAction(labels, actions, "Forward text", () -> forwardText(thread, message));
-            if (store.own(message)) addAction(labels, actions, "Edit message", () -> editMessage(thread, message));
-            addAction(labels, actions, "Save to Family Notes", () ->
+            if (store.own(message)) addAction(extraLabels, extraActions, "Edit message", () -> editMessage(thread, message));
+            addAction(extraLabels, extraActions, "Save to Family Notes", () ->
                     openFeature(com.tridev.familyhub.feature.notes.NotesFragment.forChatMessage(message.body)));
-            addAction(labels, actions, "Add to Grocery List", () ->
+            addAction(extraLabels, extraActions, "Add to Grocery List", () ->
                     openFeature(com.tridev.familyhub.feature.grocery.GroceryFragment.forChatMessage(
                             message.body.substring(0, Math.min(message.body.length(), 160)))));
-            addAction(labels, actions, "Create reminder", () -> openFeature(RemindersFragment.forChatMessage(message.body)));
+            addAction(extraLabels, extraActions, "Create reminder", () -> openFeature(RemindersFragment.forChatMessage(message.body)));
             com.tridev.familyhub.data.local.entity.FamilyTask task = fragment.linkedTask(message);
-            if (task == null) addAction(labels, actions, "Add to Family To-Do", () ->
+            if (task == null) addAction(extraLabels, extraActions, "Add to Family To-Do", () ->
                     openFeature(FamilyTasksFragment.forChatMessage(message.body, FamilyChatFragment.taskKey(message))));
-            else addAction(labels, actions, "Open linked To-Do", () -> fragment.openLinkedTask(task));
+            else addAction(extraLabels, extraActions, "Open linked To-Do", () -> fragment.openLinkedTask(task));
+            addAction(labels, actions, "More actions  ›", () ->
+                    chooseAnchored(anchor, "More actions", extraLabels, extraActions, true, touch));
         }
         if ("poll".equals(message.kind()) && !message.pollClosed() && store.own(message)) {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
-        addAction(labels, actions, "Delete message", () -> deleteOptions(thread, message));
+        addAction(labels, actions, "Delete", () -> deleteOptions(thread, message));
         chooseAnchored(anchor, "Message actions", labels, actions, true, touch);
     }
 
@@ -129,7 +132,7 @@ final class ChatSmartActions {
         dialog.show();
     }
 
-    private void forwardText(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
+    private void forwardMessage(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
         for (FamilyChatStore.ThreadState target : store.threads()) {
@@ -137,17 +140,16 @@ final class ChatSmartActions {
             String title = store.title(target);
             addAction(labels, actions, title, () -> ChatSendButton.stylePositive(new ChatFormDialog(context())
                     .setTitle("Forward message?")
-                    .setMessage("Send this text to " + title + "?")
+                    .setMessage("Send this message to " + title + "?"
+                            + ("poll".equals(message.kind()) ? "\nA forwarded poll starts with no votes." : "")
+                            + (message.pollClosed() ? " The expired deadline is cleared." : ""))
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Forward", (dialog, which) -> {
                         if (!ready(source) || !ready(target)) return;
-                        store.loadMessage(source, message.snapshot.getKey(), current -> {
-                            if (!ready(source) || !ready(target)) return;
-                            if (current == null || current.deleted() || !"text".equals(current.kind())) {
-                                toast("Message is no longer available");
-                                return;
-                            }
-                            store.send(target, current.body, () -> toast("Unable to forward message"));
+                        store.forward(source, target, message.snapshot.getKey(), result -> {
+                            if (!ready(target)) return;
+                            if (!result) toast("Unable to forward message");
+                            else toast("Message forwarded");
                         });
                     }).show()));
         }

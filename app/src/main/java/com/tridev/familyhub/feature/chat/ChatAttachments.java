@@ -677,7 +677,7 @@ final class ChatAttachments {
         } else if ("voice".equals(kind)) {
             voiceNotes.open(thread, message);
         } else if ("live".equals(kind)) {
-            fragment.startActivity(FamilyMapActivity.createIntent(fragment.requireContext(), message.sender));
+            fragment.startActivity(FamilyMapActivity.createIntent(fragment.requireContext(), message.liveMember()));
         } else if ("contact".equals(kind)) {
             String number = message.snapshot.child("phone").getValue(String.class);
             if (number == null) return;

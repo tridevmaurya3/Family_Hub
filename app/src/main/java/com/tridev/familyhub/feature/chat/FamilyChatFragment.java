@@ -347,7 +347,13 @@ public final class FamilyChatFragment extends Fragment {
         replyBanner.setBackground(card(0xffe5f2fa, EDGE, 12));
         replyContent = column();
         replyBanner.addView(replyContent, new LinearLayout.LayoutParams(0, -2, 1));
-        MaterialButton cancelReply = flatButton("×");
+        MaterialButton cancelReply = flatButton("");
+        cancelReply.setIconResource(R.drawable.ic_family_map_close);
+        cancelReply.setIconSize(dp(22));
+        cancelReply.setIconPadding(0);
+        cancelReply.setPadding(0, 0, 0, 0);
+        cancelReply.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
+        cancelReply.setIconTint(android.content.res.ColorStateList.valueOf(GREEN));
         cancelReply.setContentDescription("Cancel reply");
         cancelReply.setOnClickListener(view -> clearReply());
         replyBanner.addView(cancelReply, new LinearLayout.LayoutParams(dp(48), dp(48)));
