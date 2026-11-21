@@ -71,6 +71,111 @@
         }
       }
     },
+    "familyPrivateChat": {
+      "$owner": {
+        "messages": {
+          ".read": "auth != null && auth.uid === $owner",
+          ".indexOn": [
+            "at",
+            "pinned"
+          ],
+          "$message": {
+            ".write": "auth != null && auth.uid === $owner && !data.exists() && newData.child('sender').val() === auth.uid && !newData.child('receipts').exists() && !newData.hasChild('votes') && !newData.hasChild('reactions') && !newData.hasChild('pinned') && !newData.hasChild('editedAt') && !newData.hasChild('deletedAt') && !newData.hasChild('acks') && !newData.hasChild('checks')",
+            ".validate": "newData.hasChildren(['sender','body','at']) && (!newData.hasChild('kind') || (newData.child('kind').val() === 'location' ? newData.hasChildren(['lat','lng']) : newData.child('kind').val() === 'poll' ? newData.child('options').hasChildren(['0','1']) : newData.child('kind').val() === 'event' ? newData.hasChild('startsAt') : newData.child('kind').val() === 'contact' ? newData.hasChild('phone') : newData.child('kind').val() === 'live' || newData.child('kind').val() === 'announcement' || newData.child('kind').val() === 'checklist' || newData.hasChild('mime'))) && (!newData.hasChild('mime') || newData.parent().parent().child('files').child($message).exists()) && (newData.child('kind').val() !== 'checklist' || newData.child('entries').hasChild('0'))",
+            "sender": {
+              ".validate": "newData.isString() && newData.val() === auth.uid"
+            },
+            "body": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 2000",
+              ".write": "auth != null && auth.uid === $owner && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.exists() && ((!data.parent().child('kind').exists() && newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) || (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted'))"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "$other": {
+              ".validate": false
+            },
+            "kind": {
+              ".validate": "newData.val() === 'voice' || newData.val() === 'photo' || newData.val() === 'file' || newData.val() === 'location' || newData.val() === 'live' || newData.val() === 'contact' || newData.val() === 'event' || newData.val() === 'poll' || newData.val() === 'announcement' || newData.val() === 'checklist'"
+            },
+            "phone": {
+              ".validate": "newData.parent().child('kind').val() === 'contact' && newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+            },
+            "startsAt": {
+              ".validate": "newData.parent().child('kind').val() === 'event' && newData.isNumber() && newData.val() > 0 && newData.val() <= 4102444800000"
+            },
+            "options": {
+              ".validate": "newData.parent().child('kind').val() === 'poll' && newData.hasChildren(['0','1'])",
+              "$option": {
+                ".validate": "$option.matches(/^[0-3]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+              }
+            },
+            "votes": {
+              "$voter": {
+                ".write": "auth != null && auth.uid === $owner && auth.uid === $voter && data.parent().parent().child('kind').val() === 'poll' && newData.isString() && newData.val().matches(/^[0-3]$/) && data.parent().parent().child('options').child(newData.val()).exists() && (!data.parent().parent().child('closesAt').exists() || now < data.parent().parent().child('closesAt').val())"
+              }
+            },
+            "lat": {
+              ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90 && newData.parent().child('kind').val() === 'location'"
+            },
+            "lng": {
+              ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180 && newData.parent().child('kind').val() === 'location'"
+            },
+            "mime": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100 && (newData.parent().child('kind').val() === 'file' || (newData.parent().child('kind').val() === 'voice' && (newData.val() === 'audio/wav' || newData.val() === 'audio/mp4')) || (newData.parent().child('kind').val() === 'photo' && newData.val() === 'image/jpeg'))"
+            },
+            "voiceDuration": {
+              ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isNumber() && newData.val() > 0"
+            },
+            "voiceWave": {
+              ".validate": "newData.parent().child('kind').val() === 'voice' && newData.isString() && newData.val().matches(/^[0-9a-f]{32}$/)"
+            },
+            "replyTo": {
+              ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,128}$/) && data.parent().parent().child(newData.val()).exists()"
+            },
+            "reactions": {
+              "$reactor": {
+                ".write": "auth != null && auth.uid === $owner && auth.uid === $reactor && data.parent().parent().child('sender').exists() && !data.parent().parent().child('deletedAt').exists()",
+                ".validate": "newData.val() === '👍' || newData.val() === '❤️' || newData.val() === '😂' || newData.val() === '🙏'"
+              }
+            },
+            "pinned": {
+              ".write": "auth != null && auth.uid === $owner && data.parent().child('sender').exists() && (!data.parent().child('deletedAt').exists() || !newData.exists())",
+              ".validate": "newData.val() === true"
+            },
+            "editedAt": {
+              ".write": "auth != null && auth.uid === $owner && data.parent().child('sender').val() === auth.uid && !data.parent().child('kind').exists() && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('editedAt').val() === now && !newData.parent().child('deletedAt').exists()) && newData.parent().child('body').val() !== data.parent().child('body').val()",
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "deletedAt": {
+              ".write": "auth != null && auth.uid === $owner && data.parent().child('sender').val() === auth.uid && !data.parent().child('deletedAt').exists() && newData.val() === now && (newData.parent().child('deletedAt').val() === now && newData.parent().child('body').val() === 'Message deleted')",
+              ".validate": "newData.isNumber() && newData.val() === now"
+            },
+            "closesAt": {
+              ".validate": "newData.parent().child('kind').val() === 'poll' && newData.isNumber() && newData.val() > now && newData.val() <= 4102444800000"
+            },
+            "entries": {
+              ".validate": "newData.parent().child('kind').val() === 'checklist'",
+              "$item": {
+                ".validate": "$item.matches(/^[0-7]$/) && newData.isString() && newData.val().length > 0 && newData.val().length <= 160"
+              }
+            },
+            "checks": {
+              "$item": {
+                ".write": "auth != null && auth.uid === $owner && data.parent().parent().child('kind').val() === 'checklist' && data.parent().parent().child('entries').child($item).exists() && (!newData.exists() || newData.val() === auth.uid)"
+              }
+            }
+          }
+        },
+        "files": {
+          ".read": "auth != null && auth.uid === $owner",
+          "$message": {
+            ".write": "auth != null && auth.uid === $owner && !data.exists() && newData.exists() && newData.parent().parent().child('messages').child($message).child('sender').val() === auth.uid && newData.parent().parent().child('messages').child($message).child('mime').exists()",
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1398104"
+          }
+        }
+      }
+    },
     "familyChat": {
       "$familyId": {
         "group": {

@@ -68,11 +68,14 @@ public final class FamilyChatStore {
             sessionQuery = null;
             if (notifications != null) notifications.clear();
             clearFamily();
+            if (uid != null) removeThread(uid);
             pending.clear();
             uid = signedIn;
             status = signedIn == null ? "Sign in to use Family Chat" : "Connecting…";
             notifyObservers();
             if (signedIn == null) return;
+            DatabaseReference self = root.child("familyPrivateChat").child(signedIn);
+            watchThread(new ThreadState(signedIn, self.child("messages"), self.child("files"), null, null));
             sessionQuery = root.child("users").child(signedIn).child("familyId");
             sessionListener = listen(sessionQuery, snapshot -> {
                 if (signedIn.equals(uid)) selectFamily(snapshot.getValue(String.class));
@@ -118,7 +121,7 @@ public final class FamilyChatStore {
             }
             status = "";
             for (String peer : new ArrayList<>(threads.keySet())) {
-                if (!GROUP.equals(peer) && !peer.startsWith("room:") && !names.containsKey(peer)) removeThread(peer);
+                if (!peer.equals(uid) && !GROUP.equals(peer) && !peer.startsWith("room:") && !names.containsKey(peer)) removeThread(peer);
             }
             watchRooms();
             addThread(GROUP);
@@ -397,6 +400,7 @@ public final class FamilyChatStore {
     }
 
     List<String> participants(ThreadState thread) {
+        if (isSelf(thread)) return java.util.Collections.singletonList(uid);
         if (thread.isGroup()) return groupMembers(thread);
         return java.util.Arrays.asList(uid, thread.peer);
     }
@@ -698,7 +702,9 @@ public final class FamilyChatStore {
     }
 
     private void clearThreads() {
-        for (String peer : new ArrayList<>(threads.keySet())) removeThread(peer);
+        for (String peer : new ArrayList<>(threads.keySet())) {
+            if (!peer.equals(uid)) removeThread(peer);
+        }
     }
 
     private void removeThread(String peer) {
@@ -761,7 +767,10 @@ public final class FamilyChatStore {
     boolean online() { return connected; }
     String status() { return status; }
     String name(String id) { return names.getOrDefault(id, "Family member"); }
+    boolean isSelf(ThreadState thread) { return thread != null && thread.peer.equals(uid); }
+
     String title(ThreadState thread) {
+        if (isSelf(thread)) return "Message yourself";
         if (thread.roomTitle != null) return thread.roomTitle;
         return GROUP.equals(thread.peer) ? "Family Group" : name(thread.peer);
     }

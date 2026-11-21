@@ -430,6 +430,33 @@ test('voice notes can use the existing attachment rules in a direct chat', async
   assert.ok(deleted.child('deletedAt').exists());
 });
 
+test('message-yourself text and attachments are private to the account owner', async () => {
+  const path = 'familyPrivateChat/' + writer;
+  const own = env.authenticatedContext(writer).database().ref(path);
+  const member = env.authenticatedContext(reader).database().ref(path);
+  const anonymous = env.unauthenticatedContext().database().ref(path);
+  const stamp = { '.sv': 'timestamp' };
+  const text = { sender: writer, body: 'Private text', at: stamp };
+  await assertSucceeds(own.child('messages/note').set(text));
+  const audio = 'AAAAHGZ0eXBpc29t';
+  const voice = { ...text, body: 'Voice note', kind: 'file', mime: 'audio/mp4' };
+  await assertSucceeds(own.update({
+    'messages/voice-note': voice,
+    'files/voice-note': audio
+  }));
+  assert.equal((await own.child('messages').orderByChild('at').limitToLast(60).get()).numChildren(), 2);
+  assert.equal((await own.child('files/voice-note').get()).val(), audio);
+  await assertFails(member.child('messages').get());
+  await assertFails(member.child('files/voice-note').get());
+  await assertFails(anonymous.child('messages/note').get());
+  await assertFails(member.child('messages/injected').set({ ...text, sender: reader }));
+  await assertFails(member.child('files/injected').set(audio));
+  await assertFails(own.child('files/unlinked').set(audio));
+  await assertFails(own.child('messages/forged').set({ ...text, sender: reader }));
+  await assertSucceeds(own.child('messages/note').update({ body: 'Edited', editedAt: stamp }));
+  await assertSucceeds(own.child('messages/voice-note').update({ body: 'Message deleted', deletedAt: stamp }));
+});
+
 test('multi-message deletion is atomic and restricted to the sender', async () => {
   const path = `familyChat/familyA/direct/${writer}/${reader}`;
   const owner = env.authenticatedContext(writer).database().ref(path);
