@@ -698,6 +698,12 @@ public final class FamilyChatFragment extends Fragment {
     private void renderList() {
         String filter = search.getText().toString().trim().toLowerCase(Locale.ROOT);
         ChatFilter category = choosingLiveRecipient ? ChatFilter.ALL : chatFilter;
+        String uid = store.accountId();
+        String selfName = uid == null ? "" : ownStatusName();
+        if (!choosingLiveRecipient && uid != null && (category == ChatFilter.ALL || category == ChatFilter.DIRECT)
+                && (selfName + " (You)").toLowerCase(Locale.ROOT).contains(filter)) {
+            addSelfConversation(uid, selfName);
+        }
         List<FamilyChatStore.ThreadState> direct = new ArrayList<>();
         List<FamilyChatStore.ThreadState> groups = new ArrayList<>();
         for (FamilyChatStore.ThreadState thread : store.threads()) {
@@ -715,12 +721,8 @@ public final class FamilyChatFragment extends Fragment {
         if (!groups.isEmpty()) addLine(text("Private groups", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : groups) addConversation(thread);
         direct.sort((first, second) -> Long.compare(lastTime(second), lastTime(first)));
-        boolean showOwn = !choosingLiveRecipient && (category == ChatFilter.ALL || category == ChatFilter.DIRECT)
-                && store.accountId() != null && store.status().isEmpty()
-                && "you".contains(filter);
-        if (!direct.isEmpty() || showOwn) addLine(text("Direct messages", 14, BLUE, true));
+        if (!direct.isEmpty()) addLine(text("Direct messages", 14, BLUE, true));
         for (FamilyChatStore.ThreadState thread : direct) addConversation(thread);
-        if (showOwn) addOwnProfile();
         if (rows.getChildCount() == 0 && store.status().isEmpty()) {
             addLine(text(category == ChatFilter.UNREAD && filter.isEmpty()
                     ? "No unread chats" : "No matching chats", 14, MUTED, false));
@@ -729,6 +731,11 @@ public final class FamilyChatFragment extends Fragment {
 
     void showSecondaryPage(String title, ScrollView scroll, Runnable back,
                            java.util.function.BooleanSupplier allowed) {
+        showSecondaryPage(title, "Family Chat", scroll, null, null, back, allowed);
+    }
+
+    private void showSecondaryPage(String title, String detail, ScrollView scroll, View footer, View avatar,
+                                   Runnable back, java.util.function.BooleanSupplier allowed) {
         if (pageRoot == null || !allowed.getAsBoolean()) return;
         clearSecondaryPage();
         LinearLayout page = column();
@@ -737,11 +744,13 @@ public final class FamilyChatFragment extends Fragment {
         ModuleOverviewView pageHeader = (ModuleOverviewView) getLayoutInflater()
                 .inflate(R.layout.view_family_chat_header, page, false);
         pageHeader.setTitle(title);
-        pageHeader.setDetail("Family Chat");
+        pageHeader.setDetail(detail);
+        if (avatar != null) pageHeader.addHeaderAction(avatar);
         pageHeader.showDashboardActions(false);
         pageHeader.setNavigationAction(R.drawable.ic_arrow_back, R.string.back, v -> back.run());
         page.addView(pageHeader);
         page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        if (footer != null) page.addView(footer);
         page.setFocusableInTouchMode(true);
         screen.setVisibility(View.GONE);
         secondaryPage = page;
@@ -869,15 +878,111 @@ public final class FamilyChatFragment extends Fragment {
         return row;
     }
 
-    private void addOwnProfile() {
-        String uid = store.accountId();
-        Runnable show = () -> groupScreens.showMember(uid, groupScreens::dismiss);
+    private void addSelfConversation(String uid, String name) {
         LinearLayout content = column();
-        content.addView(text("You", 16, INK, true));
-        content.addView(text("Your profile", 13, MUTED, false));
-        LinearLayout row = avatarRow(groupScreens.avatar("You", avatars().ownPhoto(), 44, show), content);
-        row.setOnClickListener(v -> show.run());
+        content.addView(text(name + " (You)", 16, GREEN, true));
+        content.addView(text("Message yourself", 13, MUTED, false));
+        LinearLayout row = avatarRow(statusAvatar(uid, name, 44, true), content);
+        row.setBackground(card(0xffe5f3ed, 0xffb9d9c9, 16));
+        row.setFocusable(true);
+        row.setOnClickListener(v -> openSelfConversation(uid, name));
         addLine(row);
+    }
+
+    private void openSelfConversation(String uid, String name) {
+        java.util.function.BooleanSupplier allowed = () -> uid.equals(store.accountId())
+                && uid.equals(com.tridev.familyhub.core.security.AccountDataScope.uid());
+        if (!allowed.getAsBoolean()) return;
+        android.content.Context context = requireContext();
+        String preferences = com.tridev.familyhub.core.security.AccountDataScope
+                .preferencesName(context, "family_chat_self", uid);
+        android.content.SharedPreferences journal = context.getSharedPreferences(preferences,
+                android.content.Context.MODE_PRIVATE);
+        org.json.JSONArray messages;
+        try {
+            messages = new org.json.JSONArray(journal.getString("messages", "[]"));
+        } catch (org.json.JSONException error) {
+            Toast.makeText(context, "Unable to open your messages", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ScrollView history = new ScrollView(context);
+        LinearLayout messagesView = column();
+        history.addView(messagesView);
+        for (int i = 0; i < messages.length(); i++) {
+            org.json.JSONObject item = messages.optJSONObject(i);
+            if (item != null) addSelfMessage(messagesView, item.optString("body"), item.optLong("at"));
+        }
+        TextView empty = text("No messages yet", 14, MUTED, false);
+        empty.setGravity(Gravity.CENTER);
+        empty.setPadding(0, dp(14), 0, dp(10));
+        if (messages.length() == 0) messagesView.addView(empty);
+
+        LinearLayout composer = new LinearLayout(context);
+        composer.setGravity(Gravity.CENTER_VERTICAL);
+        composer.setPadding(dp(8), dp(3), dp(4), dp(3));
+        composer.setBackground(card(WHITE, EDGE, 15));
+        EditText input = new EditText(context);
+        input.setHint("Write a message");
+        input.setTextSize(17);
+        input.setMinHeight(dp(48));
+        input.setMaxLines(6);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2000)});
+        input.setBackground(null);
+        composer.addView(input, new LinearLayout.LayoutParams(0, -2, 1));
+        MaterialButton sendSelf = new MaterialButton(context);
+        ChatSendButton.style(sendSelf, "Send message to yourself");
+        sendSelf.setIconTint(android.content.res.ColorStateList.valueOf(GREEN));
+        sendSelf.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT));
+        sendSelf.setPadding(0, 0, 0, 0);
+        sendSelf.setMinimumWidth(0);
+        sendSelf.setMinWidth(0);
+        sendSelf.setEnabled(false);
+        input.addTextChangedListener(watcher(() -> sendSelf.setEnabled(!input.getText().toString().trim().isEmpty())));
+        composer.addView(sendSelf, new LinearLayout.LayoutParams(dp(48), dp(48)));
+
+        sendSelf.setOnClickListener(v -> {
+            if (!isSecondaryPage(history) || !allowed.getAsBoolean()) return;
+            String body = input.getText().toString().trim();
+            if (body.isEmpty()) return;
+            long at = System.currentTimeMillis();
+            try {
+                messages.put(new org.json.JSONObject().put("body", body).put("at", at));
+                if (!journal.edit().putString("messages", messages.toString()).commit()) {
+                    messages.remove(messages.length() - 1);
+                    Toast.makeText(context, "Unable to save message", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            } catch (org.json.JSONException error) {
+                Toast.makeText(context, "Unable to save message", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            messagesView.removeView(empty);
+            addSelfMessage(messagesView, body, at);
+            input.setText("");
+            history.post(() -> history.scrollTo(0, messagesView.getHeight()));
+        });
+        showSecondaryPage(name + " (You)", "Message yourself", history, composer,
+                statusAvatar(uid, name, 40, true), this::closeSecondaryPage, allowed);
+        history.post(() -> history.scrollTo(0, messagesView.getHeight()));
+    }
+
+    private void addSelfMessage(LinearLayout messages, String body, long at) {
+        LinearLayout bubble = column();
+        bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
+        bubble.setBackground(card(0xffe5f2fa, EDGE, 15));
+        TextView message = text(body, 16, INK, false);
+        message.setTextIsSelectable(true);
+        message.setMaxWidth((int) (getResources().getDisplayMetrics().widthPixels * 0.76f));
+        bubble.addView(message);
+        TextView time = text(dateTime(at), 11, MUTED, false);
+        time.setGravity(Gravity.END);
+        bubble.addView(time);
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-2, -2);
+        size.gravity = Gravity.END;
+        size.topMargin = dp(7);
+        messages.addView(bubble, size);
     }
 
     private void addConversation(FamilyChatStore.ThreadState thread) {
