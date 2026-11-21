@@ -28,9 +28,7 @@ import com.tridev.familyhub.core.ui.cards.ActionCardModel;
 import com.tridev.familyhub.core.ui.cards.HeroCardModel;
 import com.tridev.familyhub.core.ui.cards.ActionCardView;
 import com.tridev.familyhub.core.ui.search.SearchBarModel;
-import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.FamilyTask;
-import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
 import com.tridev.familyhub.data.model.DashboardStats;
 import com.tridev.familyhub.data.repository.DashboardRepository;
@@ -486,6 +484,10 @@ public class DashboardFragment extends Fragment {
         ).show(); */
     }
 
+    private LinearLayout overviewEntries;
+    private LinearLayout highlightEntries;
+    private LinearLayout activityEntries;
+
     private void setupHeroCard() {
         binding.dashboardHeroCard.setModel(new HeroCardModel(
                 getString(R.string.family_status),
@@ -494,9 +496,30 @@ public class DashboardFragment extends Fragment {
                 getString(R.string.family_live)
         ));
         binding.dashboardHeroCard.showChatAction(v -> openTab(R.id.nav_chat));
+        com.google.android.material.button.MaterialButton chat = binding.dashboardHeroCard.findViewById(R.id.btnHeroChat);
+        com.google.android.material.button.MaterialButton live = binding.dashboardHeroCard.findViewById(R.id.btnHeroAction);
+        LinearLayout actions = (LinearLayout) chat.getParent();
+        actions.removeView(chat);
+        actions.addView(chat, 0);
+        styleHeroShortcut(chat, 0xffe2f3eb, 0xffbbddcf, 0xff135c48);
+        styleHeroShortcut(live, 0xffeeeaf9, 0xffd8cbed, 0xff553d79);
         binding.dashboardHeroCard.setOnActionClickListener(
                 this::openFamilyLive
         );
+    }
+
+    private void styleHeroShortcut(com.google.android.material.button.MaterialButton button,
+                                   int fill, int border, int ink) {
+        button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(fill));
+        button.setStrokeColor(android.content.res.ColorStateList.valueOf(border));
+        button.setStrokeWidth(dp(1));
+        button.setCornerRadius(dp(12));
+        button.setTextColor(ink);
+        button.setIconResource(R.drawable.ic_arrow_right);
+        button.setIconTint(android.content.res.ColorStateList.valueOf(ink));
+        button.setIconGravity(com.google.android.material.button.MaterialButton.ICON_GRAVITY_END);
+        button.setIconPadding(dp(4));
+        button.setIconSize(dp(12));
     }
 
     /** Reuse dashboard summaries and destinations with the Action center card style. */
@@ -664,10 +687,11 @@ public class DashboardFragment extends Fragment {
     }
 
     private void setupDashboardHighlights() {
-        binding.dashboardBirthdayCard.setOnClickListener(
-                v -> openTab(R.id.nav_family));
-        binding.dashboardBillCard.setOnClickListener(
-                v -> openTab(R.id.nav_reminders));
+        overviewEntries = replaceDashboardSection(cardFor(binding.dashboardUpcomingReminderTitle),
+                0);
+        highlightEntries = replaceDashboardSection((View) binding.dashboardBirthdayCard.getParent(), 0);
+        activityEntries = replaceDashboardSection(cardFor(binding.dashboardRecentActivityDetail),
+                R.string.dashboard_recent_activity);
         binding.dashboardViewAll.setOnClickListener(
                 v -> openTab(R.id.nav_reminders));
         binding.dashboardRetry.setOnClickListener(v -> loadDashboardData());
@@ -838,10 +862,9 @@ public class DashboardFragment extends Fragment {
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
                     renderPrioritySummary(data);
-                    renderReminder(data);
-                    renderBirthday(data);
-                    renderBill(data);
-                    renderRecentActivity(data);
+                    renderDashboardEntries(overviewEntries, data.overview, "No upcoming items");
+                    renderDashboardEntries(highlightEntries, data.highlights, "No family highlights yet");
+                    renderDashboardEntries(activityEntries, data.recentActivity, "No recent activity");
                     binding.dashboardSmartSections.setDashboardData(data);
                     finishDashboardRefresh();
                 },
@@ -979,60 +1002,82 @@ public class DashboardFragment extends Fragment {
         }
     }
 
-    private void renderBirthday(@NonNull DashboardData data) {
-        FamilyMember member = data.getNextBirthdayMember();
-        if (!data.hasUpcomingBirthday() || member == null) {
-            binding.dashboardBirthdayTitle.setText(
-                    R.string.dashboard_no_birthday_title);
-            binding.dashboardBirthdayDetail.setText(
-                    R.string.dashboard_no_birthday_detail);
-            return;
+    private View cardFor(View child) {
+        View current = child;
+        while (!(current instanceof com.google.android.material.card.MaterialCardView)) {
+            current = (View) current.getParent();
         }
-        binding.dashboardBirthdayTitle.setText(member.name);
-        binding.dashboardBirthdayDetail.setText(getString(
-                R.string.dashboard_birthday_detail,
-                member.relation,
-                reminderDateFormat.format(new Date(data.getNextBirthdayAt()))
-        ));
+        return current;
     }
 
-    private void renderBill(@NonNull DashboardData data) {
-        Reminder bill = data.getNextBillReminder();
-        if (!data.hasUpcomingBill() || bill == null) {
-            binding.dashboardBillTitle.setText(
-                    R.string.dashboard_no_bill_title);
-            binding.dashboardBillDetail.setText(
-                    R.string.dashboard_no_bill_detail);
-            return;
+    private LinearLayout replaceDashboardSection(View oldSection, int title) {
+        LinearLayout parent = (LinearLayout) oldSection.getParent();
+        int position = parent.indexOfChild(oldSection);
+        oldSection.setVisibility(View.GONE);
+        if (title != 0) {
+            android.widget.TextView heading = new android.widget.TextView(requireContext());
+            heading.setText(title);
+            heading.setTextAppearance(R.style.TextAppearance_FamilyHub_SectionTitle);
+            heading.setTextSize(16);
+            LinearLayout.LayoutParams headingSize = new LinearLayout.LayoutParams(-1, -2);
+            headingSize.topMargin = dp(16);
+            parent.addView(heading, position++, headingSize);
         }
-        Date billDate = new Date(data.getNextBillTriggerAt());
-        binding.dashboardBillTitle.setText(bill.title);
-        binding.dashboardBillDetail.setText(getString(
-                R.string.dashboard_bill_detail,
-                reminderDateFormat.format(billDate),
-                reminderTimeFormat.format(billDate)
-        ));
+        LinearLayout entries = new LinearLayout(requireContext());
+        entries.setOrientation(LinearLayout.VERTICAL);
+        parent.addView(entries, position, new LinearLayout.LayoutParams(-1, -2));
+        return entries;
     }
 
-    private void renderRecentActivity(@NonNull DashboardData data) {
-        if (data.hasUpcomingReminder() && data.getNextReminder() != null) {
-            binding.dashboardRecentActivityDetail.setText(getString(
-                    R.string.dashboard_activity_reminder,
-                    data.getNextReminder().title
-            ));
-        } else if (data.getExpense() > 0d) {
-            binding.dashboardRecentActivityDetail.setText(getString(
-                    R.string.dashboard_activity_expense,
-                    currencyFormatter.format(data.getExpense())
-            ));
-        } else if (data.getTotalMembers() > 0) {
-            binding.dashboardRecentActivityDetail.setText(getString(
-                    R.string.dashboard_activity_family,
-                    data.getTotalMembers()
-            ));
-        } else {
-            binding.dashboardRecentActivityDetail.setText(
-                    R.string.dashboard_no_recent_activity);
+    private void renderDashboardEntries(LinearLayout section, java.util.List<DashboardData.Entry> entries,
+                                        String empty) {
+        section.removeAllViews();
+        if (entries.isEmpty()) {
+            android.widget.TextView message = new android.widget.TextView(requireContext());
+            message.setText(empty);
+            message.setTextAppearance(R.style.TextAppearance_FamilyHub_Caption);
+            message.setPadding(0, dp(8), 0, dp(4));
+            section.addView(message);
+            return;
+        }
+        for (DashboardData.Entry entry : entries) {
+            com.google.android.material.card.MaterialCardView row =
+                    new com.google.android.material.card.MaterialCardView(requireContext());
+            row.setRadius(dp(14));
+            row.setCardElevation(0);
+            row.setStrokeWidth(dp(1));
+            row.setStrokeColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.fh_outline));
+            row.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.fh_surface));
+            row.setFocusable(true);
+            row.setOnClickListener(view -> openDashboardEntry(entry.destination));
+            LinearLayout content = new LinearLayout(requireContext());
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(dp(12), dp(9), dp(12), dp(9));
+            android.widget.TextView title = new android.widget.TextView(requireContext());
+            title.setText(entry.title);
+            title.setTextAppearance(R.style.TextAppearance_FamilyHub_CardTitle);
+            android.widget.TextView detail = new android.widget.TextView(requireContext());
+            detail.setTextAppearance(R.style.TextAppearance_FamilyHub_Caption);
+            Date at = new Date(entry.at);
+            String when = reminderDateFormat.format(at);
+            if (!"Birthday".equals(entry.category)) when += " · " + reminderTimeFormat.format(at);
+            detail.setText(entry.category + " · " + when);
+            content.addView(title);
+            content.addView(detail);
+            row.addView(content, new android.widget.FrameLayout.LayoutParams(-1, -2));
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2);
+            size.topMargin = dp(6);
+            section.addView(row, size);
+        }
+    }
+
+    private void openDashboardEntry(DashboardData.Destination destination) {
+        switch (destination) {
+            case REMINDERS: openTab(R.id.nav_reminders); break;
+            case FAMILY: openTab(R.id.nav_family); break;
+            case PLANNER: openFeature(new PlannerFragment()); break;
+            case TASKS: openFeature(new FamilyTasksFragment()); break;
+            case GROCERY: openFeature(new GroceryFragment()); break;
         }
     }
 
@@ -1211,31 +1256,6 @@ public class DashboardFragment extends Fragment {
         ));
     }
 
-    private void renderReminder(@NonNull DashboardData data) {
-        Reminder nextReminder = data.getNextReminder();
-        if (!data.hasUpcomingReminder() || nextReminder == null) {
-            binding.dashboardUpcomingReminderTitle.setText(
-                    R.string.dashboard_no_upcoming_reminder_title);
-            binding.dashboardUpcomingReminderDetail.setText(
-                    R.string.dashboard_no_upcoming_reminder_detail);
-            return;
-        }
-        Date reminderDate = new Date(data.getNextReminderTriggerAt());
-        binding.dashboardUpcomingReminderTitle.setText(nextReminder.title);
-        if (Reminder.REPEAT_DAILY.equals(nextReminder.repeatType)) {
-            binding.dashboardUpcomingReminderDetail.setText(getString(
-                    R.string.reminder_daily_at,
-                    reminderTimeFormat.format(reminderDate)
-            ));
-        } else {
-            binding.dashboardUpcomingReminderDetail.setText(getString(
-                    R.string.dashboard_next_reminder_detail,
-                    reminderDateFormat.format(reminderDate),
-                    reminderTimeFormat.format(reminderDate)
-            ));
-        }
-    }
-
     private void openTab(int destinationId) {
         if (requireActivity() instanceof MainActivity) {
             ((MainActivity) requireActivity()).openTab(destinationId);
@@ -1269,6 +1289,9 @@ public class DashboardFragment extends Fragment {
         notesSummaryDatabase = null;
         notesSummaryRepository = null;
         latestDashboardData = null;
+        overviewEntries = null;
+        highlightEntries = null;
+        activityEntries = null;
         taskPendingCount = 0;
         financeStatusCard = null;
         healthStatusCard = null;

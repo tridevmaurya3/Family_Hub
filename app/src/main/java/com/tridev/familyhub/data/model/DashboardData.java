@@ -41,6 +41,26 @@ public class DashboardData {
     @NonNull
     private String priorityOwners = "";
 
+    public enum Destination { REMINDERS, PLANNER, TASKS, GROCERY, FAMILY }
+
+    public static final class Entry {
+        public final String title;
+        public final String category;
+        public final long at;
+        public final Destination destination;
+
+        public Entry(String title, String category, long at, Destination destination) {
+            this.title = title;
+            this.category = category;
+            this.at = at;
+            this.destination = destination;
+        }
+    }
+
+    public java.util.List<Entry> overview = java.util.Collections.emptyList();
+    public java.util.List<Entry> highlights = java.util.Collections.emptyList();
+    public java.util.List<Entry> recentActivity = java.util.Collections.emptyList();
+
     public DashboardData() {
         stats = new DashboardStats();
         nextReminder = null;

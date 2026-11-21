@@ -13,6 +13,12 @@ import com.tridev.familyhub.data.local.entity.FamilyMember;
 import com.tridev.familyhub.data.local.entity.GroceryItem;
 import com.tridev.familyhub.data.local.entity.Reminder;
 import com.tridev.familyhub.data.model.DashboardData;
+import com.tridev.familyhub.data.model.DashboardData.Entry;
+import com.tridev.familyhub.data.model.DashboardData.Destination;
+import com.tridev.familyhub.data.local.entity.FamilyTask;
+import com.tridev.familyhub.data.local.entity.PlannerItem;
+import java.util.ArrayList;
+import java.util.Comparator;
 import com.tridev.familyhub.data.model.DashboardStats;
 import com.tridev.familyhub.data.model.NotesDashboardSummary;
 import com.tridev.familyhub.feature.grocery.GroceryRecurrenceEngine;
@@ -96,6 +102,15 @@ public class DashboardRepository {
                 }
 
                 stats.setUpcomingReminders(reminders.size());
+                List<Entry> upcoming = new ArrayList<>();
+                List<Entry> bills = new ArrayList<>();
+                for (Reminder reminder : reminders) {
+                    long next = nextTriggerTime(reminder);
+                    addEntry(upcoming, reminder.title, "Reminder", next, Destination.REMINDERS);
+                    if (isBill(reminder)) addEntry(bills, reminder.title, "Bill reminder", next, Destination.REMINDERS);
+                }
+                dashboardData.overview = upcoming;
+                dashboardData.highlights = bills;
 
                 Reminder nextReminder =
                         findNextReminder(reminders);
@@ -238,6 +253,7 @@ public class DashboardRepository {
                         )
                 );
 
+                populateDashboardLists(dashboardData, members);
                 BirthdayCandidate birthday = findNextBirthday(members);
                 if (birthday != null) {
                     dashboardData.setNextBirthdayMember(birthday.member);
@@ -265,21 +281,8 @@ public class DashboardRepository {
         long nearest = Long.MAX_VALUE;
 
         for (Reminder reminder : reminders) {
-            String searchable = (reminder.title + " " + reminder.note)
-                    .toLowerCase(Locale.ROOT);
-            boolean isBill = searchable.contains("bill")
-                    || searchable.contains("payment")
-                    || searchable.contains("emi")
-                    || searchable.contains("electricity")
-                    || searchable.contains("insurance")
-                    || searchable.contains("fee")
-                    || searchable.contains("recharge")
-                    || searchable.contains("बिल")
-                    || searchable.contains("भुगतान")
-                    || searchable.contains("किश्त")
-                    || searchable.contains("ईएमआई");
             long trigger = nextTriggerTime(reminder);
-            if (isBill && trigger > 0L && trigger < nearest) {
+            if (isBill(reminder) && trigger > 0L && trigger < nearest) {
                 nearest = trigger;
                 closest = reminder;
             }
@@ -287,37 +290,94 @@ public class DashboardRepository {
         return closest;
     }
 
+    private boolean isBill(Reminder reminder) {
+        String searchable = (reminder.title + " " + reminder.note)
+                .toLowerCase(Locale.ROOT);
+        return searchable.contains("bill")
+                || searchable.contains("payment")
+                || searchable.contains("emi")
+                || searchable.contains("electricity")
+                || searchable.contains("insurance")
+                || searchable.contains("fee")
+                || searchable.contains("recharge")
+                || searchable.contains("बिल")
+                || searchable.contains("भुगतान")
+                || searchable.contains("किश्त")
+                || searchable.contains("ईएमआई");
+    }
+
+    private void populateDashboardLists(DashboardData data, List<FamilyMember> members) {
+        long now = System.currentTimeMillis();
+        List<Entry> recent = new ArrayList<>();
+        for (PlannerItem item : database.plannerItemDao().getAll()) {
+            if (!item.isCompleted && item.startAt >= now) {
+                addEntry(data.overview, item.title, "Planner", item.startAt, Destination.PLANNER);
+            }
+            addEntry(recent, item.title, "Planner", Math.max(item.createdAt, item.updatedAt), Destination.PLANNER);
+        }
+        for (FamilyTask task : database.familyTaskDao().getAll()) {
+            if (FamilyTask.STATUS_PENDING.equals(task.status) && task.dueAt >= now) {
+                addEntry(data.overview, task.title, "To-Do", task.dueAt, Destination.TASKS);
+            }
+            addEntry(recent, task.title, "To-Do", Math.max(task.completedAt,
+                    Math.max(task.createdAt, task.updatedAt)), Destination.TASKS);
+        }
+        for (GroceryItem item : database.groceryItemDao().getAll()) {
+            addEntry(recent, item.name, "Grocery", Math.max(item.purchasedAt,
+                    Math.max(item.createdAt, item.updatedAt)), Destination.GROCERY);
+        }
+        for (Reminder reminder : database.reminderDao().getAll()) {
+            addEntry(recent, reminder.title, "Reminder", Math.max(reminder.completedAt,
+                    Math.max(reminder.createdAt, reminder.updatedAt)), Destination.REMINDERS);
+        }
+        List<Entry> memberUpdates = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (FamilyMember member : members) {
+            if (member.cloudRemoved) continue;
+            addEntry(data.highlights, member.name, "Birthday", nextBirthdayAt(member, today), Destination.FAMILY);
+            addEntry(memberUpdates, member.name, "Family member", Math.max(member.createdAt, member.updatedAt), Destination.FAMILY);
+        }
+        recent.addAll(memberUpdates);
+        Comparator<Entry> byDate = Comparator.comparingLong(entry -> entry.at);
+        data.overview = firstFive(data.overview, byDate);
+        data.highlights = firstFive(data.highlights, byDate);
+        List<Entry> updates = firstFive(memberUpdates, byDate.reversed());
+        data.highlights.addAll(updates.subList(0, Math.min(5 - data.highlights.size(), updates.size())));
+        data.recentActivity = firstFive(recent, byDate.reversed());
+    }
+
+    private static void addEntry(List<Entry> items, String title, String category, long at, Destination destination) {
+        if (at > 0 && title != null && !title.trim().isEmpty()) items.add(new Entry(title, category, at, destination));
+    }
+
+    private static List<Entry> firstFive(List<Entry> items, Comparator<Entry> order) {
+        items.sort(order);
+        return new ArrayList<>(items.subList(0, Math.min(5, items.size())));
+    }
+
     @Nullable
-    private BirthdayCandidate findNextBirthday(
-            @NonNull List<FamilyMember> members
-    ) {
+    private BirthdayCandidate findNextBirthday(@NonNull List<FamilyMember> members) {
         LocalDate today = LocalDate.now();
         BirthdayCandidate closest = null;
-
         for (FamilyMember member : members) {
-            if (member.dateOfBirth.trim().isEmpty()) {
-                continue;
-            }
-            try {
-                LocalDate birthDate = LocalDate.parse(
-                        member.dateOfBirth,
-                        DateTimeFormatter.ISO_LOCAL_DATE
-                );
-                LocalDate next = birthdayInYear(birthDate, today.getYear());
-                if (next.isBefore(today)) {
-                    next = birthdayInYear(birthDate, today.getYear() + 1);
-                }
-                long when = next.atStartOfDay(ZoneId.systemDefault())
-                        .toInstant()
-                        .toEpochMilli();
-                if (closest == null || when < closest.when) {
-                    closest = new BirthdayCandidate(member, when);
-                }
-            } catch (DateTimeException ignored) {
-                // Invalid legacy dates are skipped instead of breaking Dashboard.
+            long when = nextBirthdayAt(member, today);
+            if (when > 0 && (closest == null || when < closest.when)) {
+                closest = new BirthdayCandidate(member, when);
             }
         }
         return closest;
+    }
+
+    private long nextBirthdayAt(FamilyMember member, LocalDate today) {
+        if (member.cloudRemoved || member.dateOfBirth == null || member.dateOfBirth.trim().isEmpty()) return -1L;
+        try {
+            LocalDate birthDate = LocalDate.parse(member.dateOfBirth, DateTimeFormatter.ISO_LOCAL_DATE);
+            LocalDate next = birthdayInYear(birthDate, today.getYear());
+            if (next.isBefore(today)) next = birthdayInYear(birthDate, today.getYear() + 1);
+            return next.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        } catch (DateTimeException ignored) {
+            return -1L;
+        }
     }
 
     @NonNull
