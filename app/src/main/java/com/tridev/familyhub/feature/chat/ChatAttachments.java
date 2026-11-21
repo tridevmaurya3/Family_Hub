@@ -320,42 +320,65 @@ final class ChatAttachments {
     private void choosePoll() {
         FamilyChatStore.ThreadState thread = target();
         if (thread == null || !store.canUse(thread)) return;
-        LinearLayout form = new LinearLayout(fragment.requireContext());
-        form.setOrientation(LinearLayout.VERTICAL);
-        android.widget.EditText question = entry("Question", 180);
-        form.addView(ChatFormDialog.outlined(question));
+        Context context = fragment.requireContext();
+        ChatActionDialog design = new ChatActionDialog(context, "Create a poll", R.drawable.ic_family_task);
+        LinearLayout form = design.content;
+        design.add(form, design.label("Question", 13, ChatActionDialog.GREEN, true), 12);
+        android.widget.EditText question = entry("Ask your family a question", 180);
+        design.add(form, pollField(question), 4);
+        design.add(form, design.label("Options", 13, ChatActionDialog.GREEN, true), 10);
         java.util.List<android.widget.EditText> choices = new java.util.ArrayList<>();
         for (int i = 1; i <= 4; i++) {
             android.widget.EditText choice = entry("Option " + i + (i > 2 ? " (optional)" : ""), 100);
             choices.add(choice);
-            form.addView(ChatFormDialog.outlined(choice));
+            design.add(form, pollField(choice), 4);
         }
         long[] closesAt = {0L};
-        MaterialButton deadline = new MaterialButton(fragment.requireContext(), null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        deadline.setText("Set voting deadline");
-        deadline.setAllCaps(false);
+        LinearLayout timing = new LinearLayout(context);
+        timing.setOrientation(LinearLayout.VERTICAL);
+        timing.setPadding(design.dp(10), design.dp(8), design.dp(10), design.dp(6));
+        timing.setBackground(design.surface(0xffeaf5ef, 0xffc9dfd3, 13));
+        design.add(form, timing, 10);
+        design.add(timing, design.label("Voting deadline", 14, ChatActionDialog.GREEN, true), 0);
+        android.widget.TextView date = design.label("No deadline", 13, 0xff4d6562, false);
+        design.add(timing, date, 3);
+        LinearLayout deadlineActions = new LinearLayout(context);
+        deadlineActions.setGravity(android.view.Gravity.END);
+        design.add(timing, deadlineActions, 0);
+        MaterialButton deadline = design.button("Set deadline", false);
+        MaterialButton clearDeadline = design.button("No deadline", false);
+        clearDeadline.setVisibility(android.view.View.GONE);
+        deadlineActions.addView(clearDeadline);
+        deadlineActions.addView(deadline);
         deadline.setOnClickListener(view -> pickPollDeadline(value -> {
             closesAt[0] = value;
-            deadline.setText("Closes · " + pollDate(value));
+            date.setText("Closes · " + pollDate(value));
+            clearDeadline.setVisibility(android.view.View.VISIBLE);
         }));
-        form.addView(deadline);
-        MaterialButton clearDeadline = new MaterialButton(fragment.requireContext(), null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        clearDeadline.setText("No deadline");
-        clearDeadline.setAllCaps(false);
         clearDeadline.setOnClickListener(view -> {
             closesAt[0] = 0L;
-            deadline.setText("Set voting deadline");
+            date.setText("No deadline");
+            clearDeadline.setVisibility(android.view.View.GONE);
         });
-        form.addView(clearDeadline);
-        android.widget.ScrollView scroll = new android.widget.ScrollView(fragment.requireContext());
+        android.widget.ScrollView scroll = new android.widget.ScrollView(context);
         scroll.addView(form);
-        androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(fragment.requireContext())
-                .setTitle("Create a poll").setView(scroll).setNegativeButton("Cancel", null)
-                .setPositiveButton("Send", null).show();
-        ChatSendButton.stylePositive(dialog);
-        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+        LinearLayout footer = new LinearLayout(context);
+        footer.setGravity(android.view.Gravity.END);
+        design.add(form, footer, 10);
+        MaterialButton cancel = design.button("Cancel", false);
+        MaterialButton send = design.button("Send poll", true);
+        send.setIconResource(R.drawable.ic_chat_send);
+        send.setIconTint(android.content.res.ColorStateList.valueOf(0xffffffff));
+        send.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_END);
+        footer.addView(cancel);
+        LinearLayout.LayoutParams sendSize = new LinearLayout.LayoutParams(-2, -2);
+        sendSize.setMarginStart(design.dp(8));
+        footer.addView(send, sendSize);
+        androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(context).setView(scroll).create();
+        dialog.show();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        send.setOnClickListener(v -> {
+            if (!visible() || !store.canUse(thread)) return;
             String label = question.getText().toString().trim();
             if (label.isEmpty()) {
                 question.setError("Enter a question");
@@ -383,6 +406,13 @@ final class ChatAttachments {
             dialog.dismiss();
             store.send(thread, label, details, null, () -> notice("Unable to send poll"));
         });
+    }
+
+    private android.view.View pollField(android.widget.EditText field) {
+        com.google.android.material.textfield.TextInputLayout box = ChatFormDialog.outlined(field);
+        box.setBoxBackgroundColor(0xffffffff);
+        box.setBoxStrokeColor(0xffb8d2c7);
+        return box;
     }
 
     private void pickPollDeadline(java.util.function.LongConsumer selected) {
@@ -421,17 +451,48 @@ final class ChatAttachments {
     private void chooseLocation() {
         FamilyChatStore.ThreadState thread = target();
         if (thread == null || !store.canUse(thread)) return;
-        new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Share location")
-                .setItems(new String[]{"Current location", "Link to my location in Family Live"}, (d, which) -> {
-                    if (which == 1) {
-                        confirmLiveShare(thread, () -> {});
-                    } else if (hasLocationPermission()) {
-                        requestLocation();
-                    } else {
-                        locationPermission.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION});
-                    }
-                }).show();
+        Context context = fragment.requireContext();
+        ChatActionDialog design = new ChatActionDialog(context, "Share location", R.drawable.ic_fh_location_pin);
+        androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(context).setView(design.content)
+                .setNegativeButton("Cancel", null).create();
+        addLocationChoice(design, "Current location", "Send a one-time map pin", () -> {
+            dialog.dismiss();
+            if (hasLocationPermission()) requestLocation();
+            else locationPermission.launch(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION});
+        });
+        addLocationChoice(design, "Family Live", "Share a link to your Family Live map", () -> {
+            dialog.dismiss();
+            confirmLiveShare(thread, () -> {});
+        });
+        dialog.show();
+    }
+
+    private void addLocationChoice(ChatActionDialog design, String title, String subtitle, Runnable clicked) {
+        Context context = fragment.requireContext();
+        LinearLayout row = new LinearLayout(context);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(design.dp(10), design.dp(10), design.dp(10), design.dp(10));
+        row.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(0x22136650),
+                design.surface(0xffffffff, 0xffd1e1d9, 14), null));
+        android.widget.ImageView icon = new android.widget.ImageView(context);
+        icon.setImageResource(R.drawable.ic_fh_location_pin);
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(ChatActionDialog.GREEN));
+        icon.setPadding(design.dp(8), design.dp(8), design.dp(8), design.dp(8));
+        icon.setBackground(design.surface(0xffe8f4ee, 0xffe8f4ee, 10));
+        row.addView(icon, new LinearLayout.LayoutParams(design.dp(40), design.dp(40)));
+        LinearLayout words = new LinearLayout(context);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setPadding(design.dp(10), 0, design.dp(6), 0);
+        words.addView(design.label(title, 16, 0xff1d3934, true));
+        words.addView(design.label(subtitle, 12, 0xff4d6562, false));
+        row.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
+        row.addView(design.label("›", 24, ChatActionDialog.GREEN, true));
+        row.setContentDescription(title + ". " + subtitle);
+        row.setFocusable(true);
+        row.setOnClickListener(v -> clicked.run());
+        design.add(design.content, row, 8);
     }
 
     private boolean hasLocationPermission() {

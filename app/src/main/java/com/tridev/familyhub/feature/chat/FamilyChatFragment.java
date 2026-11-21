@@ -81,6 +81,13 @@ public final class FamilyChatFragment extends Fragment {
     private OnBackPressedCallback backCallback;
     private String peer;
     private String lastMessageKey;
+    private android.widget.FrameLayout jumpToLatest;
+    private TextView newMessageCount;
+    private boolean scrollingUp;
+    private final Runnable showJumpAfterScroll = () -> {
+        scrollingUp = false;
+        updateJumpToLatest();
+    };
     private boolean choosingLiveRecipient;
 
     public static FamilyChatFragment forLiveShare() {
@@ -186,14 +193,41 @@ public final class FamilyChatFragment extends Fragment {
         scroll = new ScrollView(requireContext());
         rows = column();
         scroll.addView(rows);
-        screen.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        android.widget.FrameLayout chatViewport = new android.widget.FrameLayout(requireContext());
+        chatViewport.addView(scroll, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        jumpToLatest = new android.widget.FrameLayout(requireContext());
+        jumpToLatest.setVisibility(View.GONE);
+        jumpToLatest.setFocusable(true);
+        jumpToLatest.setOnClickListener(view -> scroll.scrollTo(0, rows.getHeight()));
+        android.widget.ImageView arrows = new android.widget.ImageView(requireContext());
+        arrows.setImageResource(R.drawable.ic_chat_jump_latest);
+        arrows.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        jumpToLatest.addView(arrows, new android.widget.FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+        newMessageCount = text("", 11, WHITE, true);
+        newMessageCount.setGravity(Gravity.CENTER);
+        newMessageCount.setPadding(dp(4), 0, dp(4), 0);
+        newMessageCount.setMinWidth(dp(18));
+        newMessageCount.setBackground(card(GREEN, GREEN, 12));
+        newMessageCount.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        jumpToLatest.addView(newMessageCount, new android.widget.FrameLayout.LayoutParams(-2, dp(18), Gravity.TOP | Gravity.END));
+        android.widget.FrameLayout.LayoutParams jumpPosition =
+                new android.widget.FrameLayout.LayoutParams(dp(56), dp(48), Gravity.BOTTOM | Gravity.RIGHT);
+        jumpPosition.rightMargin = dp(2);
+        chatViewport.addView(jumpToLatest, jumpPosition);
+        screen.addView(chatViewport, new LinearLayout.LayoutParams(-1, 0, 1));
         scroll.addOnLayoutChangeListener((v, l, t, r, b, oldL, oldT, oldR, oldB) -> {
             if (peer != null && b - t < oldB - oldT
                     && rows.getHeight() - scroll.getScrollY() <= oldB - oldT + dp(12)) {
                 scroll.post(() -> { if (screen != null && peer != null) scroll.scrollTo(0, rows.getHeight()); });
             }
         });
-        scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> markVisibleRead());
+        scroll.setOnScrollChangeListener((v, x, y, oldX, oldY) -> {
+            scrollingUp = y < oldY;
+            scroll.removeCallbacks(showJumpAfterScroll);
+            if (scrollingUp) scroll.postDelayed(showJumpAfterScroll, 250);
+            updateJumpToLatest();
+            markVisibleRead();
+        });
 
         bottom = new LinearLayout(requireContext());
         bottom.setPadding(dp(6), dp(3), dp(6), dp(3));
@@ -379,6 +413,9 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     @Override public void onDestroyView() {
+        scroll.removeCallbacks(showJumpAfterScroll);
+        jumpToLatest = null;
+        scrollingUp = false;
         groupScreens.dismiss();
         chatStatus.dismiss();
         clearSecondaryPage();
@@ -510,6 +547,8 @@ public final class FamilyChatFragment extends Fragment {
             ((com.tridev.familyhub.feature.main.MainActivity) requireActivity()).refreshChatInsets();
         }
         lastMessageKey = null;
+        scrollingUp = false;
+        scroll.removeCallbacks(showJumpAfterScroll);
         draft.setText("");
         render();
     }
@@ -591,16 +630,18 @@ public final class FamilyChatFragment extends Fragment {
         updateSend();
         updateReplyBanner();
         int oldY = scroll.getScrollY();
+        boolean atBottom = !scroll.canScrollVertically(1);
         rows.removeAllViews();
         bubbles.clear();
         if (!inThread) {
             renderList();
             scroll.post(() -> { if (screen != null && peer == null) scroll.scrollTo(0, oldY); });
         } else if (thread != null && !thread.error) {
-            renderThread(thread, oldY);
+            renderThread(thread, oldY, atBottom);
         } else {
             addLine(text(thread != null ? "Chat is unavailable" : "Connecting to conversation…", 14, MUTED, false));
         }
+        updateJumpToLatest();
     }
 
     private void renderList() {
@@ -924,10 +965,26 @@ public final class FamilyChatFragment extends Fragment {
         render();
     }
 
-    private void renderThread(FamilyChatStore.ThreadState thread, int oldY) {
+    private void updateJumpToLatest() {
+        if (jumpToLatest == null) return;
+        FamilyChatStore.ThreadState thread = store.thread(peer);
+        boolean visible = thread != null && !thread.error && !scrollingUp && scroll.canScrollVertically(1);
+        jumpToLatest.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) return;
+        int unread = 0;
+        for (FamilyChatStore.Message message : thread.messages) {
+            if (!message.deleted() && store.unread(message) && !hiddenForMe(message)) unread++;
+        }
+        newMessageCount.setVisibility(unread == 0 ? View.GONE : View.VISIBLE);
+        newMessageCount.setText(Integer.toString(unread));
+        jumpToLatest.setContentDescription(unread == 0 ? "Jump to latest message"
+                : "Jump to latest message. New messages: " + unread);
+    }
+
+    private void renderThread(FamilyChatStore.ThreadState thread, int oldY, boolean atBottom) {
         String latestKey = thread.messages.isEmpty() ? null
                 : thread.messages.get(thread.messages.size() - 1).snapshot.getKey();
-        boolean goToBottom = !java.util.Objects.equals(lastMessageKey, latestKey);
+        boolean goToBottom = lastMessageKey == null || atBottom;
         lastMessageKey = latestKey;
         if (thread.messages.isEmpty()) addLine(text("No messages yet", 14, MUTED, false));
         ChatAttachmentCards cards = new ChatAttachmentCards(requireContext(), attachments);
@@ -943,14 +1000,12 @@ public final class FamilyChatFragment extends Fragment {
             }
             boolean own = store.own(message);
             if (message.deleted()) voiceNotes.stopMessagePlayback(message);
-            LinearLayout bubble = column();
+            LinearLayout bubble = new ChatMessageBubble(requireContext(), (view, touch) ->
+                    smart.messageActions(thread, message, view, touch));
+            bubble.setOrientation(LinearLayout.VERTICAL);
             bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
             bubble.setTag(message.snapshot.getKey());
-            bubble.setOnLongClickListener(view -> {
-                smart.messageActions(thread, message, view);
-                return true;
-            });
             if (!own && thread.isGroup()) {
                 bubble.addView(text(store.name(message.sender), 13, GREEN, true));
             }
@@ -1043,6 +1098,7 @@ public final class FamilyChatFragment extends Fragment {
             if (screen == null || !thread.peer.equals(peer)) return;
             if (goToBottom) scroll.scrollTo(0, rows.getHeight());
             else scroll.scrollTo(0, oldY);
+            updateJumpToLatest();
             markVisibleRead();
         });
     }

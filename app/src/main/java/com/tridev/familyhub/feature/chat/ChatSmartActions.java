@@ -40,6 +40,11 @@ final class ChatSmartActions {
     }
 
     void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, android.view.View anchor) {
+        messageActions(thread, message, anchor, null);
+    }
+
+    void messageActions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
+                        android.view.View anchor, android.graphics.Point touch) {
         if (!ready(thread) || message.deleted() || fragment.hiddenForMe(message)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
@@ -75,12 +80,11 @@ final class ChatSmartActions {
         if ("poll".equals(message.kind()) && !message.pollClosed() && store.own(message)) {
             addAction(labels, actions, "Pending votes", () -> pendingVotes(thread, message));
         }
-        addAction(labels, actions, "Delete message", () -> deleteOptions(thread, message, anchor));
-        chooseAnchored(anchor, "Message actions", labels, actions, true, store.own(message));
+        addAction(labels, actions, "Delete message", () -> deleteOptions(thread, message));
+        chooseAnchored(anchor, "Message actions", labels, actions, true, touch);
     }
 
-    private void deleteOptions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message,
-                               android.view.View anchor) {
+    private void deleteOptions(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
         if (!ready(thread)) return;
         List<String> labels = new ArrayList<>();
         List<Runnable> actions = new ArrayList<>();
@@ -98,7 +102,31 @@ final class ChatSmartActions {
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Delete", (dialog, which) -> fragment.deleteForMe(thread, message))
                 .show());
-        chooseAnchored(anchor, "Delete message", labels, actions, true, store.own(message));
+        ChatActionDialog design = new ChatActionDialog(context(), "Delete message?", 0);
+        LinearLayout options = new LinearLayout(context());
+        design.add(design.content, options, 10);
+        AlertDialog dialog = new ChatFormDialog(context()).setView(design.content)
+                .setNegativeButton("Cancel", null).create();
+        for (int i = 0; i < labels.size(); i++) {
+            Runnable action = actions.get(i);
+            String label = labels.get(i);
+            MaterialButton button = design.button(label.replace(" for ", "\nfor "), false);
+            button.setContentDescription(label);
+            button.setTextSize(12);
+            if ("Delete for everyone".equals(label)) {
+                button.setTextColor(0xffa22f3c);
+                button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xfffff1f1));
+                button.setStrokeColor(android.content.res.ColorStateList.valueOf(0xffeac9cd));
+            }
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -1, 1);
+            size.setMarginStart(i == 0 ? 0 : design.dp(5));
+            options.addView(button, size);
+            button.setOnClickListener(view -> {
+                dialog.dismiss();
+                action.run();
+            });
+        }
+        dialog.show();
     }
 
     private void forwardText(FamilyChatStore.ThreadState source, FamilyChatStore.Message message) {
@@ -666,11 +694,11 @@ final class ChatSmartActions {
     private android.view.View menuAnchor;
 
     private void chooseAnchored(android.view.View anchor, String title, List<String> labels, List<Runnable> actions) {
-        chooseAnchored(anchor, title, labels, actions, false, false);
+        chooseAnchored(anchor, title, labels, actions, false, null);
     }
 
     private void chooseAnchored(android.view.View anchor, String title, List<String> labels,
-                                List<Runnable> actions, boolean beside, boolean outgoing) {
+                                List<Runnable> actions, boolean byMessage, android.graphics.Point touch) {
         if (anchor == null || !anchor.isAttachedToWindow()) {
             anchor = fragment.getView();
             if (anchor == null || !anchor.isAttachedToWindow()) return;
@@ -708,15 +736,28 @@ final class ChatSmartActions {
         android.graphics.Rect visible = new android.graphics.Rect();
         anchor.getWindowVisibleDisplayFrame(visible);
         popup.setWidth(Math.max(1, Math.min(visible.width() - menuDp(16), width + menuDp(54))));
-        if (beside && anchor != fragment.getView()) {
-            int[] point = new int[2];
-            anchor.getLocationOnScreen(point);
-            int height = Math.max(1, Math.min(visible.height() - menuDp(16), menuDp(24 + 50 * labels.size())));
+        if (byMessage && anchor != fragment.getView()) {
+            int inset = menuDp(4);
+            int gap = menuDp(6);
+            int[] origin = new int[2];
+            anchor.getLocationOnScreen(origin);
+            int touchX = touch == null ? origin[0] + anchor.getWidth() / 2 : touch.x;
+            int touchY = touch == null ? origin[1] + anchor.getHeight() / 2 : touch.y;
+            int left = visible.left + inset, right = visible.right - inset;
+            int top = visible.top + inset, bottom = visible.bottom - inset;
+            int above = Math.max(0, touchY - top - gap);
+            int below = Math.max(0, bottom - touchY - gap);
+            scroll.measure(android.view.View.MeasureSpec.makeMeasureSpec(popup.getWidth(), android.view.View.MeasureSpec.EXACTLY),
+                    android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED));
+            int desiredHeight = scroll.getMeasuredHeight();
+            boolean down = desiredHeight <= below || below >= above;
+            int available = down ? below : above;
+            int height = Math.max(1, Math.min(desiredHeight, Math.max(menuDp(80), available)));
             popup.setHeight(height);
-            int x = outgoing ? point[0] - popup.getWidth() : point[0] + anchor.getWidth();
-            x = Math.max(visible.left + menuDp(4), Math.min(x, visible.right - popup.getWidth() - menuDp(4)));
-            int y = Math.max(visible.top + menuDp(4), Math.min(
-                    point[1] + (anchor.getHeight() - height) / 2, visible.bottom - height - menuDp(4)));
+            int x = touchX + gap + popup.getWidth() <= right ? touchX + gap : touchX - gap - popup.getWidth();
+            x = Math.max(left, Math.min(x, right - popup.getWidth()));
+            int y = down ? touchY + gap : touchY - gap - height;
+            y = Math.max(top, Math.min(y, bottom - height));
             android.view.View source = anchor;
             android.view.View.OnAttachStateChangeListener listener = new android.view.View.OnAttachStateChangeListener() {
                 @Override public void onViewAttachedToWindow(android.view.View view) {}
