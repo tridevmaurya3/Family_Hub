@@ -11,12 +11,12 @@ import android.widget.TextView;
 
 import com.google.android.material.button.MaterialButton;
 
-final class ChatActionDialog {
+public final class ChatActionDialog {
     static final int GREEN = 0xff136650;
     private final Context context;
     final LinearLayout content;
 
-    ChatActionDialog(Context context, String title, int icon) {
+    public ChatActionDialog(Context context, String title, int icon) {
         this.context = context;
         content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -37,6 +37,51 @@ final class ChatActionDialog {
         heading.addView(name);
         androidx.core.view.ViewCompat.setAccessibilityHeading(name, true);
         add(content, heading, 0);
+    }
+
+    public void showChoices(String[] choices, int checked, java.util.function.IntConsumer select) {
+        androidx.appcompat.app.AlertDialog dialog = create();
+        for (int i = 0; i < choices.length; i++) {
+            int index = i;
+            MaterialButton row = button(choices[i], i == checked);
+            row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+            row.setPaddingRelative(dp(12), 0, dp(12), 0);
+            row.setCheckable(true);
+            row.setChecked(i == checked);
+            row.setOnClickListener(view -> {
+                dialog.dismiss();
+                select.accept(index);
+            });
+            add(content, row, 6);
+        }
+        addFooter(dialog, null, null);
+        show(dialog);
+    }
+
+    androidx.appcompat.app.AlertDialog create() {
+        return new ChatFormDialog(context).setView(content).create();
+    }
+
+    void addFooter(androidx.appcompat.app.AlertDialog dialog, String positive, android.view.View.OnClickListener onClick) {
+        LinearLayout actions = new LinearLayout(context);
+        actions.setGravity(Gravity.END);
+        MaterialButton cancel = button("Cancel", false);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        actions.addView(cancel, new LinearLayout.LayoutParams(0, -2, 1));
+        if (positive != null) {
+            MaterialButton action = button(positive, true);
+            action.setOnClickListener(onClick);
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1);
+            size.setMarginStart(dp(8));
+            actions.addView(action, size);
+        }
+        add(content, actions, 12);
+    }
+
+    void show(androidx.appcompat.app.AlertDialog dialog) {
+        dialog.show();
+        android.view.Window window = dialog.getWindow();
+        if (window != null) window.setBackgroundDrawableResource(android.R.color.transparent);
     }
 
     int dp(int value) {

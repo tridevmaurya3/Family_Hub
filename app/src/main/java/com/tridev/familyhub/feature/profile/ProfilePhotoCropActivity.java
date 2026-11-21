@@ -27,8 +27,10 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
     private boolean chatPhoto;
     private boolean mirrored;
     private int cropFormat;
+    private static final int ORIGINAL = 0;
     private static final int FREE_CROP = 4;
     private static final String[] CROP_FORMATS = {"Original", "Square", "Landscape 4:3", "Portrait 3:4", "Free crop"};
+    private static final int[] CROP_ORDER = {FREE_CROP, ORIGINAL, 1, 2, 3};
     private boolean busy;
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -37,11 +39,17 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         chatPhoto = getIntent().getBooleanExtra(EXTRA_CHAT_PHOTO, false);
         turns = state == null ? 0 : state.getInt("turns");
         mirrored = state != null && state.getBoolean("mirrored");
-        cropFormat = state == null ? 0 : state.getInt("cropFormat");
+        int defaultFormat = chatPhoto ? FREE_CROP : ORIGINAL;
+        cropFormat = state == null ? defaultFormat : state.getInt("cropFormat", defaultFormat);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(16),dp(16),dp(16),dp(16));
         root.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this,com.tridev.familyhub.R.color.fh_background));
-        TextView title=new TextView(this);title.setText(chatPhoto ? "Edit chat photo" : "Crop profile photo");title.setTextSize(20);root.addView(title);
+        TextView title=new TextView(this);title.setText(chatPhoto ? "Edit chat photo" : "Crop profile photo");title.setTextSize(20);
+        if (chatPhoto) {
+            title.setTextColor(0xff136650);
+            title.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        root.addView(title);
         hint = new TextView(this);
         updateCropHint();
         root.addView(hint);
@@ -81,17 +89,19 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         MaterialButton format = button("Crop: " + CROP_FORMATS[cropFormat]);
         format.setOnClickListener(v -> {
             if (busy || crop.photo == null) return;
-            new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                    .setTitle("Crop shape")
-                    .setSingleChoiceItems(CROP_FORMATS, cropFormat, (dialog, selected) -> {
-                        cropFormat = selected;
-                        format.setText("Crop: " + CROP_FORMATS[selected]);
+            String[] choices = new String[CROP_ORDER.length];
+            int checked = 0;
+            for (int i = 0; i < CROP_ORDER.length; i++) {
+                choices[i] = CROP_FORMATS[CROP_ORDER[i]];
+                if (CROP_ORDER[i] == cropFormat) checked = i;
+            }
+            new com.tridev.familyhub.feature.chat.ChatActionDialog(this, "Crop shape", 0)
+                    .showChoices(choices, checked, selected -> {
+                        cropFormat = CROP_ORDER[selected];
+                        format.setText("Crop: " + CROP_FORMATS[cropFormat]);
                         crop.updateFrame();
                         updateCropHint();
-                        dialog.dismiss();
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
+                    });
         });
         editing.addView(format, new LinearLayout.LayoutParams(0, -2, 2));
         MaterialButton flip = button("Flip");
@@ -136,7 +146,19 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         state.putInt("cropFormat", cropFormat);
     }
     @Override protected void onDestroy(){worker.shutdown();super.onDestroy();}
-    private MaterialButton button(String text){MaterialButton b=new MaterialButton(this);b.setText(text);b.setAllCaps(false);b.setTextSize(12);return b;}
+    private MaterialButton button(String text) {
+        MaterialButton button = new MaterialButton(this);
+        button.setText(text);
+        button.setAllCaps(false);
+        button.setTextSize(12);
+        if (chatPhoto) {
+            boolean primary = "Use photo".equals(text);
+            button.setCornerRadius(dp(12));
+            button.setTextColor(primary ? 0xffffffff : 0xff136650);
+            button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(primary ? 0xff136650 : 0xffe2f2ea));
+        }
+        return button;
+    }
     private int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     private final class CropView extends View {
         private static final int LEFT = 1, TOP = 2, RIGHT = 4, BOTTOM = 8;
@@ -152,7 +174,7 @@ public final class ProfilePhotoCropActivity extends AppCompatActivity {
         void updateFrame() {
             float aspect = 1f;
             if (chatPhoto) {
-                if ((cropFormat == 0 || cropFormat == FREE_CROP) && photo != null) aspect = (float) photo.getWidth() / photo.getHeight();
+                if ((cropFormat == ORIGINAL || cropFormat == FREE_CROP) && photo != null) aspect = (float) photo.getWidth() / photo.getHeight();
                 else if (cropFormat == 2) aspect = 4f / 3f;
                 else if (cropFormat == 3) aspect = 3f / 4f;
             }

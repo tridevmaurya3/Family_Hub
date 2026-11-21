@@ -291,14 +291,10 @@ final class ChatAttachments {
         FamilyChatStore.ThreadState thread = target();
         if (thread == null || !store.canUse(thread)) return;
         android.widget.EditText title = entry("Event title", 180);
-        android.widget.LinearLayout form = new android.widget.LinearLayout(fragment.requireContext());
-        int padding = Math.round(20 * form.getResources().getDisplayMetrics().density);
-        form.setPadding(padding, padding / 2, padding, 0);
-        form.addView(ChatFormDialog.outlined(title));
-        androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(fragment.requireContext())
-                .setTitle("Share an event").setView(form).setNegativeButton("Cancel", null)
-                .setPositiveButton("Choose date", null).show();
-        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
+        ChatActionDialog design = new ChatActionDialog(fragment.requireContext(), "Share an event", R.drawable.ic_planner);
+        design.add(design.content, ChatFormDialog.outlined(title), 10);
+        androidx.appcompat.app.AlertDialog dialog = design.create();
+        design.addFooter(dialog, "Choose date", v -> {
             String label = title.getText().toString().trim();
             if (label.isEmpty()) {
                 title.setError("Enter an event title");
@@ -312,6 +308,7 @@ final class ChatAttachments {
                 confirm(thread, label, details, null, null);
             });
         });
+        design.show(dialog);
     }
 
     private android.widget.EditText entry(String hint, int max) {
@@ -440,17 +437,19 @@ final class ChatAttachments {
     }
 
     void confirmLiveShare(FamilyChatStore.ThreadState thread, Runnable openChat) {
-        androidx.appcompat.app.AlertDialog confirmation =
-                new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Share Family Live location")
-                .setMessage("Send your Family Live link to " + store.title(thread) + "?")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Send", (dialog, which) -> {
-                    store.send(thread, "Family Live location",
-                            java.util.Collections.singletonMap("kind", "live"), null,
-                            () -> notice("Unable to share Family Live location"));
-                    openChat.run();
-                }).show();
-        ChatSendButton.stylePositive(confirmation);
+        ChatActionDialog design = new ChatActionDialog(fragment.requireContext(),
+                "Share Family Live location", R.drawable.ic_fh_location_pin);
+        design.add(design.content, design.label("Send your Family Live link to " + store.title(thread) + "?",
+                15, 0xff52636c, false), 12);
+        androidx.appcompat.app.AlertDialog dialog = design.create();
+        design.addFooter(dialog, "Send", view -> {
+            dialog.dismiss();
+            store.send(thread, "Family Live location",
+                    java.util.Collections.singletonMap("kind", "live"), null,
+                    () -> notice("Unable to share Family Live location"));
+            openChat.run();
+        });
+        design.show(dialog);
     }
 
     private void chooseLocation() {

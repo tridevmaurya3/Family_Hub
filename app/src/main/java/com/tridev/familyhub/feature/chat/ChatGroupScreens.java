@@ -238,16 +238,18 @@ final class ChatGroupScreens {
             actions.add(() -> store.changeGroupRole(thread, uid, !admin, ok -> finishGroupChange(thread, ok)));
         }
         labels.add("Remove from group");
-        actions.add(() -> new ChatFormDialog(context())
-                .setTitle("Remove " + name + "?")
-                .setMessage("They will lose access to this group.")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Remove", (dialog, which) ->
-                        store.changeGroupMember(thread, uid, false, ok -> finishGroupChange(thread, ok)))
-                .show());
-        new ChatFormDialog(context()).setTitle(name)
-                .setItems(labels.toArray(new String[0]), (dialog, which) -> actions.get(which).run())
-                .setNegativeButton("Cancel", null).show();
+        actions.add(() -> {
+            ChatActionDialog design = new ChatActionDialog(context(), "Remove " + name + "?", R.drawable.ic_profile_person);
+            design.add(design.content, design.label("They will lose access to this group.", 15, 0xff52636c, false), 10);
+            androidx.appcompat.app.AlertDialog dialog = design.create();
+            design.addFooter(dialog, "Remove", view -> {
+                dialog.dismiss();
+                store.changeGroupMember(thread, uid, false, ok -> finishGroupChange(thread, ok));
+            });
+            design.show(dialog);
+        });
+        new ChatActionDialog(context(), name, R.drawable.ic_profile_person)
+                .showChoices(labels.toArray(new String[0]), -1, selected -> actions.get(selected).run());
     }
 
     private void finishGroupChange(FamilyChatStore.ThreadState thread, boolean ok) {
@@ -260,14 +262,10 @@ final class ChatGroupScreens {
         EditText input = field("Group name");
         input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(60)});
         input.setText(store.title(thread));
-        LinearLayout content = column();
-        content.setPadding(dp(16), 0, dp(16), 0);
-        content.addView(ChatFormDialog.outlined(input));
-        androidx.appcompat.app.AlertDialog dialog =
-                new ChatFormDialog(context())
-                        .setTitle("Rename group").setView(content).setNegativeButton("Cancel", null)
-                        .setPositiveButton("Save", null).show();
-        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+        ChatActionDialog design = new ChatActionDialog(context(), "Rename group", R.drawable.ic_family_task);
+        design.add(design.content, ChatFormDialog.outlined(input), 10);
+        androidx.appcompat.app.AlertDialog dialog = design.create();
+        design.addFooter(dialog, "Save", view -> {
             String title = input.getText().toString().trim();
             if (title.isEmpty()) { input.setError("Enter a group name"); return; }
             view.setEnabled(false);
@@ -282,6 +280,7 @@ final class ChatGroupScreens {
                 }
             });
         });
+        design.show(dialog);
     }
 
     void showMember(String uid, Runnable back) {
