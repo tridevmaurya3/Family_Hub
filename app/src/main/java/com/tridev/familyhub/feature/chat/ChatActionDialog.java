@@ -40,7 +40,7 @@ final class ChatActionDialog {
     }
 
     int dp(int value) {
-        return Math.round(value * context.getResources().getDisplayMetrics().density);
+        return FloatingChatSizing.pixels(context, value);
     }
 
     GradientDrawable surface(int fill, int edge, int radius) {
@@ -54,7 +54,7 @@ final class ChatActionDialog {
     TextView label(String text, int size, int color, boolean bold) {
         TextView label = new TextView(context);
         label.setText(text);
-        label.setTextSize(size);
+        label.setTextSize(FloatingChatSizing.text(context, size));
         label.setTextColor(color);
         if (bold) label.setTypeface(null, Typeface.BOLD);
         return label;
@@ -67,7 +67,8 @@ final class ChatActionDialog {
         button.setText(text);
         button.setMinWidth(0);
         button.setMinimumWidth(0);
-        button.setMinHeight(dp(48));
+        button.setMinHeight(FloatingChatSizing.target(context, 48));
+        FloatingChatSizing.compactButton(button);
         button.setPadding(dp(4), dp(4), dp(4), dp(4));
         button.setCornerRadius(dp(12));
         button.setTextColor(primary ? 0xffffffff : GREEN);

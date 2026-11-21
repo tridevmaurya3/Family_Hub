@@ -72,7 +72,8 @@ final class ChatFormDialog extends MaterialAlertDialogBuilder {
                     com.google.android.material.R.attr.materialButtonOutlinedStyle);
             option.setAllCaps(false);
             option.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
-            option.setMinHeight(dp(context, 48));
+            option.setMinHeight(FloatingChatSizing.target(context, 48));
+            FloatingChatSizing.compactButton(option);
             option.setMaxLines(Integer.MAX_VALUE);
             option.setText(options[index]);
             option.setCheckable(singleChoice);
@@ -117,7 +118,8 @@ final class ChatFormDialog extends MaterialAlertDialogBuilder {
         input.setHint(null);
         input.setBackground(null);
         input.setPadding(dp(context, 14), dp(context, 12), dp(context, 14), dp(context, 12));
-        input.setMinHeight(dp(context, 50));
+        if (FloatingChatSizing.applies(context)) input.setTextSize(14);
+        input.setMinHeight(FloatingChatSizing.target(context, 50));
         input.setTextColor(ContextCompat.getColor(context, R.color.fh_on_surface));
         layout.addView(input, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
@@ -127,6 +129,6 @@ final class ChatFormDialog extends MaterialAlertDialogBuilder {
     }
 
     private static int dp(Context context, int value) {
-        return Math.round(value * context.getResources().getDisplayMetrics().density);
+        return FloatingChatSizing.pixels(context, value);
     }
 }

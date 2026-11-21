@@ -489,7 +489,7 @@ final class ChatGroupScreens {
         EditText field = new EditText(context());
         field.setSingleLine(true);
         field.setHint(hint);
-        field.setTextSize(16);
+        field.setTextSize(FloatingChatSizing.text(context(), 16));
         field.setPadding(dp(14), dp(6), dp(14), dp(6));
         field.setBackground(background(R.color.fh_surface, 14));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(52));
@@ -590,13 +590,14 @@ final class ChatGroupScreens {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setAllCaps(false);
         button.setText(title);
+        FloatingChatSizing.compactButton(button);
         return button;
     }
 
     private TextView label(String value, int size, int color, boolean bold) {
         TextView text = new TextView(context());
         text.setText(value);
-        text.setTextSize(size);
+        text.setTextSize(FloatingChatSizing.text(context(), size));
         text.setTextColor(color(color));
         if (bold) text.setTypeface(null, Typeface.BOLD);
         return text;
@@ -611,6 +612,6 @@ final class ChatGroupScreens {
     private FamilyAvatarStore photos() { return FamilyAvatarStore.get(context()); }
     private Context context() { return fragment.requireContext(); }
     private int color(int id) { return ContextCompat.getColor(context(), id); }
-    private int dp(int value) { return Math.round(context().getResources().getDisplayMetrics().density * value); }
+    private int dp(int value) { return FloatingChatSizing.pixels(context(), value); }
     private void toast(String text) { if (fragment.isAdded()) Toast.makeText(context(), text, Toast.LENGTH_SHORT).show(); }
 }

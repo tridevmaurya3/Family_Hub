@@ -434,10 +434,10 @@ final class ChatStatus {
                 row.getContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
         button.setAllCaps(false);
-        button.setTextSize(15);
+        button.setTextSize(FloatingChatSizing.text(button.getContext(), 15));
         button.setTextColor(primary ? 0xffffffff : GREEN);
         button.setGravity(primary ? android.view.Gravity.CENTER : android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
-        button.setMinHeight(dp(48));
+        button.setMinHeight(FloatingChatSizing.target(button.getContext(), 48));
         button.setPadding(dp(14), dp(8), dp(14), dp(8));
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x24106c59),
                 primary ? surface(12, BLUE, BLUE) : surface(12, EDGE, 0xffffffff, 0xffeff8f5), null));
@@ -769,7 +769,7 @@ final class ChatStatus {
     private View statusField(EditText input) {
         input.setTextColor(INK);
         input.setHintTextColor(MUTED);
-        input.setTextSize(16);
+        input.setTextSize(FloatingChatSizing.text(input.getContext(), 16));
         com.google.android.material.textfield.TextInputLayout field = ChatFormDialog.outlined(input);
         field.setBoxBackgroundColor(0xfff9fcfd);
         field.setBoxStrokeColor(BLUE);
@@ -780,7 +780,7 @@ final class ChatStatus {
     private TextView section(String label, int size, int color) {
         TextView view = new TextView(host.requireContext());
         view.setText(label);
-        view.setTextSize(size);
+        view.setTextSize(FloatingChatSizing.text(view.getContext(), size));
         view.setTextColor(color);
         view.setPadding(dp(14), dp(12), dp(14), dp(12));
         return view;
@@ -805,7 +805,7 @@ final class ChatStatus {
     }
 
     private int dp(int value) {
-        return Math.round(value * host.getResources().getDisplayMetrics().density);
+        return FloatingChatSizing.pixels(host.requireContext(), value);
     }
 
     private boolean active(String family, String uid) {

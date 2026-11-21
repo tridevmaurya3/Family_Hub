@@ -200,7 +200,7 @@ final class ChatAttachmentCards {
     private TextView label(String value, boolean bold) {
         TextView text = new TextView(context);
         text.setText(value);
-        text.setTextSize(bold ? 16 : 13);
+        text.setTextSize(FloatingChatSizing.text(context, bold ? 16 : 13));
         text.setTextColor(color(bold ? R.color.fh_on_surface : R.color.fh_text_secondary));
         if (bold) text.setTypeface(null, android.graphics.Typeface.BOLD);
         text.setPadding(0, dp(4), 0, dp(4));
@@ -213,6 +213,7 @@ final class ChatAttachmentCards {
         button.setText(label);
         button.setAllCaps(false);
         button.setTextSize(13);
+        FloatingChatSizing.compactButton(button);
         button.setTextColor(color(R.color.fh_primary));
         button.setStrokeColor(ColorStateList.valueOf(color(R.color.fh_outline)));
         button.setOnClickListener(v -> action.run());

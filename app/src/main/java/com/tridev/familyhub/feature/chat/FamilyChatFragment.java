@@ -166,7 +166,7 @@ public final class FamilyChatFragment extends Fragment {
         header = (ModuleOverviewView) inflater.inflate(R.layout.view_family_chat_header, screen, false);
         newGroup = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
-        newGroup.setTextSize(12);
+        newGroup.setTextSize(FloatingChatSizing.text(requireContext(), 12));
         newGroup.setMaxLines(2);
         newGroup.setMinWidth(0);
         newGroup.setText("New group");
@@ -189,12 +189,13 @@ public final class FamilyChatFragment extends Fragment {
         toolsButton.setMinWidth(0);
         toolsButton.setMinimumWidth(0);
         toolsButton.setPadding(0, 0, 0, 0);
-        toolsButton.setLayoutParams(new LinearLayout.LayoutParams(dp(42), dp(48)));
+        toolsButton.setLayoutParams(new LinearLayout.LayoutParams(dp(42), target(48)));
         toolsButton.setOnClickListener(view -> {
             FamilyChatStore.ThreadState thread = store.thread(peer);
             if (thread != null && store.canUse(thread)) smart.threadActions(thread, view);
         });
         header.addHeaderAction(toolsButton);
+        compactHeader(header);
         screen.addView(header);
         selectionToolbar = new LinearLayout(requireContext());
         selectionToolbar.setGravity(Gravity.CENTER_VERTICAL);
@@ -208,11 +209,11 @@ public final class FamilyChatFragment extends Fragment {
 
         search = new EditText(requireContext());
         search.setSingleLine();
-        search.setTextSize(15);
+        search.setTextSize(FloatingChatSizing.text(requireContext(), 15));
         search.setHint("Search chats");
-        search.setPadding(dp(12), 0, dp(12), 0);
+        search.setPadding(space(12), 0, space(12), 0);
         search.setBackground(card(WHITE, EDGE, 14));
-        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(48));
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, target(48));
         searchParams.topMargin = dp(8);
         screen.addView(search, searchParams);
         search.addTextChangedListener(watcher(this::render));
@@ -293,28 +294,28 @@ public final class FamilyChatFragment extends Fragment {
         bottom.setBackground(card(WHITE, EDGE, 15));
         draft = new EditText(requireContext());
         draft.setHint("Write a message");
-        draft.setTextSize(17);
-        draft.setMinHeight(dp(54));
+        draft.setTextSize(FloatingChatSizing.text(requireContext(), 17));
+        draft.setMinHeight(target(54));
         draft.setMaxLines(6);
         draft.setInputType(android.text.InputType.TYPE_CLASS_TEXT
                 | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         draft.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2000)});
         draft.setBackground(null);
-        draft.setPadding(dp(6), dp(8), dp(6), dp(8));
+        draft.setPadding(space(6), space(8), space(6), space(8));
         MaterialButton attach = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         attach.setIconResource(R.drawable.ic_chat_attachment);
         attach.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         attach.setIconPadding(0);
-        attach.setIconSize(dp(22));
+        attach.setIconSize(space(22));
         attach.setContentDescription("Add attachment");
         attach.setPadding(0, 0, 0, 0);
         attach.setOnClickListener(v -> {
             FamilyChatStore.ThreadState thread = store.thread(peer);
             if (thread != null && store.canUse(thread)) attachments.show(thread);
         });
-        bottom.addView(attach, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        bottom.addView(attach, new LinearLayout.LayoutParams(target(48), target(48)));
         com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView dictationWave =
                 new com.tridev.familyhub.feature.tasks.voice.TaskVoiceWaveView(requireContext());
         dictationWave.setVisibility(View.GONE);
@@ -335,7 +336,7 @@ public final class FamilyChatFragment extends Fragment {
         mic = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         mic.setIconResource(R.drawable.ic_mic);
-        mic.setIconSize(dp(25));
+        mic.setIconSize(space(25));
         mic.setStrokeWidth(0);
         mic.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.TRANSPARENT));
         mic.setGravity(Gravity.CENTER);
@@ -355,8 +356,8 @@ public final class FamilyChatFragment extends Fragment {
                 return voiceNotes.touch(v, event, store.thread(peer));
             });
         }
-        bottom.addView(mic, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        LinearLayout.LayoutParams sendSize = new LinearLayout.LayoutParams(dp(48), dp(48));
+        bottom.addView(mic, new LinearLayout.LayoutParams(target(48), target(48)));
+        LinearLayout.LayoutParams sendSize = new LinearLayout.LayoutParams(target(48), target(48));
         sendSize.setMarginStart(dp(4));
         bottom.addView(send, sendSize);
         LinearLayout voiceComposer = column();
@@ -373,14 +374,14 @@ public final class FamilyChatFragment extends Fragment {
         replyBanner.addView(replyContent, new LinearLayout.LayoutParams(0, -2, 1));
         MaterialButton cancelReply = flatButton("");
         cancelReply.setIconResource(R.drawable.ic_family_map_close);
-        cancelReply.setIconSize(dp(22));
+        cancelReply.setIconSize(space(22));
         cancelReply.setIconPadding(0);
         cancelReply.setPadding(0, 0, 0, 0);
         cancelReply.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         cancelReply.setIconTint(android.content.res.ColorStateList.valueOf(GREEN));
         cancelReply.setContentDescription("Cancel reply");
         cancelReply.setOnClickListener(view -> clearReply());
-        replyBanner.addView(cancelReply, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        replyBanner.addView(cancelReply, new LinearLayout.LayoutParams(target(48), target(48)));
         screen.addView(replyBanner);
         screen.addView(composerArea);
         if (state != null) {
@@ -568,6 +569,7 @@ public final class FamilyChatFragment extends Fragment {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
         button.setAllCaps(false);
+        FloatingChatSizing.compactButton(button);
         return button;
     }
 
@@ -729,7 +731,7 @@ public final class FamilyChatFragment extends Fragment {
             break;
         }
         headerAvatar.removeAllViews();
-        if (thread != null) headerAvatar.addView(threadAvatar(thread, 40));
+        if (thread != null) headerAvatar.addView(threadAvatar(thread, FloatingChatSizing.applies(requireContext()) ? 32 : 40));
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
         search.setVisibility(inThread ? View.GONE : View.VISIBLE);
         chatFilters.setVisibility(inThread || choosingLiveRecipient ? View.GONE : View.VISIBLE);
@@ -832,6 +834,7 @@ public final class FamilyChatFragment extends Fragment {
         if (avatar != null) pageHeader.addHeaderAction(avatar);
         pageHeader.showDashboardActions(false);
         pageHeader.setNavigationAction(R.drawable.ic_arrow_back, R.string.back, v -> back.run());
+        compactHeader(pageHeader);
         page.addView(pageHeader);
         page.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         if (footer != null) page.addView(footer);
@@ -955,10 +958,10 @@ public final class FamilyChatFragment extends Fragment {
     private LinearLayout avatarRow(View avatar, LinearLayout content) {
         LinearLayout row = new LinearLayout(requireContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(12), dp(9), dp(12), dp(9));
+        row.setPadding(space(12), space(9), space(12), space(9));
         row.setBackground(card(WHITE, EDGE, 16));
         row.addView(avatar);
-        content.setPadding(dp(12), 0, 0, 0);
+        content.setPadding(space(12), 0, 0, 0);
         row.addView(content, new LinearLayout.LayoutParams(0, -2, 1));
         return row;
     }
@@ -967,7 +970,7 @@ public final class FamilyChatFragment extends Fragment {
         LinearLayout content = column();
         content.addView(text(name + " (You)", 16, GREEN, true));
         content.addView(text("Message yourself", 13, MUTED, false));
-        LinearLayout row = avatarRow(statusAvatar(uid, name, 44, true), content);
+        LinearLayout row = avatarRow(statusAvatar(uid, name, FloatingChatSizing.applies(requireContext()) ? 36 : 44, true), content);
         row.setBackground(card(0xffe5f3ed, 0xffb9d9c9, 16));
         row.setFocusable(true);
         row.setOnClickListener(v -> openSelfConversation(uid, name));
@@ -1008,8 +1011,8 @@ public final class FamilyChatFragment extends Fragment {
         composer.setBackground(card(WHITE, EDGE, 15));
         EditText input = new EditText(context);
         input.setHint("Write a message");
-        input.setTextSize(17);
-        input.setMinHeight(dp(48));
+        input.setTextSize(FloatingChatSizing.text(context, 17));
+        input.setMinHeight(target(48));
         input.setMaxLines(6);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
@@ -1025,7 +1028,7 @@ public final class FamilyChatFragment extends Fragment {
         sendSelf.setMinWidth(0);
         sendSelf.setEnabled(false);
         input.addTextChangedListener(watcher(() -> sendSelf.setEnabled(!input.getText().toString().trim().isEmpty())));
-        composer.addView(sendSelf, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        composer.addView(sendSelf, new LinearLayout.LayoutParams(target(48), target(48)));
 
         sendSelf.setOnClickListener(v -> {
             if (!isSecondaryPage(history) || !allowed.getAsBoolean()) return;
@@ -1056,7 +1059,7 @@ public final class FamilyChatFragment extends Fragment {
 
     private void addSelfMessage(LinearLayout messages, String body, long at) {
         LinearLayout bubble = column();
-        bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
+        bubble.setPadding(space(10), space(7), space(10), space(7));
         bubble.setBackground(card(0xffe5f2fa, EDGE, 15));
         TextView message = text(body, 16, INK, false);
         message.setTextIsSelectable(true);
@@ -1091,7 +1094,7 @@ public final class FamilyChatFragment extends Fragment {
             String detail = direction + dateTime(store.listTime(latest)) + (unread == 0 ? "" : "  ·  " + unread + " new");
             card.addView(text(detail, 12, unread == 0 ? MUTED : BLUE, unread != 0));
         }
-        LinearLayout row = avatarRow(threadAvatar(thread, 44), card);
+        LinearLayout row = avatarRow(threadAvatar(thread, FloatingChatSizing.applies(requireContext()) ? 36 : 44), card);
         row.setFocusable(true);
         row.setOnClickListener(v -> {
             if (choosingLiveRecipient) {
@@ -1310,7 +1313,7 @@ public final class FamilyChatFragment extends Fragment {
             LinearLayout bubble = new ChatMessageBubble(requireContext(), (view, touch) ->
                     selectMessage(thread, message));
             bubble.setOrientation(LinearLayout.VERTICAL);
-            bubble.setPadding(dp(10), dp(7), dp(10), dp(7));
+            bubble.setPadding(space(10), space(7), space(10), space(7));
             bubble.setBackground(card(own ? 0xffe5f2fa : WHITE, EDGE, 15));
             bubble.setTag(message.snapshot.getKey());
             if (selectedMessageKey != null && selectedMessageKey.equals(bubble.getTag())) {
@@ -1379,17 +1382,17 @@ public final class FamilyChatFragment extends Fragment {
             bubble.addView(metadata);
             if (attachment == null) bubble.measure(View.MeasureSpec.makeMeasureSpec(compactWidth, View.MeasureSpec.AT_MOST),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            int bubbleWidth = attachment == null ? Math.min(compactWidth, Math.max(dp(140), bubble.getMeasuredWidth())) : compactWidth;
+            int bubbleWidth = attachment == null ? Math.min(compactWidth, Math.max(space(140), bubble.getMeasuredWidth())) : compactWidth;
             LinearLayout messageRow = new LinearLayout(requireContext());
             messageRow.setGravity((own ? Gravity.END : Gravity.START) | Gravity.CENTER_VERTICAL);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-            params.topMargin = dp(7);
+            params.topMargin = space(7);
             if (!own) params.setMarginEnd(dp(24));
             if (own && !message.deleted()) {
                 MaterialButton reply = new MaterialButton(requireContext(), null,
                         com.google.android.material.R.attr.materialButtonOutlinedStyle);
                 reply.setIconResource(R.drawable.ic_chat_reply);
-                reply.setIconSize(dp(22));
+                reply.setIconSize(space(22));
                 reply.setIconPadding(0);
                 reply.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
                 reply.setIconTint(android.content.res.ColorStateList.valueOf(BLUE));
@@ -1397,9 +1400,9 @@ public final class FamilyChatFragment extends Fragment {
                 reply.setContentDescription("Reply to this message");
                 reply.setOnClickListener(v -> replyTo(message));
                 int maxBubble = Math.max(dp(100), rows.getWidth() > 0
-                        ? rows.getWidth() - dp(48) : screenWidth - dp(68));
+                        ? rows.getWidth() - target(48) : screenWidth - target(48) - dp(20));
                 bubbleWidth = Math.min(bubbleWidth, maxBubble);
-                messageRow.addView(reply, new LinearLayout.LayoutParams(dp(48), dp(48)));
+                messageRow.addView(reply, new LinearLayout.LayoutParams(target(48), target(48)));
             }
             messageRow.addView(bubble, new LinearLayout.LayoutParams(bubbleWidth, -2));
             rows.addView(messageRow, params);
@@ -1448,7 +1451,7 @@ public final class FamilyChatFragment extends Fragment {
     private TextView text(String value, int size, int color, boolean bold) {
         TextView view = new TextView(requireContext());
         view.setText(value);
-        view.setTextSize(size);
+        view.setTextSize(FloatingChatSizing.text(requireContext(), size));
         view.setTextColor(color);
         if (bold) view.setTypeface(null, Typeface.BOLD);
         return view;
@@ -1456,7 +1459,7 @@ public final class FamilyChatFragment extends Fragment {
 
     private void addLine(View view) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.topMargin = dp(8);
+        params.topMargin = space(8);
         rows.addView(view, params);
     }
 
@@ -1467,7 +1470,7 @@ public final class FamilyChatFragment extends Fragment {
                         new int[]{fill, fill == WHITE ? 0xfff4f9fc : 0xffdbeef9})
                 : new GradientDrawable();
         if (!floating || (fill != WHITE && fill != 0xffe5f2fa)) drawable.setColor(fill);
-        drawable.setCornerRadius(dp(radius));
+        drawable.setCornerRadius(space(radius));
         drawable.setStroke(dp(1), edge);
         return drawable;
     }
@@ -1512,6 +1515,25 @@ public final class FamilyChatFragment extends Fragment {
         tick.setLayoutParams(new LinearLayout.LayoutParams(dp(doubleTick ? 20 : 16), dp(16)));
         return tick;
     }
+
+    private void compactHeader(ModuleOverviewView view) {
+        if (!FloatingChatSizing.applies(requireContext())) return;
+        TextView title = view.findViewById(R.id.module_overview_title);
+        TextView detail = view.findViewById(R.id.module_overview_detail);
+        title.setTextSize(15);
+        detail.setTextSize(11);
+        View iconTile = view.findViewById(R.id.module_overview_icon_container);
+        android.view.ViewGroup.LayoutParams tile = iconTile.getLayoutParams();
+        tile.width = dp(38);
+        tile.height = dp(38);
+        iconTile.setLayoutParams(tile);
+        View headerRow = (View) iconTile.getParent();
+        headerRow.setPaddingRelative(dp(6), dp(3), dp(6), dp(3));
+    }
+
+    private int space(int value) { return FloatingChatSizing.pixels(requireContext(), value); }
+
+    private int target(int value) { return FloatingChatSizing.target(requireContext(), value); }
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);

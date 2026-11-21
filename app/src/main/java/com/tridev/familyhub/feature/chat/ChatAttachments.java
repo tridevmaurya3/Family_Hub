@@ -109,7 +109,7 @@ final class ChatAttachments {
         panel.setPadding(padding, padding, padding, padding);
         android.widget.TextView title = new android.widget.TextView(context);
         title.setText("Attach to chat");
-        title.setTextSize(21);
+        title.setTextSize(FloatingChatSizing.text(context, 21));
         title.setTypeface(null, android.graphics.Typeface.BOLD);
         title.setTextColor(ContextCompat.getColor(context, R.color.fh_on_surface));
         panel.addView(title);
@@ -151,6 +151,7 @@ final class ChatAttachments {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(title);
         button.setAllCaps(false);
+        FloatingChatSizing.compactButton(button);
         button.setIconResource(icon);
         button.setIconGravity(MaterialButton.ICON_GRAVITY_TEXT_START);
         button.setBackgroundTintList(android.content.res.ColorStateList.valueOf(

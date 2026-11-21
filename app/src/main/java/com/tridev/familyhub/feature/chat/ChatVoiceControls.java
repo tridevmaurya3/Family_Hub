@@ -26,20 +26,20 @@ final class ChatVoiceControls extends LinearLayout {
         super(context);
         setGravity(Gravity.CENTER_VERTICAL);
         play = button(context, "▶", "Play voice note", BLUE, 0xfff5faff);
-        addView(play, new LayoutParams(dp(context, 48), dp(context, 48)));
+        addView(play, new LayoutParams(FloatingChatSizing.target(context, 48), FloatingChatSizing.target(context, 48)));
         FrameLayout track = new FrameLayout(context);
         wave = new Wave(context);
-        track.addView(wave, new FrameLayout.LayoutParams(-1, dp(context, 25), Gravity.TOP));
+        track.addView(wave, new FrameLayout.LayoutParams(-1, FloatingChatSizing.pixels(context, 25), Gravity.TOP));
         time = new TextView(context);
         time.setTextSize(11);
         time.setTextColor(MUTED);
         time.setSingleLine();
         track.addView(time, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
-        LayoutParams trackSize = new LayoutParams(0, dp(context, 44), 1);
+        LayoutParams trackSize = new LayoutParams(0, FloatingChatSizing.pixels(context, 44), 1);
         trackSize.setMargins(dp(context, 6), 0, dp(context, 6), 0);
         addView(track, trackSize);
         speed = button(context, "1×", "Playback speed, 1 times", BLUE, 0xfff5faff);
-        addView(speed, new LayoutParams(dp(context, 48), dp(context, 48)));
+        addView(speed, new LayoutParams(FloatingChatSizing.target(context, 48), FloatingChatSizing.target(context, 48)));
     }
 
     void show(boolean playing, boolean loading, int position, int duration, int rate, String samples) {
@@ -58,7 +58,7 @@ final class ChatVoiceControls extends LinearLayout {
         TextView button = new TextView(context);
         button.setText(text);
         button.setTextColor(ink);
-        button.setTextSize(14);
+        button.setTextSize(FloatingChatSizing.text(context, 14));
         button.setGravity(Gravity.CENTER);
         button.setContentDescription(description);
         button.setBackground(surface(context, fill));

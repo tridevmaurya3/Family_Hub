@@ -40,7 +40,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
     private LinearLayout controls;
     private FrameLayout content;
     private TextView shortcut;
-    private TextView resize;
+    private FrameLayout resizeHandles;
     private GradientDrawable background;
     private String account;
     private int x, y, width, height;
@@ -82,7 +82,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
         surface.setOrientation(LinearLayout.VERTICAL);
         surface.setBackground(background);
         surface.setClipToOutline(true);
-        surface.setPadding(dp(5), dp(4), dp(5), dp(22));
+        surface.setPadding(dp(8), dp(6), dp(8), dp(14));
         root.addView(surface, new FrameLayout.LayoutParams(-1, -1));
 
         controls = new LinearLayout(this);
@@ -92,24 +92,25 @@ public final class FloatingChatActivity extends AppCompatActivity {
         TextView drag = label("Family Chat", 13, GREEN);
         drag.setPadding(dp(5), 0, 0, 0);
         drag.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        controls.addView(drag, new LinearLayout.LayoutParams(0, dp(40), 1));
-        drag.setOnTouchListener(windowGesture(false, null));
+        controls.addView(drag, new LinearLayout.LayoutParams(0, dp(38), 1));
+        drag.setOnTouchListener(windowGesture(0, 0, null));
         addControl("⋮", "Panel settings", this::showSettings);
         addControl("−", "Minimize floating chat", () -> setCollapsed(true));
         addControl("↗", "Open in Family Hub", this::openFullApp);
         addControl("×", "Close floating chat", this::finish);
-        surface.addView(controls, new LinearLayout.LayoutParams(-1, dp(40)));
+        LinearLayout.LayoutParams controlRow = new LinearLayout.LayoutParams(-1, dp(38));
+        controlRow.setMargins(dp(14), 0, dp(14), 0);
+        surface.addView(controls, controlRow);
 
         content = new FrameLayout(this);
         content.setId(R.id.floating_chat_content);
         surface.addView(content, new LinearLayout.LayoutParams(-1, 0, 1));
-        resize = label("◢", 16, BLUE);
-        resize.setGravity(Gravity.END | Gravity.BOTTOM);
-        resize.setPadding(0, 0, dp(2), 0);
-        resize.setContentDescription("Drag to resize floating chat");
-        resize.setOnTouchListener(windowGesture(true, null));
-        FrameLayout.LayoutParams resizeSize = new FrameLayout.LayoutParams(dp(30), dp(22), Gravity.BOTTOM | Gravity.END);
-        root.addView(resize, resizeSize);
+        resizeHandles = new FrameLayout(this);
+        root.addView(resizeHandles, new FrameLayout.LayoutParams(-1, -1));
+        addResizeHandle(-1, -1, "top left");
+        addResizeHandle(1, -1, "top right");
+        addResizeHandle(-1, 1, "bottom left");
+        addResizeHandle(1, 1, "bottom right");
 
         shortcut = label("Chat", 13, Color.WHITE);
         shortcut.setBackground(shape(16, 0xff58a3cb, 0xff2489ca, BLUE));
@@ -118,7 +119,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
         shortcut.setPadding(0, dp(6), 0, dp(3));
         shortcut.setContentDescription("Restore floating Family Chat");
         shortcut.setOnClickListener(v -> setCollapsed(false));
-        shortcut.setOnTouchListener(windowGesture(false, shortcut::performClick));
+        shortcut.setOnTouchListener(windowGesture(0, 0, shortcut::performClick));
         root.addView(shortcut, new FrameLayout.LayoutParams(-1, -1));
         updateVisibility();
         applyBounds();
@@ -252,7 +253,7 @@ public final class FloatingChatActivity extends AppCompatActivity {
 
     private void updateVisibility() {
         surface.setVisibility(collapsed ? View.GONE : View.VISIBLE);
-        resize.setVisibility(collapsed ? View.GONE : View.VISIBLE);
+        resizeHandles.setVisibility(collapsed ? View.GONE : View.VISIBLE);
         shortcut.setVisibility(collapsed ? View.VISIBLE : View.GONE);
         if (collapsed) getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
         else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
@@ -269,7 +270,18 @@ public final class FloatingChatActivity extends AppCompatActivity {
         controls.addView(control, size);
     }
 
-    private View.OnTouchListener windowGesture(boolean sizing, Runnable tap) {
+    private void addResizeHandle(int horizontal, int vertical, String corner) {
+        TextView handle = label("↘", 12, 0x70146553);
+        handle.setScaleX(horizontal);
+        handle.setScaleY(vertical);
+        handle.setContentDescription("Drag to resize from " + corner);
+        handle.setOnTouchListener(windowGesture(horizontal, vertical, null));
+        int gravity = (horizontal < 0 ? Gravity.LEFT : Gravity.RIGHT)
+                | (vertical < 0 ? Gravity.TOP : Gravity.BOTTOM);
+        resizeHandles.addView(handle, new FrameLayout.LayoutParams(dp(24), dp(24), gravity));
+    }
+
+    private View.OnTouchListener windowGesture(int horizontal, int vertical, Runnable tap) {
         return new View.OnTouchListener() {
             float rawX, rawY;
             int originX, originY, originWidth, originHeight;
@@ -291,9 +303,14 @@ public final class FloatingChatActivity extends AppCompatActivity {
                         int dy = Math.round(event.getRawY() - rawY);
                         moved |= Math.abs(dx) > dp(4) || Math.abs(dy) > dp(4);
                         if (!moved) return true;
-                        if (sizing) {
-                            width = originWidth + dx;
-                            height = originHeight + dy;
+                        if (horizontal != 0) {
+                            Rect area = displayArea();
+                            int maxWidth = horizontal < 0 ? originX + originWidth : area.width() - originX;
+                            int maxHeight = vertical < 0 ? originY + originHeight : area.height() - originY;
+                            width = clamp(originWidth + horizontal * dx, dp(285), maxWidth);
+                            height = clamp(originHeight + vertical * dy, dp(310), maxHeight);
+                            x = horizontal < 0 ? originX + originWidth - width : originX;
+                            y = vertical < 0 ? originY + originHeight - height : originY;
                         } else {
                             x = originX + dx;
                             y = originY + dy;

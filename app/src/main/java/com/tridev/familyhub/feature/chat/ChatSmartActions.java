@@ -783,12 +783,13 @@ final class ChatSmartActions {
         for (int i = 0; i < labels.size(); i++) {
             Runnable action = actions.get(i);
             TextView row = label(labels.get(i));
-            row.setTextSize(16);
+            row.setTextSize(FloatingChatSizing.text(context(), 16));
             boolean destructive = labels.get(i).startsWith("Delete");
             row.setTextColor(destructive ? 0xffa73142 : 0xff1f2a31);
             row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            row.setMinHeight(menuDp(46));
-            row.setPadding(menuDp(12), menuDp(6), menuDp(12), menuDp(6));
+            row.setMinHeight(FloatingChatSizing.target(context(), 46));
+            row.setPadding(FloatingChatSizing.pixels(context(), 12), FloatingChatSizing.pixels(context(), 6),
+                    FloatingChatSizing.pixels(context(), 12), FloatingChatSizing.pixels(context(), 6));
             row.setBackground(menuShape(destructive ? 0xfffff3f4 : 0xfffcffff, 0xffd4dee2, 10));
             row.setOnClickListener(v -> {
                 popup.dismiss();
@@ -876,6 +877,7 @@ final class ChatSmartActions {
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         button.setText(text);
         button.setAllCaps(false);
+        FloatingChatSizing.compactButton(button);
         return button;
     }
 
