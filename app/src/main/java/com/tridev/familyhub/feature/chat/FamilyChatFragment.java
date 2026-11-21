@@ -232,10 +232,10 @@ public final class FamilyChatFragment extends Fragment {
         draftVoice.bind(draft, dictationWave);
         bottom.addView(inputBox, new LinearLayout.LayoutParams(0, -2, 1));
         send = new MaterialButton(requireContext());
-        send.setText("Send");
-        send.setAllCaps(false);
-        send.setContentDescription("Send message");
-        bottom.addView(send);
+        send.setMinWidth(0);
+        send.setMinimumWidth(0);
+        send.setPadding(0, 0, 0, 0);
+        ChatSendButton.style(send, "Send message");
         mic = new MaterialButton(requireContext(), null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
         mic.setIconResource(R.drawable.ic_mic);
@@ -253,9 +253,12 @@ public final class FamilyChatFragment extends Fragment {
             return voiceNotes.touch(v, event, store.thread(peer));
         });
         bottom.addView(mic, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        LinearLayout.LayoutParams sendSize = new LinearLayout.LayoutParams(dp(48), dp(48));
+        sendSize.setMarginStart(dp(4));
+        bottom.addView(send, sendSize);
         LinearLayout voiceComposer = column();
         voiceComposer.setVisibility(View.GONE);
-        voiceNotes.bind(bottom, voiceComposer);
+        voiceNotes.bind(bottom, voiceComposer, send);
         android.widget.FrameLayout composerArea = new android.widget.FrameLayout(requireContext());
         composerArea.addView(bottom, new android.widget.FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         composerArea.addView(voiceComposer, new android.widget.FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
@@ -374,7 +377,7 @@ public final class FamilyChatFragment extends Fragment {
         clearSecondaryPage();
         pageRoot = null;
         draftVoice.bind(null, null);
-        voiceNotes.bind(null, null);
+        voiceNotes.bind(null, null, null);
         screen = null;
         bubbles.clear();
         super.onDestroyView();
@@ -495,8 +498,6 @@ public final class FamilyChatFragment extends Fragment {
         FamilyChatStore.ThreadState thread = store.thread(peer);
         boolean hasText = !draft.getText().toString().trim().isEmpty();
         send.setEnabled(thread != null && !thread.error && hasText);
-        send.setVisibility(hasText ? View.VISIBLE : View.GONE);
-        mic.setVisibility(hasText ? View.GONE : View.VISIBLE);
         mic.setEnabled(thread != null && store.canUse(thread));
     }
 

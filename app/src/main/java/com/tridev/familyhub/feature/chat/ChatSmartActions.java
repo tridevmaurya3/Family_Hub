@@ -92,7 +92,7 @@ final class ChatSmartActions {
         for (FamilyChatStore.ThreadState target : store.threads()) {
             if (target == source || !store.canUse(target)) continue;
             String title = store.title(target);
-            addAction(labels, actions, title, () -> new ChatFormDialog(context())
+            addAction(labels, actions, title, () -> ChatSendButton.stylePositive(new ChatFormDialog(context())
                     .setTitle("Forward message?")
                     .setMessage("Send this text to " + title + "?")
                     .setNegativeButton("Cancel", null)
@@ -106,7 +106,7 @@ final class ChatSmartActions {
                             }
                             store.send(target, current.body, () -> toast("Unable to forward message"));
                         });
-                    }).show());
+                    }).show()));
         }
         if (labels.isEmpty()) toast("No other chats available");
         else choose("Forward to", labels, actions);
@@ -575,7 +575,8 @@ final class ChatSmartActions {
                     }
                     if (sent == 0) toast("No selected members still need a reminder");
                 }));
-        builder.show();
+        androidx.appcompat.app.AlertDialog reminders = builder.show();
+        if (!pending.isEmpty()) ChatSendButton.stylePositive(reminders);
     }
 
     private void catchUp(FamilyChatStore.ThreadState thread) {

@@ -406,6 +406,22 @@ test('chat tools validate replies, mentions, reaction ownership and pins', async
   await assertFails(outsiderRef.root.child('familyChat/familyA/' + compressedAudio).get());
 });
 
+test('voice notes can use the existing attachment rules in a direct chat', async () => {
+  const root = 'familyChat/familyA';
+  const family = env.authenticatedContext(writer).database().ref(root);
+  const recipient = env.authenticatedContext(reader).database().ref(root);
+  const nonMember = env.authenticatedContext(outsider).database().ref(root);
+  const message = `direct/${writer}/${reader}/voice-attachment`;
+  const audio = `files/${message}`;
+  const mime = 'audio/mp4;voice-duration=24000;voice-wave=' + '0123456789abcdef'.repeat(2);
+  const note = { sender: writer, body: 'Voice note', at: { '.sv': 'timestamp' }, kind: 'file', mime };
+  const bytes = 'AAAAHGZ0eXBpc29t';
+  await assertSucceeds(family.update({ [message]: note, [audio]: bytes }));
+  assert.equal((await recipient.child(message).get()).child('mime').val(), mime);
+  assert.equal((await recipient.child(audio).get()).val(), bytes);
+  await assertFails(nonMember.child(audio).get());
+});
+
 test('chat edits, deletion, deadlines and group names enforce ownership', async () => {
   const path = `familyChat/familyA/direct/${writer}/${reader}`;
   const a = env.authenticatedContext(writer).database().ref(path);

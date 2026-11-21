@@ -37,8 +37,8 @@ final class ChatAttachmentCards {
     }
 
     View create(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, int mediaWidth) {
-        String kind = message.snapshot.child("kind").getValue(String.class);
-        if (kind == null) return null;
+        String kind = message.kind();
+        if (message.deleted() || "text".equals(kind)) return null;
         Runnable open = () -> attachments.open(thread, message);
         LinearLayout card = new LinearLayout(context);
         card.setOrientation(LinearLayout.VERTICAL);

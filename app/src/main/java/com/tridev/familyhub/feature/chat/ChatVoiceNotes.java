@@ -37,7 +37,6 @@ import static com.tridev.familyhub.feature.chat.ChatVoiceControls.*;
 final class ChatVoiceNotes {
     private static final int FILE_BYTES = 1_048_576;
     private static final int SAMPLE_INTERVAL_MS = 80;
-    private static final String MIME = "audio/mp4";
     private final FamilyChatFragment fragment;
     private final FamilyChatStore store;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -51,6 +50,7 @@ final class ChatVoiceNotes {
     private FamilyChatStore.ThreadState thread;
     private LinearLayout composer;
     private LinearLayout input;
+    private View textSend;
     private TextView timer;
     private ChatVoiceControls.Wave liveWave;
     private MediaRecorder recorder;
@@ -87,14 +87,16 @@ final class ChatVoiceNotes {
         });
     }
 
-    void bind(LinearLayout input, LinearLayout composer) {
+    void bind(LinearLayout input, LinearLayout composer, View textSend) {
         this.input = input;
         this.composer = composer;
+        this.textSend = textSend;
     }
 
     void setInputVisible(boolean visible) {
         inputVisible = visible;
         boolean holding = recorder != null && !locked;
+        textSend.setVisibility(holding ? View.GONE : View.VISIBLE);
         input.setVisibility(visible && (draft == null || holding) ? View.VISIBLE : View.GONE);
         for (int i = 0; i < input.getChildCount() - 2; i++) {
             input.getChildAt(i).setVisibility(holding ? View.INVISIBLE : View.VISIBLE);
@@ -256,7 +258,7 @@ final class ChatVoiceNotes {
             LinearLayout actions = row(context);
             action(actions, "Cancel", MUTED, 0xffedf0f3, this::clearDraft);
             action(actions, "■ Stop", 0xffaa1735, 0xfffbe0e7, () -> finish(false));
-            action(actions, "Send", 0xffffffff, BLUE, () -> finish(true));
+            sendAction(actions, () -> finish(true));
             composer.addView(actions);
         }
     }
@@ -315,7 +317,7 @@ final class ChatVoiceNotes {
         preview.show(false, false, 0, duration, 0, waveform);
         track.addView(preview, new LinearLayout.LayoutParams(0, -2, 3));
         action(track, "Delete", MUTED, 0xffedf0f3, this::clearDraft);
-        action(track, "Send", 0xffffffff, BLUE, this::send);
+        sendAction(track, this::send);
         composer.addView(track);
     }
 
@@ -326,10 +328,10 @@ final class ChatVoiceNotes {
         FamilyChatStore.ThreadState destination = thread;
         stopPlayback();
         Map<String, Object> details = new HashMap<>();
-        details.put("kind", "voice");
-        details.put("mime", MIME);
-        details.put("voiceWave", waveform);
-        details.put("voiceDuration", duration);
+        String capturedWave = waveform;
+        int capturedDuration = duration;
+        details.put("kind", "file");
+        details.put("mime", ChatVoiceAttachment.contentType(capturedDuration, capturedWave));
         io.execute(() -> {
             String encoded;
             try {
@@ -351,8 +353,8 @@ final class ChatVoiceNotes {
                     if (!success && ready(destination) && draft == null) {
                         draft = source;
                         thread = destination;
-                        waveform = (String) details.get("voiceWave");
-                        duration = (Integer) details.get("voiceDuration");
+                        waveform = capturedWave;
+                        duration = capturedDuration;
                         renderPreview();
                     } else {
                         source.delete();
@@ -377,6 +379,22 @@ final class ChatVoiceNotes {
         params.topMargin = dp(context, 3);
         row.addView(button, params);
         button.setOnClickListener(v -> click.run());
+    }
+
+    private void sendAction(LinearLayout row, Runnable click) {
+        Context context = row.getContext();
+        com.google.android.material.button.MaterialButton send =
+                new com.google.android.material.button.MaterialButton(context);
+        send.setMinWidth(0);
+        send.setMinimumWidth(0);
+        send.setPadding(0, 0, 0, 0);
+        send.setBackgroundTintList(android.content.res.ColorStateList.valueOf(BLUE));
+        send.setTextColor(0xffffffff);
+        ChatSendButton.style(send, "Send voice note");
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(context, 48), dp(context, 48));
+        size.setMarginStart(dp(context, 4));
+        row.addView(send, size);
+        send.setOnClickListener(v -> click.run());
     }
 
     View messageView(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
@@ -573,9 +591,11 @@ final class ChatVoiceNotes {
             super(fragment.requireContext());
             setOrientation(VERTICAL);
             key = message.snapshot.getRef().toString();
+            ChatVoiceAttachment attachment = message.voiceAttachment();
             Integer millis = message.snapshot.child("voiceDuration").getValue(Integer.class);
-            duration = millis == null ? 0 : millis;
-            waveform = message.snapshot.child("voiceWave").getValue(String.class);
+            duration = attachment != null ? attachment.duration : millis == null ? 0 : millis;
+            waveform = attachment != null ? attachment.waveform
+                    : message.snapshot.child("voiceWave").getValue(String.class);
             controls = new ChatVoiceControls(getContext());
             controls.play.setOnClickListener(v -> open(thread, message));
             controls.speed.setOnClickListener(v -> {

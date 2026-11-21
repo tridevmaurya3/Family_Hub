@@ -117,6 +117,7 @@ final class ChatSecureText {
         form.addView(ChatFormDialog.outlined(input));
         AlertDialog screen = new ChatFormDialog(context).setTitle("Secure text · " + store.title(thread))
                 .setView(form).setNegativeButton("Close", null).setPositiveButton("Send", null).show();
+        ChatSendButton.stylePositive(screen);
         screen.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
         com.google.firebase.database.Query recent = messages.limitToLast(50);
         com.google.firebase.database.ValueEventListener listener = new com.google.firebase.database.ValueEventListener() {

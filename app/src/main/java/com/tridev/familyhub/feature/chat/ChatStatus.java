@@ -297,13 +297,14 @@ final class ChatStatus {
         reply.setHint("Reply privately");
         reply.setFilters(new InputFilter[]{new InputFilter.LengthFilter(1000)});
         content.addView(statusField(reply), cardSpacing());
-        addAction(content, "Send reply", true, () -> {
+        View sendReply = addAction(content, "Send reply", true, () -> {
             if (!active(family, uid) || !store.canUse(direct)) return;
             String message = reply.getText().toString().trim();
             if (message.isEmpty()) return;
             store.send(direct, message, () -> notice("Unable to send reply"));
             reply.setText("");
         });
+        ChatSendButton.style((TextView) sendReply, "Send reply");
     }
 
     private View addAction(LinearLayout row, String title, boolean primary, Runnable action) {

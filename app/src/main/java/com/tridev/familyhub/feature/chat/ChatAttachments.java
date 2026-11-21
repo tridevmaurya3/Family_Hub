@@ -248,7 +248,7 @@ final class ChatAttachments {
             preview.setImageBitmap(bitmap);
             dialog.setView(preview);
         }
-        dialog.show();
+        ChatSendButton.stylePositive(dialog.show());
     }
 
     private void chooseContact() {
@@ -354,6 +354,7 @@ final class ChatAttachments {
         androidx.appcompat.app.AlertDialog dialog = new ChatFormDialog(fragment.requireContext())
                 .setTitle("Create a poll").setView(scroll).setNegativeButton("Cancel", null)
                 .setPositiveButton("Send", null).show();
+        ChatSendButton.stylePositive(dialog);
         dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener(v -> {
             String label = question.getText().toString().trim();
             if (label.isEmpty()) {
@@ -404,7 +405,8 @@ final class ChatAttachments {
     }
 
     void confirmLiveShare(FamilyChatStore.ThreadState thread, Runnable openChat) {
-        new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Share Family Live location")
+        androidx.appcompat.app.AlertDialog confirmation =
+                new MaterialAlertDialogBuilder(fragment.requireContext()).setTitle("Share Family Live location")
                 .setMessage("Send your Family Live link to " + store.title(thread) + "?")
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Send", (dialog, which) -> {
@@ -413,6 +415,7 @@ final class ChatAttachments {
                             () -> notice("Unable to share Family Live location"));
                     openChat.run();
                 }).show();
+        ChatSendButton.stylePositive(confirmation);
     }
 
     private void chooseLocation() {
@@ -598,8 +601,8 @@ final class ChatAttachments {
     }
 
     void open(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
-        if (!store.canUse(thread)) return;
-        String kind = message.snapshot.child("kind").getValue(String.class);
+        if (!store.canUse(thread) || message.deleted()) return;
+        String kind = message.kind();
         if ("announcement".equals(kind)) {
             announcementResponses(thread, message);
         } else if ("checklist".equals(kind)) {

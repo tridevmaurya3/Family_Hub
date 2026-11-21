@@ -736,7 +736,12 @@ public final class FamilyChatStore {
 
         String kind() {
             String type = snapshot.child("kind").getValue(String.class);
+            if ("file".equals(type) && voiceAttachment() != null) return "voice";
             return type == null ? "text" : type;
+        }
+
+        ChatVoiceAttachment voiceAttachment() {
+            return ChatVoiceAttachment.read(snapshot.child("mime").getValue(String.class));
         }
 
         boolean received(String recipient, boolean read) {
