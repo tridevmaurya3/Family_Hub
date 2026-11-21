@@ -317,8 +317,24 @@ public class DashboardFragment extends Fragment {
         super.onStop();
     }
 
+    private ActionCardView monthlySpendCard;
+
     private void bindStatusCards() {
         financeStatusCard = binding.cardFinanceStatus;
+        LinearLayout financeRow = (LinearLayout) financeStatusCard.getParent();
+        android.view.ViewGroup.LayoutParams rowSize = financeRow.getLayoutParams();
+        rowSize.height = Math.max(rowSize.height, dp(112));
+        financeRow.setLayoutParams(rowSize);
+        LinearLayout.LayoutParams balanceSize = (LinearLayout.LayoutParams) financeStatusCard.getLayoutParams();
+        balanceSize.setMarginEnd(dp(4));
+        financeStatusCard.setLayoutParams(balanceSize);
+        monthlySpendCard = new ActionCardView(requireContext());
+        monthlySpendCard.setValueTextCentered(true);
+        monthlySpendCard.setOnClickListener(view -> openTab(R.id.nav_finance));
+        LinearLayout.LayoutParams spendSize = new LinearLayout.LayoutParams(0, -1, 1);
+        spendSize.setMarginStart(dp(4));
+        financeRow.addView(monthlySpendCard, spendSize);
+        cardFor(binding.dashboardMonthlyExpenseDetail).setVisibility(View.GONE);
         healthStatusCard = binding.cardHealthStatus;
         familyStatusCard = binding.cardFamilyStatus;
         documentStatusCard = binding.cardDocumentStatus;
@@ -862,9 +878,9 @@ public class DashboardFragment extends Fragment {
                     renderCounts(data.getStats());
                     renderActionCards(data.getStats());
                     renderPrioritySummary(data);
-                    renderDashboardEntries(overviewEntries, data.overview, "No upcoming items");
-                    renderDashboardEntries(highlightEntries, data.highlights, "No family highlights yet");
-                    renderDashboardEntries(activityEntries, data.recentActivity, "No recent activity");
+                    renderDashboardEntries(overviewEntries, data.overview, "No upcoming items", 0xffeaf4fd, 0xffb8d4ee);
+                    renderDashboardEntries(highlightEntries, data.highlights, "No family highlights yet", 0xfff2ecfa, 0xffd4c3eb);
+                    renderDashboardEntries(activityEntries, data.recentActivity, "No recent activity", 0xffe8f5ee, 0xffb9dbcb);
                     binding.dashboardSmartSections.setDashboardData(data);
                     finishDashboardRefresh();
                 },
@@ -1030,7 +1046,7 @@ public class DashboardFragment extends Fragment {
     }
 
     private void renderDashboardEntries(LinearLayout section, java.util.List<DashboardData.Entry> entries,
-                                        String empty) {
+                                        String empty, int fill, int border) {
         section.removeAllViews();
         if (entries.isEmpty()) {
             android.widget.TextView message = new android.widget.TextView(requireContext());
@@ -1046,8 +1062,8 @@ public class DashboardFragment extends Fragment {
             row.setRadius(dp(14));
             row.setCardElevation(0);
             row.setStrokeWidth(dp(1));
-            row.setStrokeColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.fh_outline));
-            row.setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(requireContext(), R.color.fh_surface));
+            row.setStrokeColor(border);
+            row.setCardBackgroundColor(fill);
             row.setFocusable(true);
             row.setOnClickListener(view -> openDashboardEntry(entry.destination));
             LinearLayout content = new LinearLayout(requireContext());
@@ -1197,18 +1213,17 @@ public class DashboardFragment extends Fragment {
     }
 
     private void renderFinance(@NonNull DashboardStats stats) {
-        binding.dashboardMonthlyExpenseValue.setText(
-                currencyFormatter.format(stats.getExpense()));
-        com.tridev.familyhub.core.ui.SemanticValueStyler.apply(
-                binding.dashboardMonthlyExpenseValue,
-                -stats.getExpense()
-        );
         String detail = getString(
                 R.string.dashboard_finance_detail,
                 currencyFormatter.format(stats.getIncome()),
                 currencyFormatter.format(stats.getBalance())
         );
-        binding.dashboardMonthlyExpenseDetail.setText(detail);
+        monthlySpendCard.setModel(overviewModel(
+                getString(R.string.monthly_spend), currencyFormatter.format(stats.getExpense()),
+                detail, R.drawable.ic_wallet));
+        tintFinanceCard(monthlySpendCard, 0xfffff0e2, 0xffe4be9d);
+        android.widget.TextView spendValue = monthlySpendCard.findViewById(R.id.action_card_primary);
+        spendValue.setTextColor(0xff8a321b);
         financeStatusCard.setModel(overviewModel(
                 getString(R.string.status_finance),
                 currencyFormatter.format(stats.getBalance()),
@@ -1217,6 +1232,13 @@ public class DashboardFragment extends Fragment {
         ));
         com.tridev.familyhub.core.ui.SemanticValueStyler.apply(
                 financeStatusCard.findViewById(R.id.action_card_primary), stats.getBalance());
+        tintFinanceCard(financeStatusCard, 0xffe8f5eb, 0xffb5d8bc);
+    }
+
+    private void tintFinanceCard(ActionCardView action, int fill, int border) {
+        com.google.android.material.card.MaterialCardView surface = action.findViewById(R.id.action_card_surface);
+        surface.setCardBackgroundColor(fill);
+        surface.setStrokeColor(border);
     }
 
     private void renderCounts(@NonNull DashboardStats stats) {
@@ -1294,6 +1316,7 @@ public class DashboardFragment extends Fragment {
         activityEntries = null;
         taskPendingCount = 0;
         financeStatusCard = null;
+        monthlySpendCard = null;
         healthStatusCard = null;
         familyStatusCard = null;
         documentStatusCard = null;
