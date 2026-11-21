@@ -86,6 +86,11 @@ public final class FamilyChatFragment extends Fragment {
     private final ChatKeywordSearch keywordSearch = new ChatKeywordSearch(store);
     private boolean searching, searchLoaded;
     private String activeMatch;
+    private String highlightedPinKey;
+    private final Runnable clearPinnedHighlight = () -> {
+        highlightedPinKey = null;
+        updateMessageSelection();
+    };
     private int searchResultsPerChat = 40;
     private List<FamilyChatStore.Message> threadMatches = java.util.Collections.emptyList();
     private final Runnable searchHistory = this::loadSearchHistory;
@@ -562,6 +567,8 @@ public final class FamilyChatFragment extends Fragment {
 
     @Override public void onDestroyView() {
         scroll.removeCallbacks(showJumpAfterScroll);
+        scroll.removeCallbacks(clearPinnedHighlight);
+        highlightedPinKey = null;
         jumpToLatest = null;
         scrollingUp = false;
         groupScreens.dismiss();
@@ -731,6 +738,10 @@ public final class FamilyChatFragment extends Fragment {
     }
 
     void jumpToPin(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        jumpToMessage(thread, message, true);
+    }
+
+    private void jumpToMessage(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message, boolean highlightPin) {
         if (!isVoiceThreadOpen(thread) || !store.canUse(thread)) return;
         clearSecondaryPage();
         String key = message.snapshot.getKey();
@@ -739,7 +750,11 @@ public final class FamilyChatFragment extends Fragment {
             render();
         }
         scroll.post(() -> {
-            if (screen != null && isVoiceThreadOpen(thread)) reveal(key);
+            if (screen == null || !isVoiceThreadOpen(thread) || !reveal(key) || !highlightPin) return;
+            highlightedPinKey = key;
+            updateMessageSelection();
+            scroll.removeCallbacks(clearPinnedHighlight);
+            scroll.postDelayed(clearPinnedHighlight, 3000);
         });
     }
 
@@ -749,6 +764,8 @@ public final class FamilyChatFragment extends Fragment {
 
     private void open(@Nullable String destination) {
         resetMessageSearch();
+        scroll.removeCallbacks(clearPinnedHighlight);
+        highlightedPinKey = null;
         historicalPin = null;
         selectedMessageKeys.clear();
         clearSecondaryPage();
@@ -832,7 +849,6 @@ public final class FamilyChatFragment extends Fragment {
                 ? View.VISIBLE : View.GONE);
         boolean chatReady = thread != null && !thread.error;
         toolsButton.setVisibility(chatReady ? View.VISIBLE : View.GONE);
-        if (chatReady) header.setSearchAction(v -> openMessageSearch());
         pinBanner.setVisibility(chatReady && !searching ? View.VISIBLE : View.GONE);
         FamilyChatStore.Message latestPin = chatReady ? latestVisiblePin(thread) : null;
         pinBanner.setText(latestPin == null ? "Pinned messages" : "Pinned · " + latestPin.body);
@@ -1055,7 +1071,7 @@ public final class FamilyChatFragment extends Fragment {
                 return;
             }
             open(thread.peer);
-            jumpToPin(thread, message);
+            jumpToMessage(thread, message, false);
         });
     }
 
@@ -1558,7 +1574,9 @@ public final class FamilyChatFragment extends Fragment {
             boolean highlighted = selectedMessageKeys.contains(bubble.getTag())
                     || (searching && activeMatch != null && activeMatch.equals(bubble.getTag()));
             bubble.setSelected(highlighted);
-            bubble.setForeground(highlighted ? card(0x2465ae85, 0xff42977c, 15) : null);
+            boolean pinned = highlightedPinKey != null && highlightedPinKey.equals(bubble.getTag());
+            bubble.setForeground(highlighted ? card(0x2465ae85, 0xff42977c, 15)
+                    : pinned ? card(0x38ffd16a, 0xffc79840, 15) : null);
         }
         header.setVisibility(selected.isEmpty() && !searching ? View.VISIBLE : View.GONE);
         selectionToolbar.setVisibility(selected.isEmpty() ? View.GONE : View.VISIBLE);
