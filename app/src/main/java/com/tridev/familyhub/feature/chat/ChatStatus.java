@@ -77,17 +77,21 @@ final class ChatStatus {
 
         LinearLayout mine = new LinearLayout(rows.getContext());
         mine.setOrientation(LinearLayout.VERTICAL);
-        mine.setPadding(dp(12), dp(5), dp(12), dp(10));
-        mine.setBackground(surface(20, EDGE, 0xffdcf3e9, 0xffeef7ff));
         rows.addView(mine);
         String ownName = host.ownStatusName();
-        mine.addView(statusRow(uid, ownName, "My status", true, null));
-        addAction(mine, "+ Create new story", true, () -> compose(statuses.child(uid), family, uid));
+        mine.addView(section("My status", 18, GREEN));
+        android.widget.FrameLayout ownCard = new android.widget.FrameLayout(rows.getContext());
+        mine.addView(ownCard, new LinearLayout.LayoutParams(-1, -2));
+        View profile = statusRow(uid, ownName, "My status");
+        ownCard.addView(profile);
+        View create = addAction(mine, "+ Create new story", true, () -> compose(statuses.child(uid), family, uid));
+        create.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33ffffff),
+                surface(12, GREEN, GREEN), null));
 
         rows.addView(section("Family updates", 18, GREEN), cardSpacing());
-        LinearLayout updates = new LinearLayout(rows.getContext());
-        updates.setOrientation(LinearLayout.VERTICAL);
-        rows.addView(updates);
+        android.widget.GridLayout updates = new android.widget.GridLayout(rows.getContext());
+        updates.setColumnCount(2);
+        rows.addView(updates, new LinearLayout.LayoutParams(-1, -2));
         TextView empty = section("Loading family updates…", 15, MUTED);
         rows.addView(empty);
         Map<String, String> members = new LinkedHashMap<>(store.groupCandidates());
@@ -123,27 +127,35 @@ final class ChatStatus {
                     if (!own && !store.groupCandidates().containsKey(memberId)) return;
                     showStatus(family, uid, memberId, member.getValue(), body, photo, video, receipts);
                 };
-                if (own) {
-                    LinearLayout current = new LinearLayout(rows.getContext());
-                    current.setOrientation(LinearLayout.VERTICAL);
-                    mine.addView(current);
-                    addAction(current, "View my story · " + type + " · " + time, false, viewStatus);
-                    addAction(current, "Remove my story", false, () -> {
-                        if (!active(family, uid)) return;
-                        statuses.child(uid).removeValue().addOnCompleteListener(removal -> {
-                            if (!host.isSecondaryPage(scroll) || !active(family, uid)) return;
-                            if (removal.isSuccessful()) open();
-                            else notice("Unable to remove status");
-                        });
+                Runnable remove = () -> {
+                    if (!host.isSecondaryPage(scroll) || !active(family, uid)) return;
+                    statuses.child(uid).removeValue().addOnCompleteListener(removal -> {
+                        if (!host.isSecondaryPage(scroll) || !active(family, uid)) return;
+                        if (removal.isSuccessful()) open();
+                        else notice("Unable to remove status");
                     });
-                    removeOnExpiry(current, remaining, () -> mine.removeView(current));
+                };
+                View entry = storyCard(memberId, member.getValue(), body, photo, video, type, time,
+                        own, viewStatus, own ? remove : null);
+                if (own) {
+                    profile.setVisibility(View.GONE);
+                    ownCard.addView(entry, new android.widget.FrameLayout.LayoutParams(-1, dp(214)));
+                    removeOnExpiry(entry, remaining, () -> {
+                        ownCard.removeView(entry);
+                        profile.setVisibility(View.VISIBLE);
+                    });
                 } else {
-                    View entry = statusRow(memberId, member.getValue(), type + " · " + time, false, viewStatus);
                     entry.setTag(postedAt);
                     int index = 0;
                     while (index < updates.getChildCount()
                             && (Long) updates.getChildAt(index).getTag() >= postedAt) index++;
-                    updates.addView(entry, index, cardSpacing());
+                    android.widget.GridLayout.LayoutParams size = new android.widget.GridLayout.LayoutParams(
+                            android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED),
+                            android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f));
+                    size.width = 0;
+                    size.height = dp(174);
+                    size.setMargins(dp(3), dp(4), dp(3), dp(4));
+                    updates.addView(entry, index, size);
                     empty.setVisibility(View.GONE);
                     removeOnExpiry(entry, remaining, () -> {
                         updates.removeView(entry);
@@ -162,30 +174,140 @@ final class ChatStatus {
         });
     }
 
-    private View statusRow(String uid, String name, String detail, boolean own, Runnable click) {
+    private View statusRow(String uid, String name, String detail) {
         LinearLayout row = new LinearLayout(host.requireContext());
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
         row.setPadding(dp(12), dp(8), dp(10), dp(8));
-        if (!own) row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x24106c59),
-                surface(16, EDGE, 0xffffffff, 0xfff0faf7), null));
-        View avatar = host.statusAvatar(uid, name, 48, own);
-        row.addView(avatar);
-        LinearLayout labels = new LinearLayout(row.getContext());
-        labels.setOrientation(LinearLayout.VERTICAL);
-        TextView title = section(name, 17, INK);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        title.setPadding(dp(12), 0, dp(8), 0);
-        labels.addView(title);
-        TextView subtitle = section(detail, 13, MUTED);
-        subtitle.setPadding(dp(12), dp(3), dp(8), 0);
-        labels.addView(subtitle);
-        row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
-        if (click != null) {
-            row.addView(section("›", 20, GREEN));
-            row.setFocusable(true);
-            row.setOnClickListener(view -> click.run());
-        }
+        row.setBackground(surface(16, EDGE, 0xffe2f4ee, 0xfff0faf7));
+        row.addView(host.statusAvatar(uid, name, 42, true));
+        row.addView(section(name + " · " + detail, 16, GREEN), new LinearLayout.LayoutParams(0, -2, 1));
         return row;
+    }
+
+    private View storyCard(String uid, String name, String body, String photo, String video,
+                           String type, String time, boolean own, Runnable open, Runnable remove) {
+        android.content.Context context = host.requireContext();
+        android.widget.FrameLayout card = new android.widget.FrameLayout(context);
+        card.setBackground(surface(16, GREEN, 0xff356f62, 0xff203f3c));
+        card.setClipToOutline(true);
+        card.setForeground(new RippleDrawable(ColorStateList.valueOf(0x33ffffff), null,
+                surface(16, 0xffffffff, 0xffffffff)));
+        card.setOnClickListener(v -> open.run());
+        card.setFocusable(true);
+        card.setContentDescription("View " + name + " status. " + type + ". " + time);
+
+        if (photo != null || video != null) {
+            ImageView thumbnail = new ImageView(context);
+            thumbnail.setScaleType(own ? ImageView.ScaleType.FIT_CENTER : ImageView.ScaleType.CENTER_CROP);
+            card.addView(thumbnail, new android.widget.FrameLayout.LayoutParams(-1, -1));
+            if (video == null) loadPreview(thumbnail, photo);
+            else loadVideoPreview(thumbnail, video);
+        } else {
+            TextView excerpt = section(body, own ? 19 : 15, 0xffffffff);
+            excerpt.setGravity(android.view.Gravity.CENTER);
+            excerpt.setMaxLines(3);
+            excerpt.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            android.widget.FrameLayout.LayoutParams excerptPosition = new android.widget.FrameLayout.LayoutParams(-1, -2,
+                    android.view.Gravity.CENTER);
+            excerptPosition.bottomMargin = dp(22);
+            card.addView(excerpt, excerptPosition);
+        }
+        GradientDrawable shade = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{0x000c2421, 0x330c2421, 0xff0c2421});
+        View scrim = new View(context);
+        scrim.setBackground(shade);
+        card.addView(scrim, new android.widget.FrameLayout.LayoutParams(-1, dp(96), android.view.Gravity.BOTTOM));
+
+        TextView badge = section(type, 11, 0xffffffff);
+        badge.setPadding(dp(9), dp(4), dp(9), dp(4));
+        badge.setBackground(surface(12, 0xff24433c, 0xff24433c));
+        android.widget.FrameLayout.LayoutParams badgePosition = new android.widget.FrameLayout.LayoutParams(-2, -2,
+                android.view.Gravity.TOP | android.view.Gravity.START);
+        badgePosition.setMargins(dp(9), dp(9), 0, 0);
+        card.addView(badge, badgePosition);
+        if (video != null) {
+            TextView play = section("▶", 22, 0xffffffff);
+            play.setPadding(0, 0, 0, 0);
+            play.setGravity(android.view.Gravity.CENTER);
+            play.setBackground(surface(24, 0x00000000, 0xcc16382f));
+            card.addView(play, new android.widget.FrameLayout.LayoutParams(dp(46), dp(46), android.view.Gravity.CENTER));
+        }
+
+        LinearLayout caption = new LinearLayout(context);
+        caption.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        caption.setPadding(dp(9), dp(7), dp(9), dp(10));
+        caption.addView(host.statusAvatar(uid, name, own ? 38 : 28, own));
+        LinearLayout words = new LinearLayout(context);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setPadding(dp(7), 0, 0, 0);
+        TextView title = section(name, own ? 17 : 13, 0xffffffff);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setSingleLine();
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        title.setPadding(0, 0, 0, 0);
+        words.addView(title);
+        TextView detail = section(time, 11, 0xffe5f3ee);
+        detail.setSingleLine();
+        detail.setPadding(0, dp(2), 0, 0);
+        words.addView(detail);
+        caption.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
+        card.addView(caption, new android.widget.FrameLayout.LayoutParams(-1, -2, android.view.Gravity.BOTTOM));
+
+        if (remove != null) {
+            TextView options = section("⋮", 22, 0xffffffff);
+            options.setPadding(0, 0, 0, 0);
+            options.setGravity(android.view.Gravity.CENTER);
+            options.setContentDescription("My status options");
+            options.setBackground(surface(20, 0x00000000, 0xcc24433c));
+            android.widget.FrameLayout.LayoutParams position = new android.widget.FrameLayout.LayoutParams(dp(40), dp(40),
+                    android.view.Gravity.TOP | android.view.Gravity.END);
+            position.setMargins(0, dp(6), dp(6), 0);
+            card.addView(options, position);
+            options.setOnClickListener(v -> {
+                androidx.appcompat.widget.PopupMenu menu = new androidx.appcompat.widget.PopupMenu(context, options);
+                menu.getMenu().add("Remove my story");
+                menu.setOnMenuItemClickListener(item -> {
+                    remove.run();
+                    return true;
+                });
+                menu.show();
+            });
+        }
+        return card;
+    }
+
+    private void loadVideoPreview(ImageView image, String video) {
+        if (video.length() > MAX_VIDEO_LENGTH) return;
+        java.io.File cache = image.getContext().getCacheDir();
+        java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            java.io.File temp = null;
+            android.media.MediaMetadataRetriever reader = null;
+            try {
+                byte[] bytes = Base64.decode(video, Base64.NO_WRAP);
+                if (bytes.length > MAX_VIDEO_BYTES) return null;
+                temp = java.io.File.createTempFile("status-thumbnail-", ".video", cache);
+                java.nio.file.Files.write(temp.toPath(), bytes);
+                reader = new android.media.MediaMetadataRetriever();
+                reader.setDataSource(temp.getAbsolutePath());
+                if (android.os.Build.VERSION.SDK_INT >= 27) {
+                    return reader.getScaledFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 640, 640);
+                }
+                return reader.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+            } catch (IOException | RuntimeException failure) {
+                return null;
+            } finally {
+                try {
+                    if (reader != null) reader.release();
+                } catch (IOException | RuntimeException ignored) {
+                } finally {
+                    if (temp != null) temp.delete();
+                }
+            }
+        }).thenAccept(bitmap -> new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            if (bitmap == null) return;
+            if (host.isSecondaryPage(image)) image.setImageBitmap(bitmap);
+            else bitmap.recycle();
+        }));
     }
 
     private static final String[] REACTIONS = {"liked", "laugh", "wow", "sad", "clap", "fire"};
