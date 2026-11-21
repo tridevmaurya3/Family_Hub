@@ -579,22 +579,47 @@ final class ChatSmartActions {
         });
     }
 
+    void openLatestPin(FamilyChatStore.ThreadState thread) {
+        loadPins(thread, messages -> {
+            if (messages.isEmpty()) showPinnedPage(thread, messages);
+            else fragment.jumpToPin(thread, messages.get(0));
+        });
+    }
+
     void pinned(FamilyChatStore.ThreadState thread) {
+        loadPins(thread, messages -> showPinnedPage(thread, messages));
+    }
+
+    private void loadPins(FamilyChatStore.ThreadState thread,
+                          java.util.function.Consumer<List<FamilyChatStore.Message>> result) {
         store.pinned(thread, messages -> {
-            if (!ready(thread)) return;
+            if (!ready(thread) || !fragment.isVoiceThreadOpen(thread)) return;
             if (messages == null) {
                 toast("Unable to load pinned messages");
                 return;
             }
-            LinearLayout content = panel();
-            for (FamilyChatStore.Message message : messages) {
-                if (message.deleted() || fragment.hiddenForMe(message)) continue;
-                content.addView(resultRow(message, () -> openMessage(thread, message)));
-            }
-            if (content.getChildCount() == 0) content.addView(label("No pinned messages. Open a message's actions to pin it."));
-            new ChatFormDialog(context()).setTitle("Pinned messages")
-                    .setView(scroll(content)).setPositiveButton("Done", null).show();
+            messages.removeIf(message -> message.deleted() || fragment.hiddenForMe(message));
+            messages.sort(java.util.Comparator.comparingLong((FamilyChatStore.Message message) -> message.at).reversed());
+            result.accept(messages);
         });
+    }
+
+    private void showPinnedPage(FamilyChatStore.ThreadState thread, List<FamilyChatStore.Message> messages) {
+        LinearLayout content = panel();
+        ScrollView page = scroll(content);
+        for (FamilyChatStore.Message message : messages) {
+            MaterialButton row = resultRow(message, () -> fragment.jumpToPin(thread, message));
+            row.setGravity(android.view.Gravity.START | android.view.Gravity.CENTER_VERTICAL);
+            row.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xfff5fcf8));
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(-1, -2);
+            size.bottomMargin = FloatingChatSizing.pixels(context(), 6);
+            content.addView(row, size);
+        }
+        if (messages.isEmpty()) {
+            content.addView(label("No pinned messages in this chat."));
+        }
+        fragment.showSecondaryPage("Pinned messages", page, fragment::closeSecondaryPage,
+                () -> store.canUse(thread) && fragment.isVoiceThreadOpen(thread));
     }
 
     private void search(FamilyChatStore.ThreadState thread, boolean media) {

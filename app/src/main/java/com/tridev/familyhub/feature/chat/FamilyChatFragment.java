@@ -67,6 +67,8 @@ public final class FamilyChatFragment extends Fragment {
     private final FamilyAvatarStore.Listener avatarObserver = this::render;
     private LinearLayout headerAvatar;
     private final List<View> bubbles = new ArrayList<>();
+    private List<FamilyChatStore.Message> displayedMessages = java.util.Collections.emptyList();
+    private FamilyChatStore.Message historicalPin;
     private LinearLayout screen, rows, bottom;
     private android.widget.FrameLayout pageRoot;
     private View secondaryPage;
@@ -245,7 +247,10 @@ public final class FamilyChatFragment extends Fragment {
         pinBanner.setEllipsize(android.text.TextUtils.TruncateAt.END);
         pinBanner.setOnClickListener(view -> {
             FamilyChatStore.ThreadState thread = store.thread(peer);
-            if (thread != null && store.canUse(thread)) smart.pinned(thread);
+            if (thread == null || !store.canUse(thread)) return;
+            FamilyChatStore.Message latest = latestVisiblePin(thread);
+            if (latest != null) jumpToPin(thread, latest);
+            else smart.openLatestPin(thread);
         });
         screen.addView(pinBanner, new LinearLayout.LayoutParams(-1, -2));
 
@@ -492,6 +497,8 @@ public final class FamilyChatFragment extends Fragment {
         draftVoice.bind(null, null);
         voiceNotes.bind(null, null, null);
         screen = null;
+        historicalPin = null;
+        displayedMessages = java.util.Collections.emptyList();
         bubbles.clear();
         super.onDestroyView();
     }
@@ -636,11 +643,33 @@ public final class FamilyChatFragment extends Fragment {
         return true;
     }
 
+    private FamilyChatStore.Message latestVisiblePin(FamilyChatStore.ThreadState thread) {
+        for (int i = thread.messages.size() - 1; i >= 0; i--) {
+            FamilyChatStore.Message message = thread.messages.get(i);
+            if (message.pinned() && !message.deleted() && !hiddenForMe(message)) return message;
+        }
+        return null;
+    }
+
+    void jumpToPin(FamilyChatStore.ThreadState thread, FamilyChatStore.Message message) {
+        if (!isVoiceThreadOpen(thread) || !store.canUse(thread)) return;
+        clearSecondaryPage();
+        String key = message.snapshot.getKey();
+        if (thread.messages.stream().noneMatch(item -> java.util.Objects.equals(key, item.snapshot.getKey()))) {
+            historicalPin = message;
+            render();
+        }
+        scroll.post(() -> {
+            if (screen != null && isVoiceThreadOpen(thread)) reveal(key);
+        });
+    }
+
     boolean wasUnread(FamilyChatStore.Message message) {
         return unreadOnOpen.contains(message.snapshot.getKey()) || store.unread(message);
     }
 
     private void open(@Nullable String destination) {
+        historicalPin = null;
         selectedMessageKeys.clear();
         clearSecondaryPage();
         voiceNotes.stop();
@@ -723,13 +752,8 @@ public final class FamilyChatFragment extends Fragment {
         boolean chatReady = thread != null && !thread.error;
         toolsButton.setVisibility(chatReady ? View.VISIBLE : View.GONE);
         pinBanner.setVisibility(chatReady ? View.VISIBLE : View.GONE);
-        pinBanner.setText("Pinned messages");
-        if (chatReady) for (int i = thread.messages.size() - 1; i >= 0; i--) {
-            FamilyChatStore.Message pinned = thread.messages.get(i);
-            if (!pinned.pinned() || pinned.deleted() || hiddenForMe(pinned)) continue;
-            pinBanner.setText("Pinned · " + pinned.body);
-            break;
-        }
+        FamilyChatStore.Message latestPin = chatReady ? latestVisiblePin(thread) : null;
+        pinBanner.setText(latestPin == null ? "Pinned messages" : "Pinned · " + latestPin.body);
         headerAvatar.removeAllViews();
         if (thread != null) headerAvatar.addView(threadAvatar(thread, FloatingChatSizing.applies(requireContext()) ? 32 : 40));
         header.showDashboardActions(newGroup.getVisibility() != View.VISIBLE && thread == null);
@@ -760,11 +784,11 @@ public final class FamilyChatFragment extends Fragment {
                 : store.online() ? "Live · Family sync" : "Offline · messages send when reconnected");
         updateSend();
         updateReplyBanner();
-        updateMessageSelection();
         int oldY = scroll.getScrollY();
         boolean atBottom = !scroll.canScrollVertically(1);
         rows.removeAllViews();
         bubbles.clear();
+        displayedMessages = java.util.Collections.emptyList();
         if (!inThread) {
             renderList();
             scroll.post(() -> { if (screen != null && peer == null) scroll.scrollTo(0, oldY); });
@@ -773,6 +797,7 @@ public final class FamilyChatFragment extends Fragment {
         } else {
             addLine(text(thread != null ? "Chat is unavailable" : "Connecting to conversation…", 14, MUTED, false));
         }
+        updateMessageSelection();
         updateJumpToLatest();
     }
 
@@ -1287,7 +1312,7 @@ public final class FamilyChatFragment extends Fragment {
         List<FamilyChatStore.Message> selected = new ArrayList<>();
         java.util.Set<String> valid = new java.util.HashSet<>();
         if (!selectedMessageKeys.isEmpty() && thread != null && store.canUse(thread)) {
-            for (FamilyChatStore.Message message : thread.messages) {
+            for (FamilyChatStore.Message message : displayedMessages) {
                 String key = message.snapshot.getKey();
                 if (selectedMessageKeys.contains(key) && !message.deleted() && !hiddenForMe(message)) {
                     selected.add(message);
@@ -1331,9 +1356,16 @@ public final class FamilyChatFragment extends Fragment {
         int screenWidth = screen.getWidth() > 0 ? screen.getWidth() : getResources().getDisplayMetrics().widthPixels;
         int compactWidth = Math.min(dp(420), Math.round(screenWidth * 0.82f));
         int compactMediaWidth = Math.max(1, compactWidth - dp(20));
+        displayedMessages = new ArrayList<>(thread.messages);
+        if (historicalPin != null && displayedMessages.stream().noneMatch(message ->
+                java.util.Objects.equals(message.snapshot.getKey(), historicalPin.snapshot.getKey()))) {
+            displayedMessages.add(historicalPin);
+            displayedMessages.sort(java.util.Comparator.comparingLong((FamilyChatStore.Message message) -> message.at)
+                    .thenComparing(message -> message.snapshot.getKey()));
+        }
         java.util.Map<String, FamilyChatStore.Message> known = new java.util.HashMap<>();
-        for (FamilyChatStore.Message item : thread.messages) known.put(item.snapshot.getKey(), item);
-        for (FamilyChatStore.Message message : thread.messages) {
+        for (FamilyChatStore.Message item : displayedMessages) known.put(item.snapshot.getKey(), item);
+        for (FamilyChatStore.Message message : displayedMessages) {
             if (hiddenForMe(message)) {
                 bubbles.add(null);
                 continue;
@@ -1452,12 +1484,12 @@ public final class FamilyChatFragment extends Fragment {
         if (screen == null || secondaryPage != null || !isResumed() || peer == null
                 || !screen.isShown() || !screen.hasWindowFocus()) return;
         FamilyChatStore.ThreadState thread = store.thread(peer);
-        if (thread == null || bubbles.size() != thread.messages.size()) return;
+        if (thread == null || bubbles.size() != displayedMessages.size()) return;
         android.graphics.Rect viewport = new android.graphics.Rect();
         if (!scroll.getGlobalVisibleRect(viewport)) return;
         for (int i = 0; i < bubbles.size(); i++) {
             android.graphics.Rect bounds = new android.graphics.Rect();
-            FamilyChatStore.Message message = thread.messages.get(i);
+            FamilyChatStore.Message message = displayedMessages.get(i);
             if (!message.deleted() && store.unread(message) && bubbles.get(i) != null
                     && bubbles.get(i).getGlobalVisibleRect(bounds) && android.graphics.Rect.intersects(viewport, bounds)) {
                 store.receipt(thread, message, true);
